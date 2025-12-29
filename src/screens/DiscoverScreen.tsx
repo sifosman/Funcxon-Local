@@ -11,6 +11,14 @@ import type { VendorListItem } from './AttendeeHomeScreen';
 type CategoryFilter = 'all' | 'venues' | 'catering' | 'photography' | 'other';
 type SortBy = 'default' | 'rating-desc' | 'reviews-desc' | 'price-asc';
 
+type TagCategory = {
+  id: number;
+  name: string;
+  slug: string;
+  vendor_type: string;
+  parent_category_id: number | null;
+};
+
 export default function DiscoverScreen() {
   const navigation = useNavigation<any>();
   const [search, setSearch] = useState('');
@@ -18,19 +26,53 @@ export default function DiscoverScreen() {
   const [onlyWithPrice, setOnlyWithPrice] = useState(false);
   const [category, setCategory] = useState<CategoryFilter>('all');
   const [sortBy, setSortBy] = useState<SortBy>('default');
+  const [selectedTags, setSelectedTags] = useState<number[]>([]);
+  const [showTagFilters, setShowTagFilters] = useState(false);
 
-  const { data, isLoading, error } = useQuery<VendorListItem[]>({
-    queryKey: ['discover-vendors'],
+  // Fetch tag categories for filtering
+  const { data: tagCategories } = useQuery<TagCategory[]>({
+    queryKey: ['tag_categories_filter'],
     queryFn: async () => {
       const { data, error } = await supabase
+        .from('tag_categories')
+        .select('id, name, slug, vendor_type, parent_category_id')
+        .eq('is_active', true)
+        .not('parent_category_id', 'is', null)
+        .order('display_order', { ascending: true });
+
+      if (error) throw error;
+      return data as TagCategory[];
+    },
+  });
+
+  const { data, isLoading, error } = useQuery<VendorListItem[]>({
+    queryKey: ['discover-vendors', selectedTags],
+    queryFn: async () => {
+      let query = supabase
         .from('vendors')
         .select('id, name, price_range, rating, review_count, image_url')
         .limit(30);
 
-      if (error) {
-        throw error;
+      // Filter by tags if any selected
+      if (selectedTags.length > 0) {
+        const { data: taggedVendors, error: tagError } = await supabase
+          .from('vendor_tags')
+          .select('vendor_id')
+          .in('tag_category_id', selectedTags);
+
+        if (tagError) throw tagError;
+
+        const vendorIds = [...new Set(taggedVendors.map((t) => t.vendor_id))];
+        if (vendorIds.length > 0) {
+          query = query.in('id', vendorIds);
+        } else {
+          return [];
+        }
       }
 
+      const { data, error } = await query;
+
+      if (error) throw error;
       return (data as VendorListItem[]) ?? [];
     },
   });
@@ -335,7 +377,7 @@ export default function DiscoverScreen() {
         </View>
 
         {/* Other filter toggles */}
-        <View style={{ marginTop: spacing.sm, flexDirection: 'row' }}>
+        <View style={{ marginTop: spacing.sm, flexDirection: 'row', gap: spacing.sm }}>
           <TouchableOpacity
             onPress={() => setOnlyWithPrice((prev) => !prev)}
             style={{
@@ -356,7 +398,94 @@ export default function DiscoverScreen() {
               Show only with price
             </Text>
           </TouchableOpacity>
+
+          <TouchableOpacity
+            onPress={() => setShowTagFilters((prev) => !prev)}
+            style={{
+              paddingHorizontal: spacing.md,
+              paddingVertical: spacing.xs,
+              borderRadius: radii.full,
+              borderWidth: 1,
+              borderColor: showTagFilters ? colors.primary : colors.borderSubtle,
+              backgroundColor: showTagFilters ? colors.primary : colors.surface,
+            }}
+          >
+            <Text
+              style={{
+                ...typography.caption,
+                color: showTagFilters ? '#FFFFFF' : colors.textPrimary,
+              }}
+            >
+              🏷️ Tags {selectedTags.length > 0 ? `(${selectedTags.length})` : ''}
+            </Text>
+          </TouchableOpacity>
         </View>
+
+        {/* Tag Filters (expandable) */}
+        {showTagFilters && tagCategories && tagCategories.length > 0 && (
+          <View
+            style={{
+              marginTop: spacing.md,
+              padding: spacing.md,
+              borderRadius: radii.lg,
+              backgroundColor: colors.surface,
+              borderWidth: 1,
+              borderColor: colors.borderSubtle,
+            }}
+          >
+            <Text
+              style={{
+                ...typography.titleMedium,
+                color: colors.textPrimary,
+                marginBottom: spacing.sm,
+              }}
+            >
+              Filter by Tags
+            </Text>
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm }}>
+              {tagCategories.slice(0, 20).map((tag) => {
+                const isSelected = selectedTags.includes(tag.id);
+                return (
+                  <TouchableOpacity
+                    key={tag.id}
+                    onPress={() => {
+                      setSelectedTags((prev) =>
+                        isSelected ? prev.filter((id) => id !== tag.id) : [...prev, tag.id]
+                      );
+                    }}
+                    style={{
+                      paddingHorizontal: spacing.md,
+                      paddingVertical: spacing.xs,
+                      borderRadius: radii.full,
+                      borderWidth: 1,
+                      borderColor: isSelected ? colors.primary : colors.borderSubtle,
+                      backgroundColor: isSelected ? colors.primary : colors.surface,
+                    }}
+                  >
+                    <Text
+                      style={{
+                        ...typography.caption,
+                        color: isSelected ? '#FFFFFF' : colors.textPrimary,
+                      }}
+                    >
+                      {tag.name}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+            {selectedTags.length > 0 && (
+              <TouchableOpacity
+                onPress={() => setSelectedTags([])}
+                style={{ marginTop: spacing.sm }}
+              >
+                <Text style={{ ...typography.caption, color: colors.primary }}>
+                  Clear all tags
+                </Text>
+              </TouchableOpacity>
+            )}
+          </View>
+        )}
 
         {/* Sort options */}
         <View style={{ marginTop: spacing.md }}>

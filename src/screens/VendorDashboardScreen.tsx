@@ -1,8 +1,12 @@
 import { ActivityIndicator, FlatList, Text, View } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useQuery } from '@tanstack/react-query';
 
 import { supabase } from '../lib/supabaseClient';
 import { colors, spacing, radii, typography } from '../theme';
+import { PrimaryButton } from '../components/ui';
+import type { VendorStackParamList } from '../navigation/VendorNavigator';
 
 type VendorSummary = {
   id: number;
@@ -26,7 +30,15 @@ type QuoteRequest = {
   details?: string | null;
 };
 
+type VendorDocument = {
+  id: number;
+  document_type: string;
+  file_name: string | null;
+};
+
 export default function VendorDashboardScreen() {
+  const navigation = useNavigation<NativeStackNavigationProp<VendorStackParamList>>();
+
   const {
     data: vendor,
     isLoading: vendorLoading,
@@ -97,6 +109,27 @@ export default function VendorDashboardScreen() {
   });
 
   const pendingCount = quotes?.filter((q) => q.status === 'pending').length ?? 0;
+
+  const {
+    data: documents,
+  } = useQuery<VendorDocument[] | null>({
+    queryKey: ['vendor-dashboard-documents', vendorId],
+    enabled: !!vendorId,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('vendor_documents')
+        .select('id, document_type, file_name')
+        .eq('vendor_id', vendorId)
+        .order('created_at', { ascending: false })
+        .limit(5);
+
+      if (error) {
+        throw error;
+      }
+
+      return (data as VendorDocument[]) ?? [];
+    },
+  });
 
   if (vendorLoading) {
     return (
@@ -195,6 +228,34 @@ export default function VendorDashboardScreen() {
           : ''}
         {vendor.price_range ? `  ·  ${vendor.price_range}` : ''}
       </Text>
+
+      <PrimaryButton
+        title="Complete Onboarding"
+        onPress={() => navigation.navigate('VendorOnboarding', { vendorId: vendor.id })}
+        style={{ marginBottom: spacing.lg }}
+      />
+
+      {documents && documents.length > 0 && (
+        <View
+          style={{
+            padding: spacing.md,
+            borderRadius: radii.lg,
+            backgroundColor: colors.surfaceMuted,
+            borderWidth: 1,
+            borderColor: colors.borderSubtle,
+            marginBottom: spacing.lg,
+          }}
+        >
+          <Text style={{ ...typography.titleMedium, color: colors.textPrimary, marginBottom: spacing.xs }}>
+            Compliance documents
+          </Text>
+          {documents.map((doc) => (
+            <Text key={doc.id} style={{ ...typography.caption, color: colors.textSecondary }}>
+              • {doc.file_name ?? 'Document'} ({doc.document_type})
+            </Text>
+          ))}
+        </View>
+      )}
 
       {/* Reviews section */}
       <Text

@@ -3,6 +3,7 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { MaterialIcons } from '@expo/vector-icons';
 import { AttendeeNavigator } from './AttendeeNavigator';
 import { QuotesNavigator } from './QuotesNavigator';
+import VendorNavigator from './VendorNavigator';
 import DiscoverScreen from '../screens/DiscoverScreen';
 import PlannerScreen from '../screens/PlannerScreen';
 import ProfileScreen from '../screens/ProfileScreen';
@@ -13,6 +14,7 @@ export type RootTabParamList = {
   Discover: undefined;
   Quotes: undefined;
   Planner: undefined;
+  Vendor: undefined;
   Profile: undefined;
 };
 
@@ -105,6 +107,11 @@ export function RootNavigator() {
         name="Planner"
         component={PlannerScreen}
         options={{ headerTitle: 'My planner', tabBarLabel: 'Planner' }}
+      />
+      <Tab.Screen
+        name="Vendor"
+        component={VendorNavigator}
+        options={{ headerShown: false, tabBarLabel: 'Vendor' }}
       />
       <Tab.Screen
         name="Profile"
