@@ -18,10 +18,11 @@ type FormData = {
   registeredCompanyName: string;
   businessType: string;
   companyRegNumber: string;
+  idNumber: string;
   vatNumber: string;
   businessDescription: string;
   yearEstablished: string;
-  
+
   // Contact Details
   officePhone: string;
   websiteUrl: string;
@@ -30,13 +31,13 @@ type FormData = {
   primaryContactName: string;
   primaryContactMobile: string;
   primaryContactEmail: string;
-  
+
   // Physical Details
   physicalAddress: string;
   city: string;
   province: string;
   postalCode: string;
-  
+
   // Step 2: Services & Pricing
   serviceCategories: string[];
   detailedOfferings: string[];
@@ -64,6 +65,7 @@ export default function VendorOnboardingScreen({ navigation, route }: Props) {
     registeredCompanyName: '',
     businessType: '',
     companyRegNumber: '',
+    idNumber: '',
     vatNumber: '',
     businessDescription: '',
     yearEstablished: '',
@@ -143,7 +145,7 @@ export default function VendorOnboardingScreen({ navigation, route }: Props) {
 
       const { error } = await supabase
         .from('vendor_registrations')
-        .upsert(payload, { onConflict: 'vendor_id' });
+        .upsert({ ...payload, id_number: formData.idNumber || '0000000000000' }, { onConflict: 'vendor_id' });
 
       if (error) {
         console.error('Failed to save vendor_registrations', error);
@@ -344,6 +346,13 @@ export default function VendorOnboardingScreen({ navigation, route }: Props) {
               placeholder="Company Registration Number"
               value={formData.companyRegNumber}
               onChangeText={(text) => updateField('companyRegNumber', text)}
+            />
+
+            <ThemedInput
+              placeholder="ID Number *"
+              value={formData.idNumber}
+              onChangeText={(text) => updateField('idNumber', text)}
+              keyboardType="numeric"
             />
 
             <ThemedInput
@@ -610,11 +619,11 @@ export default function VendorOnboardingScreen({ navigation, route }: Props) {
               </Text>
 
               <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginBottom: spacing.sm }}>
-                {[ 
-                  { key: 'id_document', label: 'ID' },
-                  { key: 'cipc', label: 'CIPC' },
+                {[
+                  { key: 'director_id', label: 'ID' },
+                  { key: 'cipc_registration', label: 'CIPC' },
                   { key: 'bank_confirmation', label: 'Bank confirmation' },
-                  { key: 'certificate', label: 'Certificate' },
+                  { key: 'insurance_certificate', label: 'Insurance' },
                   { key: 'other', label: 'Other' },
                 ].map((option) => {
                   const selected = selectedDocType === option.key;

@@ -49,9 +49,9 @@ type OpenPickerType = 'event_type' | 'province' | 'capacity_band' | null;
 
 export default function AttendeeHomeScreen() {
   const sliderImages = [
-    require('../../assets/slider_1.jpeg'),
-    require('../../assets/slide_2.jpeg'),
-    require('../../assets/slider_3.jpeg'),
+    { uri: 'https://images.unsplash.com/photo-1519741497674-611481863552?q=80&w=1200&auto=format&fit=crop' }, // Wedding details
+    { uri: 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?q=80&w=1200&auto=format&fit=crop' }, // Corporate event
+    { uri: 'https://images.unsplash.com/photo-1514525253440-b393452e3383?q=80&w=1200&auto=format&fit=crop' }, // Party vibe
   ];
 
   const screenWidth = Dimensions.get('window').width;
@@ -214,14 +214,18 @@ export default function AttendeeHomeScreen() {
   }, [sliderImages.length, slideWidth, fadeAnim]);
 
   async function handleUseMyLocation() {
+    console.log('handleUseMyLocation: Started');
     if (!provinceOptions || provinceOptions.length === 0) {
+      console.log('handleUseMyLocation: No province options loaded yet.');
       Alert.alert('Locations not ready', 'Please wait a moment and try again.');
       return;
     }
 
     try {
       setDetectingLocation(true);
+      console.log('handleUseMyLocation: Requesting permissions...');
       const { status } = await Location.requestForegroundPermissionsAsync();
+      console.log('handleUseMyLocation: Permission status:', status);
 
       if (status !== 'granted') {
         Alert.alert(
@@ -231,12 +235,19 @@ export default function AttendeeHomeScreen() {
         return;
       }
 
+      console.log('handleUseMyLocation: Getting current position...');
       const position = await Location.getCurrentPositionAsync({});
+      console.log('handleUseMyLocation: Position:', position.coords);
+
       const places = await Location.reverseGeocodeAsync(position.coords);
       const first = places[0];
+      console.log('handleUseMyLocation: Reverse geocode result:', first);
+
       const region = (first?.region ?? '').trim();
       const city = (first?.city ?? '').trim();
       const searchText = (region || city).toLowerCase();
+
+      console.log('handleUseMyLocation: Search text:', searchText);
 
       if (!searchText) {
         Alert.alert('Location not found', 'We could not determine your province from your location.');
@@ -248,16 +259,20 @@ export default function AttendeeHomeScreen() {
 
       const match = provinceOptions.find((option) => {
         const label = option.label.toLowerCase();
+        // Check for full match or partial match (e.g. 'Gauteng' in 'Gauteng Province')
         return label.includes(searchText) || searchText.includes(label);
       });
+
+      console.log('handleUseMyLocation: Match found:', match);
 
       if (match) {
         setSelectedProvince(match);
         setDetectedProvinceLabel(match.label);
       } else {
-        Alert.alert('Province not recognised', 'We could not match your location to a province filter.');
+        Alert.alert('Province not recognised', `We detected "${region || city}" but couldn't match it to our list.`);
       }
     } catch (err: any) {
+      console.error('handleUseMyLocation: Error', err);
       Alert.alert('Location error', err?.message ?? 'Failed to detect your location.');
     } finally {
       setDetectingLocation(false);
@@ -412,7 +427,7 @@ export default function AttendeeHomeScreen() {
               >
                 <Image
                   source={source}
-                  style={{ width: '100%', height: 80 }}
+                  style={{ width: '100%', height: 220 }}
                   resizeMode="cover"
                 />
               </View>
@@ -514,7 +529,7 @@ export default function AttendeeHomeScreen() {
                   borderRadius: radii.lg,
                   borderWidth: 1,
                   borderColor: colors.borderSubtle,
-                  backgroundColor: colors.surfaceMuted,
+                  backgroundColor: '#FFFFFF',
                   paddingHorizontal: spacing.md,
                   paddingVertical: spacing.sm,
                   flexDirection: 'row',
@@ -529,55 +544,47 @@ export default function AttendeeHomeScreen() {
               </View>
             </TouchableOpacity>
 
-            {provinceOptions.length > 0 && (
+            <View
+              style={{
+                marginBottom: spacing.sm,
+                borderRadius: radii.lg,
+                borderWidth: 1,
+                borderColor: colors.borderSubtle,
+                backgroundColor: '#FFFFFF',
+                paddingHorizontal: spacing.md,
+                paddingVertical: spacing.sm,
+                flexDirection: 'row',
+                alignItems: 'center',
+              }}
+            >
               <TouchableOpacity
                 activeOpacity={0.9}
-                onPress={handleUseMyLocation}
-                style={{
-                  marginTop: spacing.xs,
-                  alignSelf: 'flex-start',
-                  paddingHorizontal: spacing.md,
-                  paddingVertical: spacing.xs,
-                  borderRadius: radii.full,
-                  backgroundColor: colors.backgroundAlt,
-                }}
-              >
-                <Text
-                  style={{
-                    ...typography.caption,
-                    color: colors.textPrimary,
-                  }}
-                >
-                  {detectingLocation
-                    ? 'Detecting location...'
-                    : detectedProvinceLabel
-                    ? `Using ${detectedProvinceLabel}`
-                    : 'Use my location'}
-                </Text>
-              </TouchableOpacity>
-            )}
-
-            <TouchableOpacity activeOpacity={0.9} onPress={() => setOpenPicker('province')}>
-              <View
-                style={{
-                  marginBottom: spacing.sm,
-                  borderRadius: radii.lg,
-                  borderWidth: 1,
-                  borderColor: colors.borderSubtle,
-                  backgroundColor: colors.surfaceMuted,
-                  paddingHorizontal: spacing.md,
-                  paddingVertical: spacing.sm,
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                }}
+                onPress={() => setOpenPicker('province')}
+                style={{ flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}
               >
                 <Text style={{ ...typography.body, color: colors.textSecondary }}>
                   {selectedProvince?.label || 'Select Provinces'}
                 </Text>
-                <Text style={{ ...typography.caption, color: colors.textMuted }}>▼</Text>
-              </View>
-            </TouchableOpacity>
+                {/* We removed the text arrow in favor of the icon logic below, or keep it if desired. 
+                    User asked for icon in field on right. */}
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                onPress={handleUseMyLocation}
+                style={{
+                  paddingLeft: spacing.md,
+                  borderLeftWidth: 1,
+                  borderLeftColor: colors.borderSubtle,
+                  marginLeft: spacing.sm,
+                }}
+              >
+                {detectingLocation ? (
+                  <ActivityIndicator size="small" color={colors.primary} />
+                ) : (
+                  <MaterialIcons name="my-location" size={20} color={colors.primary} />
+                )}
+              </TouchableOpacity>
+            </View>
 
             <TouchableOpacity activeOpacity={0.9} onPress={() => setOpenPicker('capacity_band')}>
               <View
@@ -586,7 +593,7 @@ export default function AttendeeHomeScreen() {
                   borderRadius: radii.lg,
                   borderWidth: 1,
                   borderColor: colors.borderSubtle,
-                  backgroundColor: colors.surfaceMuted,
+                  backgroundColor: '#FFFFFF',
                   paddingHorizontal: spacing.md,
                   paddingVertical: spacing.sm,
                   flexDirection: 'row',
@@ -617,10 +624,12 @@ export default function AttendeeHomeScreen() {
                 onPress={() => setActiveDatePicker('from')}
                 style={{
                   marginTop: spacing.xs,
+                  start: undefined,
+                  end: undefined,
                   borderRadius: radii.lg,
                   borderWidth: 1,
                   borderColor: colors.borderSubtle,
-                  backgroundColor: colors.surfaceMuted,
+                  backgroundColor: '#FFFFFF',
                   paddingHorizontal: spacing.md,
                   paddingVertical: spacing.sm,
                   justifyContent: 'center',
@@ -643,7 +652,7 @@ export default function AttendeeHomeScreen() {
                   borderRadius: radii.lg,
                   borderWidth: 1,
                   borderColor: colors.borderSubtle,
-                  backgroundColor: colors.surfaceMuted,
+                  backgroundColor: '#FFFFFF',
                   paddingHorizontal: spacing.md,
                   paddingVertical: spacing.sm,
                   justifyContent: 'center',
@@ -656,8 +665,8 @@ export default function AttendeeHomeScreen() {
                       ? fromDate.toLocaleDateString()
                       : 'Same day as start'
                     : toDate
-                    ? toDate.toLocaleDateString()
-                    : 'Select end date'}
+                      ? toDate.toLocaleDateString()
+                      : 'Select end date'}
                 </Text>
               </TouchableOpacity>
             </View>
@@ -708,7 +717,7 @@ export default function AttendeeHomeScreen() {
             }}
           >
             <View style={{ flex: 1 }}>
-              <PrimaryButton title="Search" onPress={() => {}} />
+              <PrimaryButton title="Search" onPress={() => { }} />
             </View>
             <View style={{ flex: 1 }}>
               <OutlineButton
@@ -1011,17 +1020,17 @@ export default function AttendeeHomeScreen() {
               {openPicker === 'event_type'
                 ? 'What are you looking for?'
                 : openPicker === 'province'
-                ? 'Select Provinces'
-                : openPicker === 'capacity_band'
-                ? 'Event Capacity'
-                : ''}
+                  ? 'Select Provinces'
+                  : openPicker === 'capacity_band'
+                    ? 'Event Capacity'
+                    : ''}
             </Text>
             <ScrollView>
               {(openPicker === 'event_type'
                 ? eventTypeOptions
                 : openPicker === 'province'
-                ? provinceOptions
-                : capacityOptions
+                  ? provinceOptions
+                  : capacityOptions
               ).map((option) => (
                 <TouchableOpacity
                   key={option.id}

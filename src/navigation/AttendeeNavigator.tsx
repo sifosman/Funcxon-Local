@@ -4,6 +4,7 @@ import AttendeeHomeScreen from '../screens/AttendeeHomeScreen';
 import VendorProfileScreen from '../screens/VendorProfileScreen';
 import QuoteRequestScreen from '../screens/QuoteRequestScreen';
 import PlannerScreen from '../screens/PlannerScreen';
+import MyShortlistScreen from '../screens/MyShortlistScreen';
 import { colors, typography } from '../theme';
 
 export type AttendeeStackParamList = {
@@ -11,6 +12,7 @@ export type AttendeeStackParamList = {
   VendorProfile: { vendorId: number };
   QuoteRequest: { vendorId: number; vendorName: string };
   Planner: undefined;
+  MyShortlist: undefined;
 };
 
 const Stack = createNativeStackNavigator<AttendeeStackParamList>();
@@ -48,6 +50,11 @@ export function AttendeeNavigator() {
         name="Planner"
         component={PlannerScreen}
         options={{ title: 'My planner (demo)' }}
+      />
+      <Stack.Screen
+        name="MyShortlist"
+        component={MyShortlistScreen}
+        options={{ title: 'My Favorites' }}
       />
     </Stack.Navigator>
   );

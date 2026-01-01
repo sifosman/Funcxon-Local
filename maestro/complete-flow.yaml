@@ -1,0 +1,81 @@
+# Complete Booking Flow Test Suite
+# Runs all tests in sequence
+
+appId: host.exp.exponent
+---
+# ========================================
+# PHASE 1: HOME SCREEN VERIFICATION
+# ========================================
+- launchApp
+- waitForAnimationToEnd
+
+# Verify home screen loaded
+- assertVisible: "What are you looking for?"
+
+# Test search
+- tapOn: "Search..."
+- inputText: "venue"
+- assertVisible: "Oceanview"
+- clearText
+- hideKeyboard
+- takeScreenshot: 01_home_search
+
+# ========================================
+# PHASE 2: VENDOR PROFILE & FAVORITES
+# ========================================
+- tapOn: "Oceanview Wedding Estate"
+- waitForAnimationToEnd
+- assertVisible: "Request a Quote"
+- takeScreenshot: 02_vendor_profile
+
+# Add to favorites
+- tapOn:
+    id: "favorite-button"
+- waitForAnimationToEnd
+
+# Check favorites list
+- tapOn: "Profile"
+- waitForAnimationToEnd
+- tapOn: "My Favorites"
+- waitForAnimationToEnd
+- assertVisible: "Oceanview Wedding Estate"
+- takeScreenshot: 03_favorites_list
+
+# ========================================
+# PHASE 3: PLANNER TASKS
+# ========================================
+- tapOn: "Planner"
+- waitForAnimationToEnd
+- assertVisible: "My Planner"
+
+# Add a task
+- tapOn:
+    id: "add-task-button"
+- waitForAnimationToEnd
+- tapOn: "Task title (e.g. Book DJ)"
+- inputText: "Test booking task"
+- hideKeyboard
+- tapOn: "Add Task"
+- waitForAnimationToEnd
+- assertVisible: "Test booking task"
+- takeScreenshot: 04_planner_task
+
+# ========================================
+# PHASE 4: QUOTE & BOOKING FLOW
+# ========================================
+- tapOn: "Quotes"
+- waitForAnimationToEnd
+- assertVisible: "Test User"
+- tapOn: "Test User"
+- waitForAnimationToEnd
+- takeScreenshot: 05_quote_detail
+
+# Accept quote (if not already accepted)
+- tapOn: "Accept Quote & Book"
+- waitForAnimationToEnd:
+    timeout: 10000
+- takeScreenshot: 06_payment_screen
+
+# ========================================
+# TEST COMPLETE
+# ========================================

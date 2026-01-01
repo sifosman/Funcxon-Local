@@ -1,0 +1,49 @@
+# Favorites/Shortlist Test Flow
+# Tests adding and removing vendors from favorites
+
+appId: host.exp.exponent
+---
+- launchApp
+- waitForAnimationToEnd
+
+# Navigate to Home and find a vendor
+- assertVisible: "What are you looking for?"
+
+# Click on first vendor card
+- tapOn: "Oceanview Wedding Estate"
+- waitForAnimationToEnd
+
+# Verify vendor profile loaded
+- assertVisible: "Request a Quote"
+
+# Tap favorite/heart button (look for heart icon area)
+- tapOn:
+    id: "favorite-button"
+- waitForAnimationToEnd
+
+# Navigate to Profile tab
+- tapOn: "Profile"
+- waitForAnimationToEnd
+
+# Navigate to My Favorites
+- tapOn: "My Favorites"
+- waitForAnimationToEnd
+
+# Verify vendor appears in favorites
+- assertVisible: "Oceanview Wedding Estate"
+
+# Take screenshot
+- takeScreenshot: favorites_test
+
+# Tap on vendor to go back to profile
+- tapOn: "Oceanview Wedding Estate"
+- waitForAnimationToEnd
+
+# Unfavorite the vendor
+- tapOn:
+    id: "favorite-button"
+- waitForAnimationToEnd
+
+# Go back and verify removed
+- back
+- assertNotVisible: "Oceanview Wedding Estate"

@@ -37,7 +37,7 @@ export default function QuoteRequestScreen({ route, navigation }: Props) {
       }
 
       const demoUser = userRows?.[0];
-      const userId = demoUser?.id ?? null;
+      const userId = demoUser?.id ?? 6;
 
       const { error: insertError } = await supabase.from('quote_requests').insert({
         vendor_id: vendorId,

@@ -1,11 +1,14 @@
-import { ActivityIndicator, ScrollView, Text, View } from 'react-native';
-import { useQuery } from '@tanstack/react-query';
+import { ActivityIndicator, ScrollView, Text, View, TouchableOpacity, Alert } from 'react-native';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 
 import { supabase } from '../lib/supabaseClient';
 import type { AttendeeStackParamList } from '../navigation/AttendeeNavigator';
 import { colors, spacing, radii, typography } from '../theme';
+
 import { PrimaryButton } from '../components/ui';
+import { MaterialIcons } from '@expo/vector-icons';
+import { ShortlistService } from '../services/ShortlistService';
 
 type Props = NativeStackScreenProps<AttendeeStackParamList, 'VendorProfile'>;
 
@@ -55,6 +58,23 @@ type Review = {
 
 export default function VendorProfileScreen({ route, navigation }: Props) {
   const { vendorId } = route.params;
+  const queryClient = useQueryClient();
+
+  const { data: isShortlisted } = useQuery({
+    queryKey: ['shortlist-status', vendorId],
+    queryFn: () => ShortlistService.isShortlisted(vendorId),
+  });
+
+  const toggleShortlistMutation = useMutation({
+    mutationFn: () => ShortlistService.toggleShortlist(vendorId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['shortlist-status', vendorId] });
+      queryClient.invalidateQueries({ queryKey: ['shortlist'] }); // Refresh list if looking at it
+    },
+    onError: (err: any) => {
+      Alert.alert('Error', err.message || 'Failed to update shortlist');
+    },
+  });
 
   const {
     data: vendor,
@@ -244,6 +264,22 @@ export default function VendorProfileScreen({ route, navigation }: Props) {
         >
           {name}
         </Text>
+        <TouchableOpacity
+          onPress={() => toggleShortlistMutation.mutate()}
+          disabled={toggleShortlistMutation.isPending}
+          style={{
+            position: 'absolute',
+            top: spacing.md,
+            right: spacing.md,
+            padding: spacing.sm
+          }}
+        >
+          <MaterialIcons
+            name={isShortlisted ? "favorite" : "favorite-border"}
+            size={28}
+            color={isShortlisted ? colors.primary : colors.textMuted}
+          />
+        </TouchableOpacity>
         {averageRating !== null && (
           <Text
             style={{

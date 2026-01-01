@@ -1,0 +1,51 @@
+# Planner Test Flow
+# Tests task creation in the planner feature
+
+appId: host.exp.exponent
+---
+- launchApp
+- waitForAnimationToEnd
+
+# Navigate to Planner tab
+- tapOn: "Planner"
+- waitForAnimationToEnd
+
+# Verify planner screen loaded
+- assertVisible: "My Planner"
+
+# Tap add task button (+ icon)
+- tapOn:
+    id: "add-task-button"
+- waitForAnimationToEnd
+
+# Verify modal appeared
+- assertVisible: "New Task"
+
+# Enter task title
+- tapOn: "Task title (e.g. Book DJ)"
+- inputText: "Book wedding DJ"
+- hideKeyboard
+
+# Submit task
+- tapOn: "Add Task"
+- waitForAnimationToEnd
+
+# Verify task appears in list
+- assertVisible: "Book wedding DJ"
+- assertVisible: "pending"
+
+# Add another task
+- tapOn:
+    id: "add-task-button"
+- waitForAnimationToEnd
+- tapOn: "Task title (e.g. Book DJ)"
+- inputText: "Confirm venue deposit"
+- hideKeyboard
+- tapOn: "Add Task"
+- waitForAnimationToEnd
+
+# Verify second task
+- assertVisible: "Confirm venue deposit"
+
+# Take screenshot
+- takeScreenshot: planner_test

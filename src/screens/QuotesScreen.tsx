@@ -37,7 +37,7 @@ export default function QuotesScreen() {
         throw userError;
       }
 
-      const demoUser = userRows?.[0];
+      const demoUser = userRows?.[0] ?? { id: 6 };
 
       if (!demoUser) {
         return [];
@@ -157,16 +157,83 @@ export default function QuotesScreen() {
                 borderColor: colors.borderSubtle,
               }}
             >
-            <Text
-              style={{
-                ...typography.body,
-                color: colors.textPrimary,
-                fontWeight: '600',
-              }}
-            >
-              {item.name ?? 'Unnamed enquiry'}
-            </Text>
-            {item.event_type && (
+              <Text
+                style={{
+                  ...typography.body,
+                  color: colors.textPrimary,
+                  fontWeight: '600',
+                }}
+              >
+                {item.name ?? 'Unnamed enquiry'}
+              </Text>
+              {item.event_type && (
+                <Text
+                  style={{
+                    ...typography.caption,
+                    color: colors.textSecondary,
+                    marginTop: spacing.xs,
+                  }}
+                >
+                  Event type: {item.event_type}
+                </Text>
+              )}
+              {item.email && (
+                <Text
+                  style={{
+                    ...typography.caption,
+                    color: colors.textSecondary,
+                    marginTop: spacing.xs,
+                  }}
+                >
+                  {item.email}
+                </Text>
+              )}
+              {(item.event_date || item.created_at) && (
+                <Text
+                  style={{
+                    ...typography.caption,
+                    color: colors.textSecondary,
+                    marginTop: spacing.xs,
+                  }}
+                >
+                  Requested for:{' '}
+                  {new Date(item.event_date || item.created_at || '').toLocaleDateString()}
+                </Text>
+              )}
+              {item.budget && (
+                <Text
+                  style={{
+                    ...typography.caption,
+                    color: colors.textSecondary,
+                    marginTop: spacing.xs,
+                  }}
+                >
+                  Budget: {item.budget}
+                </Text>
+              )}
+              {typeof item.quote_amount === 'number' && (
+                <Text
+                  style={{
+                    ...typography.caption,
+                    color: colors.textSecondary,
+                    marginTop: spacing.xs,
+                  }}
+                >
+                  Quoted amount: {item.quote_amount.toLocaleString()}
+                </Text>
+              )}
+              {item.details && (
+                <Text
+                  style={{
+                    ...typography.caption,
+                    color: colors.textSecondary,
+                    marginTop: spacing.xs,
+                  }}
+                  numberOfLines={3}
+                >
+                  {item.details}
+                </Text>
+              )}
               <Text
                 style={{
                   ...typography.caption,
@@ -174,75 +241,8 @@ export default function QuotesScreen() {
                   marginTop: spacing.xs,
                 }}
               >
-                Event type: {item.event_type}
+                Status: {item.status ?? 'pending'}
               </Text>
-            )}
-            {item.email && (
-              <Text
-                style={{
-                  ...typography.caption,
-                  color: colors.textSecondary,
-                  marginTop: spacing.xs,
-                }}
-              >
-                {item.email}
-              </Text>
-            )}
-            {(item.event_date || item.created_at) && (
-              <Text
-                style={{
-                  ...typography.caption,
-                  color: colors.textSecondary,
-                  marginTop: spacing.xs,
-                }}
-              >
-                Requested for:{' '}
-                {new Date(item.event_date || item.created_at || '').toLocaleDateString()}
-              </Text>
-            )}
-            {item.budget && (
-              <Text
-                style={{
-                  ...typography.caption,
-                  color: colors.textSecondary,
-                  marginTop: spacing.xs,
-                }}
-              >
-                Budget: {item.budget}
-              </Text>
-            )}
-            {typeof item.quote_amount === 'number' && (
-              <Text
-                style={{
-                  ...typography.caption,
-                  color: colors.textSecondary,
-                  marginTop: spacing.xs,
-                }}
-              >
-                Quoted amount: {item.quote_amount.toLocaleString()}
-              </Text>
-            )}
-            {item.details && (
-              <Text
-                style={{
-                  ...typography.caption,
-                  color: colors.textSecondary,
-                  marginTop: spacing.xs,
-                }}
-                numberOfLines={3}
-              >
-                {item.details}
-              </Text>
-            )}
-            <Text
-              style={{
-                ...typography.caption,
-                color: colors.textSecondary,
-                marginTop: spacing.xs,
-              }}
-            >
-              Status: {item.status ?? 'pending'}
-            </Text>
               {item.vendor_id && (
                 <Text
                   style={{

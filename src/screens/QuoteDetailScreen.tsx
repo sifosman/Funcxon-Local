@@ -1,11 +1,12 @@
-import { ActivityIndicator, ScrollView, Text, View } from 'react-native';
-import { useRoute } from '@react-navigation/native';
+import { ActivityIndicator, ScrollView, Text, View, Alert } from 'react-native';
+import { useRoute, useNavigation } from '@react-navigation/native';
 import type { RouteProp } from '@react-navigation/native';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
 import { supabase } from '../lib/supabaseClient';
 import { colors, spacing, radii, typography } from '../theme';
 import type { QuotesStackParamList } from '../navigation/QuotesNavigator';
+import { PrimaryButton } from '../components/ui';
 
 type QuoteRequest = {
   id: number;
@@ -19,6 +20,7 @@ type QuoteRequest = {
   budget?: string | null;
   quote_amount?: number | null;
   created_at?: string | null;
+  user_id?: number | null;
 };
 
 type VendorSummary = {
@@ -39,6 +41,8 @@ type QuoteDetailData = {
 export default function QuoteDetailScreen() {
   const route = useRoute<RouteProp<QuotesStackParamList, 'QuoteDetail'>>();
   const { quoteId } = route.params;
+  const navigation = useNavigation();
+  const queryClient = useQueryClient();
 
   const { data, isLoading, error } = useQuery<QuoteDetailData | null>({
     queryKey: ['quote-detail', quoteId],
@@ -46,7 +50,7 @@ export default function QuoteDetailScreen() {
       const { data: quoteRows, error: quoteError } = await supabase
         .from('quote_requests')
         .select(
-          'id, vendor_id, name, email, status, details, event_type, event_date, budget, quote_amount, created_at',
+          'id, vendor_id, name, email, status, details, event_type, event_date, budget, quote_amount, created_at, user_id',
         )
         .eq('id', quoteId)
         .limit(1);
@@ -76,6 +80,75 @@ export default function QuoteDetailScreen() {
 
       return { quote, vendor };
     },
+  });
+
+  const handleBookQuote = useMutation({
+    mutationFn: async () => {
+      console.log('Starting quote booking process...');
+      if (!data?.quote) throw new Error('Quote data missing');
+
+      console.log('Updating quote status to accepted...');
+      // 1. Update quote status
+      const { error: updateError } = await supabase
+        .from('quote_requests')
+        .update({ status: 'accepted' })
+        .eq('id', quoteId);
+
+      if (updateError) {
+        console.error('Failed to update quote status:', updateError);
+        throw updateError;
+      }
+
+      console.log('Creating booking deposit...');
+      // 2. Create booking deposit record (pending)
+      // We must insert and get the ID back to pass to PayFast
+      const { data: depositData, error: depositError } = await supabase
+        .from('booking_deposits')
+        .insert({
+          vendor_id: data.quote.vendor_id,
+          user_id: data.quote.user_id,
+          quote_request_id: quoteId,
+          amount: data.quote.quote_amount || 0,
+          payment_status: 'pending'
+        })
+        .select('id')
+        .single();
+
+      if (depositError) {
+        console.error('Failed to create deposit:', depositError);
+        throw depositError;
+      }
+
+      console.log('Generating PayFast URL...');
+      // 3. Generate PayFast URL
+      const { PayfastService } = require('../services/PayfastService');
+      const paymentUrl = await PayfastService.generatePaymentUrl({
+        amount: data.quote.quote_amount || 0,
+        item_name: `Booking Quote #${quoteId}`,
+        email_address: data.quote.email || 'customer@vibeventz.app',
+        m_payment_id: String(depositData.id)
+      });
+
+      console.log('PayFast URL generated:', paymentUrl);
+      return { paymentUrl, depositId: depositData.id };
+    },
+    onSuccess: (result) => {
+      console.log('Mutation success, navigating to payment...');
+      if (result) {
+        queryClient.invalidateQueries({ queryKey: ['quote-detail', quoteId] });
+        queryClient.invalidateQueries({ queryKey: ['quotes-list'] });
+
+        // @ts-ignore
+        navigation.navigate('Payment', {
+          paymentUrl: result.paymentUrl,
+          depositId: result.depositId
+        });
+      }
+    },
+    onError: (err) => {
+      console.error('Booking mutation error:', err);
+      Alert.alert('Booking Failed', err.message || 'An unexpected error occurred. Please try again.');
+    }
   });
 
   if (isLoading) {
@@ -295,6 +368,29 @@ export default function QuoteDetailScreen() {
           </Text>
         )}
       </View>
+
+      {quote.status !== 'accepted' && quote.status !== 'booked' && (
+        <View style={{ marginTop: spacing.md, paddingBottom: spacing.xl }}>
+          <PrimaryButton
+            title={handleBookQuote.isPending ? "Processing..." : "Accept Quote & Book"}
+            onPress={() => handleBookQuote.mutate()}
+            disabled={handleBookQuote.isPending}
+          />
+          {handleBookQuote.isPending && (
+            <View style={{ alignItems: 'center', marginTop: spacing.sm }}>
+              <ActivityIndicator size="small" color={colors.primary} />
+              <Text style={{ textAlign: 'center', marginTop: spacing.xs, color: colors.textMuted }}>
+                Processing your booking...
+              </Text>
+            </View>
+          )}
+          {handleBookQuote.isError && (
+            <Text style={{ textAlign: 'center', marginTop: spacing.sm, color: colors.primaryTeal }}>
+              Failed to process booking. Please try again.
+            </Text>
+          )}
+        </View>
+      )}
     </ScrollView>
   );
 }

@@ -1,8 +1,12 @@
-import { ActivityIndicator, FlatList, Text, View } from 'react-native';
-import { useQuery } from '@tanstack/react-query';
+import { useState } from 'react';
+import { ActivityIndicator, FlatList, Text, TextInput, TouchableOpacity, View, Alert, Modal } from 'react-native';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { MaterialIcons } from '@expo/vector-icons';
 
 import { supabase } from '../lib/supabaseClient';
 import { colors, spacing, radii, typography } from '../theme';
+import { useAuth } from '../auth/AuthContext';
+import { PrimaryButton } from '../components/ui';
 
 type Task = {
   id: number;
@@ -12,170 +16,180 @@ type Task = {
 };
 
 export default function PlannerScreen() {
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
+  const [isModalVisible, setIsModalVisible] = useState(false);
+  const [newTaskTitle, setNewTaskTitle] = useState('');
+  const [newTaskDate, setNewTaskDate] = useState(new Date().toISOString().split('T')[0]);
+
   const { data, isLoading, error } = useQuery<Task[]>({
-    queryKey: ['planner-tasks'],
+    queryKey: ['planner-tasks', user?.id],
     queryFn: async () => {
-      // For this demo, pull tasks for the demo_attendee user if present.
-      const { data: userRows, error: userError } = await supabase
+      if (!user) return [];
+
+      // 1. Get the integer user ID from the 'users' table using the Auth ID
+      const { data: userRow, error: userError } = await supabase
         .from('users')
-        .select('id, username')
-        .eq('username', 'demo_attendee')
-        .limit(1);
+        .select('id')
+        .eq('auth_user_id', user.id)
+        .single();
 
-      if (userError) {
-        throw userError;
-      }
+      if (userError || !userRow) throw new Error('User not found');
 
-      const demoUser = userRows?.[0];
-
-      if (!demoUser) {
-        return [];
-      }
-
-      const { data: tasks, error: tasksError } = await supabase
+      // 2. Fetch tasks for this user
+      const { data: tasks, error: fetchError } = await supabase
         .from('tasks')
-        .select('id, title, status, due_date')
-        .eq('user_id', demoUser.id)
-        .order('due_date', { ascending: true })
-        .limit(50);
+        .select('*')
+        .eq('user_id', userRow.id)
+        .order('due_date', { ascending: true });
 
-      if (tasksError) {
-        throw tasksError;
-      }
-
-      return (tasks as Task[]) ?? [];
+      if (fetchError) throw fetchError;
+      return tasks ?? [];
     },
+    enabled: !!user,
+  });
+
+  const addTaskMutation = useMutation({
+    mutationFn: async (title: string) => {
+      const { data: userRow } = await supabase
+        .from('users')
+        .select('id')
+        .eq('auth_user_id', user?.id)
+        .single();
+
+      if (!userRow) throw new Error('User not found');
+
+      const { error } = await supabase
+        .from('tasks')
+        .insert({
+          user_id: userRow.id,
+          title: title,
+          status: 'pending',
+          due_date: newTaskDate
+        });
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['planner-tasks'] });
+      setIsModalVisible(false);
+      setNewTaskTitle('');
+      Alert.alert('Success', 'Task added to your planner');
+    },
+    onError: (err) => {
+      Alert.alert('Error', err.message);
+    }
   });
 
   if (isLoading) {
     return (
-      <View
-        style={{
-          flex: 1,
-          alignItems: 'center',
-          justifyContent: 'center',
-          backgroundColor: colors.background,
-        }}
-      >
-        <ActivityIndicator />
-      </View>
-    );
-  }
-
-  if (error instanceof Error) {
-    return (
-      <View
-        style={{
-          flex: 1,
-          paddingHorizontal: spacing.lg,
-          paddingVertical: spacing.lg,
-          justifyContent: 'center',
-          backgroundColor: colors.background,
-        }}
-      >
-        <Text style={{ ...typography.titleMedium, color: colors.textPrimary }}>Failed to load planner tasks.</Text>
-        <Text style={{ marginTop: spacing.sm, ...typography.body, color: colors.textMuted }}>{error.message}</Text>
-      </View>
-    );
-  }
-
-  if (!data || data.length === 0) {
-    return (
-      <View
-        style={{
-          flex: 1,
-          paddingHorizontal: spacing.lg,
-          paddingVertical: spacing.lg,
-          justifyContent: 'center',
-          backgroundColor: colors.background,
-        }}
-      >
-        <Text style={{ textAlign: 'center', ...typography.body, color: colors.textPrimary }}>
-          No tasks yet for the demo planner.
-        </Text>
-        <Text
-          style={{
-            textAlign: 'center',
-            marginTop: spacing.sm,
-            ...typography.body,
-            color: colors.textMuted,
-          }}
-        >
-          Add a few rows into the tasks table for the demo_attendee user to see them here.
-        </Text>
+      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.background }}>
+        <ActivityIndicator size="large" color={colors.primary} />
       </View>
     );
   }
 
   return (
-    <View
-      style={{
-        flex: 1,
-        paddingHorizontal: spacing.lg,
-        paddingVertical: spacing.lg,
-        backgroundColor: colors.background,
-      }}
-    >
-      <Text
-        style={{
-          ...typography.titleMedium,
-          color: colors.textPrimary,
-          marginBottom: spacing.md,
-        }}
-      >
-        My planner tasks (demo)
-      </Text>
+    <View style={{ flex: 1, backgroundColor: colors.background }}>
+      <View style={{ padding: spacing.lg, paddingBottom: spacing.sm }}>
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+          <Text style={{ ...typography.titleMedium, color: colors.textPrimary }}>
+            My Planner
+          </Text>
+          <TouchableOpacity onPress={() => setIsModalVisible(true)}>
+            <MaterialIcons name="add-circle" size={32} color={colors.primary} />
+          </TouchableOpacity>
+        </View>
+        <Text style={{ ...typography.body, color: colors.textSecondary, marginTop: spacing.xs }}>
+          Keep track of your wedding to-dos.
+        </Text>
+      </View>
 
-      <FlatList
-        data={data}
-        keyExtractor={(item) => String(item.id)}
-        contentContainerStyle={{ paddingBottom: spacing.xl }}
-        renderItem={({ item }) => {
-          const due = item.due_date ? new Date(item.due_date).toLocaleDateString() : 'No due date';
-
-          return (
+      {!data || data.length === 0 ? (
+        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: spacing.lg }}>
+          <MaterialIcons name="event-note" size={48} color={colors.borderSubtle} />
+          <Text style={{ ...typography.body, color: colors.textMuted, marginTop: spacing.md, textAlign: 'center' }}>
+            No tasks yet. Tap the + button to add your first to-do!
+          </Text>
+        </View>
+      ) : (
+        <FlatList
+          data={data}
+          keyExtractor={(item) => String(item.id)}
+          contentContainerStyle={{ padding: spacing.lg, paddingTop: spacing.sm }}
+          renderItem={({ item }) => (
             <View
               style={{
-                paddingVertical: spacing.md,
-                paddingHorizontal: spacing.md,
+                padding: spacing.md,
                 borderRadius: radii.lg,
                 backgroundColor: colors.surface,
                 borderWidth: 1,
                 borderColor: colors.borderSubtle,
                 marginBottom: spacing.sm,
+                flexDirection: 'row',
+                justifyContent: 'space-between',
+                alignItems: 'center'
               }}
             >
-              <Text
-                style={{
-                  ...typography.body,
-                  color: colors.textPrimary,
-                  fontWeight: '600',
-                }}
-              >
-                {item.title}
-              </Text>
-              <Text
-                style={{
-                  ...typography.caption,
-                  color: colors.textSecondary,
-                  marginTop: spacing.xs,
-                }}
-              >
-                Status: {item.status ?? 'unknown'}
-              </Text>
-              <Text
-                style={{
-                  ...typography.caption,
-                  color: colors.textSecondary,
-                  marginTop: spacing.xs,
-                }}
-              >
-                Due: {due}
-              </Text>
+              <View>
+                <Text style={{ ...typography.body, color: colors.textPrimary, fontWeight: '600' }}>
+                  {item.title}
+                </Text>
+                <Text style={{ ...typography.caption, color: colors.textSecondary, marginTop: spacing.xs }}>
+                  Due: {item.due_date ? new Date(item.due_date).toLocaleDateString() : 'No date'}
+                </Text>
+              </View>
+              <View style={{ paddingHorizontal: spacing.sm, paddingVertical: spacing.xs, borderRadius: radii.full, backgroundColor: item.status === 'completed' ? colors.primary : colors.surfaceMuted }}>
+                <Text style={{ ...typography.caption, color: item.status === 'completed' ? '#FFF' : colors.textPrimary }}>
+                  {item.status}
+                </Text>
+              </View>
             </View>
-          );
-        }}
-      />
+          )}
+        />
+      )}
+
+      <Modal
+        visible={isModalVisible}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setIsModalVisible(false)}
+      >
+        <View style={{ flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.5)' }}>
+          <View style={{ backgroundColor: colors.surface, borderTopLeftRadius: radii.xl, borderTopRightRadius: radii.xl, padding: spacing.lg }}>
+            <Text style={{ ...typography.titleMedium, marginBottom: spacing.md }}>New Task</Text>
+
+            <TextInput
+              placeholder="Task title (e.g. Book DJ)"
+              value={newTaskTitle}
+              onChangeText={setNewTaskTitle}
+              autoFocus
+              style={{
+                borderWidth: 1,
+                borderColor: colors.borderSubtle,
+                borderRadius: radii.md,
+                padding: spacing.md,
+                marginBottom: spacing.md,
+                ...typography.body
+              }}
+            />
+
+            <PrimaryButton
+              title={addTaskMutation.isPending ? "Adding..." : "Add Task"}
+              onPress={() => {
+                if (newTaskTitle.trim()) addTaskMutation.mutate(newTaskTitle);
+              }}
+            />
+
+            <TouchableOpacity
+              style={{ marginTop: spacing.md, alignItems: 'center' }}
+              onPress={() => setIsModalVisible(false)}
+            >
+              <Text style={{ ...typography.body, color: colors.textMuted }}>Cancel</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }

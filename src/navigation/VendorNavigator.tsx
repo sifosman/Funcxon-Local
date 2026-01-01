@@ -5,6 +5,7 @@ import VendorOnboardingScreen from '../screens/VendorOnboardingScreen';
 import VendorTagSelectionScreen from '../screens/VendorTagSelectionScreen';
 import VendorCatalogScreen from '../screens/VendorCatalogScreen';
 import VendorCatalogItemFormScreen from '../screens/VendorCatalogItemFormScreen';
+import VendorBookingsScreen from '../screens/VendorBookingsScreen';
 
 export type VendorStackParamList = {
   VendorDashboard: undefined;
@@ -12,6 +13,7 @@ export type VendorStackParamList = {
   VendorTagSelection: { vendorId: number };
   VendorCatalog: undefined;
   VendorCatalogItemForm: { itemId?: number };
+  VendorBookings: undefined;
 };
 
 const Stack = createNativeStackNavigator<VendorStackParamList>();
@@ -54,6 +56,11 @@ export default function VendorNavigator() {
         name="VendorCatalogItemForm"
         component={VendorCatalogItemFormScreen}
         options={{ title: 'Add/Edit Item' }}
+      />
+      <Stack.Screen
+        name="VendorBookings"
+        component={VendorBookingsScreen}
+        options={{ title: 'Bookings & Deposits' }}
       />
     </Stack.Navigator>
   );

@@ -7,6 +7,7 @@ import { colors } from '../theme';
 export type QuotesStackParamList = {
   QuotesList: undefined;
   QuoteDetail: { quoteId: number };
+  Payment: { paymentUrl: string; depositId: number };
 };
 
 const Stack = createNativeStackNavigator<QuotesStackParamList>();
@@ -34,6 +35,11 @@ export function QuotesNavigator() {
         name="QuoteDetail"
         component={QuoteDetailScreen}
         options={{ title: 'Quote details' }}
+      />
+      <Stack.Screen
+        name="Payment"
+        component={require('../screens/PaymentScreen').default}
+        options={{ title: 'Secure Payment' }}
       />
     </Stack.Navigator>
   );

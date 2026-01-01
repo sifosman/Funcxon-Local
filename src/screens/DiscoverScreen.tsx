@@ -77,6 +77,74 @@ export default function DiscoverScreen() {
     },
   });
 
+  const query = search.trim().toLowerCase();
+
+  const classifyCategory = (item: VendorListItem): CategoryFilter => {
+    const name = (item.name ?? '').toLowerCase();
+
+    if (name.includes('venue') || name.includes('hall') || name.includes('hotel')) {
+      return 'venues';
+    }
+
+    if (name.includes('cater') || name.includes('food') || name.includes('chef')) {
+      return 'catering';
+    }
+
+    if (name.includes('photo') || name.includes('video') || name.includes('film')) {
+      return 'photography';
+    }
+
+    return 'other';
+  };
+
+  const getPriceValue = (priceRange?: string | null): number => {
+    if (!priceRange) return Number.MAX_SAFE_INTEGER;
+    const match = priceRange.match(/\d+/);
+    return match ? parseInt(match[0], 10) : Number.MAX_SAFE_INTEGER;
+  };
+
+  const filtered = useMemo(() => {
+    if (!data) return [];
+    return data.filter((item) => {
+      const name = (item.name ?? '').toLowerCase();
+      const matchesSearch = !query || name.includes(query);
+
+      const matchesRating =
+        minRating == null || (typeof item.rating === 'number' && item.rating >= minRating);
+
+      const matchesPrice = !onlyWithPrice || !!item.price_range;
+
+      const itemCategory = classifyCategory(item);
+      const matchesCategory = category === 'all' || category === itemCategory;
+
+      return matchesSearch && matchesRating && matchesPrice && matchesCategory;
+    });
+  }, [data, query, minRating, onlyWithPrice, category]);
+
+  const sorted = useMemo(() => {
+    if (sortBy === 'default') return filtered;
+
+    return [...filtered].sort((a, b) => {
+      if (sortBy === 'rating-desc') {
+        const ar = typeof a.rating === 'number' ? a.rating : 0;
+        const br = typeof b.rating === 'number' ? b.rating : 0;
+        return br - ar;
+      }
+
+      if (sortBy === 'reviews-desc') {
+        const ac = typeof a.review_count === 'number' ? a.review_count : 0;
+        const bc = typeof b.review_count === 'number' ? b.review_count : 0;
+        return bc - ac;
+      }
+
+      if (sortBy === 'price-asc') {
+        return getPriceValue(a.price_range) - getPriceValue(b.price_range);
+      }
+
+      return 0;
+    });
+  }, [filtered, sortBy]);
+
   if (isLoading) {
     return (
       <View
@@ -136,101 +204,6 @@ export default function DiscoverScreen() {
       </View>
     );
   }
-
-  if (!data || data.length === 0) {
-    return (
-      <View
-        style={{
-          flex: 1,
-          paddingHorizontal: spacing.lg,
-          paddingVertical: spacing.lg,
-          justifyContent: 'center',
-          backgroundColor: colors.background,
-        }}
-      >
-        <Text style={{ textAlign: 'center', ...typography.body, color: colors.textPrimary }}>
-          No vendors available yet.
-        </Text>
-        <Text
-          style={{
-            textAlign: 'center',
-            marginTop: spacing.sm,
-            ...typography.body,
-            color: colors.textMuted,
-          }}
-        >
-          Add a few vendors in Supabase to see them featured here.
-        </Text>
-      </View>
-    );
-  }
-
-  const query = search.trim().toLowerCase();
-
-  const classifyCategory = (item: VendorListItem): CategoryFilter => {
-    const name = (item.name ?? '').toLowerCase();
-
-    if (name.includes('venue') || name.includes('hall') || name.includes('hotel')) {
-      return 'venues';
-    }
-
-    if (name.includes('cater') || name.includes('food') || name.includes('chef')) {
-      return 'catering';
-    }
-
-    if (name.includes('photo') || name.includes('video') || name.includes('film')) {
-      return 'photography';
-    }
-
-    return 'other';
-  };
-
-  const getPriceValue = (priceRange?: string | null): number => {
-    if (!priceRange) return Number.MAX_SAFE_INTEGER;
-    const match = priceRange.match(/\d+/);
-    return match ? parseInt(match[0], 10) : Number.MAX_SAFE_INTEGER;
-  };
-
-  const filtered = useMemo(() => {
-    return data.filter((item) => {
-      const name = (item.name ?? '').toLowerCase();
-      const matchesSearch = !query || name.includes(query);
-
-      const matchesRating =
-        minRating == null || (typeof item.rating === 'number' && item.rating >= minRating);
-
-      const matchesPrice = !onlyWithPrice || !!item.price_range;
-
-      const itemCategory = classifyCategory(item);
-      const matchesCategory = category === 'all' || category === itemCategory;
-
-      return matchesSearch && matchesRating && matchesPrice && matchesCategory;
-    });
-  }, [data, query, minRating, onlyWithPrice, category]);
-
-  const sorted = useMemo(() => {
-    if (sortBy === 'default') return filtered;
-
-    return [...filtered].sort((a, b) => {
-      if (sortBy === 'rating-desc') {
-        const ar = typeof a.rating === 'number' ? a.rating : 0;
-        const br = typeof b.rating === 'number' ? b.rating : 0;
-        return br - ar;
-      }
-
-      if (sortBy === 'reviews-desc') {
-        const ac = typeof a.review_count === 'number' ? a.review_count : 0;
-        const bc = typeof b.review_count === 'number' ? b.review_count : 0;
-        return bc - ac;
-      }
-
-      if (sortBy === 'price-asc') {
-        return getPriceValue(a.price_range) - getPriceValue(b.price_range);
-      }
-
-      return 0;
-    });
-  }, [filtered, sortBy]);
 
   return (
     <ScrollView

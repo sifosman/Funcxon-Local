@@ -1,0 +1,40 @@
+# Booking Flow Test
+# Tests the complete quote acceptance and booking flow
+
+appId: host.exp.exponent
+---
+- launchApp
+- waitForAnimationToEnd
+
+# Navigate to Quotes tab
+- tapOn: "Quotes"
+- waitForAnimationToEnd
+
+# Look for the priced quote (Test User with R45,000)
+- assertVisible: "Test User"
+
+# Tap on the quote to view details
+- tapOn: "Test User"
+- waitForAnimationToEnd
+
+# Verify quote detail screen
+- assertVisible: "Quote details"
+- assertVisible: "45,000"
+
+# Look for Accept button (should be visible for priced quotes)
+- assertVisible: "Accept Quote & Book"
+
+# Take screenshot before accepting
+- takeScreenshot: quote_detail_before_accept
+
+# Accept the quote
+- tapOn: "Accept Quote & Book"
+- waitForAnimationToEnd:
+    timeout: 10000
+
+# Verify payment screen loaded (PayFast)
+# The WebView should show PayFast content
+- takeScreenshot: payment_screen
+
+# Go back without completing payment
+- back

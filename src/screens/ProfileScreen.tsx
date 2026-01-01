@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Alert, ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { colors, spacing, radii, typography } from '../theme';
 import { useAuth } from '../auth/AuthContext';
@@ -7,6 +8,7 @@ import { useAuth } from '../auth/AuthContext';
 export default function ProfileScreen() {
   const [menuOpen, setMenuOpen] = useState(false);
   const { signOut } = useAuth();
+  const navigation = useNavigation();
 
   const toggleMenu = () => {
     setMenuOpen((prev) => !prev);
@@ -126,6 +128,7 @@ export default function ProfileScreen() {
           >
             {[
               { label: 'Quotes', icon: 'request-quote' as const },
+              { label: 'Favorites', icon: 'favorite' as const },
               { label: 'My events', icon: 'event' as const },
               { label: 'Settings', icon: 'settings' as const },
               { label: 'Sign out', icon: 'logout' as const },
@@ -143,7 +146,18 @@ export default function ProfileScreen() {
                     if (error) {
                       Alert.alert('Sign out failed', error.message);
                     }
+                    if (error) {
+                      Alert.alert('Sign out failed', error.message);
+                    }
                     setMenuOpen(false);
+                  } else if (item.label === 'Favorites') {
+                    setMenuOpen(false);
+                    // @ts-ignore - navigation types are tricky across navigators
+                    navigation.navigate('Home', { screen: 'MyShortlist' });
+                  } else if (item.label === 'Quotes') {
+                    setMenuOpen(false);
+                    // @ts-ignore
+                    navigation.navigate('Quotes');
                   }
                 }}
               >

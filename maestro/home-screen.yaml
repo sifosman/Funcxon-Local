@@ -1,0 +1,34 @@
+# Home Screen Test Flow
+# Tests the enhanced home screen with slider, search, and location features
+
+appId: host.exp.exponent
+---
+# Wait for app to load
+- launchApp
+- waitForAnimationToEnd
+
+# Verify home screen loaded
+- assertVisible: "What are you looking for?"
+
+# Test search functionality
+- tapOn: "Search..."
+- inputText: "venue"
+- assertVisible: "Oceanview Wedding Estate"
+- clearText
+- hideKeyboard
+
+# Test event type dropdown
+- tapOn: "What are you looking for?"
+- assertVisible: "Wedding"
+- tapOn: "Wedding"
+
+# Verify slider is visible (by checking hero section exists)
+- scrollUntilVisible:
+    element: "Select Provinces"
+    direction: DOWN
+
+# Test location icon in province field
+- tapOn: "Select Provinces"
+
+# Take screenshot of home screen
+- takeScreenshot: home_screen_test

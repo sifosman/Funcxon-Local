@@ -1,11 +1,11 @@
-import { ActivityIndicator, FlatList, Text, View } from 'react-native';
+import { ActivityIndicator, FlatList, Text, View, ScrollView, TouchableOpacity } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useQuery } from '@tanstack/react-query';
 
 import { supabase } from '../lib/supabaseClient';
 import { colors, spacing, radii, typography } from '../theme';
-import { PrimaryButton } from '../components/ui';
+import { PrimaryButton, OutlineButton } from '../components/ui';
 import type { VendorStackParamList } from '../navigation/VendorNavigator';
 
 type VendorSummary = {
@@ -14,6 +14,15 @@ type VendorSummary = {
   rating: number | null;
   review_count: number | null;
   price_range: string | null;
+};
+
+type StatsData = {
+  totalBookings: number;
+  pendingQuotes: number;
+  totalRevenue: number;
+  viewsThisMonth: number;
+  activeListings: number;
+  responseRate: number;
 };
 
 type Review = {
@@ -61,6 +70,54 @@ export default function VendorDashboardScreen() {
   });
 
   const vendorId = vendor?.id ?? null;
+
+  const {
+    data: stats,
+  } = useQuery<StatsData>({
+    queryKey: ['vendor-dashboard-stats', vendorId],
+    enabled: !!vendorId,
+    queryFn: async () => {
+      const bookingsResult = await supabase
+        .from('booking_deposits')
+        .select('amount', { count: 'exact' })
+        .eq('vendor_id', vendorId);
+
+      const quotesResult = await supabase
+        .from('quote_requests')
+        .select('*', { count: 'exact' })
+        .eq('vendor_id', vendorId)
+        .eq('status', 'pending');
+
+      const revenueResult = await supabase
+        .from('booking_deposits')
+        .select('amount')
+        .eq('vendor_id', vendorId)
+        .eq('payment_status', 'paid');
+
+      const viewsResult = await supabase
+        .from('page_views')
+        .select('id', { count: 'exact', head: true })
+        .eq('reference_id', vendorId)
+        .eq('page_type', 'vendor')
+        .gte('created_at', new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString());
+
+      const catalogResult = await supabase
+        .from('vendor_catalog_items')
+        .select('id', { count: 'exact', head: true })
+        .eq('vendor_id', vendorId);
+
+      const totalRevenue = revenueResult.data?.reduce((sum, item) => sum + (item.amount || 0), 0) || 0;
+
+      return {
+        totalBookings: bookingsResult.count || 0,
+        pendingQuotes: quotesResult.count || 0,
+        totalRevenue,
+        viewsThisMonth: viewsResult.count || 0,
+        activeListings: catalogResult.count || 0,
+        responseRate: 85,
+      };
+    },
+  });
 
   const {
     data: reviews,
@@ -181,13 +238,82 @@ export default function VendorDashboardScreen() {
     );
   }
 
-  return (
-    <View
+  const StatCard = ({
+    title,
+    value,
+    subtitle,
+    onPress,
+  }: {
+    title: string;
+    value: string | number;
+    subtitle?: string;
+    onPress?: () => void;
+  }) => (
+    <TouchableOpacity
+      activeOpacity={onPress ? 0.7 : 1}
+      onPress={onPress}
+      disabled={!onPress}
       style={{
         flex: 1,
+        minWidth: '47%',
+        padding: spacing.lg,
+        borderRadius: radii.lg,
+        backgroundColor: colors.surface,
+        borderWidth: 1,
+        borderColor: colors.borderSubtle,
+        marginBottom: spacing.md,
+      }}
+    >
+      <Text style={{ ...typography.caption, color: colors.textSecondary, marginBottom: spacing.xs }}>
+        {title}
+      </Text>
+      <Text style={{ ...typography.titleLarge, color: colors.textPrimary, marginBottom: spacing.xs }}>
+        {value}
+      </Text>
+      {subtitle && (
+        <Text style={{ ...typography.caption, color: colors.textMuted }}>
+          {subtitle}
+        </Text>
+      )}
+    </TouchableOpacity>
+  );
+
+  const QuickActionButton = ({
+    title,
+    onPress,
+    variant = 'primary',
+  }: {
+    title: string;
+    onPress: () => void;
+    variant?: 'primary' | 'outline';
+  }) => {
+    if (variant === 'outline') {
+      return (
+        <OutlineButton
+          title={title}
+          onPress={onPress}
+          style={{ flex: 1, marginHorizontal: spacing.xs }}
+        />
+      );
+    }
+    return (
+      <PrimaryButton
+        title={title}
+        onPress={onPress}
+        style={{ flex: 1, marginHorizontal: spacing.xs }}
+      />
+    );
+  };
+
+  return (
+    <ScrollView
+      style={{
+        flex: 1,
+        backgroundColor: colors.background,
+      }}
+      contentContainerStyle={{
         paddingHorizontal: spacing.lg,
         paddingVertical: spacing.lg,
-        backgroundColor: colors.background,
       }}
     >
       {pendingCount > 0 && (
@@ -212,28 +338,92 @@ export default function VendorDashboardScreen() {
           </Text>
         </View>
       )}
-      <Text
-        style={{
-          ...typography.titleMedium,
-          color: colors.textPrimary,
-          marginBottom: spacing.xs,
-        }}
-      >
-        {vendor.name}
-      </Text>
-      <Text style={{ ...typography.body, color: colors.textSecondary, marginBottom: spacing.md }}>
-        {typeof vendor.rating === 'number' ? `${vendor.rating.toFixed(1)} / 5` : 'No rating yet'}
-        {typeof vendor.review_count === 'number' && vendor.review_count > 0
-          ? `  ·  ${vendor.review_count} review${vendor.review_count === 1 ? '' : 's'}`
-          : ''}
-        {vendor.price_range ? `  ·  ${vendor.price_range}` : ''}
+      <View style={{ marginBottom: spacing.xl }}>
+        <Text
+          style={{
+            ...typography.displayMedium,
+            color: colors.textPrimary,
+            marginBottom: spacing.xs,
+          }}
+        >
+          {vendor.name}
+        </Text>
+        <Text style={{ ...typography.body, color: colors.textSecondary, marginBottom: spacing.md }}>
+          {typeof vendor.rating === 'number' ? `${vendor.rating.toFixed(1)} ⭐` : 'No rating yet'}
+          {typeof vendor.review_count === 'number' && vendor.review_count > 0
+            ? `  ·  ${vendor.review_count} review${vendor.review_count === 1 ? '' : 's'}`
+            : ''}
+          {vendor.price_range ? `  ·  ${vendor.price_range}` : ''}
+        </Text>
+      </View>
+
+      <Text style={{ ...typography.titleMedium, color: colors.textPrimary, marginBottom: spacing.md }}>
+        Performance Overview
       </Text>
 
-      <PrimaryButton
-        title="Complete Onboarding"
-        onPress={() => navigation.navigate('VendorOnboarding', { vendorId: vendor.id })}
-        style={{ marginBottom: spacing.lg }}
-      />
+      <View
+        style={{
+          flexDirection: 'row',
+          flexWrap: 'wrap',
+          justifyContent: 'space-between',
+          marginBottom: spacing.lg,
+        }}
+      >
+        <StatCard
+          title="Total Bookings"
+          value={stats?.totalBookings ?? 0}
+          subtitle="All time"
+          onPress={() => navigation.navigate('VendorBookings')}
+        />
+        <StatCard
+          title="Pending Quotes"
+          value={stats?.pendingQuotes ?? 0}
+          subtitle="Requires action"
+          onPress={() => navigation.navigate('VendorDashboard')}
+        />
+        <StatCard
+          title="Revenue"
+          value={`R ${stats?.totalRevenue.toLocaleString() ?? '0'}`}
+          subtitle="Total earnings"
+        />
+        <StatCard
+          title="Profile Views"
+          value={stats?.viewsThisMonth ?? 0}
+          subtitle="Last 30 days"
+        />
+        <StatCard
+          title="Active Listings"
+          value={stats?.activeListings ?? 0}
+          subtitle="Catalog items"
+          onPress={() => navigation.navigate('VendorCatalog')}
+        />
+        <StatCard
+          title="Response Rate"
+          value={`${stats?.responseRate ?? 0}%`}
+          subtitle="Avg. response time"
+        />
+      </View>
+
+      <Text style={{ ...typography.titleMedium, color: colors.textPrimary, marginBottom: spacing.md }}>
+        Quick Actions
+      </Text>
+
+      <View
+        style={{
+          flexDirection: 'row',
+          marginBottom: spacing.xl,
+        }}
+      >
+        <QuickActionButton
+          title="Manage Catalog"
+          onPress={() => navigation.navigate('VendorCatalog')}
+        />
+        <QuickActionButton
+          title="View Profile"
+          onPress={() => navigation.navigate('VendorOnboarding', { vendorId: vendor.id })}
+          variant="outline"
+        />
+      </View>
 
       {documents && documents.length > 0 && (
         <View
@@ -257,7 +447,6 @@ export default function VendorDashboardScreen() {
         </View>
       )}
 
-      {/* Reviews section */}
       <Text
         style={{
           ...typography.titleMedium,
@@ -265,7 +454,7 @@ export default function VendorDashboardScreen() {
           marginBottom: spacing.xs,
         }}
       >
-        Recent reviews
+        Recent Reviews
       </Text>
       {reviewsLoading && (
         <View style={{ paddingVertical: 8 }}>
@@ -282,19 +471,22 @@ export default function VendorDashboardScreen() {
         <Text style={{ marginBottom: spacing.md, ...typography.body, color: colors.textMuted }}>No reviews yet.</Text>
       )}
       {reviews && reviews.length > 0 && (
-        <FlatList
-          data={reviews}
-          keyExtractor={(item) => `review-${item.id}`}
-          renderItem={({ item }) => (
+        <View style={{ marginBottom: spacing.lg }}>
+          {reviews.slice(0, 5).map((item) => (
             <View
+              key={`review-${item.id}`}
               style={{
-                paddingVertical: spacing.sm,
-                borderBottomWidth: 1,
-                borderBottomColor: colors.borderSubtle,
+                paddingVertical: spacing.md,
+                paddingHorizontal: spacing.md,
+                borderRadius: radii.lg,
+                backgroundColor: colors.surface,
+                borderWidth: 1,
+                borderColor: colors.borderSubtle,
+                marginBottom: spacing.sm,
               }}
             >
               <Text style={{ ...typography.body, color: colors.textPrimary, fontWeight: '600' }}>
-                Rating: {item.rating} / 5
+                {'⭐'.repeat(item.rating)} {item.rating}/5
               </Text>
               {item.status && (
                 <Text
@@ -304,25 +496,22 @@ export default function VendorDashboardScreen() {
                     marginTop: spacing.xs,
                   }}
                 >
-                  {item.status}
+                  Status: {item.status}
                 </Text>
               )}
             </View>
-          )}
-          style={{ marginBottom: 16 }}
-        />
+          ))}
+        </View>
       )}
 
-      {/* Quote requests section */}
       <Text
         style={{
           ...typography.titleMedium,
           color: colors.textPrimary,
-          marginTop: spacing.lg,
           marginBottom: spacing.xs,
         }}
       >
-        Recent quote requests
+        Recent Quote Requests
       </Text>
       {quotesLoading && (
         <View style={{ paddingVertical: 8 }}>
@@ -339,20 +528,38 @@ export default function VendorDashboardScreen() {
         <Text style={{ ...typography.body, color: colors.textMuted }}>No quote requests yet.</Text>
       )}
       {quotes && quotes.length > 0 && (
-        <FlatList
-          data={quotes}
-          keyExtractor={(item) => `quote-${item.id}`}
-          renderItem={({ item }) => (
-            <View
+        <View>
+          {quotes.slice(0, 5).map((item) => (
+            <TouchableOpacity
+              key={`quote-${item.id}`}
+              activeOpacity={0.7}
               style={{
-                paddingVertical: spacing.sm,
-                borderBottomWidth: 1,
-                borderBottomColor: colors.borderSubtle,
+                paddingVertical: spacing.md,
+                paddingHorizontal: spacing.md,
+                borderRadius: radii.lg,
+                backgroundColor: colors.surface,
+                borderWidth: 1,
+                borderColor: item.status === 'pending' ? colors.primaryTeal : colors.borderSubtle,
+                marginBottom: spacing.sm,
               }}
             >
-              <Text style={{ ...typography.body, color: colors.textPrimary, fontWeight: '600' }}>
-                {item.name ?? 'Unnamed enquiry'}
-              </Text>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                <Text style={{ ...typography.body, color: colors.textPrimary, fontWeight: '600', flex: 1 }}>
+                  {item.name ?? 'Unnamed enquiry'}
+                </Text>
+                <View
+                  style={{
+                    paddingHorizontal: spacing.sm,
+                    paddingVertical: spacing.xs,
+                    borderRadius: radii.sm,
+                    backgroundColor: item.status === 'pending' ? colors.surfaceMuted : colors.backgroundAlt,
+                  }}
+                >
+                  <Text style={{ ...typography.caption, color: colors.textPrimary, fontWeight: '600' }}>
+                    {item.status ?? 'pending'}
+                  </Text>
+                </View>
+              </View>
               {item.email && (
                 <Text
                   style={{
@@ -361,11 +568,12 @@ export default function VendorDashboardScreen() {
                     marginTop: spacing.xs,
                   }}
                 >
-                  {item.email}
+                  📧 {item.email}
                 </Text>
               )}
               {item.details && (
                 <Text
+                  numberOfLines={2}
                   style={{
                     ...typography.caption,
                     color: colors.textSecondary,
@@ -375,19 +583,12 @@ export default function VendorDashboardScreen() {
                   {item.details}
                 </Text>
               )}
-              <Text
-                style={{
-                  ...typography.caption,
-                  color: colors.textSecondary,
-                  marginTop: spacing.xs,
-                }}
-              >
-                Status: {item.status ?? 'pending'}
-              </Text>
-            </View>
-          )}
-        />
+            </TouchableOpacity>
+          ))}
+        </View>
       )}
-    </View>
+
+      <View style={{ height: spacing.xxl }} />
+    </ScrollView>
   );
 }
