@@ -15,7 +15,7 @@
     "ios": {
       "supportsTablet": true,
       "config": {
-        "googleMapsApiKey": "AIzaSyAACqjAkuvxeD5gDXh7xnRkbv-HDTqiEsQ"
+        "googleMapsApiKey": ""
       },
       "infoPlist": {
         "NSCameraUsageDescription": "Vibeventz needs camera access so you can capture event and profile photos.",
@@ -30,7 +30,7 @@
       },
       "config": {
         "googleMaps": {
-          "apiKey": "AIzaSyAACqjAkuvxeD5gDXh7xnRkbv-HDTqiEsQ"
+          "apiKey": ""
         }
       },
       "edgeToEdgeEnabled": true,
