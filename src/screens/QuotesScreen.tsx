@@ -1,11 +1,14 @@
-import { ActivityIndicator, FlatList, Text, TouchableOpacity, View } from 'react-native';
+import { useMemo, useState } from 'react';
+import { ActivityIndicator, Alert, FlatList, Text, TouchableOpacity, View } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useQuery } from '@tanstack/react-query';
+import { MaterialIcons } from '@expo/vector-icons';
 
 import { supabase } from '../lib/supabaseClient';
 import { colors, spacing, radii, typography } from '../theme';
 import type { QuotesStackParamList } from '../navigation/QuotesNavigator';
+import { useAuth } from '../auth/AuthContext';
 
 type QuoteRequest = {
   id: number;
@@ -21,32 +24,71 @@ type QuoteRequest = {
   created_at?: string | null;
 };
 
-export default function QuotesScreen() {
-  const navigation = useNavigation<NativeStackNavigationProp<QuotesStackParamList>>();
+type VendorSeed = {
+  id: number;
+  name: string | null;
+  description: string | null;
+  category_id: number | null;
+};
 
-  const { data, isLoading, error } = useQuery<QuoteRequest[]>({
+type CategorySeed = {
+  id: number;
+  name: string | null;
+};
+
+export default function QuotesScreen() {
+  const navigation = useNavigation<any>();
+  const { user } = useAuth();
+  const [activeTab, setActiveTab] = useState<'all' | 'pending' | 'finalised'>('all');
+  const [actionLoadingId, setActionLoadingId] = useState<number | null>(null);
+
+  const { data, isLoading, error, refetch } = useQuery<QuoteRequest[]>({
     queryKey: ['attendee-quotes'],
     queryFn: async () => {
+      if (!user?.id) {
+        return [];
+      }
+
       const { data: userRows, error: userError } = await supabase
         .from('users')
-        .select('id, username')
-        .eq('username', 'demo_attendee')
-        .limit(1);
+        .select('id, username, email')
+        .eq('auth_user_id', user.id)
+        .maybeSingle();
 
       if (userError) {
         throw userError;
       }
 
-      const demoUser = userRows?.[0];
+      let internalUser = userRows ?? null;
 
-      if (!demoUser) {
+      if (!internalUser) {
+        const email = user.email ?? 'attendee@funcxon.com';
+        const username = email.split('@')[0] || 'attendee';
+        const { data: createdUser, error: createError } = await supabase
+          .from('users')
+          .insert({
+            auth_user_id: user.id,
+            username,
+            password: 'demo',
+            email,
+            full_name: username,
+          })
+          .select('id, username, email')
+          .single();
+
+        if (!createError && createdUser) {
+          internalUser = createdUser;
+        }
+      }
+
+      if (!internalUser) {
         return [];
       }
 
       const { data: quotes, error: quotesError } = await supabase
         .from('quote_requests')
         .select('id, vendor_id, name, email, status, details, event_type, event_date, budget, quote_amount, created_at')
-        .eq('user_id', demoUser.id)
+        .eq('user_id', internalUser.id)
         .order('id', { ascending: false })
         .limit(50);
 
@@ -54,9 +96,166 @@ export default function QuotesScreen() {
         throw quotesError;
       }
 
+      if (!quotes || quotes.length === 0) {
+        const { data: vendors } = await supabase
+          .from('vendors')
+          .select('id, name, description, category_id')
+          .order('id', { ascending: true })
+          .limit(6);
+
+        const { data: categories } = await supabase
+          .from('categories')
+          .select('id, name');
+
+        const categoryMap = new Map(
+          (categories as CategorySeed[] | null)?.map((category) => [category.id, category.name]) ?? [],
+        );
+
+        const vendorPool = (vendors as VendorSeed[] | null) ?? [];
+
+        if (vendorPool.length > 0) {
+          const seedRows = vendorPool.slice(0, 5).map((vendor, index) => {
+            const categoryName = categoryMap.get(vendor.category_id ?? -1) ?? 'Service';
+            const status = index === 0
+              ? 'finalised'
+              : index === 1
+                ? 'pending'
+                : index === 2
+                  ? 'in_progress'
+                  : index === 3
+                    ? 'amended'
+                    : 'pending';
+            const quoteAmount = [4500, 1200, 650, 2800, 800][index] ?? 1200;
+            const eventDate = new Date();
+            eventDate.setDate(eventDate.getDate() + (index + 2) * 3);
+            return {
+              user_id: internalUser.id,
+              vendor_id: vendor.id,
+              name: vendor.name ?? 'Vendor Quote',
+              email: 'planner@funcxon.com',
+              status,
+              event_type: categoryName,
+              event_date: eventDate.toISOString().split('T')[0],
+              budget: `R ${Math.round(quoteAmount * 1.5).toLocaleString('en-ZA')}`,
+              quote_amount: quoteAmount,
+              details:
+                vendor.description ??
+                'A tailored package with setup, equipment, and on-site coordination included.',
+            };
+          });
+
+          await supabase.from('quote_requests').insert(seedRows);
+        }
+
+        const { data: seededQuotes } = await supabase
+          .from('quote_requests')
+          .select('id, vendor_id, name, email, status, details, event_type, event_date, budget, quote_amount, created_at')
+          .eq('user_id', internalUser.id)
+          .order('id', { ascending: false })
+          .limit(50);
+
+        return (seededQuotes as QuoteRequest[]) ?? [];
+      }
+
       return (quotes as QuoteRequest[]) ?? [];
     },
   });
+
+  const filtered = useMemo(() => {
+    if (!data) return [];
+    if (activeTab === 'all') return data;
+    return data.filter((item) => item.status === activeTab);
+  }, [data, activeTab]);
+
+  const summary = useMemo(() => {
+    const totals = {
+      total: 0,
+      finalised: 0,
+      pending: 0,
+      inProgress: 0,
+    };
+    data?.forEach((quote) => {
+      const amount = typeof quote.quote_amount === 'number' ? quote.quote_amount : 0;
+      totals.total += amount;
+      if (quote.status === 'finalised') {
+        totals.finalised += amount;
+      } else if (quote.status === 'pending') {
+        totals.pending += amount;
+      } else if (quote.status === 'in_progress') {
+        totals.inProgress += amount;
+      }
+    });
+    return totals;
+  }, [data]);
+
+  const statusStyle = (status?: string | null) => {
+    switch (status) {
+      case 'pending':
+        return { backgroundColor: '#EDE7FF', color: '#5B4BBA' };
+      case 'finalised':
+        return { backgroundColor: '#DCFCE7', color: '#166534' };
+      case 'amended':
+        return { backgroundColor: '#FFEDD5', color: '#9A3412' };
+      case 'in_progress':
+        return { backgroundColor: '#FDE68A', color: '#92400E' };
+      default:
+        return { backgroundColor: '#FEF3C7', color: '#92400E' };
+    }
+  };
+
+  const formatCurrency = (value: number) => `R ${value.toLocaleString('en-ZA')}`;
+
+  const tabCounts = {
+    all: data?.length ?? 0,
+    pending: data?.filter((item) => item.status === 'pending').length ?? 0,
+    finalised: data?.filter((item) => item.status === 'finalised').length ?? 0,
+  };
+
+  const handleSecondaryAction = async (quote: QuoteRequest) => {
+    if (!quote.vendor_id) {
+      Alert.alert('Missing vendor', 'This quote is missing a vendor reference.');
+      return;
+    }
+
+    if (quote.status === 'finalised') {
+      navigation.navigate('Home', {
+        screen: 'VendorProfile',
+        params: { vendorId: quote.vendor_id },
+      });
+      return;
+    }
+
+    if (quote.status === 'pending') {
+      navigation.navigate('Home', {
+        screen: 'QuoteRequest',
+        params: { vendorId: quote.vendor_id, vendorName: quote.name ?? 'Vendor' },
+      });
+      return;
+    }
+
+    if (quote.status === 'amended') {
+      setActionLoadingId(quote.id);
+      try {
+        const { error: updateError } = await supabase
+          .from('quote_requests')
+          .update({ status: 'finalised' })
+          .eq('id', quote.id);
+
+        if (updateError) {
+          throw updateError;
+        }
+
+        await refetch();
+      } catch (err: any) {
+        Alert.alert('Unable to approve', err?.message ?? 'Please try again.');
+      } finally {
+        setActionLoadingId(null);
+      }
+      return;
+    }
+
+    Alert.alert('In progress', 'This quote is still being prepared by the vendor.');
+  };
 
   if (isLoading) {
     return (
@@ -127,136 +326,237 @@ export default function QuotesScreen() {
         backgroundColor: colors.background,
       }}
     >
-      <Text
-        style={{
-          ...typography.titleMedium,
-          color: colors.textPrimary,
-          marginBottom: spacing.md,
-        }}
-      >
-        My quotes (demo)
-      </Text>
-
       <FlatList
-        data={data}
+        data={filtered}
         keyExtractor={(item) => String(item.id)}
         contentContainerStyle={{ paddingBottom: spacing.xl }}
-        renderItem={({ item }) => (
-          <TouchableOpacity
-            activeOpacity={0.8}
-            onPress={() => navigation.navigate('QuoteDetail', { quoteId: item.id })}
-            style={{ marginBottom: spacing.sm }}
-          >
+        ListHeaderComponent={
+          <View>
+            <TouchableOpacity
+              onPress={() => navigation.goBack()}
+              style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.sm }}
+            >
+              <MaterialIcons name="arrow-back" size={18} color={colors.textPrimary} />
+              <Text style={{ ...typography.caption, color: colors.textPrimary, marginLeft: spacing.xs }}>
+                Back to My Planner
+              </Text>
+            </TouchableOpacity>
+
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+              <View style={{ flex: 1, paddingRight: spacing.md }}>
+                <Text style={{ ...typography.displayMedium, color: colors.textPrimary }}>My Quotes</Text>
+                <Text style={{ ...typography.body, color: colors.textSecondary, marginTop: spacing.xs }}>
+                  Track your vendor quotes by status
+                </Text>
+              </View>
+              <TouchableOpacity
+                activeOpacity={0.9}
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  paddingHorizontal: spacing.lg,
+                  paddingVertical: spacing.sm,
+                  borderRadius: radii.md,
+                  backgroundColor: colors.primary,
+                }}
+              >
+                <MaterialIcons name="add" size={18} color="#FFFFFF" style={{ marginRight: spacing.xs }} />
+                <Text style={{ ...typography.body, color: '#FFFFFF', fontWeight: '600' }}>Request Quote</Text>
+              </TouchableOpacity>
+            </View>
+
             <View
               style={{
-                paddingVertical: spacing.md,
-                paddingHorizontal: spacing.md,
+                marginTop: spacing.lg,
+                padding: spacing.lg,
                 borderRadius: radii.lg,
                 backgroundColor: colors.surface,
                 borderWidth: 1,
                 borderColor: colors.borderSubtle,
+                shadowColor: '#000',
+                shadowOpacity: 0.05,
+                shadowRadius: 8,
+                shadowOffset: { width: 0, height: 3 },
               }}
             >
-            <Text
+              <Text style={{ ...typography.body, color: colors.textPrimary, fontWeight: '600', marginBottom: spacing.md }}>
+                Quote Summary
+              </Text>
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', rowGap: spacing.md }}>
+                <View style={{ width: '50%' }}>
+                  <Text style={{ ...typography.caption, color: colors.textMuted }}>Total Value</Text>
+                  <Text style={{ ...typography.titleMedium, color: colors.textPrimary }}>
+                    {formatCurrency(summary.total)}
+                  </Text>
+                </View>
+                <View style={{ width: '50%' }}>
+                  <Text style={{ ...typography.caption, color: colors.textMuted }}>Finalised</Text>
+                  <Text style={{ ...typography.titleMedium, color: '#16A34A' }}>
+                    {formatCurrency(summary.finalised)}
+                  </Text>
+                </View>
+                <View style={{ width: '50%' }}>
+                  <Text style={{ ...typography.caption, color: colors.textMuted }}>Pending</Text>
+                  <Text style={{ ...typography.titleMedium, color: '#4F46E5' }}>
+                    {formatCurrency(summary.pending)}
+                  </Text>
+                </View>
+                <View style={{ width: '50%' }}>
+                  <Text style={{ ...typography.caption, color: colors.textMuted }}>In Progress</Text>
+                  <Text style={{ ...typography.titleMedium, color: '#D97706' }}>
+                    {formatCurrency(summary.inProgress)}
+                  </Text>
+                </View>
+              </View>
+            </View>
+
+            <View style={{ flexDirection: 'row', columnGap: spacing.sm, marginTop: spacing.lg, marginBottom: spacing.md }}>
+              {([
+                { key: 'all' as const, label: `All (${tabCounts.all})` },
+                { key: 'pending' as const, label: `Pending (${tabCounts.pending})` },
+                { key: 'finalised' as const, label: `Finalised (${tabCounts.finalised})` },
+              ]).map((tab) => {
+                const selected = activeTab === tab.key;
+                return (
+                  <TouchableOpacity
+                    key={tab.key}
+                    onPress={() => setActiveTab(tab.key)}
+                    style={{
+                      paddingHorizontal: spacing.md,
+                      paddingVertical: spacing.xs,
+                      borderRadius: radii.full,
+                      borderWidth: 1,
+                      borderColor: selected ? colors.primary : colors.borderSubtle,
+                      backgroundColor: selected ? colors.primary : colors.surface,
+                    }}
+                  >
+                    <Text style={{ ...typography.caption, color: selected ? '#FFFFFF' : colors.textPrimary }}>
+                      {tab.label}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          </View>
+        }
+        renderItem={({ item }) => {
+          const requestedDate = item.event_date || item.created_at
+            ? new Date(item.event_date || item.created_at || '').toLocaleDateString('en-ZA')
+            : null;
+          const actionLabel = item.status === 'finalised'
+            ? 'Rate and Review'
+            : item.status === 'amended'
+              ? 'Approve'
+              : item.status === 'pending'
+                ? 'Amend'
+                : 'View Details';
+          const actionLoading = actionLoadingId === item.id;
+          return (
+            <View
               style={{
-                ...typography.body,
-                color: colors.textPrimary,
-                fontWeight: '600',
+                marginBottom: spacing.md,
+                padding: spacing.lg,
+                borderRadius: radii.lg,
+                backgroundColor: colors.surface,
+                borderWidth: 1,
+                borderColor: colors.borderSubtle,
+                shadowColor: '#000',
+                shadowOpacity: 0.06,
+                shadowRadius: 8,
+                shadowOffset: { width: 0, height: 4 },
               }}
             >
-              {item.name ?? 'Unnamed enquiry'}
-            </Text>
-            {item.event_type && (
-              <Text
-                style={{
-                  ...typography.caption,
-                  color: colors.textSecondary,
-                  marginTop: spacing.xs,
-                }}
-              >
-                Event type: {item.event_type}
-              </Text>
-            )}
-            {item.email && (
-              <Text
-                style={{
-                  ...typography.caption,
-                  color: colors.textSecondary,
-                  marginTop: spacing.xs,
-                }}
-              >
-                {item.email}
-              </Text>
-            )}
-            {(item.event_date || item.created_at) && (
-              <Text
-                style={{
-                  ...typography.caption,
-                  color: colors.textSecondary,
-                  marginTop: spacing.xs,
-                }}
-              >
-                Requested for:{' '}
-                {new Date(item.event_date || item.created_at || '').toLocaleDateString()}
-              </Text>
-            )}
-            {item.budget && (
-              <Text
-                style={{
-                  ...typography.caption,
-                  color: colors.textSecondary,
-                  marginTop: spacing.xs,
-                }}
-              >
-                Budget: {item.budget}
-              </Text>
-            )}
-            {typeof item.quote_amount === 'number' && (
-              <Text
-                style={{
-                  ...typography.caption,
-                  color: colors.textSecondary,
-                  marginTop: spacing.xs,
-                }}
-              >
-                Quoted amount: {item.quote_amount.toLocaleString()}
-              </Text>
-            )}
-            {item.details && (
-              <Text
-                style={{
-                  ...typography.caption,
-                  color: colors.textSecondary,
-                  marginTop: spacing.xs,
-                }}
-                numberOfLines={3}
-              >
-                {item.details}
-              </Text>
-            )}
-            <Text
-              style={{
-                ...typography.caption,
-                color: colors.textSecondary,
-                marginTop: spacing.xs,
-              }}
-            >
-              Status: {item.status ?? 'pending'}
-            </Text>
-              {item.vendor_id && (
-                <Text
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                <View style={{ flex: 1, paddingRight: spacing.sm }}>
+                  <Text style={{ ...typography.titleMedium, color: colors.textPrimary }}>
+                    {item.name ?? 'Vendor Quote'}
+                  </Text>
+                  <Text style={{ ...typography.caption, color: colors.textSecondary, marginTop: spacing.xs }}>
+                    {item.event_type ?? 'Service package'}
+                  </Text>
+                </View>
+                <View
                   style={{
-                    ...typography.caption,
-                    color: colors.textMuted,
-                    marginTop: spacing.xs,
+                    paddingHorizontal: spacing.sm,
+                    paddingVertical: spacing.xs,
+                    borderRadius: radii.full,
+                    backgroundColor: statusStyle(item.status).backgroundColor,
                   }}
                 >
-                  Vendor ID: {item.vendor_id}
+                  <Text style={{ ...typography.caption, color: statusStyle(item.status).color, fontWeight: '600' }}>
+                    {item.status ?? 'requested'}
+                  </Text>
+                </View>
+              </View>
+
+              {item.details && (
+                <Text style={{ ...typography.body, color: colors.textSecondary, marginTop: spacing.sm }} numberOfLines={3}>
+                  {item.details}
                 </Text>
               )}
+
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: spacing.md }}>
+                <View>
+                  <Text style={{ ...typography.caption, color: colors.textMuted }}>Category:</Text>
+                  <Text style={{ ...typography.body, color: colors.textPrimary }}>
+                    {item.event_type ?? 'General'}
+                  </Text>
+                </View>
+                <View>
+                  <Text style={{ ...typography.caption, color: colors.textMuted }}>Requested:</Text>
+                  <Text style={{ ...typography.body, color: colors.textPrimary }}>
+                    {requestedDate ?? 'TBD'}
+                  </Text>
+                </View>
+                <View style={{ alignItems: 'flex-end' }}>
+                  <Text style={{ ...typography.caption, color: colors.textMuted }}>Quote</Text>
+                  <Text style={{ ...typography.titleMedium, color: colors.textPrimary }}>
+                    {typeof item.quote_amount === 'number' ? formatCurrency(item.quote_amount) : 'TBD'}
+                  </Text>
+                </View>
+              </View>
+
+              <View style={{ flexDirection: 'row', marginTop: spacing.md, columnGap: spacing.sm }}>
+                <TouchableOpacity
+                  onPress={() => navigation.navigate('QuoteDetail', { quoteId: item.id })}
+                  style={{
+                    flex: 1,
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    paddingVertical: spacing.sm,
+                    borderRadius: radii.md,
+                    borderWidth: 1,
+                    borderColor: colors.borderSubtle,
+                    backgroundColor: colors.surface,
+                  }}
+                >
+                  <MaterialIcons name="description" size={16} color={colors.textPrimary} style={{ marginRight: spacing.xs }} />
+                  <Text style={{ ...typography.caption, color: colors.textPrimary }}>View Details</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={() => handleSecondaryAction(item)}
+                  disabled={actionLoading}
+                  style={{
+                    flex: 1,
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    paddingVertical: spacing.sm,
+                    borderRadius: radii.md,
+                    backgroundColor: colors.accent,
+                    opacity: actionLoading ? 0.7 : 1,
+                  }}
+                >
+                  <MaterialIcons name="edit" size={16} color={colors.textPrimary} style={{ marginRight: spacing.xs }} />
+                  <Text style={{ ...typography.caption, color: colors.textPrimary }}>
+                    {actionLoading ? 'Saving...' : actionLabel}
+                  </Text>
+                </TouchableOpacity>
+              </View>
             </View>
-          </TouchableOpacity>
-        )}
+          );
+        }}
       />
     </View>
   );

@@ -94,19 +94,35 @@ export default function SignInScreen({ navigation }: Props) {
         }}
         keyboardShouldPersistTaps="handled"
       >
-        <View style={{ width: '100%', maxWidth: 360, alignSelf: 'center' }}>
-          <View style={{ alignItems: 'center', marginBottom: spacing.xl }}>
+        <View
+          style={{
+            width: '100%',
+            maxWidth: 360,
+            alignSelf: 'center',
+            backgroundColor: colors.surface,
+            borderRadius: radii.lg,
+            borderWidth: 1,
+            borderColor: colors.borderSubtle,
+            padding: spacing.xl,
+            shadowColor: '#000',
+            shadowOpacity: 0.08,
+            shadowRadius: 10,
+            shadowOffset: { width: 0, height: 4 },
+          }}
+        >
+          <View style={{ alignItems: 'center', marginBottom: spacing.lg }}>
             <Text
               style={{
                 ...typography.titleLarge,
                 color: colors.textPrimary,
                 marginBottom: spacing.sm,
+                textAlign: 'center',
               }}
             >
-              Log in
+              Welcome Back
             </Text>
-            <Text style={{ ...typography.body, color: colors.textMuted }}>
-              Connect, Collaborate, Celebrate
+            <Text style={{ ...typography.body, color: colors.textMuted, textAlign: 'center' }}>
+              Log in to access your event planning tools.
             </Text>
           </View>
 
@@ -178,11 +194,7 @@ export default function SignInScreen({ navigation }: Props) {
             <Text style={{ ...typography.caption, color: colors.primaryTeal }}>Forgot password?</Text>
           </TouchableOpacity>
 
-          <PrimaryButton
-            title={loading ? 'Signing in...' : 'Log in'}
-            onPress={handleSignIn}
-            disabled={loading}
-          />
+          <PrimaryButton title={loading ? 'Signing in...' : 'Log in'} onPress={handleSignIn} disabled={loading} />
 
           {formError ? (
             <Text
@@ -217,42 +229,37 @@ export default function SignInScreen({ navigation }: Props) {
               style={{
                 width: '100%',
                 paddingVertical: spacing.md,
-                borderRadius: radii.lg,
+                borderRadius: radii.md,
                 borderWidth: 1,
                 borderColor: colors.borderSubtle,
-                backgroundColor: colors.surface,
-                flexDirection: 'row',
                 alignItems: 'center',
                 justifyContent: 'center',
+                flexDirection: 'row',
+                backgroundColor: colors.surface,
               }}
             >
               <View
                 style={{
-                  width: 24,
-                  height: 24,
+                  width: 28,
+                  height: 28,
                   borderRadius: 12,
                   backgroundColor: '#FFFFFF',
                   alignItems: 'center',
                   justifyContent: 'center',
                   marginRight: spacing.sm,
+                  borderWidth: 1,
+                  borderColor: colors.borderSubtle,
                 }}
               >
                 <Text style={{ ...typography.caption, color: colors.textPrimary }}>G</Text>
               </View>
-              <Text
-                style={{
-                  ...typography.body,
-                  color: colors.textPrimary,
-                }}
-              >
-                Log in with Google
-              </Text>
+              <Text style={{ ...typography.body, color: colors.textPrimary }}>Log in with Google</Text>
             </TouchableOpacity>
           </View>
 
           <View style={{ marginTop: spacing.lg, alignItems: 'center' }}>
             <Text style={{ ...typography.caption, color: colors.textMuted }}>
-              Dont have an account?{' '}
+              Don’t have an account?{' '}
               <Text
                 style={{ ...typography.caption, color: colors.primaryTeal }}
                 onPress={() => navigation.navigate('SignUp')}

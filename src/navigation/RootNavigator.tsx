@@ -3,17 +3,19 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { MaterialIcons } from '@expo/vector-icons';
 import { AttendeeNavigator } from './AttendeeNavigator';
 import { QuotesNavigator } from './QuotesNavigator';
+import { ProfileNavigator } from './ProfileNavigator';
 import DiscoverScreen from '../screens/DiscoverScreen';
 import PlannerScreen from '../screens/PlannerScreen';
-import ProfileScreen from '../screens/ProfileScreen';
+import FavouritesScreen from '../screens/FavouritesScreen';
 import { colors, typography } from '../theme';
 
 export type RootTabParamList = {
   Home: undefined;
   Discover: undefined;
+  Favourites: undefined;
   Quotes: undefined;
   Planner: undefined;
-  Profile: undefined;
+  Account: undefined;
 };
 
 const Tab = createBottomTabNavigator<RootTabParamList>();
@@ -23,7 +25,7 @@ export function RootNavigator() {
     <Tab.Navigator
       screenOptions={({ route }) => ({
         tabBarActiveTintColor: colors.primaryTeal,
-        tabBarInactiveTintColor: colors.primaryTeal,
+        tabBarInactiveTintColor: colors.textMuted,
         tabBarStyle: {
           backgroundColor: colors.surface,
           borderTopColor: colors.borderSubtle,
@@ -53,18 +55,20 @@ export function RootNavigator() {
           let iconName: keyof typeof MaterialIcons.glyphMap = 'home';
 
           if (route.name === 'Home') {
-            iconName = 'home';
+            iconName = 'search';
           } else if (route.name === 'Discover') {
             iconName = 'travel-explore';
+          } else if (route.name === 'Favourites') {
+            iconName = 'favorite';
           } else if (route.name === 'Quotes') {
             iconName = 'request-quote';
           } else if (route.name === 'Planner') {
             iconName = 'event-note';
-          } else if (route.name === 'Profile') {
+          } else if (route.name === 'Account') {
             iconName = 'person';
           }
 
-          const icon = <MaterialIcons name={iconName} size={size} color={colors.primaryTeal} />;
+          const icon = <MaterialIcons name={iconName} size={size} color={focused ? colors.primaryTeal : colors.textMuted} />;
 
           if (!focused) {
             return icon;
@@ -89,12 +93,12 @@ export function RootNavigator() {
       <Tab.Screen
         name="Home"
         component={AttendeeNavigator}
-        options={{ headerShown: false, tabBarLabel: 'Home' }}
+        options={{ headerShown: false, tabBarLabel: 'Search' }}
       />
       <Tab.Screen
-        name="Discover"
-        component={DiscoverScreen}
-        options={{ headerShown: false, tabBarLabel: 'Discover' }}
+        name="Favourites"
+        component={FavouritesScreen}
+        options={{ headerTitle: 'Favourites', tabBarLabel: 'Favourites' }}
       />
       <Tab.Screen
         name="Quotes"
@@ -107,9 +111,9 @@ export function RootNavigator() {
         options={{ headerTitle: 'My planner', tabBarLabel: 'Planner' }}
       />
       <Tab.Screen
-        name="Profile"
-        component={ProfileScreen}
-        options={{ headerTitle: 'Profile', tabBarLabel: 'Profile' }}
+        name="Account"
+        component={ProfileNavigator}
+        options={{ headerShown: false, tabBarLabel: 'Account' }}
       />
     </Tab.Navigator>
   );

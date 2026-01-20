@@ -14,149 +14,128 @@ export default function WelcomeScreen({ navigation }: Props) {
           flexGrow: 1,
           paddingHorizontal: spacing.lg,
           paddingVertical: spacing.xl,
-          justifyContent: 'space-between',
+          justifyContent: 'center',
         }}
       >
-        <View style={{ alignItems: 'center', marginTop: spacing.xl }}>
-          <View
-            style={{
-              width: 80,
-              height: 80,
-              borderRadius: 24,
-              backgroundColor: colors.surface,
-              alignItems: 'center',
-              justifyContent: 'center',
-              marginBottom: spacing.md,
-              borderWidth: 1,
-              borderColor: colors.borderSubtle,
-              overflow: 'hidden',
-            }}
-          >
-            <Image
-              source={require('../../assets/1000478602.jpg')}
-              style={{ width: '100%', height: '100%' }}
-              resizeMode="cover"
-            />
-          </View>
-          <Text
-            style={{
-              ...typography.titleLarge,
-              color: colors.textPrimary,
-            }}
-          >
-            Funcxon
-          </Text>
-          <Text
-            style={{
-              ...typography.caption,
-              color: colors.textSecondary,
-              marginTop: spacing.xs,
-            }}
-          >
-            Connect · Collaborate · Celebrate
-          </Text>
-        </View>
-
-        <View style={{ marginTop: spacing.xl }}>
-          {[
-            {
-              icon: 'search',
-              title: 'Discover the perfect vendors',
-              body: 'Browse a curated marketplace of top-tier event professionals.',
-            },
-            {
-              icon: 'rule',
-              title: 'Compare & request quotes',
-              body: 'Easily compare options and get quotes from multiple vendors.',
-            },
-            {
-              icon: 'celebration',
-              title: 'Plan your event in one place',
-              body: 'Manage bookings, communication, and planning seamlessly.',
-            },
-          ].map((item) => (
+        <View
+          style={{
+            backgroundColor: colors.surface,
+            borderRadius: radii.lg,
+            borderWidth: 1,
+            borderColor: colors.borderSubtle,
+            padding: spacing.xl,
+            maxWidth: 420,
+            alignSelf: 'center',
+            shadowColor: '#000',
+            shadowOpacity: 0.08,
+            shadowRadius: 10,
+            shadowOffset: { width: 0, height: 4 },
+          }}
+        >
+          <View style={{ alignItems: 'center', marginBottom: spacing.lg }}>
             <View
-              key={item.title}
               style={{
-                flexDirection: 'row',
-                padding: spacing.md,
-                borderRadius: radii.lg,
+                width: 80,
+                height: 80,
+                borderRadius: 24,
                 backgroundColor: colors.surface,
                 alignItems: 'center',
-                marginBottom: spacing.sm,
-                shadowColor: '#000',
-                shadowOpacity: 0.04,
-                shadowRadius: 6,
-                shadowOffset: { width: 0, height: 3 },
+                justifyContent: 'center',
+                marginBottom: spacing.md,
+                borderWidth: 1,
+                borderColor: colors.borderSubtle,
+                overflow: 'hidden',
               }}
             >
-              <MaterialIcons
-                name={item.icon as any}
-                size={28}
-                color={colors.primaryTeal}
-                style={{ marginRight: spacing.md }}
+              <Image
+                source={require('../../assets/1000478602.jpg')}
+                style={{ width: '100%', height: '100%' }}
+                resizeMode="cover"
               />
-              <View style={{ flex: 1 }}>
-                <Text
-                  style={{
-                    ...typography.titleMedium,
-                    color: colors.textPrimary,
-                    marginBottom: spacing.xs,
-                  }}
-                >
-                  {item.title}
-                </Text>
-                <Text style={{ ...typography.caption, color: colors.textSecondary }}>{item.body}</Text>
-              </View>
             </View>
-          ))}
-        </View>
+            <Text style={{ ...typography.titleLarge, color: colors.textPrimary }}>Welcome to Funcxon</Text>
+            <Text style={{ ...typography.body, color: colors.textSecondary, marginTop: spacing.sm, textAlign: 'center' }}>
+              Connect, collaborate, and celebrate with trusted vendors.
+            </Text>
+          </View>
 
-        <View style={{ marginTop: spacing.lg, marginBottom: spacing.lg }}>
-          <TouchableOpacity
-            activeOpacity={0.9}
-            onPress={() => navigation.navigate('SignUp')}
-            style={{
-              width: '100%',
-              paddingVertical: spacing.md,
-              borderRadius: radii.lg,
-              backgroundColor: colors.primary,
-              alignItems: 'center',
-              justifyContent: 'center',
-              marginBottom: spacing.sm,
-            }}
-          >
-            <Text
+          <View style={{ marginTop: spacing.md }}>
+            {[
+              {
+                icon: 'search',
+                title: 'Discover the perfect vendors',
+                body: 'Browse a curated marketplace of top-tier event professionals.',
+              },
+              {
+                icon: 'rule',
+                title: 'Compare & request quotes',
+                body: 'Easily compare options and get quotes from multiple vendors.',
+              },
+              {
+                icon: 'celebration',
+                title: 'Plan your event in one place',
+                body: 'Manage bookings, communication, and planning seamlessly.',
+              },
+            ].map((item) => (
+              <View
+                key={item.title}
+                style={{
+                  flexDirection: 'row',
+                  padding: spacing.md,
+                  borderRadius: radii.md,
+                  backgroundColor: colors.surfaceMuted,
+                  alignItems: 'center',
+                  marginBottom: spacing.sm,
+                }}
+              >
+                <MaterialIcons
+                  name={item.icon as any}
+                  size={24}
+                  color={colors.primaryTeal}
+                  style={{ marginRight: spacing.md }}
+                />
+                <View style={{ flex: 1 }}>
+                  <Text style={{ ...typography.titleMedium, color: colors.textPrimary, marginBottom: spacing.xs }}>
+                    {item.title}
+                  </Text>
+                  <Text style={{ ...typography.caption, color: colors.textSecondary }}>{item.body}</Text>
+                </View>
+              </View>
+            ))}
+          </View>
+
+          <View style={{ marginTop: spacing.lg }}>
+            <TouchableOpacity
+              activeOpacity={0.9}
+              onPress={() => navigation.navigate('SignUp')}
               style={{
-                ...typography.titleMedium,
-                color: '#FFFFFF',
+                width: '100%',
+                paddingVertical: spacing.md,
+                borderRadius: radii.md,
+                backgroundColor: colors.primary,
+                alignItems: 'center',
+                justifyContent: 'center',
+                marginBottom: spacing.sm,
               }}
             >
-              Get started
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            activeOpacity={0.9}
-            onPress={() => navigation.navigate('SignIn')}
-            style={{
-              width: '100%',
-              paddingVertical: spacing.md,
-              borderRadius: radii.lg,
-              borderWidth: 2,
-              borderColor: colors.primary,
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
-          >
-            <Text
+              <Text style={{ ...typography.titleMedium, color: '#FFFFFF' }}>Get started</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              activeOpacity={0.9}
+              onPress={() => navigation.navigate('SignIn')}
               style={{
-                ...typography.titleMedium,
-                color: colors.primary,
+                width: '100%',
+                paddingVertical: spacing.md,
+                borderRadius: radii.md,
+                borderWidth: 1,
+                borderColor: colors.primary,
+                alignItems: 'center',
+                justifyContent: 'center',
               }}
             >
-              Log in
-            </Text>
-          </TouchableOpacity>
+              <Text style={{ ...typography.titleMedium, color: colors.primary }}>Log in</Text>
+            </TouchableOpacity>
+          </View>
         </View>
       </ScrollView>
     </View>

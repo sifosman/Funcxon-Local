@@ -94,19 +94,35 @@ export default function SignUpScreen({ navigation }: Props) {
         }}
         keyboardShouldPersistTaps="handled"
       >
-        <View style={{ width: '100%', maxWidth: 360, alignSelf: 'center' }}>
-          <View style={{ alignItems: 'center', marginBottom: spacing.xl }}>
+        <View
+          style={{
+            width: '100%',
+            maxWidth: 360,
+            alignSelf: 'center',
+            backgroundColor: colors.surface,
+            borderRadius: radii.lg,
+            borderWidth: 1,
+            borderColor: colors.borderSubtle,
+            padding: spacing.xl,
+            shadowColor: '#000',
+            shadowOpacity: 0.08,
+            shadowRadius: 10,
+            shadowOffset: { width: 0, height: 4 },
+          }}
+        >
+          <View style={{ alignItems: 'center', marginBottom: spacing.lg }}>
             <Text
               style={{
                 ...typography.titleLarge,
                 color: colors.textPrimary,
                 marginBottom: spacing.sm,
+                textAlign: 'center',
               }}
             >
-              Create an Account
+              Create Your Account
             </Text>
-            <Text style={{ ...typography.body, color: colors.textMuted }}>
-              Connect, Collaborate, Celebrate
+            <Text style={{ ...typography.body, color: colors.textMuted, textAlign: 'center' }}>
+              Join thousands of event hosts planning their perfect occasions.
             </Text>
           </View>
 
@@ -269,11 +285,7 @@ export default function SignUpScreen({ navigation }: Props) {
             </View>
           </View>
 
-          <PrimaryButton
-            title={loading ? 'Creating account...' : 'Create Account'}
-            onPress={handleSignUp}
-            disabled={loading}
-          />
+          <PrimaryButton title={loading ? 'Creating account...' : 'Sign up'} onPress={handleSignUp} disabled={loading} />
 
           {formError ? (
             <Text
@@ -289,43 +301,7 @@ export default function SignUpScreen({ navigation }: Props) {
           ) : null}
 
           <View style={{ marginTop: spacing.lg }}>
-            <TouchableOpacity
-              activeOpacity={0.9}
-              onPress={handleGoogleSignUp}
-              style={{
-                width: '100%',
-                paddingVertical: spacing.md,
-                borderRadius: radii.lg,
-                borderWidth: 1,
-                borderColor: colors.borderSubtle,
-                backgroundColor: colors.surface,
-                flexDirection: 'row',
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-            >
-              <View
-                style={{
-                  width: 24,
-                  height: 24,
-                  borderRadius: 12,
-                  backgroundColor: '#FFFFFF',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  marginRight: spacing.sm,
-                }}
-              >
-                <Text style={{ ...typography.caption, color: colors.textPrimary }}>G</Text>
-              </View>
-              <Text
-                style={{
-                  ...typography.body,
-                  color: colors.textPrimary,
-                }}
-              >
-                Register with Google
-              </Text>
-            </TouchableOpacity>
+            <OutlineButton title="Sign up with Google" onPress={handleGoogleSignUp} style={{ width: '100%', paddingVertical: spacing.md, borderRadius: radii.lg, borderWidth: 1, borderColor: colors.borderSubtle, backgroundColor: colors.surface }} />
           </View>
 
           <View style={{ marginTop: spacing.lg, alignItems: 'center' }}>
@@ -335,7 +311,7 @@ export default function SignUpScreen({ navigation }: Props) {
                 style={{ ...typography.caption, color: colors.primaryTeal }}
                 onPress={() => navigation.navigate('SignIn')}
               >
-                Sign In
+                Log in
               </Text>
             </Text>
           </View>

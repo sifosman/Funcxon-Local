@@ -1,9 +1,7 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
-  Animated,
-  Dimensions,
   Image,
   Modal,
   ScrollView,
@@ -23,6 +21,8 @@ import type { AttendeeStackParamList } from '../navigation/AttendeeNavigator';
 import { colors, spacing, radii, typography } from '../theme';
 import { OutlineButton, PrimaryButton, ThemedInput } from '../components/ui';
 import * as Location from 'expo-location';
+import { getFavourites, toggleFavourite } from '../lib/favourites';
+import { useAuth } from '../auth/AuthContext';
 
 export type VendorListItem = {
   id: number;
@@ -31,6 +31,7 @@ export type VendorListItem = {
   rating: number | null;
   review_count: number | null;
   image_url: string | null;
+  description?: string | null;
   province?: string | null;
   city?: string | null;
 };
@@ -48,15 +49,6 @@ type DropdownOption = {
 type OpenPickerType = 'event_type' | 'province' | 'capacity_band' | null;
 
 export default function AttendeeHomeScreen() {
-  const sliderImages = [
-    require('../../assets/slider_1.jpeg'),
-    require('../../assets/slide_2.jpeg'),
-    require('../../assets/slider_3.jpeg'),
-  ];
-
-  const screenWidth = Dimensions.get('window').width;
-  const slideWidth = screenWidth - spacing.lg * 2;
-
   const navigation = useNavigation<NativeStackNavigationProp<AttendeeStackParamList>>();
   const [search, setSearch] = useState('');
   const [serviceType, setServiceType] = useState<ServiceType>('All');
@@ -72,6 +64,8 @@ export default function AttendeeHomeScreen() {
   const [detectedProvinceLabel, setDetectedProvinceLabel] = useState<string | null>(null);
   const [locationCity, setLocationCity] = useState<string | null>(null);
   const [locationRegion, setLocationRegion] = useState<string | null>(null);
+  const [favouriteIds, setFavouriteIds] = useState<number[]>([]);
+  const { user } = useAuth();
 
   const { data, isLoading, error } = useQuery<VendorListItem[]>({
     queryKey: ['vendors'],
@@ -185,33 +179,30 @@ export default function AttendeeHomeScreen() {
 
   const featuredVendors = (orderedVendors.length ? orderedVendors : filteredVendors).slice(0, 10);
 
-  const sliderRef = useRef<ScrollView | null>(null);
-  const [currentSlide, setCurrentSlide] = useState(0);
-  const fadeAnim = useRef(new Animated.Value(1)).current;
-
   useEffect(() => {
-    if (sliderImages.length <= 1) return;
+    let isMounted = true;
+    if (!user?.id) {
+      setFavouriteIds([]);
+      return () => {
+        isMounted = false;
+      };
+    }
+    getFavourites(user).then((ids) => {
+      if (isMounted) setFavouriteIds(ids);
+    });
+    return () => {
+      isMounted = false;
+    };
+  }, [user?.id]);
 
-    const interval = setInterval(() => {
-      setCurrentSlide((prev) => {
-        const nextIndex = (prev + 1) % sliderImages.length;
-        if (sliderRef.current) {
-          sliderRef.current.scrollTo({ x: nextIndex * slideWidth, animated: true });
-        }
-
-        fadeAnim.setValue(0);
-        Animated.timing(fadeAnim, {
-          toValue: 1,
-          duration: 800,
-          useNativeDriver: true,
-        }).start();
-
-        return nextIndex;
-      });
-    }, 7000);
-
-    return () => clearInterval(interval);
-  }, [sliderImages.length, slideWidth, fadeAnim]);
+  const handleToggleFavourite = async (vendorId: number) => {
+    if (!user?.id) {
+      Alert.alert('Sign in required', 'Please sign in to save favourites.');
+      return;
+    }
+    const next = await toggleFavourite(user, vendorId);
+    setFavouriteIds(next);
+  };
 
   async function handleUseMyLocation() {
     if (!provinceOptions || provinceOptions.length === 0) {
@@ -307,465 +298,242 @@ export default function AttendeeHomeScreen() {
       style={{ flex: 1, backgroundColor: colors.background }}
       contentContainerStyle={{ paddingBottom: spacing.xl }}
     >
-      {/* Header */}
-      <View
-        style={{
-          paddingHorizontal: spacing.lg,
-          paddingTop: spacing.xl,
-          paddingBottom: spacing.md,
-          flexDirection: 'row',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-        }}
-      >
-        <View>
-          <Text
-            style={{
-              ...typography.body,
-              color: colors.textMuted,
-            }}
-          >
-            Welcome back!
-          </Text>
+      <View style={{ backgroundColor: colors.primary, paddingBottom: spacing.xl }}>
+        <View style={{ paddingHorizontal: spacing.lg, paddingTop: spacing.xl }}>
           <Text
             style={{
               ...typography.displayMedium,
-              color: colors.textPrimary,
-              marginTop: spacing.xs,
+              color: '#FFFFFF',
+              textAlign: 'center',
             }}
           >
-            Plan your perfect event
+            Connect, Collaborate, Celebrate
           </Text>
-          {(locationCity || locationRegion) && (
-            <View style={{ marginTop: spacing.xs }}>
-              <Text
-                style={{
-                  ...typography.caption,
-                  color: colors.textSecondary,
-                }}
-              >
-                {locationCity && locationRegion
-                  ? `Near ${locationCity}, ${locationRegion}`
-                  : `Near ${locationCity || locationRegion}`}
-              </Text>
-              <TouchableOpacity
-                activeOpacity={0.8}
-                onPress={() => setOpenPicker('province')}
-                style={{ marginTop: spacing.xs }}
-              >
-                <Text
-                  style={{
-                    ...typography.caption,
-                    color: colors.textMuted,
-                  }}
-                >
-                  Change location
-                </Text>
-              </TouchableOpacity>
-            </View>
-          )}
-        </View>
-        <View
-          style={{
-            width: 48,
-            height: 48,
-            borderRadius: 24,
-            backgroundColor: colors.surface,
-            alignItems: 'center',
-            justifyContent: 'center',
-            borderWidth: 1,
-            borderColor: colors.borderSubtle,
-          }}
-        >
-          <Text style={{ ...typography.titleMedium, color: colors.textPrimary }}>U</Text>
-        </View>
-      </View>
-
-      {/* Hero slider */}
-      <View
-        style={{
-          paddingHorizontal: spacing.lg,
-          marginBottom: spacing.lg,
-        }}
-      >
-        <Animated.View
-          style={{
-            borderRadius: radii.lg,
-            overflow: 'hidden',
-            borderWidth: 1,
-            borderColor: colors.borderSubtle,
-            opacity: fadeAnim,
-          }}
-        >
-          <ScrollView
-            ref={sliderRef}
-            horizontal
-            pagingEnabled
-            showsHorizontalScrollIndicator={false}
+          <Text
+            style={{
+              ...typography.body,
+              color: 'rgba(255,255,255,0.9)',
+              textAlign: 'center',
+              marginTop: spacing.sm,
+            }}
           >
-            {sliderImages.map((source, index) => (
-              <View
-                key={index}
-                style={{
-                  width: slideWidth,
-                }}
-              >
-                <Image
-                  source={source}
-                  style={{ width: '100%', height: 80 }}
-                  resizeMode="cover"
-                />
-              </View>
-            ))}
-          </ScrollView>
-        </Animated.View>
-      </View>
+            Welcome to Funcxon! Your all in one Event Coordinator. Plan, browse, compare, get quotes, and
+            book venues and service professionals in one place.
+          </Text>
 
-      {/* Search & filters card */}
-      <View style={{ paddingHorizontal: spacing.lg }}>
-        <View
-          style={{
-            borderRadius: 16,
-            borderWidth: 1,
-            borderColor: colors.borderSubtle,
-            backgroundColor: colors.surface,
-            padding: spacing.lg,
-            shadowColor: '#000',
-            shadowOpacity: 0.06,
-            shadowRadius: 8,
-            shadowOffset: { width: 0, height: 4 },
-          }}
-        >
-          {/* Search pill */}
           <View
             style={{
-              borderRadius: 999,
+              marginTop: spacing.lg,
               backgroundColor: colors.surface,
-              paddingHorizontal: spacing.md,
-              height: 44,
-              flexDirection: 'row',
-              alignItems: 'center',
-              marginBottom: spacing.md,
+              borderRadius: radii.lg,
+              padding: spacing.lg,
               borderWidth: 1,
-              borderColor: colors.borderSubtle,
+              borderColor: '#D1D5DB',
+              shadowColor: '#000',
+              shadowOpacity: 0.12,
+              shadowRadius: 10,
+              shadowOffset: { width: 0, height: 4 },
             }}
           >
-            <Text style={{ ...typography.body, color: colors.textMuted, marginRight: spacing.sm }}>🔍</Text>
-            <TextInput
-              placeholder="Search..."
-              placeholderTextColor={colors.textMuted}
-              value={search}
-              onChangeText={setSearch}
-              style={{
-                flex: 1,
-                fontSize: 14,
-                color: colors.textPrimary,
-              }}
-            />
-          </View>
-
-          {/* Service type grid */}
-          <View
-            style={{
-              marginTop: spacing.md,
-              flexDirection: 'row',
-              flexWrap: 'wrap',
-              columnGap: spacing.sm,
-              rowGap: spacing.sm,
-            }}
-          >
-            {(['Venues', 'Vendors', 'Service Providers', 'All'] as ServiceType[]).map((type) => {
-              const selected = serviceType === type;
-              return (
-                <TouchableOpacity
-                  key={type}
-                  onPress={() => setServiceType(type)}
-                  style={{
-                    flexBasis: '48%',
-                    paddingVertical: spacing.sm,
-                    paddingHorizontal: spacing.md,
-                    borderRadius: radii.lg,
-                    backgroundColor: selected ? colors.primaryTeal : colors.inputBackground,
-                    borderWidth: selected ? 0 : 1,
-                    borderColor: colors.borderSubtle,
-                  }}
-                >
-                  <Text
+            <Text style={{ ...typography.caption, color: colors.textSecondary, marginBottom: spacing.xs }}>
+              Service type
+            </Text>
+            <View style={{ flexDirection: 'row', columnGap: spacing.sm }}>
+              {(['Venues', 'Service Providers', 'All'] as ServiceType[]).map((type) => {
+                const selected = serviceType === type;
+                const label =
+                  type === 'Service Providers' ? 'Vendor &\nService\nProfessionals' : type === 'Venues' ? 'Venue\nPortfolios' : 'All';
+                return (
+                  <TouchableOpacity
+                    key={type}
+                    onPress={() => setServiceType(type)}
                     style={{
-                      ...typography.body,
-                      fontSize: 13,
-                      textAlign: 'center',
-                      color: selected ? '#FFFFFF' : colors.textPrimary,
+                      flex: 1,
+                      paddingVertical: spacing.sm,
+                      borderRadius: radii.md,
+                      borderWidth: 1,
+                      borderColor: selected ? colors.primary : '#D1D5DB',
+                      backgroundColor: selected ? colors.primary : '#FFFFFF',
+                      alignItems: 'center',
+                      justifyContent: 'center',
                     }}
                   >
-                    {type}
+                    <Text
+                      style={{
+                        ...typography.caption,
+                        fontWeight: '600',
+                        textAlign: 'center',
+                        color: selected ? '#FFFFFF' : colors.textPrimary,
+                      }}
+                    >
+                      {label}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+
+            <View style={{ marginTop: spacing.md }}>
+              <Text style={{ ...typography.caption, color: colors.textSecondary, marginBottom: spacing.xs }}>
+                Search by category
+              </Text>
+              <TouchableOpacity activeOpacity={0.9} onPress={() => setOpenPicker('event_type')}>
+                <View
+                  style={{
+                    borderRadius: radii.md,
+                    borderWidth: 1,
+                    borderColor: '#D1D5DB',
+                    paddingHorizontal: spacing.md,
+                    paddingVertical: spacing.sm,
+                    backgroundColor: '#FFFFFF',
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                  }}
+                >
+                  <Text style={{ ...typography.body, color: colors.textPrimary }}>
+                    {selectedEventType?.label || 'Search by Category'}
+                  </Text>
+                  <Text style={{ ...typography.caption, color: colors.textMuted }}>▼</Text>
+                </View>
+              </TouchableOpacity>
+            </View>
+
+            <View style={{ marginTop: spacing.md }}>
+              <Text style={{ ...typography.caption, color: colors.textSecondary, marginBottom: spacing.xs }}>
+                What are you looking for?
+              </Text>
+              <TouchableOpacity activeOpacity={0.9} onPress={() => setOpenPicker('capacity_band')}>
+                <View
+                  style={{
+                    borderRadius: radii.md,
+                    borderWidth: 1,
+                    borderColor: '#D1D5DB',
+                    paddingHorizontal: spacing.md,
+                    paddingVertical: spacing.sm,
+                    backgroundColor: '#FFFFFF',
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                  }}
+                >
+                  <Text style={{ ...typography.body, color: colors.textPrimary }}>
+                    {selectedCapacity?.label || 'Event Capacity'}
+                  </Text>
+                  <Text style={{ ...typography.caption, color: colors.textMuted }}>▼</Text>
+                </View>
+              </TouchableOpacity>
+            </View>
+
+            <View style={{ marginTop: spacing.md }}>
+              <Text style={{ ...typography.caption, color: colors.textSecondary, marginBottom: spacing.xs }}>
+                Location
+              </Text>
+              <TouchableOpacity activeOpacity={0.9} onPress={() => setOpenPicker('province')}>
+                <View
+                  style={{
+                    borderRadius: radii.md,
+                    borderWidth: 1,
+                    borderColor: '#D1D5DB',
+                    paddingHorizontal: spacing.md,
+                    paddingVertical: spacing.sm,
+                    backgroundColor: '#FFFFFF',
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                  }}
+                >
+                  <Text style={{ ...typography.body, color: colors.textPrimary }}>
+                    {selectedProvince?.label || 'Select Provinces'}
+                  </Text>
+                  <Text style={{ ...typography.caption, color: colors.textMuted }}>▼</Text>
+                </View>
+              </TouchableOpacity>
+              {provinceOptions.length > 0 && (
+                <TouchableOpacity
+                  activeOpacity={0.9}
+                  onPress={handleUseMyLocation}
+                  style={{
+                    marginTop: spacing.xs,
+                    alignSelf: 'flex-start',
+                    paddingHorizontal: spacing.md,
+                    paddingVertical: spacing.xs,
+                    borderRadius: radii.full,
+                    backgroundColor: colors.accent,
+                  }}
+                >
+                  <Text style={{ ...typography.caption, color: colors.textPrimary }}>
+                    {detectingLocation
+                      ? 'Detecting location...'
+                      : detectedProvinceLabel
+                      ? `Using ${detectedProvinceLabel}`
+                      : 'Use my location'}
                   </Text>
                 </TouchableOpacity>
-              );
-            })}
-          </View>
-
-          {/* Select dropdowns */}
-          <View style={{ marginTop: spacing.md }}>
-            <TouchableOpacity activeOpacity={0.9} onPress={() => setOpenPicker('event_type')}>
-              <View
-                style={{
-                  marginBottom: spacing.sm,
-                  borderRadius: radii.lg,
-                  borderWidth: 1,
-                  borderColor: colors.borderSubtle,
-                  backgroundColor: colors.surfaceMuted,
-                  paddingHorizontal: spacing.md,
-                  paddingVertical: spacing.sm,
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                }}
-              >
-                <Text style={{ ...typography.body, color: colors.textSecondary }}>
-                  {selectedEventType?.label || 'What are you looking for?'}
-                </Text>
-                <Text style={{ ...typography.caption, color: colors.textMuted }}>▼</Text>
-              </View>
-            </TouchableOpacity>
-
-            {provinceOptions.length > 0 && (
-              <TouchableOpacity
-                activeOpacity={0.9}
-                onPress={handleUseMyLocation}
-                style={{
-                  marginTop: spacing.xs,
-                  alignSelf: 'flex-start',
-                  paddingHorizontal: spacing.md,
-                  paddingVertical: spacing.xs,
-                  borderRadius: radii.full,
-                  backgroundColor: colors.backgroundAlt,
-                }}
-              >
-                <Text
-                  style={{
-                    ...typography.caption,
-                    color: colors.textPrimary,
-                  }}
-                >
-                  {detectingLocation
-                    ? 'Detecting location...'
-                    : detectedProvinceLabel
-                    ? `Using ${detectedProvinceLabel}`
-                    : 'Use my location'}
-                </Text>
-              </TouchableOpacity>
-            )}
-
-            <TouchableOpacity activeOpacity={0.9} onPress={() => setOpenPicker('province')}>
-              <View
-                style={{
-                  marginBottom: spacing.sm,
-                  borderRadius: radii.lg,
-                  borderWidth: 1,
-                  borderColor: colors.borderSubtle,
-                  backgroundColor: colors.surfaceMuted,
-                  paddingHorizontal: spacing.md,
-                  paddingVertical: spacing.sm,
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                }}
-              >
-                <Text style={{ ...typography.body, color: colors.textSecondary }}>
-                  {selectedProvince?.label || 'Select Provinces'}
-                </Text>
-                <Text style={{ ...typography.caption, color: colors.textMuted }}>▼</Text>
-              </View>
-            </TouchableOpacity>
-
-            <TouchableOpacity activeOpacity={0.9} onPress={() => setOpenPicker('capacity_band')}>
-              <View
-                style={{
-                  marginBottom: spacing.sm,
-                  borderRadius: radii.lg,
-                  borderWidth: 1,
-                  borderColor: colors.borderSubtle,
-                  backgroundColor: colors.surfaceMuted,
-                  paddingHorizontal: spacing.md,
-                  paddingVertical: spacing.sm,
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                }}
-              >
-                <Text style={{ ...typography.body, color: colors.textSecondary }}>
-                  {selectedCapacity?.label || 'Event Capacity'}
-                </Text>
-                <Text style={{ ...typography.caption, color: colors.textMuted }}>▼</Text>
-              </View>
-            </TouchableOpacity>
-          </View>
-
-          {/* Date range */}
-          <View
-            style={{
-              marginTop: spacing.sm,
-              flexDirection: 'row',
-              columnGap: spacing.md,
-            }}
-          >
-            <View style={{ flex: 1 }}>
-              <Text style={{ ...typography.caption, color: colors.textMuted }}>Event Date: From</Text>
-              <TouchableOpacity
-                activeOpacity={0.9}
-                onPress={() => setActiveDatePicker('from')}
-                style={{
-                  marginTop: spacing.xs,
-                  borderRadius: radii.lg,
-                  borderWidth: 1,
-                  borderColor: colors.borderSubtle,
-                  backgroundColor: colors.surfaceMuted,
-                  paddingHorizontal: spacing.md,
-                  paddingVertical: spacing.sm,
-                  justifyContent: 'center',
-                }}
-              >
-                <Text style={{ ...typography.caption, color: colors.textSecondary }}>
-                  {fromDate ? fromDate.toLocaleDateString() : 'Select start date'}
-                </Text>
-              </TouchableOpacity>
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={{ ...typography.caption, color: colors.textMuted }}>To</Text>
-              <TouchableOpacity
-                activeOpacity={singleDayEvent ? 1 : 0.9}
-                onPress={() => {
-                  if (!singleDayEvent) setActiveDatePicker('to');
-                }}
-                style={{
-                  marginTop: spacing.xs,
-                  borderRadius: radii.lg,
-                  borderWidth: 1,
-                  borderColor: colors.borderSubtle,
-                  backgroundColor: colors.surfaceMuted,
-                  paddingHorizontal: spacing.md,
-                  paddingVertical: spacing.sm,
-                  justifyContent: 'center',
-                  opacity: singleDayEvent ? 0.6 : 1,
-                }}
-              >
-                <Text style={{ ...typography.caption, color: colors.textSecondary }}>
-                  {singleDayEvent
-                    ? fromDate
-                      ? fromDate.toLocaleDateString()
-                      : 'Same day as start'
-                    : toDate
-                    ? toDate.toLocaleDateString()
-                    : 'Select end date'}
-                </Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-
-          {/* Single day toggle */}
-          <TouchableOpacity
-            onPress={() => setSingleDayEvent((prev) => !prev)}
-            style={{
-              flexDirection: 'row',
-              alignItems: 'center',
-              marginTop: spacing.sm,
-            }}
-          >
-            <View
-              style={{
-                width: 18,
-                height: 18,
-                borderRadius: 4,
-                borderWidth: 1,
-                borderColor: colors.borderSubtle,
-                backgroundColor: singleDayEvent ? colors.primaryTeal : 'transparent',
-                alignItems: 'center',
-                justifyContent: 'center',
-                marginRight: spacing.xs,
-              }}
-            >
-              {singleDayEvent && (
-                <Text
-                  style={{
-                    ...typography.caption,
-                    color: '#FFFFFF',
-                  }}
-                >
-                  ✓
-                </Text>
               )}
             </View>
-            <Text style={{ ...typography.caption, color: colors.textSecondary }}>Event is on a single day</Text>
-          </TouchableOpacity>
 
-          {/* Search / Clear buttons */}
-          <View
-            style={{
-              flexDirection: 'row',
-              columnGap: spacing.md,
-              marginTop: spacing.md,
-            }}
-          >
-            <View style={{ flex: 1 }}>
-              <PrimaryButton title="Search" onPress={() => {}} />
-            </View>
-            <View style={{ flex: 1 }}>
-              <OutlineButton
-                title="Clear All"
-                onPress={() => {
-                  setSearch('');
-                  setServiceType('All');
-                  setSelectedEventType(null);
-                  setSelectedProvince(null);
-                  setSelectedCapacity(null);
-                  setDetectedProvinceLabel(null);
-                  setLocationCity(null);
-                  setLocationRegion(null);
-                }}
-              />
-            </View>
-          </View>
-
-          {/* Filter / Sort row */}
-          <View
-            style={{
-              marginTop: spacing.md,
-              paddingTop: spacing.md,
-              borderTopWidth: 1,
-              borderTopColor: colors.borderSubtle,
-              flexDirection: 'row',
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
-          >
-            <TouchableOpacity>
-              <Text style={{ ...typography.body, color: colors.textSecondary }}>Filter</Text>
-            </TouchableOpacity>
             <View
               style={{
-                width: 1,
-                height: 20,
-                marginHorizontal: spacing.lg,
-                backgroundColor: colors.borderSubtle,
+                marginTop: spacing.md,
+                flexDirection: 'row',
+                columnGap: spacing.md,
+                justifyContent: 'center',
               }}
-            />
-            <TouchableOpacity>
-              <Text style={{ ...typography.body, color: colors.textSecondary }}>Sort</Text>
-            </TouchableOpacity>
+            >
+              <View style={{ flex: 1 }}>
+                <PrimaryButton title="Search" onPress={() => {}} />
+              </View>
+              <View style={{ width: 120 }}>
+                <OutlineButton
+                  title="Clear All"
+                  onPress={() => {
+                    setSearch('');
+                    setServiceType('All');
+                    setSelectedEventType(null);
+                    setSelectedProvince(null);
+                    setSelectedCapacity(null);
+                    setDetectedProvinceLabel(null);
+                    setLocationCity(null);
+                    setLocationRegion(null);
+                  }}
+                />
+              </View>
+            </View>
+
+            <View style={{ flexDirection: 'row', columnGap: spacing.sm, marginTop: spacing.md }}>
+              <TouchableOpacity
+                style={{
+                  flex: 1,
+                  borderWidth: 1,
+                  borderColor: '#D1D5DB',
+                  borderRadius: radii.md,
+                  paddingVertical: spacing.xs,
+                  alignItems: 'center',
+                }}
+              >
+                <Text style={{ ...typography.caption, color: colors.textSecondary }}>Filter</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={{
+                  flex: 1,
+                  borderWidth: 1,
+                  borderColor: '#D1D5DB',
+                  borderRadius: radii.md,
+                  paddingVertical: spacing.xs,
+                  alignItems: 'center',
+                }}
+              >
+                <Text style={{ ...typography.caption, color: colors.textSecondary }}>Sort</Text>
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
       </View>
 
       {/* Categories */}
-      <View style={{ paddingHorizontal: spacing.lg, paddingTop: spacing.lg }}>
-        <Text
-          style={{
-            ...typography.displayMedium,
-            color: colors.textPrimary,
-            marginBottom: spacing.md,
-          }}
-        >
+      <View style={{ paddingHorizontal: spacing.lg, paddingTop: spacing.xl }}>
+        <Text style={{ ...typography.displayMedium, color: colors.textPrimary, marginBottom: spacing.md }}>
           Categories
         </Text>
         <View
@@ -843,19 +611,44 @@ export default function AttendeeHomeScreen() {
                 borderBottomColor: colors.borderSubtle,
               }}
             >
-              <Text style={{ ...typography.body, color: colors.textPrimary, fontWeight: '600' }}>
-                {vendor.name ?? 'Untitled vendor'}
-              </Text>
-              <Text style={{ ...typography.caption, color: colors.textSecondary, marginTop: spacing.xs }}>
-                {[vendor.city, vendor.province].filter(Boolean).join(', ') || 'Location not specified'}
-              </Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                <View style={{ flex: 1, paddingRight: spacing.md }}>
+                  <Text style={{ ...typography.body, color: colors.textPrimary, fontWeight: '600' }}>
+                    {vendor.name ?? 'Untitled vendor'}
+                  </Text>
+                  <Text style={{ ...typography.caption, color: colors.textSecondary, marginTop: spacing.xs }}>
+                    {[vendor.city, vendor.province].filter(Boolean).join(', ') || 'Location not specified'}
+                  </Text>
+                </View>
+                <TouchableOpacity
+                  onPress={(event) => {
+                    event.stopPropagation();
+                    handleToggleFavourite(vendor.id);
+                  }}
+                  style={{
+                    width: 32,
+                    height: 32,
+                    borderRadius: 16,
+                    borderWidth: 1,
+                    borderColor: colors.borderSubtle,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
+                  <MaterialIcons
+                    name={favouriteIds.includes(vendor.id) ? 'favorite' : 'favorite-border'}
+                    size={18}
+                    color={favouriteIds.includes(vendor.id) ? colors.primaryTeal : colors.textMuted}
+                  />
+                </TouchableOpacity>
+              </View>
             </TouchableOpacity>
           ))}
         </View>
       )}
 
-      {/* Featured Services */}
-      <View style={{ paddingTop: spacing.lg }}>
+      {/* Featured Vendors */}
+      <View style={{ paddingTop: spacing.xl, backgroundColor: colors.surface, marginTop: spacing.xl }}>
         <Text
           style={{
             ...typography.displayMedium,
@@ -864,7 +657,7 @@ export default function AttendeeHomeScreen() {
             paddingHorizontal: spacing.lg,
           }}
         >
-          Featured Services
+          Featured Vendors
         </Text>
 
         {featuredVendors.length === 0 ? (
@@ -898,11 +691,38 @@ export default function AttendeeHomeScreen() {
                 }}
               >
                 {item.image_url ? (
-                  <Image
-                    source={{ uri: item.image_url }}
-                    style={{ width: '100%', height: 140 }}
-                    resizeMode="cover"
-                  />
+                  <View>
+                    <Image
+                      source={{ uri: item.image_url }}
+                      style={{ width: '100%', height: 140 }}
+                      resizeMode="cover"
+                    />
+                    <TouchableOpacity
+                      onPress={(event) => {
+                        event.stopPropagation();
+                        handleToggleFavourite(item.id);
+                      }}
+                      style={{
+                        position: 'absolute',
+                        top: spacing.sm,
+                        right: spacing.sm,
+                        width: 32,
+                        height: 32,
+                        borderRadius: 16,
+                        backgroundColor: '#FFFFFF',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        borderWidth: 1,
+                        borderColor: colors.borderSubtle,
+                      }}
+                    >
+                      <MaterialIcons
+                        name={favouriteIds.includes(item.id) ? 'favorite' : 'favorite-border'}
+                        size={18}
+                        color={favouriteIds.includes(item.id) ? colors.primaryTeal : colors.textMuted}
+                      />
+                    </TouchableOpacity>
+                  </View>
                 ) : (
                   <View
                     style={{
@@ -914,6 +734,31 @@ export default function AttendeeHomeScreen() {
                     }}
                   >
                     <Text style={{ ...typography.caption, color: colors.textMuted }}>No image</Text>
+                    <TouchableOpacity
+                      onPress={(event) => {
+                        event.stopPropagation();
+                        handleToggleFavourite(item.id);
+                      }}
+                      style={{
+                        position: 'absolute',
+                        top: spacing.sm,
+                        right: spacing.sm,
+                        width: 32,
+                        height: 32,
+                        borderRadius: 16,
+                        backgroundColor: '#FFFFFF',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        borderWidth: 1,
+                        borderColor: colors.borderSubtle,
+                      }}
+                    >
+                      <MaterialIcons
+                        name={favouriteIds.includes(item.id) ? 'favorite' : 'favorite-border'}
+                        size={18}
+                        color={favouriteIds.includes(item.id) ? colors.primaryTeal : colors.textMuted}
+                      />
+                    </TouchableOpacity>
                   </View>
                 )}
                 <View style={{ padding: spacing.md }}>

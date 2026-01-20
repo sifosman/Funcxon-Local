@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, ScrollView, Text, TextInput, TouchableOpacity, View, Image } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { MaterialIcons } from '@expo/vector-icons';
@@ -7,6 +7,8 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '../lib/supabaseClient';
 import { colors, spacing, radii, typography } from '../theme';
 import type { VendorListItem } from './AttendeeHomeScreen';
+import { getFavourites, toggleFavourite } from '../lib/favourites';
+import { useAuth } from '../auth/AuthContext';
 
 type CategoryFilter = 'all' | 'venues' | 'catering' | 'photography' | 'other';
 type SortBy = 'default' | 'rating-desc' | 'reviews-desc' | 'price-asc';
@@ -18,6 +20,8 @@ export default function DiscoverScreen() {
   const [onlyWithPrice, setOnlyWithPrice] = useState(false);
   const [category, setCategory] = useState<CategoryFilter>('all');
   const [sortBy, setSortBy] = useState<SortBy>('default');
+  const [favouriteIds, setFavouriteIds] = useState<number[]>([]);
+  const { user } = useAuth();
 
   const { data, isLoading, error } = useQuery<VendorListItem[]>({
     queryKey: ['discover-vendors'],
@@ -63,34 +67,6 @@ export default function DiscoverScreen() {
       >
         <Text style={{ ...typography.titleMedium, color: colors.textPrimary }}>Failed to load discovery list.</Text>
         <Text style={{ marginTop: spacing.sm, ...typography.body, color: colors.textMuted }}>{error.message}</Text>
-      </View>
-    );
-  }
-
-  if (!data || data.length === 0) {
-    return (
-      <View
-        style={{
-          flex: 1,
-          paddingHorizontal: spacing.lg,
-          paddingVertical: spacing.lg,
-          justifyContent: 'center',
-          backgroundColor: colors.background,
-        }}
-      >
-        <Text style={{ textAlign: 'center', ...typography.body, color: colors.textPrimary }}>
-          No vendors available yet.
-        </Text>
-        <Text
-          style={{
-            textAlign: 'center',
-            marginTop: spacing.sm,
-            ...typography.body,
-            color: colors.textMuted,
-          }}
-        >
-          Add a few vendors in Supabase to see them featured here.
-        </Text>
       </View>
     );
   }
@@ -190,19 +166,43 @@ export default function DiscoverScreen() {
     });
   }, [filtered, sortBy]);
 
+  useEffect(() => {
+    let isMounted = true;
+    if (!user?.id) {
+      setFavouriteIds([]);
+      return () => {
+        isMounted = false;
+      };
+    }
+    getFavourites(user).then((ids) => {
+      if (isMounted) setFavouriteIds(ids);
+    });
+    return () => {
+      isMounted = false;
+    };
+  }, [user?.id]);
+
+  const handleToggleFavourite = async (vendorId: number) => {
+    if (!user?.id) {
+      return;
+    }
+    const next = await toggleFavourite(user, vendorId);
+    setFavouriteIds(next);
+  };
+
   return (
     <ScrollView
       style={{ flex: 1, backgroundColor: colors.background }}
-      contentContainerStyle={{ paddingHorizontal: spacing.lg, paddingVertical: spacing.lg, paddingBottom: spacing.xl }}
+      contentContainerStyle={{ paddingHorizontal: spacing.lg, paddingTop: spacing.xl, paddingBottom: spacing.xl }}
     >
       <Text
         style={{
           ...typography.displayMedium,
           color: colors.textPrimary,
-          marginBottom: spacing.sm,
+          marginBottom: spacing.xs,
         }}
       >
-        Discover
+        Browse Vendors
       </Text>
       <Text
         style={{
@@ -211,15 +211,34 @@ export default function DiscoverScreen() {
           marginBottom: spacing.lg,
         }}
       >
-        Explore a curated list of venues, caterers, and services to inspire your event.
+        Explore a curated list of venues, caterers, and services for your event.
       </Text>
+
+      <View style={{ flexDirection: 'row', columnGap: spacing.sm, marginBottom: spacing.lg }}>
+        {[{ label: 'Filter' }, { label: 'Sort' }, { label: 'Map' }].map((item) => (
+          <TouchableOpacity
+            key={item.label}
+            style={{
+              flex: 1,
+              borderWidth: 1,
+              borderColor: '#D1D5DB',
+              borderRadius: radii.md,
+              paddingVertical: spacing.sm,
+              alignItems: 'center',
+              backgroundColor: colors.surface,
+            }}
+          >
+            <Text style={{ ...typography.caption, color: colors.textSecondary }}>{item.label}</Text>
+          </TouchableOpacity>
+        ))}
+      </View>
       {/* Search */}
       <View
         style={{
           marginBottom: spacing.md,
-          borderRadius: radii.lg,
+          borderRadius: radii.md,
           borderWidth: 1,
-          borderColor: colors.borderSubtle,
+          borderColor: '#D1D5DB',
           backgroundColor: colors.surface,
           flexDirection: 'row',
           alignItems: 'center',
@@ -405,6 +424,10 @@ export default function DiscoverScreen() {
         </View>
       </View>
 
+      <Text style={{ ...typography.caption, color: colors.textMuted, marginBottom: spacing.md }}>
+        Showing {sorted.length} vendors
+      </Text>
+
       {sorted.length === 0 ? (
         <View style={{ paddingVertical: spacing.lg }}>
           <Text style={{ ...typography.body, color: colors.textMuted }}>
@@ -426,19 +449,50 @@ export default function DiscoverScreen() {
           >
             <View
               style={{
-                borderRadius: radii.xl,
+                borderRadius: radii.lg,
                 backgroundColor: colors.surface,
                 borderWidth: 1,
                 borderColor: colors.borderSubtle,
                 overflow: 'hidden',
+                shadowColor: '#000',
+                shadowOpacity: 0.08,
+                shadowRadius: 6,
+                shadowOffset: { width: 0, height: 3 },
               }}
             >
               {item.image_url ? (
-                <Image
-                  source={{ uri: item.image_url }}
-                  style={{ width: '100%', height: 140 }}
-                  resizeMode="cover"
-                />
+                <View>
+                  <Image
+                    source={{ uri: item.image_url }}
+                    style={{ width: '100%', height: 140 }}
+                    resizeMode="cover"
+                  />
+                  <TouchableOpacity
+                    onPress={(event) => {
+                      event.stopPropagation();
+                      handleToggleFavourite(item.id);
+                    }}
+                    style={{
+                      position: 'absolute',
+                      top: spacing.sm,
+                      right: spacing.sm,
+                      width: 32,
+                      height: 32,
+                      borderRadius: 16,
+                      backgroundColor: '#FFFFFF',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      borderWidth: 1,
+                      borderColor: colors.borderSubtle,
+                    }}
+                  >
+                    <MaterialIcons
+                      name={favouriteIds.includes(item.id) ? 'favorite' : 'favorite-border'}
+                      size={18}
+                      color={favouriteIds.includes(item.id) ? colors.primaryTeal : colors.textMuted}
+                    />
+                  </TouchableOpacity>
+                </View>
               ) : (
                 <View
                   style={{
@@ -450,6 +504,31 @@ export default function DiscoverScreen() {
                   }}
                 >
                   <Text style={{ ...typography.caption, color: colors.textMuted }}>No image</Text>
+                  <TouchableOpacity
+                    onPress={(event) => {
+                      event.stopPropagation();
+                      handleToggleFavourite(item.id);
+                    }}
+                    style={{
+                      position: 'absolute',
+                      top: spacing.sm,
+                      right: spacing.sm,
+                      width: 32,
+                      height: 32,
+                      borderRadius: 16,
+                      backgroundColor: '#FFFFFF',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      borderWidth: 1,
+                      borderColor: colors.borderSubtle,
+                    }}
+                  >
+                    <MaterialIcons
+                      name={favouriteIds.includes(item.id) ? 'favorite' : 'favorite-border'}
+                      size={18}
+                      color={favouriteIds.includes(item.id) ? colors.primaryTeal : colors.textMuted}
+                    />
+                  </TouchableOpacity>
                 </View>
               )}
               <View style={{ padding: spacing.md }}>
