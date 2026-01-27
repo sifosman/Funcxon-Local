@@ -1,7 +1,8 @@
+import { useState } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { DefaultTheme, NavigationContainer } from '@react-navigation/native';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { Platform } from 'react-native';
+import { Platform, View } from 'react-native';
 import { AppNavigator } from './src/navigation/AppNavigator';
 import { AuthProvider } from './src/auth/AuthContext';
 import { ApplicationFormProvider } from './src/context/ApplicationFormContext';
@@ -16,6 +17,8 @@ import {
   PlayfairDisplay_600SemiBold,
   PlayfairDisplay_700Bold,
 } from '@expo-google-fonts/playfair-display';
+import FloatingHelpButton from './src/components/FloatingHelpButton';
+import { HelpCenterModal } from './src/components/HelpCenterModal';
 
 const queryClient = new QueryClient();
 
@@ -32,6 +35,7 @@ const navTheme = {
 };
 
 export default function App() {
+  const [helpVisible, setHelpVisible] = useState(false);
   // Only load custom fonts on native platforms
   const [fontsLoaded] = useFonts({
     Montserrat_400Regular,
@@ -56,7 +60,11 @@ export default function App() {
       <AuthProvider>
         <ApplicationFormProvider>
           <NavigationContainer theme={navTheme}>
-            <AppNavigator />
+            <View style={{ flex: 1 }}>
+              <AppNavigator />
+              <FloatingHelpButton onPress={() => setHelpVisible(true)} />
+              <HelpCenterModal visible={helpVisible} onClose={() => setHelpVisible(false)} />
+            </View>
             <StatusBar style="dark" />
           </NavigationContainer>
         </ApplicationFormProvider>

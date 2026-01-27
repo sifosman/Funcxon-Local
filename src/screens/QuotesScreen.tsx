@@ -22,6 +22,7 @@ type QuoteRequest = {
   budget?: string | null;
   quote_amount?: number | null;
   created_at?: string | null;
+  message?: string | null;
 };
 
 type VendorSeed = {
@@ -39,7 +40,7 @@ type CategorySeed = {
 export default function QuotesScreen() {
   const navigation = useNavigation<any>();
   const { user } = useAuth();
-  const [activeTab, setActiveTab] = useState<'all' | 'pending' | 'finalised'>('all');
+  const [activeTab, setActiveTab] = useState<'all' | 'pending' | 'finalised' | 'tours'>('all');
   const [actionLoadingId, setActionLoadingId] = useState<number | null>(null);
 
   const { data, isLoading, error, refetch } = useQuery<QuoteRequest[]>({
@@ -87,7 +88,7 @@ export default function QuotesScreen() {
 
       const { data: quotes, error: quotesError } = await supabase
         .from('quote_requests')
-        .select('id, vendor_id, name, email, status, details, event_type, event_date, budget, quote_amount, created_at')
+        .select('id, vendor_id, name, email, status, details, event_type, event_date, budget, quote_amount, created_at, message')
         .eq('user_id', internalUser.id)
         .order('id', { ascending: false })
         .limit(50);
@@ -164,6 +165,7 @@ export default function QuotesScreen() {
   const filtered = useMemo(() => {
     if (!data) return [];
     if (activeTab === 'all') return data;
+    if (activeTab === 'tours') return data.filter((item) => item.status === 'tour_requested');
     return data.filter((item) => item.status === activeTab);
   }, [data, activeTab]);
 
@@ -198,6 +200,8 @@ export default function QuotesScreen() {
         return { backgroundColor: '#FFEDD5', color: '#9A3412' };
       case 'in_progress':
         return { backgroundColor: '#FDE68A', color: '#92400E' };
+      case 'tour_requested':
+        return { backgroundColor: '#E0F2FE', color: '#0369A1' };
       default:
         return { backgroundColor: '#FEF3C7', color: '#92400E' };
     }
@@ -209,6 +213,7 @@ export default function QuotesScreen() {
     all: data?.length ?? 0,
     pending: data?.filter((item) => item.status === 'pending').length ?? 0,
     finalised: data?.filter((item) => item.status === 'finalised').length ?? 0,
+    tours: data?.filter((item) => item.status === 'tour_requested').length ?? 0,
   };
 
   const handleSecondaryAction = async (quote: QuoteRequest) => {
@@ -250,6 +255,16 @@ export default function QuotesScreen() {
         Alert.alert('Unable to approve', err?.message ?? 'Please try again.');
       } finally {
         setActionLoadingId(null);
+      }
+      return;
+    }
+
+    if (quote.status === 'tour_requested') {
+      if (quote.vendor_id) {
+        navigation.navigate('Home', {
+          screen: 'VendorProfile',
+          params: { vendorId: quote.vendor_id },
+        });
       }
       return;
     }
@@ -415,6 +430,7 @@ export default function QuotesScreen() {
                 { key: 'all' as const, label: `All (${tabCounts.all})` },
                 { key: 'pending' as const, label: `Pending (${tabCounts.pending})` },
                 { key: 'finalised' as const, label: `Finalised (${tabCounts.finalised})` },
+                { key: 'tours' as const, label: `Tours (${tabCounts.tours})` },
               ]).map((tab) => {
                 const selected = activeTab === tab.key;
                 return (
@@ -449,7 +465,9 @@ export default function QuotesScreen() {
               ? 'Approve'
               : item.status === 'pending'
                 ? 'Amend'
-                : 'View Details';
+                : item.status === 'tour_requested'
+                  ? 'Contact Venue'
+                  : 'View Details';
           const actionLoading = actionLoadingId === item.id;
           return (
             <View
@@ -493,6 +511,24 @@ export default function QuotesScreen() {
                 <Text style={{ ...typography.body, color: colors.textSecondary, marginTop: spacing.sm }} numberOfLines={3}>
                   {item.details}
                 </Text>
+              )}
+
+              {item.message && item.status === 'tour_requested' && (
+                <View style={{ 
+                  marginTop: spacing.sm, 
+                  padding: spacing.sm, 
+                  backgroundColor: '#F0F9FF', 
+                  borderRadius: radii.md,
+                  borderLeftWidth: 3,
+                  borderLeftColor: '#0284C7'
+                }}>
+                  <Text style={{ ...typography.caption, color: '#0C4A6E', fontWeight: '600' }}>
+                    Tour Request
+                  </Text>
+                  <Text style={{ ...typography.caption, color: '#0C4A6E', marginTop: 2 }}>
+                    {item.message}
+                  </Text>
+                </View>
               )}
 
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: spacing.md }}>

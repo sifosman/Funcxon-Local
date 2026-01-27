@@ -295,6 +295,51 @@ export default function VendorProfileScreen({ route, navigation }: Props) {
     Linking.openURL(url).catch(() => null);
   };
 
+  const handleBookTour = async () => {
+    if (!user?.id) {
+      Alert.alert('Sign in required', 'Please sign in to book a venue tour.');
+      return;
+    }
+
+    if (!vendor?.whatsapp_number || !vendor?.name) {
+      Alert.alert('Contact Error', 'This venue cannot be contacted for tours.');
+      return;
+    }
+
+    try {
+      // Create quote request entry
+      const { error: quoteError } = await supabase
+        .from('quote_requests')
+        .insert({
+          user_id: user.id,
+          vendor_id: vendor.id,
+          status: 'tour_requested',
+          message: `Tour request for ${vendor.name}`,
+          created_at: new Date().toISOString(),
+        });
+
+      if (quoteError) {
+        console.error('Failed to create tour request:', quoteError);
+        // Continue with WhatsApp even if DB insert fails
+      }
+
+      // Open WhatsApp with pre-filled message
+      const message = encodeURIComponent(`Hi, I'd like to book a tour of ${vendor.name}. Are you available?`);
+      const whatsappUrl = `https://wa.me/${vendor.whatsapp_number.replace(/[^0-9]/g, '')}?text=${message}`;
+      
+      await Linking.openURL(whatsappUrl);
+      
+      Alert.alert(
+        'Tour Request Sent',
+        'Your tour request has been sent to the venue. They will contact you via WhatsApp to arrange a suitable time.',
+        [{ text: 'OK' }]
+      );
+    } catch (error) {
+      console.error('Failed to book tour:', error);
+      Alert.alert('Error', 'Failed to send tour request. Please try again.');
+    }
+  };
+
   const whatsappUrl = vendor.whatsapp_number
     ? `https://wa.me/${vendor.whatsapp_number.replace(/[^0-9]/g, '')}`
     : null;
@@ -625,6 +670,23 @@ export default function VendorProfileScreen({ route, navigation }: Props) {
                 Contact
               </Text>
               <View style={{ gap: spacing.sm }}>
+                {whatsappUrl && vendor.venue_capacity && (
+                  <TouchableOpacity
+                    onPress={() => handleBookTour()}
+                    style={{
+                      backgroundColor: colors.primaryTeal,
+                      paddingVertical: spacing.md,
+                      borderRadius: radii.md,
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      marginBottom: spacing.sm,
+                    }}
+                  >
+                    <MaterialIcons name="event-available" size={18} color="#FFFFFF" />
+                    <Text style={{ color: '#FFFFFF', fontWeight: '600', marginLeft: spacing.sm }}>Book Venue Tour</Text>
+                  </TouchableOpacity>
+                )}
                 {whatsappUrl && (
                   <TouchableOpacity
                     onPress={() => handleOpenUrl(whatsappUrl)}

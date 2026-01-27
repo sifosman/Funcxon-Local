@@ -84,6 +84,7 @@ export default function AccountScreen() {
             label: 'Listings Subscription Offers',
             icon: 'local-offer',
             submenu: [
+                { id: 'subscription-plans', label: 'View Subscription Plans', icon: 'credit-card' },
                 { id: 'subscription-vendors', label: 'Vendors / Service Professionals', icon: 'store' },
                 { id: 'subscription-venues', label: 'Venues', icon: 'location-city' },
             ],
@@ -119,6 +120,8 @@ export default function AccountScreen() {
                 toggleMenu(item.id);
             } else if (item.route) {
                 navigation.navigate(item.route);
+            } else if (item.id === 'subscription-plans') {
+                navigation.navigate('SubscriptionPlans');
             }
         };
 

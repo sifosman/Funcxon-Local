@@ -10,6 +10,7 @@ type ProfileStackParamList = {
     SubscriberLogin: undefined;
     SubscriberProfile: undefined;
     PortfolioProfile: undefined;
+    PortfolioAssistance: undefined;
 };
 
 type MenuItem = {
@@ -34,6 +35,15 @@ export default function SubscriberSuiteScreen() {
             route: 'PortfolioProfile',
             iconColor: colors.primaryTeal,
             iconBg: '#E0F2F7',
+        },
+        {
+            id: 'portfolio-assistance',
+            title: 'Portfolio Assistance',
+            description: 'Get expert help with your portfolio creation and optimization',
+            icon: 'support-agent',
+            route: 'PortfolioAssistance',
+            iconColor: '#8B5CF6',
+            iconBg: '#F3E8FF',
         },
         {
             id: 'subscriber-legal-terms',

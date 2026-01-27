@@ -9,6 +9,8 @@ import ApplicationStep1Screen from '../screens/subscriber/ApplicationStep1Screen
 import ApplicationStep2Screen from '../screens/subscriber/ApplicationStep2Screen';
 import ApplicationStep3Screen from '../screens/subscriber/ApplicationStep3Screen';
 import ApplicationStep4Screen from '../screens/subscriber/ApplicationStep4Screen';
+import SubscriptionPlansScreen from '../screens/SubscriptionPlansScreen';
+import PortfolioAssistanceScreen from '../screens/PortfolioAssistanceScreen';
 import { colors, typography } from '../theme';
 
 export type ProfileStackParamList = {
@@ -22,6 +24,8 @@ export type ProfileStackParamList = {
     ApplicationStep2: undefined;
     ApplicationStep3: undefined;
     ApplicationStep4: undefined;
+    SubscriptionPlans: undefined;
+    PortfolioAssistance: undefined;
 };
 
 const Stack = createNativeStackNavigator<ProfileStackParamList>();
@@ -88,6 +92,16 @@ export function ProfileNavigator() {
             <Stack.Screen
                 name="ApplicationStep4"
                 component={ApplicationStep4Screen}
+                options={{ headerShown: false }}
+            />
+            <Stack.Screen
+                name="SubscriptionPlans"
+                component={SubscriptionPlansScreen}
+                options={{ headerShown: false }}
+            />
+            <Stack.Screen
+                name="PortfolioAssistance"
+                component={PortfolioAssistanceScreen}
                 options={{ headerShown: false }}
             />
         </Stack.Navigator>

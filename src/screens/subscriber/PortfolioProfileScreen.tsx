@@ -3,11 +3,13 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { colors, spacing, radii, typography } from '../../theme';
+import { PhotoUploadCounter } from '../../components/PhotoUploadCounter';
 
 type ProfileStackParamList = {
   SubscriberSuite: undefined;
   PortfolioProfile: undefined;
   PortfolioType: undefined;
+  SubscriptionPlans: undefined;
 };
 
 interface QuickActionCard {
@@ -80,6 +82,16 @@ export default function PortfolioProfileScreen() {
           <Text style={{ ...typography.body, color: colors.textMuted }}>
             Manage your business listings and subscriber profile
           </Text>
+        </View>
+
+        {/* Photo Upload Counter */}
+        <View style={{ paddingHorizontal: spacing.lg, marginBottom: spacing.md }}>
+          <PhotoUploadCounter 
+            vendorId={1} // TODO: use actual vendor ID from context
+            onUpgradePress={() => {
+              navigation.navigate('SubscriptionPlans');
+            }}
+          />
         </View>
 
         {/* Stats Cards */}

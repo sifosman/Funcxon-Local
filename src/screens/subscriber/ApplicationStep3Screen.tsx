@@ -7,6 +7,8 @@ import { colors, spacing, radii, typography } from '../../theme';
 import { useApplicationForm } from '../../context/ApplicationFormContext';
 import { validateStep3 } from '../../utils/formValidation';
 import { ApplicationProgress } from '../../components/ApplicationProgress';
+import { PhotoUploadCounter } from '../../components/PhotoUploadCounter';
+import { canUploadMorePhotos, incrementVendorPhotoCount, decrementVendorPhotoCount } from '../../lib/subscription';
 
 type ProfileStackParamList = {
   ApplicationStep2: undefined;
@@ -20,11 +22,26 @@ export default function ApplicationStep3Screen() {
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   const handlePickImages = async () => {
-    Alert.alert(
-      'Image Upload',
-      'Image picker functionality requires expo-image-picker to be installed. This will be added in the next step.',
-      [{ text: 'OK' }]
-    );
+    try {
+      // Check if user can upload more photos (mock vendor ID for now)
+      const canUpload = await canUploadMorePhotos(1); // TODO: use actual vendor ID
+      if (!canUpload) {
+        Alert.alert(
+          'Photo Limit Reached',
+          'You\'ve reached your photo limit. Upgrade your subscription to add more photos.',
+          [{ text: 'OK' }]
+        );
+        return;
+      }
+
+      Alert.alert(
+        'Image Upload',
+        'Image picker functionality requires expo-image-picker to be installed. This will be added in the next step.',
+        [{ text: 'OK' }]
+      );
+    } catch (error) {
+      Alert.alert('Error', 'Failed to check photo limit. Please try again.');
+    }
   };
 
   const handlePickDocuments = async () => {
@@ -43,9 +60,19 @@ export default function ApplicationStep3Screen() {
     );
   };
 
-  const handleRemoveImage = (index: number) => {
-    const newImages = state.step3.images.filter((_, i) => i !== index);
-    updateStep3({ images: newImages });
+  const handleRemoveImage = async (index: number) => {
+    try {
+      // Decrement photo count in database
+      await decrementVendorPhotoCount(1); // TODO: use actual vendor ID
+      
+      const newImages = state.step3.images.filter((_, i) => i !== index);
+      updateStep3({ images: newImages });
+    } catch (error) {
+      console.error('Failed to update photo count:', error);
+      // Still remove the image locally even if DB update fails
+      const newImages = state.step3.images.filter((_, i) => i !== index);
+      updateStep3({ images: newImages });
+    }
   };
 
   const handleRemoveDocument = (index: number) => {
@@ -98,6 +125,15 @@ export default function ApplicationStep3Screen() {
             </View>
             <ApplicationProgress currentStep={3} />
           </View>
+
+          {/* Photo Upload Counter */}
+          <PhotoUploadCounter 
+            vendorId={1} // TODO: use actual vendor ID from context
+            onUpgradePress={() => {
+              // TODO: Navigate to subscription plans screen
+              Alert.alert('Upgrade', 'Subscription plans screen will be available soon.');
+            }}
+          />
 
           {/* Portfolio Images */}
           <View
