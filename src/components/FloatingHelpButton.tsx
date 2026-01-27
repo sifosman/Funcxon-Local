@@ -66,7 +66,7 @@ const styles = StyleSheet.create({
   container: {
     position: 'absolute',
     right: spacing.lg,
-    bottom: spacing.xl * 2.5, // sit above bottom tabs
+    bottom: spacing.xl * 3.5, // sit higher above bottom tabs
     alignItems: 'center',
     justifyContent: 'center',
   },

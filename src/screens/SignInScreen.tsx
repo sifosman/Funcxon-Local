@@ -82,6 +82,13 @@ export default function SignInScreen({ navigation }: Props) {
     }
   };
 
+  const handleFacebookSignIn = async () => {
+    const { error } = await signInWithProvider('facebook');
+    if (error) {
+      Alert.alert('Facebook sign in failed', error.message);
+    }
+  };
+
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
       <ScrollView
@@ -254,6 +261,38 @@ export default function SignInScreen({ navigation }: Props) {
                 <Text style={{ ...typography.caption, color: colors.textPrimary }}>G</Text>
               </View>
               <Text style={{ ...typography.body, color: colors.textPrimary }}>Log in with Google</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              activeOpacity={0.9}
+              onPress={handleFacebookSignIn}
+              style={{
+                width: '100%',
+                paddingVertical: spacing.md,
+                borderRadius: radii.md,
+                borderWidth: 1,
+                borderColor: colors.borderSubtle,
+                alignItems: 'center',
+                justifyContent: 'center',
+                flexDirection: 'row',
+                backgroundColor: colors.surface,
+                marginTop: spacing.sm,
+              }}
+            >
+              <View
+                style={{
+                  width: 28,
+                  height: 28,
+                  borderRadius: 12,
+                  backgroundColor: '#1877F2',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  marginRight: spacing.sm,
+                }}
+              >
+                <Text style={{ ...typography.caption, color: '#FFFFFF', fontWeight: 'bold' }}>f</Text>
+              </View>
+              <Text style={{ ...typography.body, color: colors.textPrimary }}>Log in with Facebook</Text>
             </TouchableOpacity>
           </View>
 

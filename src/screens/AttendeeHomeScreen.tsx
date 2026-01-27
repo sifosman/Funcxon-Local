@@ -23,6 +23,7 @@ import { OutlineButton, PrimaryButton, ThemedInput } from '../components/ui';
 import * as Location from 'expo-location';
 import { getFavourites, toggleFavourite } from '../lib/favourites';
 import { useAuth } from '../auth/AuthContext';
+import { provinces, getCitiesByProvince } from '../config/locations';
 
 export type VendorListItem = {
   id: number;
@@ -46,14 +47,16 @@ type DropdownOption = {
   sort_order: number | null;
 };
 
-type OpenPickerType = 'event_type' | 'province' | 'capacity_band' | null;
+type OpenPickerType = 'event_type' | 'province' | 'city' | 'capacity_band' | null;
 
 export default function AttendeeHomeScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<AttendeeStackParamList>>();
   const [search, setSearch] = useState('');
   const [serviceType, setServiceType] = useState<ServiceType>('All');
   const [selectedEventType, setSelectedEventType] = useState<DropdownOption | null>(null);
-  const [selectedProvince, setSelectedProvince] = useState<DropdownOption | null>(null);
+  const [selectedProvinces, setSelectedProvinces] = useState<string[]>([]);
+  const [selectedCities, setSelectedCities] = useState<string[]>([]);
+  const [distanceKm, setDistanceKm] = useState<string>('');
   const [selectedCapacity, setSelectedCapacity] = useState<DropdownOption | null>(null);
   const [openPicker, setOpenPicker] = useState<OpenPickerType>(null);
   const [singleDayEvent, setSingleDayEvent] = useState(false);
@@ -122,7 +125,6 @@ export default function AttendeeHomeScreen() {
   const filteredVendors = useMemo(() => {
     if (!data) return [];
     const query = search.trim().toLowerCase();
-    const provinceFilter = (selectedProvince?.label ?? '').trim().toLowerCase();
 
     return data.filter((vendor) => {
       const name = (vendor.name ?? '').toLowerCase();
@@ -138,11 +140,17 @@ export default function AttendeeHomeScreen() {
       }
 
       const vendorProvince = (vendor.province ?? '').toLowerCase();
-      const matchesProvince = !provinceFilter || vendorProvince.includes(provinceFilter);
+      const vendorCity = (vendor.city ?? '').toLowerCase();
+      
+      const matchesProvince = selectedProvinces.length === 0 || 
+        selectedProvinces.some(p => vendorProvince.includes(p.toLowerCase()));
+      
+      const matchesCity = selectedCities.length === 0 || 
+        selectedCities.some(c => vendorCity.includes(c.toLowerCase()));
 
-      return matchesSearch && matchesType && matchesProvince;
+      return matchesSearch && matchesType && matchesProvince && matchesCity;
     });
-  }, [data, search, serviceType, selectedProvince]);
+  }, [data, search, serviceType, selectedProvinces, selectedCities]);
 
   const orderedVendors = useMemo(() => {
     if (!filteredVendors.length) return [];
@@ -237,14 +245,17 @@ export default function AttendeeHomeScreen() {
       setLocationCity(city || null);
       setLocationRegion(region || null);
 
-      const match = provinceOptions.find((option) => {
-        const label = option.label.toLowerCase();
-        return label.includes(searchText) || searchText.includes(label);
+      const matchingProvince = provinces.find((p) => {
+        const name = p.name.toLowerCase();
+        return name.includes(searchText) || searchText.includes(name);
       });
 
-      if (match) {
-        setSelectedProvince(match);
-        setDetectedProvinceLabel(match.label);
+      if (matchingProvince) {
+        setSelectedProvinces([matchingProvince.name]);
+        setDetectedProvinceLabel(matchingProvince.name);
+        if (city) {
+          setSelectedCities([city]);
+        }
       } else {
         Alert.alert('Province not recognised', 'We could not match your location to a province filter.');
       }
@@ -427,7 +438,29 @@ export default function AttendeeHomeScreen() {
 
             <View style={{ marginTop: spacing.md }}>
               <Text style={{ ...typography.caption, color: colors.textSecondary, marginBottom: spacing.xs }}>
-                Location
+                Distance (km)
+              </Text>
+              <TextInput
+                value={distanceKm}
+                onChangeText={setDistanceKm}
+                placeholder="e.g., 50"
+                keyboardType="numeric"
+                style={{
+                  borderRadius: radii.md,
+                  borderWidth: 1,
+                  borderColor: '#D1D5DB',
+                  paddingHorizontal: spacing.md,
+                  paddingVertical: spacing.sm,
+                  backgroundColor: '#FFFFFF',
+                  ...typography.body,
+                  color: colors.textPrimary,
+                }}
+              />
+            </View>
+
+            <View style={{ marginTop: spacing.md }}>
+              <Text style={{ ...typography.caption, color: colors.textSecondary, marginBottom: spacing.xs }}>
+                Provinces
               </Text>
               <TouchableOpacity activeOpacity={0.9} onPress={() => setOpenPicker('province')}>
                 <View
@@ -443,8 +476,34 @@ export default function AttendeeHomeScreen() {
                     justifyContent: 'space-between',
                   }}
                 >
-                  <Text style={{ ...typography.body, color: colors.textPrimary }}>
-                    {selectedProvince?.label || 'Select Provinces'}
+                  <Text style={{ ...typography.body, color: colors.textPrimary, flex: 1 }} numberOfLines={1}>
+                    {selectedProvinces.length > 0 ? selectedProvinces.join(', ') : 'Select Provinces'}
+                  </Text>
+                  <Text style={{ ...typography.caption, color: colors.textMuted }}>▼</Text>
+                </View>
+              </TouchableOpacity>
+            </View>
+
+            <View style={{ marginTop: spacing.md }}>
+              <Text style={{ ...typography.caption, color: colors.textSecondary, marginBottom: spacing.xs }}>
+                Cities
+              </Text>
+              <TouchableOpacity activeOpacity={0.9} onPress={() => setOpenPicker('city')}>
+                <View
+                  style={{
+                    borderRadius: radii.md,
+                    borderWidth: 1,
+                    borderColor: '#D1D5DB',
+                    paddingHorizontal: spacing.md,
+                    paddingVertical: spacing.sm,
+                    backgroundColor: '#FFFFFF',
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                  }}
+                >
+                  <Text style={{ ...typography.body, color: colors.textPrimary, flex: 1 }} numberOfLines={1}>
+                    {selectedCities.length > 0 ? selectedCities.join(', ') : 'Select Cities'}
                   </Text>
                   <Text style={{ ...typography.caption, color: colors.textMuted }}>▼</Text>
                 </View>
@@ -491,7 +550,9 @@ export default function AttendeeHomeScreen() {
                     setSearch('');
                     setServiceType('All');
                     setSelectedEventType(null);
-                    setSelectedProvince(null);
+                    setSelectedProvinces([]);
+                    setSelectedCities([]);
+                    setDistanceKm('');
                     setSelectedCapacity(null);
                     setDetectedProvinceLabel(null);
                     setLocationCity(null);
@@ -502,18 +563,6 @@ export default function AttendeeHomeScreen() {
             </View>
 
             <View style={{ flexDirection: 'row', columnGap: spacing.sm, marginTop: spacing.md }}>
-              <TouchableOpacity
-                style={{
-                  flex: 1,
-                  borderWidth: 1,
-                  borderColor: '#D1D5DB',
-                  borderRadius: radii.md,
-                  paddingVertical: spacing.xs,
-                  alignItems: 'center',
-                }}
-              >
-                <Text style={{ ...typography.caption, color: colors.textSecondary }}>Filter</Text>
-              </TouchableOpacity>
               <TouchableOpacity
                 style={{
                   flex: 1,
@@ -856,59 +905,179 @@ export default function AttendeeHomeScreen() {
               {openPicker === 'event_type'
                 ? 'What are you looking for?'
                 : openPicker === 'province'
-                ? 'Select Provinces'
+                ? 'Select Provinces (Multi-select)'
+                : openPicker === 'city'
+                ? 'Select Cities (Multi-select)'
                 : openPicker === 'capacity_band'
                 ? 'Event Capacity'
                 : ''}
             </Text>
             <ScrollView>
-              {(openPicker === 'event_type'
-                ? eventTypeOptions
-                : openPicker === 'province'
-                ? provinceOptions
-                : capacityOptions
-              ).map((option) => (
-                <TouchableOpacity
-                  key={option.id}
-                  onPress={() => {
-                    if (openPicker === 'event_type') {
+              {openPicker === 'event_type' ? (
+                eventTypeOptions.map((option) => (
+                  <TouchableOpacity
+                    key={option.id}
+                    onPress={() => {
                       setSelectedEventType(option);
-                    } else if (openPicker === 'province') {
-                      setSelectedProvince(option);
-                    } else if (openPicker === 'capacity_band') {
-                      setSelectedCapacity(option);
-                    }
-                    setOpenPicker(null);
-                  }}
-                  style={{
-                    paddingVertical: spacing.sm,
-                  }}
-                >
-                  <Text
+                      setOpenPicker(null);
+                    }}
                     style={{
-                      ...typography.body,
-                      color: colors.textPrimary,
+                      paddingVertical: spacing.sm,
                     }}
                   >
-                    {option.label}
-                  </Text>
-                </TouchableOpacity>
-              ))}
+                    <Text
+                      style={{
+                        ...typography.body,
+                        color: colors.textPrimary,
+                      }}
+                    >
+                      {option.label}
+                    </Text>
+                  </TouchableOpacity>
+                ))
+              ) : openPicker === 'province' ? (
+                provinces.map((province) => {
+                  const isSelected = selectedProvinces.includes(province.name);
+                  return (
+                    <TouchableOpacity
+                      key={province.name}
+                      onPress={() => {
+                        if (isSelected) {
+                          setSelectedProvinces(selectedProvinces.filter(p => p !== province.name));
+                        } else {
+                          setSelectedProvinces([...selectedProvinces, province.name]);
+                        }
+                      }}
+                      style={{
+                        paddingVertical: spacing.sm,
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                      }}
+                    >
+                      <View
+                        style={{
+                          width: 24,
+                          height: 24,
+                          borderRadius: 4,
+                          borderWidth: 2,
+                          borderColor: isSelected ? colors.primary : '#D1D5DB',
+                          backgroundColor: isSelected ? colors.primary : '#FFFFFF',
+                          marginRight: spacing.sm,
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                        }}
+                      >
+                        {isSelected && (
+                          <MaterialIcons name="check" size={16} color="#FFFFFF" />
+                        )}
+                      </View>
+                      <Text
+                        style={{
+                          ...typography.body,
+                          color: colors.textPrimary,
+                        }}
+                      >
+                        {province.name}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })
+              ) : openPicker === 'city' ? (
+                (() => {
+                  const availableCities = selectedProvinces.length > 0
+                    ? selectedProvinces.flatMap(p => getCitiesByProvince(p))
+                    : provinces.flatMap(p => p.cities);
+                  
+                  return availableCities.sort().map((city) => {
+                    const isSelected = selectedCities.includes(city);
+                    return (
+                      <TouchableOpacity
+                        key={city}
+                        onPress={() => {
+                          if (isSelected) {
+                            setSelectedCities(selectedCities.filter(c => c !== city));
+                          } else {
+                            setSelectedCities([...selectedCities, city]);
+                          }
+                        }}
+                        style={{
+                          paddingVertical: spacing.sm,
+                          flexDirection: 'row',
+                          alignItems: 'center',
+                        }}
+                      >
+                        <View
+                          style={{
+                            width: 24,
+                            height: 24,
+                            borderRadius: 4,
+                            borderWidth: 2,
+                            borderColor: isSelected ? colors.primary : '#D1D5DB',
+                            backgroundColor: isSelected ? colors.primary : '#FFFFFF',
+                            marginRight: spacing.sm,
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                          }}
+                        >
+                          {isSelected && (
+                            <MaterialIcons name="check" size={16} color="#FFFFFF" />
+                          )}
+                        </View>
+                        <Text
+                          style={{
+                            ...typography.body,
+                            color: colors.textPrimary,
+                          }}
+                        >
+                          {city}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  });
+                })()
+              ) : (
+                capacityOptions.map((option) => (
+                  <TouchableOpacity
+                    key={option.id}
+                    onPress={() => {
+                      setSelectedCapacity(option);
+                      setOpenPicker(null);
+                    }}
+                    style={{
+                      paddingVertical: spacing.sm,
+                    }}
+                  >
+                    <Text
+                      style={{
+                        ...typography.body,
+                        color: colors.textPrimary,
+                      }}
+                    >
+                      {option.label}
+                    </Text>
+                  </TouchableOpacity>
+                ))
+              )}
             </ScrollView>
             <TouchableOpacity
               onPress={() => setOpenPicker(null)}
               style={{
                 marginTop: spacing.md,
-                alignSelf: 'flex-end',
+                paddingVertical: spacing.sm,
+                paddingHorizontal: spacing.lg,
+                backgroundColor: colors.primary,
+                borderRadius: radii.md,
+                alignSelf: 'center',
               }}
             >
               <Text
                 style={{
                   ...typography.body,
-                  color: colors.textSecondary,
+                  color: '#FFFFFF',
+                  fontWeight: '600',
                 }}
               >
-                Close
+                Done
               </Text>
             </TouchableOpacity>
           </View>

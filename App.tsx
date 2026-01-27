@@ -19,6 +19,7 @@ import {
 } from '@expo-google-fonts/playfair-display';
 import FloatingHelpButton from './src/components/FloatingHelpButton';
 import { HelpCenterModal } from './src/components/HelpCenterModal';
+import { useVendorStatus } from './src/hooks/useVendorStatus';
 
 const queryClient = new QueryClient();
 
@@ -36,6 +37,8 @@ const navTheme = {
 
 export default function App() {
   const [helpVisible, setHelpVisible] = useState(false);
+  const { isVendor } = useVendorStatus();
+  
   // Only load custom fonts on native platforms
   const [fontsLoaded] = useFonts({
     Montserrat_400Regular,
@@ -62,8 +65,8 @@ export default function App() {
           <NavigationContainer theme={navTheme}>
             <View style={{ flex: 1 }}>
               <AppNavigator />
-              <FloatingHelpButton onPress={() => setHelpVisible(true)} />
-              <HelpCenterModal visible={helpVisible} onClose={() => setHelpVisible(false)} />
+              {isVendor && <FloatingHelpButton onPress={() => setHelpVisible(true)} />}
+              {isVendor && <HelpCenterModal visible={helpVisible} onClose={() => setHelpVisible(false)} />}
             </View>
             <StatusBar style="dark" />
           </NavigationContainer>

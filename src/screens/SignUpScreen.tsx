@@ -82,6 +82,13 @@ export default function SignUpScreen({ navigation }: Props) {
     }
   };
 
+  const handleFacebookSignUp = async () => {
+    const { error } = await signInWithProvider('facebook');
+    if (error) {
+      Alert.alert('Facebook sign up failed', error.message);
+    }
+  };
+
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
       <ScrollView
@@ -301,7 +308,70 @@ export default function SignUpScreen({ navigation }: Props) {
           ) : null}
 
           <View style={{ marginTop: spacing.lg }}>
-            <OutlineButton title="Sign up with Google" onPress={handleGoogleSignUp} style={{ width: '100%', paddingVertical: spacing.md, borderRadius: radii.lg, borderWidth: 1, borderColor: colors.borderSubtle, backgroundColor: colors.surface }} />
+            <TouchableOpacity
+              activeOpacity={0.9}
+              onPress={handleGoogleSignUp}
+              style={{
+                width: '100%',
+                paddingVertical: spacing.md,
+                borderRadius: radii.md,
+                borderWidth: 1,
+                borderColor: colors.borderSubtle,
+                alignItems: 'center',
+                justifyContent: 'center',
+                flexDirection: 'row',
+                backgroundColor: colors.surface,
+              }}
+            >
+              <View
+                style={{
+                  width: 28,
+                  height: 28,
+                  borderRadius: 12,
+                  backgroundColor: '#FFFFFF',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  marginRight: spacing.sm,
+                  borderWidth: 1,
+                  borderColor: colors.borderSubtle,
+                }}
+              >
+                <Text style={{ ...typography.caption, color: colors.textPrimary }}>G</Text>
+              </View>
+              <Text style={{ ...typography.body, color: colors.textPrimary }}>Sign up with Google</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              activeOpacity={0.9}
+              onPress={handleFacebookSignUp}
+              style={{
+                width: '100%',
+                paddingVertical: spacing.md,
+                borderRadius: radii.md,
+                borderWidth: 1,
+                borderColor: colors.borderSubtle,
+                alignItems: 'center',
+                justifyContent: 'center',
+                flexDirection: 'row',
+                backgroundColor: colors.surface,
+                marginTop: spacing.sm,
+              }}
+            >
+              <View
+                style={{
+                  width: 28,
+                  height: 28,
+                  borderRadius: 12,
+                  backgroundColor: '#1877F2',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  marginRight: spacing.sm,
+                }}
+              >
+                <Text style={{ ...typography.caption, color: '#FFFFFF', fontWeight: 'bold' }}>f</Text>
+              </View>
+              <Text style={{ ...typography.body, color: colors.textPrimary }}>Sign up with Facebook</Text>
+            </TouchableOpacity>
           </View>
 
           <View style={{ marginTop: spacing.lg, alignItems: 'center' }}>
