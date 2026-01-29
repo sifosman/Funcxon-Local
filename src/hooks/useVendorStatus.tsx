@@ -14,11 +14,11 @@ export function useVendorStatus() {
     queryFn: async () => {
       if (!user?.id) return null;
       
-      // Method 1: Check if there's a user_id column (most common approach)
+      // Method 1: Check user_id relationship (preferred method)
       try {
         const { data, error } = await supabase
           .from('vendors')
-          .select('id, name, user_id')
+          .select('id, name, email, user_id')
           .eq('user_id', user.id)
           .single();
 
@@ -26,10 +26,10 @@ export function useVendorStatus() {
           return data;
         }
       } catch (e) {
-        // Column might not exist, try next method
+        // Column might not exist yet, try next method
       }
 
-      // Method 2: Check by email (alternative approach)
+      // Method 2: Check by email (fallback for existing data)
       try {
         const { data, error } = await supabase
           .from('vendors')

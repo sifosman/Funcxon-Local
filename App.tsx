@@ -37,7 +37,6 @@ const navTheme = {
 
 export default function App() {
   const [helpVisible, setHelpVisible] = useState(false);
-  const { isVendor } = useVendorStatus();
   
   // Only load custom fonts on native platforms
   const [fontsLoaded] = useFonts({
@@ -63,15 +62,23 @@ export default function App() {
       <AuthProvider>
         <ApplicationFormProvider>
           <NavigationContainer theme={navTheme}>
-            <View style={{ flex: 1 }}>
-              <AppNavigator />
-              {isVendor && <FloatingHelpButton onPress={() => setHelpVisible(true)} />}
-              {isVendor && <HelpCenterModal visible={helpVisible} onClose={() => setHelpVisible(false)} />}
-            </View>
+            <AppContent helpVisible={helpVisible} setHelpVisible={setHelpVisible} />
             <StatusBar style="dark" />
           </NavigationContainer>
         </ApplicationFormProvider>
       </AuthProvider>
     </QueryClientProvider>
+  );
+}
+
+function AppContent({ helpVisible, setHelpVisible }: { helpVisible: boolean; setHelpVisible: (visible: boolean) => void }) {
+  const { isVendor } = useVendorStatus();
+  
+  return (
+    <View style={{ flex: 1 }}>
+      <AppNavigator />
+      {isVendor && <FloatingHelpButton onPress={() => setHelpVisible(true)} />}
+      {isVendor && <HelpCenterModal visible={helpVisible} onClose={() => setHelpVisible(false)} />}
+    </View>
   );
 }

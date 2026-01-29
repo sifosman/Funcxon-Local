@@ -5,6 +5,7 @@ import { useNavigation, useRoute } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { colors, spacing, radii, typography } from '../theme';
 import { getSubscriptionTiers } from '../lib/subscription';
+import type { ProfileStackParamList } from '../navigation/ProfileNavigator';
 
 type SubscriptionTier = {
   id: number;
@@ -22,7 +23,7 @@ type RouteParams = {
 };
 
 export default function SubscriptionPlansScreen() {
-  const navigation = useNavigation<NativeStackNavigationProp<any>>();
+  const navigation = useNavigation<NativeStackNavigationProp<ProfileStackParamList>>();
   const route = useRoute();
   const { currentTier } = route.params as RouteParams || {};
   
@@ -46,20 +47,16 @@ export default function SubscriptionPlansScreen() {
   };
 
   const handleUpgrade = (tier: SubscriptionTier) => {
-    Alert.alert(
-      'Upgrade Subscription',
-      `Upgrade to ${tier.tier_name.toUpperCase()} for ${selectedBilling === 'monthly' ? tier.price_monthly : tier.price_yearly} ZAR/${selectedBilling.slice(0, -2)}ly?`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { 
-          text: 'Upgrade', 
-          onPress: () => {
-            // TODO: Integrate with payment processing
-            Alert.alert('Coming Soon', 'Payment processing will be available soon.');
-          }
-        }
-      ]
-    );
+    const price = selectedBilling === 'monthly' ? tier.price_monthly : tier.price_yearly;
+    const isFree = !price || price === 0;
+    const priceLabel = isFree ? 'Free' : `R${Number(price).toLocaleString()}/${selectedBilling.slice(0, -2)}ly`;
+
+    navigation.navigate('SubscriptionCheckout', {
+      tierName: tier.tier_name,
+      billing: selectedBilling,
+      priceLabel,
+      isFree,
+    });
   };
 
   const formatPrice = (price: number | null) => {

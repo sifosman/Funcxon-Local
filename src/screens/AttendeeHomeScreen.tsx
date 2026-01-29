@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, useRef } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -24,6 +24,7 @@ import * as Location from 'expo-location';
 import { getFavourites, toggleFavourite } from '../lib/favourites';
 import { useAuth } from '../auth/AuthContext';
 import { provinces, getCitiesByProvince } from '../config/locations';
+import MapRadiusSelector from '../components/MapRadiusSelector';
 
 export type VendorListItem = {
   id: number;
@@ -35,6 +36,7 @@ export type VendorListItem = {
   description?: string | null;
   province?: string | null;
   city?: string | null;
+  category_id?: number | null;
 };
 
 type ServiceType = 'Venues' | 'Vendors' | 'Service Providers' | 'All';
@@ -47,10 +49,12 @@ type DropdownOption = {
   sort_order: number | null;
 };
 
-type OpenPickerType = 'event_type' | 'province' | 'city' | 'capacity_band' | null;
+type OpenPickerType = 'event_type' | 'province' | 'city' | 'capacity_band' | 'distance' | null;
 
 export default function AttendeeHomeScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<AttendeeStackParamList>>();
+  const scrollViewRef = useRef<ScrollView>(null);
+  const featuredVendorsRef = useRef<View>(null);
   const [search, setSearch] = useState('');
   const [serviceType, setServiceType] = useState<ServiceType>('All');
   const [selectedEventType, setSelectedEventType] = useState<DropdownOption | null>(null);
@@ -68,6 +72,12 @@ export default function AttendeeHomeScreen() {
   const [locationCity, setLocationCity] = useState<string | null>(null);
   const [locationRegion, setLocationRegion] = useState<string | null>(null);
   const [favouriteIds, setFavouriteIds] = useState<number[]>([]);
+  const [sortBy, setSortBy] = useState<'name' | 'rating' | 'price' | 'distance'>('name');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
+  const [showSortModal, setShowSortModal] = useState(false);
+  const [showMapRadiusSelector, setShowMapRadiusSelector] = useState(false);
+  const [mapCenter, setMapCenter] = useState<{ latitude: number; longitude: number } | null>(null);
+  const [mapRadius, setMapRadius] = useState<number>(20);
   const { user } = useAuth();
 
   const { data, isLoading, error } = useQuery<VendorListItem[]>({
@@ -75,7 +85,7 @@ export default function AttendeeHomeScreen() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('vendors')
-        .select('id, name, price_range, rating, review_count, image_url, province, city')
+        .select('id, name, price_range, rating, review_count, image_url, province, city, description, category_id')
         .limit(50);
 
       if (error) {
@@ -122,6 +132,67 @@ export default function AttendeeHomeScreen() {
     [dropdownData],
   );
 
+  // Create a mapping of event types to icons
+  const getEventIcon = (eventType: string) => {
+    const lowerEvent = eventType.toLowerCase();
+    
+    // Specific event types with unique icons
+    if (lowerEvent.includes('wedding') || lowerEvent.includes('marriage')) return 'favorite';
+    if (lowerEvent.includes('engagement')) return 'diamond';
+    if (lowerEvent.includes('birthday') || lowerEvent.includes('party')) return 'cake';
+    if (lowerEvent.includes('kids') || lowerEvent.includes('children') || lowerEvent.includes('child')) return 'child-care';
+    if (lowerEvent.includes('corporate') || lowerEvent.includes('business') || lowerEvent.includes('meeting')) return 'business-center';
+    if (lowerEvent.includes('conference') || lowerEvent.includes('seminar') || lowerEvent.includes('workshop')) return 'groups';
+    if (lowerEvent.includes('festival') || lowerEvent.includes('concert') || lowerEvent.includes('music')) return 'music-note';
+    if (lowerEvent.includes('sports') || lowerEvent.includes('game') || lowerEvent.includes('tournament')) return 'sports-basketball';
+    if (lowerEvent.includes('food') || lowerEvent.includes('dining') || lowerEvent.includes('restaurant')) return 'restaurant';
+    if (lowerEvent.includes('art') || lowerEvent.includes('exhibition') || lowerEvent.includes('gallery')) return 'palette';
+    if (lowerEvent.includes('charity') || lowerEvent.includes('fundraiser') || lowerEvent.includes('donation')) return 'volunteer-activism';
+    if (lowerEvent.includes('education') || lowerEvent.includes('training') || lowerEvent.includes('school')) return 'school';
+    if (lowerEvent.includes('family') || lowerEvent.includes('reunion')) return 'people';
+    if (lowerEvent.includes('outdoor') || lowerEvent.includes('adventure') || lowerEvent.includes('nature')) return 'park';
+    if (lowerEvent.includes('beach') || lowerEvent.includes('pool') || lowerEvent.includes('water')) return 'pool';
+    if (lowerEvent.includes('holiday') || lowerEvent.includes('christmas') || lowerEvent.includes('xmas')) return 'celebration';
+    if (lowerEvent.includes('graduation') || lowerEvent.includes('commencement')) return 'school';
+    if (lowerEvent.includes('anniversary')) return 'favorite';
+    if (lowerEvent.includes('baby') || lowerEvent.includes('shower')) return 'pregnant-woman';
+    if (lowerEvent.includes('retirement')) return 'elderly';
+    if (lowerEvent.includes('cultural') || lowerEvent.includes('heritage')) return 'public';
+    if (lowerEvent.includes('religious') || lowerEvent.includes('church') || lowerEvent.includes('temple')) return 'church';
+    if (lowerEvent.includes('tech') || lowerEvent.includes('technology') || lowerEvent.includes('digital')) return 'devices';
+    if (lowerEvent.includes('fashion') || lowerEvent.includes('style') || lowerEvent.includes('clothing')) return 'checkroom';
+    if (lowerEvent.includes('health') || lowerEvent.includes('wellness') || lowerEvent.includes('medical')) return 'local-hospital';
+    if (lowerEvent.includes('travel') || lowerEvent.includes('vacation') || lowerEvent.includes('trip')) return 'flight';
+    if (lowerEvent.includes('movie') || lowerEvent.includes('film') || lowerEvent.includes('cinema')) return 'movie';
+    if (lowerEvent.includes('book') || lowerEvent.includes('reading') || lowerEvent.includes('literary')) return 'menu-book';
+    if (lowerEvent.includes('gaming') || lowerEvent.includes('video game') || lowerEvent.includes('esports')) return 'sports-esports';
+    if (lowerEvent.includes('comedy') || lowerEvent.includes('stand-up') || lowerEvent.includes('laugh')) return 'mood';
+    if (lowerEvent.includes('dance') || lowerEvent.includes('ballroom') || lowerEvent.includes('ballet')) return 'nightlife';
+    if (lowerEvent.includes('photography') || lowerEvent.includes('photo') || lowerEvent.includes('camera')) return 'photo-camera';
+    if (lowerEvent.includes('cooking') || lowerEvent.includes('culinary') || lowerEvent.includes('chef')) return 'restaurant-menu';
+    if (lowerEvent.includes('gardening') || lowerEvent.includes('plants') || lowerEvent.includes('garden')) return 'local-florist';
+    if (lowerEvent.includes('pet') || lowerEvent.includes('animal') || lowerEvent.includes('dog')) return 'pets';
+    if (lowerEvent.includes('science') || lowerEvent.includes('lab') || lowerEvent.includes('research')) return 'science';
+    if (lowerEvent.includes('history') || lowerEvent.includes('museum') || lowerEvent.includes('historical')) return 'museum';
+    if (lowerEvent.includes('theater') || lowerEvent.includes('drama') || lowerEvent.includes('play')) return 'theater-comedy';
+    if (lowerEvent.includes('magic') || lowerEvent.includes('illusion') || lowerEvent.includes('trick')) return 'auto-fix-high';
+    
+    // Default fallback icons for common patterns
+    if (lowerEvent.includes('party')) return 'celebration';
+    if (lowerEvent.includes('event')) return 'event';
+    if (lowerEvent.includes('gathering')) return 'groups';
+    if (lowerEvent.includes('social')) return 'people';
+    
+    return 'event'; // Ultimate default
+  };
+
+  const handleLocationSelected = (location: { latitude: number; longitude: number }, radius: number) => {
+    setMapCenter(location);
+    setMapRadius(radius);
+    // Convert radius to string for display
+    setDistanceKm(radius.toString());
+  };
+
   const filteredVendors = useMemo(() => {
     if (!data) return [];
     const query = search.trim().toLowerCase();
@@ -139,6 +210,38 @@ export default function AttendeeHomeScreen() {
         matchesType = true;
       }
 
+      // Add event type filtering - now using category_id mapping
+      let matchesEventType = true;
+      if (selectedEventType && vendor.category_id) {
+        // Map event types to category IDs for proper matching
+        const eventTypeToCategoryId: Record<string, number> = {
+          'wedding': 11,
+          'engagement': 12,
+          'birthday': 13,
+          'kids_party': 14,
+          'baby': 15,
+          'bridal': 16,
+          'matric': 17,
+          'corporate': 18,
+          'conference': 19
+        };
+        
+        const eventCode = selectedEventType.code.toLowerCase();
+        const expectedCategoryId = eventTypeToCategoryId[eventCode];
+        
+        if (expectedCategoryId) {
+          matchesEventType = vendor.category_id === expectedCategoryId;
+        } else {
+          // Fallback to keyword matching for any other event types
+          const eventTypeKeywords = selectedEventType.label.toLowerCase();
+          const vendorName = (vendor.name ?? '').toLowerCase();
+          const vendorDescription = (vendor.description ?? '').toLowerCase();
+          
+          matchesEventType = vendorName.includes(eventTypeKeywords) || 
+                            vendorDescription.includes(eventTypeKeywords);
+        }
+      }
+
       const vendorProvince = (vendor.province ?? '').toLowerCase();
       const vendorCity = (vendor.city ?? '').toLowerCase();
       
@@ -148,28 +251,72 @@ export default function AttendeeHomeScreen() {
       const matchesCity = selectedCities.length === 0 || 
         selectedCities.some(c => vendorCity.includes(c.toLowerCase()));
 
-      return matchesSearch && matchesType && matchesProvince && matchesCity;
+      return matchesSearch && matchesType && matchesEventType && matchesProvince && matchesCity;
     });
-  }, [data, search, serviceType, selectedProvinces, selectedCities]);
+  }, [data, search, serviceType, selectedEventType, selectedProvinces, selectedCities]);
 
   const orderedVendors = useMemo(() => {
     if (!filteredVendors.length) return [];
-    if (!locationCity && !locationRegion) return filteredVendors;
-
-    const cityFilter = (locationCity ?? '').toLowerCase();
-    const regionFilter = (locationRegion ?? '').toLowerCase();
-
-    const score = (vendor: VendorListItem) => {
-      const city = (vendor.city ?? '').toLowerCase();
-      const province = (vendor.province ?? '').toLowerCase();
-
-      if (cityFilter && city.includes(cityFilter)) return 0;
-      if (regionFilter && province.includes(regionFilter)) return 1;
-      return 2;
-    };
-
-    return [...filteredVendors].sort((a, b) => score(a) - score(b));
-  }, [filteredVendors, locationCity, locationRegion]);
+    
+    let vendors = [...filteredVendors];
+    
+    // Apply sorting
+    vendors.sort((a, b) => {
+      let comparison = 0;
+      
+      switch (sortBy) {
+        case 'name':
+          const nameA = (a.name ?? '').toLowerCase();
+          const nameB = (b.name ?? '').toLowerCase();
+          comparison = nameA.localeCompare(nameB);
+          break;
+          
+        case 'rating':
+          const ratingA = a.rating ?? 0;
+          const ratingB = b.rating ?? 0;
+          comparison = ratingA - ratingB;
+          break;
+          
+        case 'price':
+          // Extract numeric values from price range for comparison
+          const extractPrice = (priceRange: string | null) => {
+            if (!priceRange) return 0;
+            const numbers = priceRange.match(/[\d,]+/g);
+            if (!numbers || numbers.length === 0) return 0;
+            // Use the highest number in the range for comparison
+            return parseInt(numbers[numbers.length - 1].replace(/,/g, ''), 10);
+          };
+          const priceA = extractPrice(a.price_range);
+          const priceB = extractPrice(b.price_range);
+          comparison = priceA - priceB;
+          break;
+          
+        case 'distance':
+          // Priority: same city, then same province, then others
+          const cityFilter = (locationCity ?? '').toLowerCase();
+          const regionFilter = (locationRegion ?? '').toLowerCase();
+          
+          const getDistanceScore = (vendor: VendorListItem) => {
+            const city = (vendor.city ?? '').toLowerCase();
+            const province = (vendor.province ?? '').toLowerCase();
+            
+            if (cityFilter && city.includes(cityFilter)) return 0;
+            if (regionFilter && province.includes(regionFilter)) return 1;
+            return 2;
+          };
+          
+          comparison = getDistanceScore(a) - getDistanceScore(b);
+          break;
+          
+        default:
+          comparison = 0;
+      }
+      
+      return sortOrder === 'asc' ? comparison : -comparison;
+    });
+    
+    return vendors;
+  }, [filteredVendors, sortBy, sortOrder, locationCity, locationRegion]);
 
   const nearbyVendors = useMemo(() => {
     if (!orderedVendors.length || (!locationCity && !locationRegion)) return [];
@@ -306,6 +453,7 @@ export default function AttendeeHomeScreen() {
 
   return (
     <ScrollView
+      ref={scrollViewRef}
       style={{ flex: 1, backgroundColor: colors.background }}
       contentContainerStyle={{ paddingBottom: spacing.xl }}
     >
@@ -438,13 +586,11 @@ export default function AttendeeHomeScreen() {
 
             <View style={{ marginTop: spacing.md }}>
               <Text style={{ ...typography.caption, color: colors.textSecondary, marginBottom: spacing.xs }}>
-                Distance (km)
+                Search Area
               </Text>
-              <TextInput
-                value={distanceKm}
-                onChangeText={setDistanceKm}
-                placeholder="e.g., 50"
-                keyboardType="numeric"
+              <TouchableOpacity 
+                activeOpacity={0.9} 
+                onPress={() => setShowMapRadiusSelector(true)}
                 style={{
                   borderRadius: radii.md,
                   borderWidth: 1,
@@ -452,10 +598,19 @@ export default function AttendeeHomeScreen() {
                   paddingHorizontal: spacing.md,
                   paddingVertical: spacing.sm,
                   backgroundColor: '#FFFFFF',
-                  ...typography.body,
-                  color: colors.textPrimary,
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
                 }}
-              />
+              >
+                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                  <MaterialIcons name="map" size={16} color={colors.primary} />
+                  <Text style={{ ...typography.body, color: colors.textPrimary, marginLeft: spacing.sm }}>
+                    {mapCenter ? `${mapRadius}km radius` : 'Select search area'}
+                  </Text>
+                </View>
+                <MaterialIcons name="chevron-right" size={16} color={colors.textMuted} />
+              </TouchableOpacity>
             </View>
 
             <View style={{ marginTop: spacing.md }}>
@@ -532,16 +687,17 @@ export default function AttendeeHomeScreen() {
               )}
             </View>
 
-            <View
-              style={{
-                marginTop: spacing.md,
-                flexDirection: 'row',
-                columnGap: spacing.md,
-                justifyContent: 'center',
-              }}
-            >
+            <View style={{ flexDirection: 'row', columnGap: spacing.md, justifyContent: 'center' }}>
               <View style={{ flex: 1 }}>
-                <PrimaryButton title="Search" onPress={() => {}} />
+                <PrimaryButton 
+                  title="Search" 
+                  onPress={() => {
+                    // Scroll to featured vendors section
+                    setTimeout(() => {
+                      scrollViewRef.current?.scrollTo({ y: 800, animated: true });
+                    }, 100);
+                  }} 
+                />
               </View>
               <View style={{ width: 120 }}>
                 <OutlineButton
@@ -557,6 +713,8 @@ export default function AttendeeHomeScreen() {
                     setDetectedProvinceLabel(null);
                     setLocationCity(null);
                     setLocationRegion(null);
+                    setSortBy('name');
+                    setSortOrder('asc');
                   }}
                 />
               </View>
@@ -571,9 +729,15 @@ export default function AttendeeHomeScreen() {
                   borderRadius: radii.md,
                   paddingVertical: spacing.xs,
                   alignItems: 'center',
+                  flexDirection: 'row',
+                  justifyContent: 'center',
                 }}
+                onPress={() => setShowSortModal(true)}
               >
-                <Text style={{ ...typography.caption, color: colors.textSecondary }}>Sort</Text>
+                <MaterialIcons name="sort" size={16} color={colors.textSecondary} />
+                <Text style={{ ...typography.caption, color: colors.textSecondary, marginLeft: spacing.xs }}>
+                  Sort: {sortBy === 'name' ? 'Name' : sortBy === 'rating' ? 'Rating' : sortBy === 'price' ? 'Price' : 'Distance'} ({sortOrder === 'asc' ? '↑' : '↓'})
+                </Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -585,57 +749,69 @@ export default function AttendeeHomeScreen() {
         <Text style={{ ...typography.displayMedium, color: colors.textPrimary, marginBottom: spacing.md }}>
           Categories
         </Text>
-        <View
-          style={{
-            flexDirection: 'row',
-            flexWrap: 'wrap',
-            justifyContent: 'space-between',
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={true}
+          contentContainerStyle={{ 
+            paddingRight: spacing.lg + 40, // Extra padding so last item gets cut off
+            paddingVertical: spacing.xs,
           }}
         >
-          {[
-            { label: 'Weddings', icon: 'celebration' as const },
-            { label: 'Birthdays', icon: 'cake' as const },
-            { label: 'Corporate', icon: 'business-center' as const },
-            { label: 'Festivals', icon: 'festival' as const },
-          ].map((item) => (
-            <View
-              key={item.label}
-              style={{
-                width: '23%',
-                alignItems: 'center',
-                justifyContent: 'center',
-                marginBottom: spacing.lg,
-              }}
-            >
-              <View
+          {eventTypeOptions.map((event) => {
+            const isSelected = selectedEventType?.id === event.id;
+            return (
+              <TouchableOpacity
+                key={event.id}
+                onPress={() => {
+                  setSelectedEventType(event);
+                  // Scroll to featured vendors section after a short delay to ensure the filter is applied
+                  setTimeout(() => {
+                    // Use a fixed position scroll for more reliable behavior
+                    scrollViewRef.current?.scrollTo({ y: 800, animated: true });
+                  }, 300);
+                }}
                 style={{
-                  width: 56,
-                  height: 56,
-                  borderRadius: 18,
-                  backgroundColor: colors.surface,
                   alignItems: 'center',
                   justifyContent: 'center',
-                  shadowColor: '#000',
-                  shadowOpacity: 0.08,
-                  shadowRadius: 6,
-                  shadowOffset: { width: 0, height: 4 },
+                  marginRight: spacing.lg,
+                  minWidth: 80,
                 }}
               >
-                <MaterialIcons name={item.icon} size={28} color={colors.primary} />
-              </View>
-              <Text
-                style={{
-                  ...typography.caption,
-                  color: colors.textPrimary,
-                  marginTop: spacing.xs,
-                  textAlign: 'center',
-                }}
-              >
-                {item.label}
-              </Text>
-            </View>
-          ))}
-        </View>
+                <View
+                  style={{
+                    width: 56,
+                    height: 56,
+                    borderRadius: 18,
+                    backgroundColor: isSelected ? colors.primary : colors.surface,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    shadowColor: '#000',
+                    shadowOpacity: 0.08,
+                    shadowRadius: 6,
+                    shadowOffset: { width: 0, height: 4 },
+                    borderWidth: isSelected ? 2 : 0,
+                    borderColor: isSelected ? colors.primary : 'transparent',
+                  }}
+                >
+                  <MaterialIcons name={getEventIcon(event.label) as any} size={28} color={isSelected ? '#FFFFFF' : colors.primary} />
+                </View>
+                <Text
+                  style={{
+                    ...typography.caption,
+                    color: isSelected ? colors.primary : colors.textPrimary,
+                    fontWeight: isSelected ? '600' : 'normal',
+                    marginTop: spacing.xs,
+                    textAlign: 'center',
+                    maxWidth: 80,
+                  }}
+                  numberOfLines={2}
+                >
+                  {event.label}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </ScrollView>
       </View>
 
       {nearbyVendors.length > 0 && (
@@ -697,7 +873,30 @@ export default function AttendeeHomeScreen() {
       )}
 
       {/* Featured Vendors */}
-      <View style={{ paddingTop: spacing.xl, backgroundColor: colors.surface, marginTop: spacing.xl }}>
+      <View ref={featuredVendorsRef} style={{ paddingTop: spacing.xl, backgroundColor: colors.surface, marginTop: spacing.xl }}>
+        {selectedEventType && (
+          <View style={{ paddingHorizontal: spacing.lg, paddingBottom: spacing.md }}>
+            <View style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              backgroundColor: colors.primary + '20',
+              paddingHorizontal: spacing.md,
+              paddingVertical: spacing.xs,
+              borderRadius: radii.full,
+              alignSelf: 'flex-start'
+            }}>
+              <MaterialIcons name="filter-list" size={16} color={colors.primary} />
+              <Text style={{ 
+                ...typography.caption, 
+                color: colors.primary, 
+                marginLeft: spacing.xs,
+                fontWeight: '600'
+              }}>
+                Filtered by: {selectedEventType.label}
+              </Text>
+            </View>
+          </View>
+        )}
         <Text
           style={{
             ...typography.displayMedium,
@@ -711,23 +910,31 @@ export default function AttendeeHomeScreen() {
 
         {featuredVendors.length === 0 ? (
           <View style={{ paddingHorizontal: spacing.lg, paddingBottom: spacing.lg }}>
-            <Text style={{ ...typography.body, color: colors.textMuted }}>
-              No featured services yet. Add vendors in Supabase to see them here.
-            </Text>
+            {selectedEventType ? (
+              <View style={{ alignItems: 'center', paddingVertical: spacing.xl }}>
+                <MaterialIcons name="search-off" size={48} color={colors.textMuted} />
+                <Text style={{ ...typography.titleMedium, color: colors.textPrimary, marginTop: spacing.md, textAlign: 'center' }}>
+                  No vendors found for "{selectedEventType.label}"
+                </Text>
+                <Text style={{ ...typography.body, color: colors.textMuted, marginTop: spacing.sm, textAlign: 'center' }}>
+                  Try selecting a different category or adjust your filters
+                </Text>
+              </View>
+            ) : (
+              <Text style={{ ...typography.body, color: colors.textMuted }}>
+                No featured services yet. Add vendors in Supabase to see them here.
+              </Text>
+            )}
           </View>
         ) : (
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={{ paddingHorizontal: spacing.lg, paddingBottom: spacing.lg }}
-          >
+          <View style={{ paddingHorizontal: spacing.lg, paddingBottom: spacing.lg }}>
             {featuredVendors.map((item) => (
               <TouchableOpacity
                 key={item.id}
                 onPress={() => navigation.navigate('VendorProfile', { vendorId: item.id })}
                 style={{
-                  width: 260,
-                  marginRight: spacing.md,
+                  width: '100%',
+                  marginBottom: spacing.md,
                   borderRadius: radii.xl,
                   backgroundColor: colors.surface,
                   borderWidth: 1,
@@ -869,7 +1076,7 @@ export default function AttendeeHomeScreen() {
                 </View>
               </TouchableOpacity>
             ))}
-          </ScrollView>
+          </View>
         )}
       </View>
       <Modal
@@ -910,6 +1117,8 @@ export default function AttendeeHomeScreen() {
                 ? 'Select Cities (Multi-select)'
                 : openPicker === 'capacity_band'
                 ? 'Event Capacity'
+                : openPicker === 'distance'
+                ? 'Select Distance'
                 : ''}
             </Text>
             <ScrollView>
@@ -1035,7 +1244,7 @@ export default function AttendeeHomeScreen() {
                     );
                   });
                 })()
-              ) : (
+              ) : openPicker === 'capacity_band' ? (
                 capacityOptions.map((option) => (
                   <TouchableOpacity
                     key={option.id}
@@ -1057,7 +1266,30 @@ export default function AttendeeHomeScreen() {
                     </Text>
                   </TouchableOpacity>
                 ))
-              )}
+              ) : openPicker === 'distance' ? (
+                // Distance options
+                ['20', '50', '100', '200'].map((distance) => (
+                  <TouchableOpacity
+                    key={distance}
+                    onPress={() => {
+                      setDistanceKm(distance);
+                      setOpenPicker(null);
+                    }}
+                    style={{
+                      paddingVertical: spacing.sm,
+                    }}
+                  >
+                    <Text
+                      style={{
+                        ...typography.body,
+                        color: colors.textPrimary,
+                      }}
+                    >
+                      {distance} km
+                    </Text>
+                  </TouchableOpacity>
+                ))
+              ) : null}
             </ScrollView>
             <TouchableOpacity
               onPress={() => setOpenPicker(null)}
@@ -1107,6 +1339,161 @@ export default function AttendeeHomeScreen() {
           }}
         />
       )}
+      
+      {/* Sort Modal */}
+      <Modal
+        visible={showSortModal}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowSortModal(false)}
+      >
+        <View
+          style={{
+            flex: 1,
+            backgroundColor: 'rgba(0,0,0,0.3)',
+            justifyContent: 'flex-end',
+          }}
+        >
+          <View
+            style={{
+              backgroundColor: colors.surface,
+              paddingHorizontal: spacing.lg,
+              paddingVertical: spacing.lg,
+              borderTopLeftRadius: radii.xl,
+              borderTopRightRadius: radii.xl,
+              maxHeight: '70%',
+            }}
+          >
+            <Text
+              style={{
+                ...typography.titleMedium,
+                color: colors.textPrimary,
+                marginBottom: spacing.md,
+              }}
+            >
+              Sort Results
+            </Text>
+            
+            <ScrollView>
+              {/* Sort By Options */}
+              <View style={{ marginBottom: spacing.lg }}>
+                <Text style={{ ...typography.caption, color: colors.textSecondary, marginBottom: spacing.sm }}>
+                  Sort by
+                </Text>
+                {[
+                  { key: 'name' as const, label: 'Name (A-Z)', icon: 'sort' },
+                  { key: 'rating' as const, label: 'Rating', icon: 'star' },
+                  { key: 'price' as const, label: 'Price', icon: 'attach-money' },
+                  { key: 'distance' as const, label: 'Distance', icon: 'location-on' },
+                ].map((option) => (
+                  <TouchableOpacity
+                    key={option.key}
+                    onPress={() => {
+                      setSortBy(option.key);
+                      setShowSortModal(false);
+                    }}
+                    style={{
+                      paddingVertical: spacing.sm,
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      backgroundColor: sortBy === option.key ? colors.primary + '20' : 'transparent',
+                      borderRadius: radii.md,
+                      paddingHorizontal: spacing.sm,
+                    }}
+                  >
+                    <MaterialIcons name={option.icon as any} size={20} color={colors.primary} />
+                    <Text
+                      style={{
+                        ...typography.body,
+                        color: colors.textPrimary,
+                        marginLeft: spacing.sm,
+                        fontWeight: sortBy === option.key ? '600' : 'normal',
+                      }}
+                    >
+                      {option.label}
+                    </Text>
+                    {sortBy === option.key && (
+                      <MaterialIcons name="check" size={20} color={colors.primary} style={{ marginLeft: 'auto' }} />
+                    )}
+                  </TouchableOpacity>
+                ))}
+              </View>
+              
+              {/* Sort Order Options */}
+              <View style={{ marginBottom: spacing.lg }}>
+                <Text style={{ ...typography.caption, color: colors.textSecondary, marginBottom: spacing.sm }}>
+                  Order
+                </Text>
+                {[
+                  { key: 'asc' as const, label: 'Ascending (A-Z, 1-10)', icon: 'arrow-upward' },
+                  { key: 'desc' as const, label: 'Descending (Z-A, 10-1)', icon: 'arrow-downward' },
+                ].map((option) => (
+                  <TouchableOpacity
+                    key={option.key}
+                    onPress={() => {
+                      setSortOrder(option.key);
+                      setShowSortModal(false);
+                    }}
+                    style={{
+                      paddingVertical: spacing.sm,
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      backgroundColor: sortOrder === option.key ? colors.primary + '20' : 'transparent',
+                      borderRadius: radii.md,
+                      paddingHorizontal: spacing.sm,
+                    }}
+                  >
+                    <MaterialIcons name={option.icon as any} size={20} color={colors.primary} />
+                    <Text
+                      style={{
+                        ...typography.body,
+                        color: colors.textPrimary,
+                        marginLeft: spacing.sm,
+                        fontWeight: sortOrder === option.key ? '600' : 'normal',
+                      }}
+                    >
+                      {option.label}
+                    </Text>
+                    {sortOrder === option.key && (
+                      <MaterialIcons name="check" size={20} color={colors.primary} style={{ marginLeft: 'auto' }} />
+                    )}
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </ScrollView>
+            
+            <TouchableOpacity
+              onPress={() => setShowSortModal(false)}
+              style={{
+                marginTop: spacing.md,
+                paddingVertical: spacing.sm,
+                paddingHorizontal: spacing.lg,
+                backgroundColor: colors.primary,
+                borderRadius: radii.md,
+                alignSelf: 'center',
+              }}
+            >
+              <Text
+                style={{
+                  ...typography.body,
+                  color: '#FFFFFF',
+                  fontWeight: '600',
+                }}
+              >
+                Done
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+      
+      {/* Map Radius Selector */}
+      <MapRadiusSelector
+        visible={showMapRadiusSelector}
+        onClose={() => setShowMapRadiusSelector(false)}
+        onLocationSelected={handleLocationSelected}
+        initialRadius={mapRadius}
+      />
     </ScrollView>
   );
 }

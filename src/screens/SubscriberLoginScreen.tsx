@@ -4,13 +4,7 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { colors, spacing, radii, typography } from '../theme';
-
-type ProfileStackParamList = {
-    AccountMain: undefined;
-    SubscriberSuite: undefined;
-    SubscriberLogin: undefined;
-    SubscriberProfile: undefined;
-};
+import type { ProfileStackParamList } from '../navigation/ProfileNavigator';
 
 // Dev mode - accepts any credentials
 const DEV_MODE = __DEV__;
@@ -203,6 +197,42 @@ export default function SubscriberLoginScreen() {
                             {loading ? 'Logging in...' : 'Login'}
                         </Text>
                     </TouchableOpacity>
+
+                    {/* Attendee conversion CTAs */}
+                    <View style={{ marginTop: spacing.md }}>
+                        <TouchableOpacity
+                            onPress={() => navigation.navigate('SubscriptionPlans')}
+                            style={{
+                                paddingVertical: spacing.md,
+                                borderRadius: radii.lg,
+                                alignItems: 'center',
+                                borderWidth: 1,
+                                borderColor: colors.borderSubtle,
+                                backgroundColor: colors.surface,
+                            }}
+                            activeOpacity={0.8}
+                        >
+                            <Text style={{ ...typography.body, fontWeight: '600', color: colors.textPrimary }}>
+                                View Plans / Become a Vendor
+                            </Text>
+                        </TouchableOpacity>
+
+                        <TouchableOpacity
+                            onPress={() => navigation.navigate('ApplicationStep1')}
+                            style={{
+                                marginTop: spacing.sm,
+                                paddingVertical: spacing.md,
+                                borderRadius: radii.lg,
+                                alignItems: 'center',
+                                backgroundColor: colors.muted,
+                            }}
+                            activeOpacity={0.8}
+                        >
+                            <Text style={{ ...typography.body, fontWeight: '600', color: colors.textPrimary }}>
+                                Start Vendor Application
+                            </Text>
+                        </TouchableOpacity>
+                    </View>
 
                     {/* Help Text */}
                     <View style={{ marginTop: spacing.xl, padding: spacing.md, backgroundColor: colors.muted, borderRadius: radii.md }}>

@@ -10,6 +10,7 @@ import ApplicationStep2Screen from '../screens/subscriber/ApplicationStep2Screen
 import ApplicationStep3Screen from '../screens/subscriber/ApplicationStep3Screen';
 import ApplicationStep4Screen from '../screens/subscriber/ApplicationStep4Screen';
 import SubscriptionPlansScreen from '../screens/SubscriptionPlansScreen';
+import SubscriptionCheckoutScreen from '../screens/SubscriptionCheckoutScreen';
 import PortfolioAssistanceScreen from '../screens/PortfolioAssistanceScreen';
 import { colors, typography } from '../theme';
 
@@ -25,6 +26,7 @@ export type ProfileStackParamList = {
     ApplicationStep3: undefined;
     ApplicationStep4: undefined;
     SubscriptionPlans: undefined;
+    SubscriptionCheckout: { tierName: string; billing: 'monthly' | 'yearly'; priceLabel: string; isFree: boolean };
     PortfolioAssistance: undefined;
 };
 
@@ -97,6 +99,11 @@ export function ProfileNavigator() {
             <Stack.Screen
                 name="SubscriptionPlans"
                 component={SubscriptionPlansScreen}
+                options={{ headerShown: false }}
+            />
+            <Stack.Screen
+                name="SubscriptionCheckout"
+                component={SubscriptionCheckoutScreen}
                 options={{ headerShown: false }}
             />
             <Stack.Screen

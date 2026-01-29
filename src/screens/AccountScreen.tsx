@@ -5,14 +5,7 @@ import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { colors, spacing, radii, typography } from '../theme';
 import { useAuth } from '../auth/AuthContext';
-
-// This will be defined in ProfileNavigator
-type ProfileStackParamList = {
-    AccountMain: undefined;
-    SubscriberSuite: undefined;
-    SubscriberLogin: undefined;
-    SubscriberProfile: undefined;
-};
+import type { ProfileStackParamList } from '../navigation/ProfileNavigator';
 
 type MenuItem = {
     id: string;
@@ -46,6 +39,18 @@ export default function AccountScreen() {
         }
     };
 
+    const handleBecomeVendor = () => {
+        // Navigate to the existing vendor application flow
+        navigation.navigate('ApplicationStep1');
+    };
+
+    const handleGoToListings = () => {
+        // Jump to the Home tab (Search/Listings) and its initial screen.
+        // This screen lives in the root tab navigator, so we need to navigate via the parent navigator.
+        const parentNav = navigation.getParent() as any;
+        parentNav?.navigate?.('Home', { screen: 'VendorList' });
+    };
+
     const menuItems: MenuItem[] = [
         {
             id: 'my-profile',
@@ -54,6 +59,7 @@ export default function AccountScreen() {
             submenu: [
                 { id: 'create-profile', label: 'Create Profile', icon: 'person-add' },
                 { id: 'edit-profile', label: 'Edit Profile', icon: 'edit' },
+                { id: 'become-vendor', label: 'Become a Vendor', icon: 'store', action: handleBecomeVendor },
                 { id: 'change-password', label: 'Change Password', icon: 'lock' },
                 { id: 'marketing-permissions', label: 'Marketing Permissions', icon: 'notifications' },
                 { id: 'delete-account', label: 'Delete Account', icon: 'delete', color: colors.destructive },
@@ -75,8 +81,8 @@ export default function AccountScreen() {
             icon: 'credit-card',
             submenu: [
                 { id: 'portfolio-profile', label: 'Portfolio Profile', icon: 'business-center', route: 'SubscriberLogin' },
-                { id: 'subscriber-legal-terms', label: 'Subscriber Legal Terms', icon: 'description' },
-                { id: 'activity-dashboard', label: 'Activity Dashboard', icon: 'bar-chart' },
+                { id: 'subscriber-legal-terms', label: 'Subscriber Legal Terms', icon: 'description', route: 'SubscriberLogin' },
+                { id: 'activity-dashboard', label: 'Activity Dashboard', icon: 'bar-chart', route: 'SubscriberLogin' },
             ],
         },
         {
@@ -85,8 +91,8 @@ export default function AccountScreen() {
             icon: 'local-offer',
             submenu: [
                 { id: 'subscription-plans', label: 'View Subscription Plans', icon: 'credit-card' },
-                { id: 'subscription-vendors', label: 'Vendors / Service Professionals', icon: 'store' },
-                { id: 'subscription-venues', label: 'Venues', icon: 'location-city' },
+                { id: 'subscription-vendors', label: 'Vendors / Service Professionals', icon: 'store', action: handleGoToListings },
+                { id: 'subscription-venues', label: 'Venues', icon: 'location-city', action: handleGoToListings },
             ],
         },
         {
