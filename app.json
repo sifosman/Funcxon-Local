@@ -43,6 +43,12 @@
     },
     "plugins": [
       "expo-web-browser"
-    ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "536d0059-dd1a-452c-b92a-67e2b2da6d31"
+      }
+    },
+    "owner": "sifosman"
   }
 }

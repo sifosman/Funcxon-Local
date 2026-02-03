@@ -70,7 +70,7 @@ export interface Step4Data {
   marketingConsent: boolean;
 }
 
-interface ApplicationFormState {
+export interface ApplicationFormState {
   portfolioType: PortfolioType;
   step1: Step1Data;
   step2: Step2Data;

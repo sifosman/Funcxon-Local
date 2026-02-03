@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, Alert } from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView, Alert, ActivityIndicator } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -8,19 +8,24 @@ import { useApplicationForm } from '../../context/ApplicationFormContext';
 import { validateStep4 } from '../../utils/formValidation';
 import { ApplicationProgress } from '../../components/ApplicationProgress';
 import { subscriptionPlans } from '../../config/subscriptionPlans';
+import { submitApplication, uploadFileToStorage } from '../../lib/applicationService';
+import { useAuth } from '../../auth/AuthContext';
 
 type ProfileStackParamList = {
   ApplicationStep3: undefined;
   ApplicationStep4: undefined;
   Payment: undefined;
+  PortfolioProfile: undefined;
 };
 
 export default function ApplicationStep4Screen() {
   const navigation = useNavigation<NativeStackNavigationProp<ProfileStackParamList>>();
   const { state, updateStep4 } = useApplicationForm();
+  const { user } = useAuth();
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     const validation = validateStep4(state.step4);
 
     if (!validation.isValid) {
@@ -29,20 +34,88 @@ export default function ApplicationStep4Screen() {
       return;
     }
 
-    Alert.alert(
-      'Application Submitted',
-      'Your application has been submitted successfully! The payment screen would be the next step.',
-      [
-        {
-          text: 'OK',
-          onPress: () => {
-            // In production, navigate to Payment screen
-            // navigation.navigate('Payment');
-            Alert.alert('Next Steps', 'In production, this would navigate to the payment screen.');
-          },
-        },
-      ]
-    );
+    if (!user) {
+      Alert.alert('Error', 'Please sign in to submit your application');
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    try {
+      // Upload files to Supabase Storage first
+      const uploadedImages = [];
+      const uploadedVideos = [];
+      const uploadedDocuments = [];
+
+      // Upload images
+      for (const image of state.step3.images) {
+        const result = await uploadFileToStorage('portfolio-images', image, user.id);
+        if (result.success && result.url) {
+          uploadedImages.push(result.url);
+        }
+      }
+
+      // Upload videos
+      for (const video of state.step3.videos) {
+        const result = await uploadFileToStorage('portfolio-videos', video, user.id);
+        if (result.success && result.url) {
+          uploadedVideos.push(result.url);
+        }
+      }
+
+      // Upload documents
+      for (const document of state.step3.documents) {
+        const result = await uploadFileToStorage('business-documents', document, user.id);
+        if (result.success && result.url) {
+          uploadedDocuments.push(result.url);
+        }
+      }
+
+      // Submit application to database
+      const portfolioType = state.portfolioType === 'venues' ? 'venue' as const : 'vendor' as const;
+      
+      const submission = {
+        portfolio_type: portfolioType,
+        company_details: state.step1,
+        service_categories: state.step2,
+        coverage_provinces: state.step2.provinces,
+        coverage_cities: state.step2.cities,
+        business_description: state.step2.description,
+        portfolio_images: uploadedImages,
+        portfolio_videos: uploadedVideos,
+        business_documents: uploadedDocuments,
+        subscription_tier: state.step4.subscriptionPlan,
+        terms_accepted: state.step4.termsAccepted,
+        privacy_accepted: state.step4.privacyAccepted,
+        marketing_consent: state.step4.marketingConsent,
+      };
+
+      const result = await submitApplication(submission);
+
+      if (result.success) {
+        Alert.alert(
+          'Application Submitted!',
+          'Your application has been submitted successfully. We will review it and get back to you within 3-5 business days.',
+          [
+            {
+              text: 'OK',
+              onPress: () => {
+                // Reset form and navigate to portfolio profile
+                updateStep4({ subscriptionPlan: '', termsAccepted: false, privacyAccepted: false, marketingConsent: false });
+                navigation.navigate('PortfolioProfile');
+              },
+            },
+          ]
+        );
+      } else {
+        Alert.alert('Submission Failed', result.error || 'Failed to submit application. Please try again.');
+      }
+    } catch (error) {
+      console.error('Submit application error:', error);
+      Alert.alert('Error', 'An unexpected error occurred. Please try again.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -323,9 +396,10 @@ export default function ApplicationStep4Screen() {
             </TouchableOpacity>
             <TouchableOpacity
               onPress={handleSubmit}
+              disabled={isSubmitting}
               style={{
                 flex: 1,
-                backgroundColor: colors.primaryTeal,
+                backgroundColor: isSubmitting ? colors.borderSubtle : colors.primaryTeal,
                 paddingVertical: spacing.md,
                 borderRadius: radii.md,
                 flexDirection: 'row',
@@ -334,10 +408,21 @@ export default function ApplicationStep4Screen() {
               }}
               activeOpacity={0.8}
             >
-              <Text style={{ color: '#FFFFFF', fontSize: 16, fontWeight: '600', marginRight: spacing.sm }}>
-                Submit Application
-              </Text>
-              <MaterialIcons name="check" size={16} color="#FFFFFF" />
+              {isSubmitting ? (
+                <>
+                  <ActivityIndicator size="small" color="#FFFFFF" style={{ marginRight: spacing.sm }} />
+                  <Text style={{ color: '#FFFFFF', fontSize: 16, fontWeight: '600' }}>
+                    Submitting...
+                  </Text>
+                </>
+              ) : (
+                <>
+                  <Text style={{ color: '#FFFFFF', fontSize: 16, fontWeight: '600', marginRight: spacing.sm }}>
+                    Submit Application
+                  </Text>
+                  <MaterialIcons name="check-circle" size={16} color="#FFFFFF" />
+                </>
+              )}
             </TouchableOpacity>
           </View>
         </View>

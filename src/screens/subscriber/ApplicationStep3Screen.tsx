@@ -1,8 +1,10 @@
 import { useState } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, Image, Alert } from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView, Image, Alert, Platform } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import * as ImagePicker from 'expo-image-picker';
+import * as DocumentPicker from 'expo-document-picker';
 import { colors, spacing, radii, typography } from '../../theme';
 import { useApplicationForm } from '../../context/ApplicationFormContext';
 import { validateStep3 } from '../../utils/formValidation';
@@ -16,6 +18,10 @@ type ProfileStackParamList = {
   ApplicationStep4: undefined;
 };
 
+const MAX_IMAGE_SIZE = 10 * 1024 * 1024; // 10MB
+const MAX_VIDEO_SIZE = 50 * 1024 * 1024; // 50MB
+const MAX_DOCUMENT_SIZE = 10 * 1024 * 1024; // 10MB
+
 export default function ApplicationStep3Screen() {
   const navigation = useNavigation<NativeStackNavigationProp<ProfileStackParamList>>();
   const { state, updateStep3 } = useApplicationForm();
@@ -23,8 +29,8 @@ export default function ApplicationStep3Screen() {
 
   const handlePickImages = async () => {
     try {
-      // Check if user can upload more photos (mock vendor ID for now)
-      const canUpload = await canUploadMorePhotos(1); // TODO: use actual vendor ID
+      // Check if user can upload more photos
+      const canUpload = await canUploadMorePhotos(1);
       if (!canUpload) {
         Alert.alert(
           'Photo Limit Reached',
@@ -34,30 +40,167 @@ export default function ApplicationStep3Screen() {
         return;
       }
 
-      Alert.alert(
-        'Image Upload',
-        'Image picker functionality requires expo-image-picker to be installed. This will be added in the next step.',
-        [{ text: 'OK' }]
-      );
+      // Request permission
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert(
+          'Permission Required',
+          'Please grant access to your photo library to upload images.',
+          [{ text: 'OK' }]
+        );
+        return;
+      }
+
+      // Launch image picker
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ['images'],
+        allowsMultipleSelection: true,
+        allowsEditing: false,
+        quality: 0.8,
+        selectionLimit: 10, // Reasonable limit for batch upload
+      });
+
+      if (!result.canceled && result.assets) {
+        // Validate file sizes
+        const validImages = result.assets.filter((asset) => {
+          const fileSize = asset.fileSize || 0;
+          if (fileSize > MAX_IMAGE_SIZE) {
+            Alert.alert(
+              'File Too Large',
+              `${asset.fileName || 'Image'} exceeds 10MB limit.`
+            );
+            return false;
+          }
+          return true;
+        });
+
+        // Add valid images to state
+        const newImages = validImages.map((asset) => ({
+          uri: asset.uri,
+          name: asset.fileName || `image_${Date.now()}.jpg`,
+          type: asset.mimeType || 'image/jpeg',
+          size: asset.fileSize || 0,
+        }));
+
+        // Update state with new images
+        const updatedImages = [...state.step3.images, ...newImages];
+        updateStep3({ images: updatedImages });
+
+        // Increment photo count for each uploaded image
+        for (let i = 0; i < newImages.length; i++) {
+          await incrementVendorPhotoCount(1);
+        }
+
+        if (validImages.length > 0) {
+          Alert.alert('Success', `${validImages.length} image(s) added successfully.`);
+        }
+      }
     } catch (error) {
-      Alert.alert('Error', 'Failed to check photo limit. Please try again.');
+      console.error('Image picker error:', error);
+      Alert.alert('Error', 'Failed to pick images. Please try again.');
     }
   };
 
   const handlePickDocuments = async () => {
-    Alert.alert(
-      'Document Upload',
-      'Document picker functionality requires expo-document-picker to be installed. This will be added in the next step.',
-      [{ text: 'OK' }]
-    );
+    try {
+      const result = await DocumentPicker.getDocumentAsync({
+        type: [
+          'application/pdf',
+          'application/msword',
+          'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        ],
+        copyToCacheDirectory: true,
+        multiple: true,
+      });
+
+      if (!result.canceled && result.assets) {
+        // Validate file sizes
+        const validDocuments = result.assets.filter((asset) => {
+          if (asset.size && asset.size > MAX_DOCUMENT_SIZE) {
+            Alert.alert(
+              'File Too Large',
+              `${asset.name} exceeds 10MB limit.`
+            );
+            return false;
+          }
+          return true;
+        });
+
+        // Add valid documents to state
+        const newDocuments = validDocuments.map((asset) => ({
+          uri: asset.uri,
+          name: asset.name,
+          type: asset.mimeType || 'application/pdf',
+          size: asset.size || 0,
+        }));
+
+        const updatedDocuments = [...state.step3.documents, ...newDocuments];
+        updateStep3({ documents: updatedDocuments });
+
+        if (validDocuments.length > 0) {
+          Alert.alert('Success', `${validDocuments.length} document(s) added successfully.`);
+        }
+      }
+    } catch (error) {
+      console.error('Document picker error:', error);
+      Alert.alert('Error', 'Failed to pick documents. Please try again.');
+    }
   };
 
   const handlePickVideos = async () => {
-    Alert.alert(
-      'Video Upload',
-      'Video picker functionality requires expo-image-picker to be installed. This will be added in the next step.',
-      [{ text: 'OK' }]
-    );
+    try {
+      // Request permission
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert(
+          'Permission Required',
+          'Please grant access to your photo library to upload videos.',
+          [{ text: 'OK' }]
+        );
+        return;
+      }
+
+      // Launch video picker
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ['videos'],
+        allowsMultipleSelection: true,
+        allowsEditing: false,
+        selectionLimit: 5, // Reasonable limit for videos
+      });
+
+      if (!result.canceled && result.assets) {
+        // Validate file sizes
+        const validVideos = result.assets.filter((asset) => {
+          const fileSize = asset.fileSize || 0;
+          if (fileSize > MAX_VIDEO_SIZE) {
+            Alert.alert(
+              'File Too Large',
+              `${asset.fileName || 'Video'} exceeds 50MB limit.`
+            );
+            return false;
+          }
+          return true;
+        });
+
+        // Add valid videos to state
+        const newVideos = validVideos.map((asset) => ({
+          uri: asset.uri,
+          name: asset.fileName || `video_${Date.now()}.mp4`,
+          type: asset.mimeType || 'video/mp4',
+          size: asset.fileSize || 0,
+        }));
+
+        const updatedVideos = [...state.step3.videos, ...newVideos];
+        updateStep3({ videos: updatedVideos });
+
+        if (validVideos.length > 0) {
+          Alert.alert('Success', `${validVideos.length} video(s) added successfully.`);
+        }
+      }
+    } catch (error) {
+      console.error('Video picker error:', error);
+      Alert.alert('Error', 'Failed to pick videos. Please try again.');
+    }
   };
 
   const handleRemoveImage = async (index: number) => {
@@ -383,7 +526,7 @@ export default function ApplicationStep3Screen() {
             <MaterialIcons name="info" size={20} color="#F59E0B" style={{ marginRight: spacing.sm }} />
             <View style={{ flex: 1 }}>
               <Text style={{ ...typography.caption, color: '#92400E' }}>
-                Note: File upload functionality requires additional dependencies. Please ensure expo-image-picker and expo-document-picker are installed before using this feature.
+              Note: Supported formats: JPG, PNG (max 10MB each), MP4, MOV (max 50MB each), PDF, DOC, DOCX (max 10MB each).
               </Text>
             </View>
           </View>

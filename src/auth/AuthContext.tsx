@@ -21,6 +21,7 @@ export type AuthContextValue = {
   }) => Promise<{ error?: Error }>;
   signOut: () => Promise<{ error?: Error }>;
   signInWithProvider: (provider: OAuthProvider) => Promise<{ error?: Error }>;
+  resendConfirmationEmail: (email: string) => Promise<{ error?: Error }>;
 };
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
@@ -66,6 +67,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signOut: AuthContextValue['signOut'] = async () => {
     const { error } = await supabase.auth.signOut();
+    return { error: error ?? undefined };
+  };
+
+  const resendConfirmationEmail: AuthContextValue['resendConfirmationEmail'] = async (email) => {
+    const { error } = await supabase.auth.resend({
+      type: 'signup',
+      email,
+    });
     return { error: error ?? undefined };
   };
 
@@ -156,6 +165,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         signUp,
         signOut,
         signInWithProvider,
+        resendConfirmationEmail,
       }}
     >
       {children}
