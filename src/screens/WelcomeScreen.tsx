@@ -13,8 +13,9 @@ export default function WelcomeScreen({ navigation }: Props) {
         contentContainerStyle={{
           flexGrow: 1,
           paddingHorizontal: spacing.lg,
-          paddingVertical: spacing.xl,
-          justifyContent: 'center',
+          paddingTop: spacing.xl + 40, // Add top padding for status bar
+          paddingBottom: spacing.xl,
+          justifyContent: 'flex-start', // Start from top instead of center
         }}
       >
         <View

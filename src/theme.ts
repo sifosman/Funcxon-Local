@@ -37,6 +37,7 @@ export const colors = {
   destructiveForeground: '#FFFFFF',
   muted: '#EDE9DD', // muted bg hsl(45, 40%, 94%)
   mutedForeground: '#5A7A85',
+  chipBackground: '#F5F1E8', // chip background color
   
   // Chart colors (from Replit)
   chart1: '#2B9EB3', // primary teal

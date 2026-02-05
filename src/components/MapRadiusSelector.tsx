@@ -46,11 +46,19 @@ export default function MapRadiusSelector({
   // Radius options (in km)
   const radiusOptions = [5, 10, 20, 50, 100, 200];
 
-  const mapsModule = Platform.OS === 'web' ? null : (require('react-native-maps') as any);
-  const MapView = mapsModule?.default as any;
-  const Circle = mapsModule?.Circle as any;
-  const Marker = mapsModule?.Marker as any;
-  const PROVIDER_GOOGLE = mapsModule?.PROVIDER_GOOGLE as any;
+  const mapsModule = Platform.OS === 'web' ? null : (() => {
+    try {
+      return require('react-native-maps');
+    } catch (e) {
+      console.warn('react-native-maps not available:', e);
+      return null;
+    }
+  })();
+  
+  const MapView = mapsModule?.default;
+  const Circle = mapsModule?.Circle;
+  const Marker = mapsModule?.Marker;
+  const PROVIDER_GOOGLE = mapsModule?.PROVIDER_GOOGLE;
 
   const handleMapPress = (event: any) => {
     const { coordinate } = event.nativeEvent;
@@ -122,14 +130,14 @@ export default function MapRadiusSelector({
         </View>
 
         {/* Map (native only) */}
-        {Platform.OS === 'web' ? (
-          <View style={[styles.map, { alignItems: 'center', justifyContent: 'center', padding: spacing.lg }]}>
-            <MaterialIcons name="map" size={28} color={colors.textMuted} />
+        {Platform.OS === 'web' || !MapView ? (
+          <View style={[styles.map, { alignItems: 'center', justifyContent: 'center', padding: spacing.lg, backgroundColor: colors.surfaceMuted }]}>
+            <MaterialIcons name="map" size={48} color={colors.textMuted} />
             <Text style={{ ...typography.body, color: colors.textPrimary, marginTop: spacing.sm, textAlign: 'center' }}>
-              Map radius selection is available on the mobile app.
+              Map is loading...
             </Text>
             <Text style={{ ...typography.caption, color: colors.textMuted, marginTop: spacing.xs, textAlign: 'center' }}>
-              On web, choose a radius below and apply.
+              Choose a radius below and tap Apply.
             </Text>
           </View>
         ) : (

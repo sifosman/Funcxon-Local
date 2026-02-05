@@ -133,6 +133,7 @@ export function ThemedInput({ errorText, style, ...rest }: ThemedInputProps) {
           paddingVertical: spacing.sm,
           backgroundColor: colors.inputBackground,
           fontSize: 14,
+          color: colors.textPrimary,
           ...(style ? (style as object) : {}),
         }}
       />

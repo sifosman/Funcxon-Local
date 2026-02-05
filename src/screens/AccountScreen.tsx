@@ -5,6 +5,7 @@ import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { colors, spacing, radii, typography } from '../theme';
 import { useAuth } from '../auth/AuthContext';
+import { supabase } from '../lib/supabaseClient';
 import type { ProfileStackParamList } from '../navigation/ProfileNavigator';
 
 type MenuItem = {
@@ -19,7 +20,7 @@ type MenuItem = {
 
 export default function AccountScreen() {
     const navigation = useNavigation<NativeStackNavigationProp<ProfileStackParamList>>();
-    const { signOut } = useAuth();
+    const { signOut, user } = useAuth();
     const [expandedMenus, setExpandedMenus] = useState<Set<string>>(new Set());
 
     const toggleMenu = (menuId: string) => {
@@ -39,9 +40,45 @@ export default function AccountScreen() {
         }
     };
 
-    const handleBecomeVendor = () => {
-        // Navigate to the existing vendor application flow
-        navigation.navigate('ApplicationStep1');
+    const handleGoToPlanner = () => {
+        // Navigate to the Planner tab
+        const parentNav = navigation.getParent() as any;
+        parentNav?.navigate?.('Planner');
+    };
+
+    const handleGoToQuotes = () => {
+        // Navigate to the Quotes tab
+        const parentNav = navigation.getParent() as any;
+        parentNav?.navigate?.('Quotes');
+    };
+
+    const handleBecomeVendor = async () => {
+        // Check if user has an active subscription
+        const { data: userData, error: userError } = await supabase
+            .from('users')
+            .select('id, account_type, subscription_status')
+            .eq('auth_user_id', user?.id)
+            .maybeSingle();
+
+        if (userError || !userData) {
+            // If can't determine status, navigate to subscription plans to be safe
+            navigation.navigate('SubscriptionPlans');
+            return;
+        }
+
+        // Check if user has an active subscription
+        const hasActiveSubscription = userData.subscription_status === 'active' || 
+                                      userData.subscription_status === 'trial' ||
+                                      userData.account_type === 'vendor' ||
+                                      userData.account_type === 'subscriber';
+
+        if (!hasActiveSubscription) {
+            // User doesn't have a subscription, take them to subscription offers
+            navigation.navigate('SubscriptionPlans');
+        } else {
+            // User has subscription, proceed to vendor application
+            navigation.navigate('ApplicationStep1');
+        }
     };
 
     const handleGoToListings = () => {
@@ -49,6 +86,19 @@ export default function AccountScreen() {
         // This screen lives in the root tab navigator, so we need to navigate via the parent navigator.
         const parentNav = navigation.getParent() as any;
         parentNav?.navigate?.('Home', { screen: 'VendorList' });
+    };
+
+    const handleHelpCentre = () => {
+        // Open help center modal by dispatching a custom event
+        // The App.tsx will listen for this and show the modal
+        const event = new CustomEvent('openHelpCenter');
+        window.dispatchEvent?.(event);
+        // Also show an alert with contact info for now
+        Alert.alert(
+            'Help Centre',
+            'Contact us for assistance:\n\nEmail: support@funcxon.com\nWhatsApp: +27000000000\n\nDocumentation and FAQs coming soon!',
+            [{ text: 'OK' }]
+        );
     };
 
     const menuItems: MenuItem[] = [
@@ -125,9 +175,16 @@ export default function AccountScreen() {
             } else if (hasSubmenu) {
                 toggleMenu(item.id);
             } else if (item.route) {
-                navigation.navigate(item.route);
+                // Use type assertion to fix TypeScript issue with dynamic route
+                (navigation as any).navigate(item.route);
             } else if (item.id === 'subscription-plans') {
                 navigation.navigate('SubscriptionPlans');
+            } else if (item.id === 'my-planner') {
+                handleGoToPlanner();
+            } else if (item.id === 'my-quotes') {
+                handleGoToQuotes();
+            } else if (item.id === 'help-centre') {
+                handleHelpCentre();
             }
         };
 

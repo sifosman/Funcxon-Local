@@ -985,18 +985,8 @@ export default function VendorProfileScreen({ route, navigation }: Props) {
             ))}
           </View>
 
-          <TouchableOpacity
-            onPress={() => Alert.alert('Coming soon', 'Review functionality will be available soon.')}
-            style={{
-              backgroundColor: colors.primaryTeal,
-              paddingVertical: spacing.md,
-              borderRadius: radii.md,
-              alignItems: 'center',
-              marginBottom: spacing.lg,
-            }}
-          >
-            <Text style={{ color: '#FFFFFF', fontWeight: '600' }}>Write a Review</Text>
-          </TouchableOpacity>
+          {/* Review functionality removed - only users who have used the service can leave reviews */}
+          {/* This feature will be re-implemented with proper booking verification */}
         </View>
       )}
 

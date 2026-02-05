@@ -7,6 +7,29 @@ import { colors, radii, spacing, typography } from '../theme';
 import type { ProfileStackParamList } from '../navigation/ProfileNavigator';
 import { useApplicationForm } from '../context/ApplicationFormContext';
 
+// Field component moved outside to prevent re-renders causing keyboard to close
+const Field = ({ label, value, onChangeText, placeholder, keyboardType }: { label: string; value: string; onChangeText: (t: string) => void; placeholder?: string; keyboardType?: 'default' | 'email-address' | 'phone-pad' | 'numeric'; }) => (
+  <View style={{ marginBottom: spacing.md }}>
+    <Text style={{ ...typography.caption, color: colors.textSecondary, marginBottom: spacing.xs }}>{label}</Text>
+    <TextInput
+      value={value}
+      onChangeText={onChangeText}
+      placeholder={placeholder}
+      placeholderTextColor={colors.textMuted}
+      keyboardType={keyboardType ?? 'default'}
+      style={{
+        borderWidth: 1,
+        borderColor: colors.borderSubtle,
+        backgroundColor: colors.surface,
+        borderRadius: radii.md,
+        paddingHorizontal: spacing.md,
+        paddingVertical: spacing.sm,
+        color: colors.textPrimary,
+      }}
+    />
+  </View>
+);
+
 type RouteParams = {
   tierName: string;
   billing: 'monthly' | 'yearly';
@@ -82,28 +105,6 @@ export default function SubscriptionCheckoutScreen() {
       [{ text: 'Continue', onPress: () => navigation.navigate('ApplicationStep1') }],
     );
   };
-
-  const Field = ({ label, value, onChangeText, placeholder, keyboardType }: { label: string; value: string; onChangeText: (t: string) => void; placeholder?: string; keyboardType?: 'default' | 'email-address' | 'phone-pad' | 'numeric'; }) => (
-    <View style={{ marginBottom: spacing.md }}>
-      <Text style={{ ...typography.caption, color: colors.textSecondary, marginBottom: spacing.xs }}>{label}</Text>
-      <TextInput
-        value={value}
-        onChangeText={onChangeText}
-        placeholder={placeholder}
-        placeholderTextColor={colors.textMuted}
-        keyboardType={keyboardType ?? 'default'}
-        style={{
-          borderWidth: 1,
-          borderColor: colors.borderSubtle,
-          backgroundColor: colors.surface,
-          borderRadius: radii.md,
-          paddingHorizontal: spacing.md,
-          paddingVertical: spacing.sm,
-          color: colors.textPrimary,
-        }}
-      />
-    </View>
-  );
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>

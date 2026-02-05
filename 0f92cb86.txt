@@ -1,0 +1,251 @@
+DATA PROCESSING AGREEMENT (DPA)
+
+Between: Funcxon (Pty) Ltd ("Processor/Platform")
+And: Vendor/Subscriber ("Responsible Party")
+
+Effective Date: 05 December 2025
+
+This Data Processing Agreement (“Agreement”) forms part of the Funcxon Terms & Conditions
+and governs the processing of personal information by Funcxon (Pty) Ltd (“Funcxon”) on behalf
+of the Vendor/Subscriber (the “Vendor”) for the purpose of providing platform services under
+the Protection of Personal Information Act 4 of 2013 ("POPIA").
+
+
+
+1. DEFINITIONS
+
+   •   Personal Information: As defined in POPIA.
+
+   •   Processing: Any operation involving personal information.
+
+   •   Responsible Party: The Vendor who determines the purpose of processing.
+
+   •   Operator: Funcxon (Pty) Ltd acting on behalf of Vendor.
+
+   •   Data Subject: Individual to whom the personal information relates.
+
+
+
+2. ROLE OF THE PARTIES
+
+   •   Vendor is the Responsible Party.
+
+   •   Funcxon is the Operator and processes personal information only on documented
+       instructions of the Vendor.
+
+
+
+3. PURPOSE OF PROCESSING
+
+Funcxon will process personal information solely to:
+
+   •   Host Vendor profile and content
+
+   •   Enable communication with customers
+
+   •   Facilitate bookings and transactions
+
+   •   Provide payment services through third-party providers
+
+   •   Provide platform analytics and improvements
+
+   •   Customer dispute resolution and support
+
+No other use is permitted unless required by law.
+
+
+
+4. TYPES OF PERSONAL INFORMATION
+
+Typical information processed includes:
+   •   Customer identification details
+
+   •   Contact information
+
+   •   Booking and event details
+
+   •   Payment and invoice information
+
+   •   Communication and review data
+
+
+
+5. RESPONSIBILITIES OF THE VENDOR
+
+Vendor represents and warrants that:
+
+   •   Personal information is obtained lawfully
+
+   •   Data subjects are informed of processing activities
+
+   •   Necessary consents are obtained where required
+
+   •   Vendor complies with POPIA obligations
+
+Vendor indemnifies Funcxon for any breach of POPIA by the Vendor.
+
+
+
+6. OBLIGATIONS OF FUNCXON (OPERATOR)
+
+Funcxon will:
+
+   •   Process only on documented instructions from Vendor
+
+   •   Implement appropriate security safeguards
+
+   •   Restrict internal access on a need-to-know basis
+
+   •   Notify Vendor of any data breach without undue delay
+
+   •   Cooperate with Vendor in responding to data subject requests
+
+   •   Not engage another operator without safeguards in place
+
+
+
+7. SUB-PROCESSORS
+
+Funcxon may use third-party providers to deliver services, including:
+
+   •   Cloud hosting providers
+
+   •   Payment gateways
+
+   •   Analytics providers
+
+Funcxon remains responsible for ensuring sub-processors meet POPIA requirements.
+
+
+
+8. INTERNATIONAL DATA TRANSFERS
+Where personal information is transferred outside South Africa, Funcxon will ensure legal
+safeguards exist including:
+
+   •   Adequate data protection laws, or
+
+   •   Standard contractual clauses, or
+
+   •   Written undertakings compatible with POPIA.
+
+
+
+9. SECURITY SAFEGUARDS
+
+Funcxon will maintain:
+
+   •   Encryption where appropriate
+
+   •   Secure access control
+
+   •   Firewalls and intrusion detection
+
+   •   Regular vulnerability assessments
+
+   •   Backup and disaster recovery procedures
+
+
+
+10. DATA BREACH NOTIFICATION
+
+In the event of a confirmed data breach, Funcxon will:
+
+   •   Notify Vendor promptly
+
+   •   Provide details of the breach
+
+   •   Assist with mitigation efforts
+
+   •   Cooperate with regulatory reporting duties
+
+Vendor is responsible for notification to data subjects unless agreed otherwise.
+
+
+
+11. DATA SUBJECT RIGHTS
+
+Funcxon will assist Vendor, where reasonable, with:
+
+   •   Access to personal information
+
+   •   Rectification or deletion requests
+
+   •   Objections to processing
+
+   •   Complaints or enquiries from data subjects
+
+
+
+12. AUDITS
+
+Vendor may request documentation demonstrating compliance. On-site audits are permitted
+only:
+   •   With reasonable notice, and
+
+   •   Not more than once annually, unless mandated by law
+
+
+
+13. RETENTION AND DELETION
+
+Upon termination of the Vendor’s contract:
+
+   •   Funcxon will delete or anonymise personal information after legal retention periods
+
+   •   Backups will be purged during routine cycles
+
+Exception: Information required for legal claims or compliance may be retained.
+
+
+
+14. CONFIDENTIALITY
+
+Funcxon must ensure that authorised personnel:
+
+   •   Maintain strict confidentiality, and
+
+   •   Receive training regarding POPIA compliance
+
+
+
+15. LIABILITY
+
+Vendor is responsible for:
+
+   •   Lawful data collection
+
+   •   Accuracy of information supplied
+
+   •   Consent obligations
+
+Funcxon is liable for breaches caused by its own negligence or security failure.
+
+
+
+16. TERM AND TERMINATION
+
+This Agreement remains in force for the duration of the Vendor’s subscription to Funcxon
+services and will automatically terminate upon full deletion of Vendor data.
+
+
+
+17. GOVERNING LAW
+
+This Agreement is governed by South African law.
+
+
+
+18. SIGNATURES
+
+Vendor (Responsible Party):
+Name: __________________
+Date: ___________________
+Funcxon (Operator):
+Name: Zulayka Bhyat
+Date: 05 December 2025
+
+
+
+This Agreement ensures POPIA compliance and defines the responsibilities of both parties
+in the processing of personal information.
+

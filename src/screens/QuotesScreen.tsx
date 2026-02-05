@@ -44,7 +44,7 @@ export default function QuotesScreen() {
   const [actionLoadingId, setActionLoadingId] = useState<number | null>(null);
 
   const { data, isLoading, error, refetch } = useQuery<QuoteRequest[]>({
-    queryKey: ['attendee-quotes'],
+    queryKey: ['attendee-quotes', user?.id],
     queryFn: async () => {
       if (!user?.id) {
         return [];

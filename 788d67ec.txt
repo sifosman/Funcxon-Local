@@ -1,0 +1,252 @@
+Funcxon Privacy Policy (POPIA Compliant)
+
+Effective Date: 05 December 2025
+
+This Privacy Policy explains how Funcxon collects, uses, stores, shares, protects, and
+processes personal information in accordance with the Protection of Personal Information Act 4
+of 2013 (POPIA) and applicable South African law.
+
+By using the Funcxon mobile application, website, platform, and related services (collectively,
+the “Platform”), you consent to the collection and processing of your personal information as
+described in this Policy.
+
+
+
+1. RESPONSIBLE PARTY
+
+Funcxon (Pty) Ltd is the Responsible Party as defined under POPIA.
+
+Contact Details (Information Officer)
+Name: Zulayka Bhyat
+Email: zulaykab@gmail.com
+Registered Address: 46 Alhambra Place, Roshnee, Vereeniging, Gauteng, South Africa, 1936
+
+
+
+2. PERSONAL INFORMATION WE COLLECT
+
+We collect the following categories of personal information:
+
+2.1 Information You Provide Directly
+
+   •   Full name and surname
+
+   •   Email address
+
+   •   Phone number
+
+   •   Physical address (where applicable)
+
+   •   Business registration information (for vendors)
+
+   •   Bank/payment details (processed via third parties)
+
+   •   Booking details and event information
+
+   •   Profile pictures, photos, videos, documents
+
+   •   Reviews, messages, and communication data
+
+2.2 Information Collected Automatically
+
+   •   Device information
+
+   •   IP address
+
+   •   Browser type
+
+   •   Usage data (pages viewed, clicks, time spent)
+   •   Location data (if enabled)
+
+   •   Cookies and tracking technologies (website)
+
+2.3 Third-Party Information
+
+We may receive personal information through:
+
+   •   Payment processors
+
+   •   Identity verification services
+
+   •   Vendors you engage with via the Platform
+
+
+
+3. PURPOSE OF PROCESSING
+
+We process personal information for:
+
+   •   Account creation and login
+
+   •   Providing platform services
+
+   •   Facilitating bookings between users and vendors
+
+   •   Processing payments and invoicing
+
+   •   Customer support and dispute resolution
+
+   •   Sending notifications (bookings, payments, updates)
+
+   •   Marketing communications (with consent)
+
+   •   Platform analytics and improvement
+
+   •   Legal and compliance requirements
+
+   •   Security, fraud detection, and prevention
+
+We will only process personal information for purposes compatible with this Privacy Policy.
+
+
+
+4. CONSENT
+
+By creating an account, browsing, booking, or communicating through the Platform, you:
+
+   •   Consent to the processing of your personal information
+
+   •   Confirm information provided is accurate
+
+   •   Understand you may withdraw consent at any time (subject to legal limitations)
+
+Consent for marketing communications may be withdrawn using the unsubscribe option or by
+contacting the Information Officer.
+
+
+
+5. YOUR RIGHTS UNDER POPIA
+You have the right to:
+
+    •   Access your personal information
+
+    •   Request correction or deletion of inaccurate information
+
+    •   Object to processing of your data
+
+    •   Withdraw consent to processing
+
+    •   Lodge a complaint with the Information Regulator
+
+Information Regulator Contact:
+Email: complaints.IR@justice.gov.za
+
+
+
+6. INFORMATION SHARING & DISCLOSURE
+
+We will not sell your personal information.
+
+We may share information with:
+6.1 Vendors — to fulfil bookings and provide services.
+6.2 Payment Processors — for secure payment processing.
+6.3 Service Providers — IT, hosting, analytics.
+6.4 Legal Authorities — when required by law or to protect rights.
+
+All third parties must comply with POPIA.
+
+
+
+7. INTERNATIONAL TRANSFERS
+
+Where information must be processed or stored outside South Africa (e.g., cloud hosting
+providers), we will ensure:
+
+    •   The receiving country has adequate data protection laws, or
+
+    •   Appropriate contractual safeguards are in place.
+
+
+
+8. SECURITY SAFEGUARDS
+
+We implement appropriate security measures, including:
+
+    •   Encryption technologies
+
+    •   Restricted access control
+
+    •   Secure firewalls and server settings
+
+    •   Password protection and authentication
+
+    •   Regular security reviews and audits
+
+However, no internet-based system is 100% secure, and we cannot guarantee absolute security.
+9. RETENTION OF INFORMATION
+
+We retain personal information only for:
+
+   •   As long as necessary to fulfil the purpose collected
+
+   •   Legal or regulatory retention periods
+
+   •   Accounting and audit requirements
+
+Once no longer required, information will be securely deleted or anonymised.
+
+
+
+10. CHILDREN
+
+The Platform is not intended for children under 18. We do not knowingly collect personal
+information from minors without legal guardian consent.
+
+
+
+11. COOKIES & TRACKING TECHNOLOGIES
+
+Cookies may be used on the website for:
+
+   •   Session management
+
+   •   Analytics data
+
+   •   Improving user experience
+
+   •   Security purposes
+
+Users may manage cookie preferences in browser settings.
+
+A separate Cookie Policy applies to the web version of the Platform.
+
+
+
+12. DIRECT MARKETING
+
+We may send marketing content only when:
+
+   •   The user has given consent
+
+   •   It relates to similar services already used by the user
+
+Users may opt-out at any time without charge.
+
+
+
+13. INFORMATION REGULATOR COMPLIANCE
+
+If you believe your personal information has been mishandled, contact:
+
+   •   Funcxon Information Officer (see section 1)
+
+   •   Or submit a complaint to the Information Regulator
+14. UPDATES TO THIS POLICY
+
+This Privacy Policy may be updated periodically. Material changes will be communicated to
+users, and continued use of the Platform constitutes acceptance of the updated policy.
+
+
+
+15. CONTACT
+
+For all privacy inquiries:
+Information Officer
+Email: zulaykab@gmail.com
+Address: 46 Alhambra Place, Roshnee, Vereeniging, Gauteng, South Africa,1936
+
+
+
+By using Funcxon, you acknowledge that you have read and understood this Privacy Policy
+and consent to the processing of personal information under POPIA.
+

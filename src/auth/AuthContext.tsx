@@ -86,7 +86,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     // On native (Expo), use AuthSession so we can return to the app.
-    const redirectUrl = AuthSession.makeRedirectUri();
+    // Use the app scheme for production builds to ensure proper redirect
+    const redirectUrl = Platform.select({
+      web: AuthSession.makeRedirectUri(),
+      default: 'vibeventz://auth/callback',
+    });
 
     console.log('AuthContext signInWithProvider (native) redirectUrl:', redirectUrl);
 

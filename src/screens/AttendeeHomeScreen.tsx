@@ -664,26 +664,52 @@ export default function AttendeeHomeScreen() {
                 </View>
               </TouchableOpacity>
               {provinceOptions.length > 0 && (
-                <TouchableOpacity
-                  activeOpacity={0.9}
-                  onPress={handleUseMyLocation}
-                  style={{
-                    marginTop: spacing.xs,
-                    alignSelf: 'flex-start',
-                    paddingHorizontal: spacing.md,
-                    paddingVertical: spacing.xs,
-                    borderRadius: radii.full,
-                    backgroundColor: colors.accent,
-                  }}
-                >
-                  <Text style={{ ...typography.caption, color: colors.textPrimary }}>
-                    {detectingLocation
-                      ? 'Detecting location...'
-                      : detectedProvinceLabel
-                      ? `Using ${detectedProvinceLabel}`
-                      : 'Use my location'}
-                  </Text>
-                </TouchableOpacity>
+                <View style={{ flexDirection: 'row', marginTop: spacing.xs, gap: spacing.sm }}>
+                  <TouchableOpacity
+                    activeOpacity={0.9}
+                    onPress={handleUseMyLocation}
+                    style={{
+                      alignSelf: 'flex-start',
+                      paddingHorizontal: spacing.md,
+                      paddingVertical: spacing.xs,
+                      borderRadius: radii.full,
+                      backgroundColor: colors.accent,
+                    }}
+                  >
+                    <Text style={{ ...typography.caption, color: colors.textPrimary }}>
+                      {detectingLocation
+                        ? 'Detecting location...'
+                        : detectedProvinceLabel
+                        ? `Using ${detectedProvinceLabel}`
+                        : 'Use my location'}
+                    </Text>
+                  </TouchableOpacity>
+                  {(selectedProvinces.length > 0 || selectedCities.length > 0) && (
+                    <TouchableOpacity
+                      activeOpacity={0.9}
+                      onPress={() => {
+                        setSelectedProvinces([]);
+                        setSelectedCities([]);
+                        setDetectedProvinceLabel(null);
+                        setLocationCity(null);
+                        setLocationRegion(null);
+                      }}
+                      style={{
+                        alignSelf: 'flex-start',
+                        paddingHorizontal: spacing.md,
+                        paddingVertical: spacing.xs,
+                        borderRadius: radii.full,
+                        backgroundColor: colors.surfaceMuted,
+                        borderWidth: 1,
+                        borderColor: colors.borderSubtle,
+                      }}
+                    >
+                      <Text style={{ ...typography.caption, color: colors.textSecondary }}>
+                        Remove Location
+                      </Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
               )}
             </View>
 
@@ -1195,7 +1221,29 @@ export default function AttendeeHomeScreen() {
                 (() => {
                   const availableCities = selectedProvinces.length > 0
                     ? selectedProvinces.flatMap(p => getCitiesByProvince(p))
-                    : provinces.flatMap(p => p.cities);
+                    : [];
+                  
+                  if (selectedProvinces.length === 0) {
+                    return (
+                      <View style={{ alignItems: 'center', paddingVertical: spacing.xl }}>
+                        <MaterialIcons name="location-city" size={48} color={colors.textMuted} />
+                        <Text style={{ ...typography.body, color: colors.textSecondary, marginTop: spacing.md, textAlign: 'center' }}>
+                          Please select at least one province first to see available cities.
+                        </Text>
+                      </View>
+                    );
+                  }
+                  
+                  if (availableCities.length === 0) {
+                    return (
+                      <View style={{ alignItems: 'center', paddingVertical: spacing.xl }}>
+                        <MaterialIcons name="error-outline" size={48} color={colors.textMuted} />
+                        <Text style={{ ...typography.body, color: colors.textSecondary, marginTop: spacing.md, textAlign: 'center' }}>
+                          No cities found for the selected province(s).
+                        </Text>
+                      </View>
+                    );
+                  }
                   
                   return availableCities.sort().map((city) => {
                     const isSelected = selectedCities.includes(city);
