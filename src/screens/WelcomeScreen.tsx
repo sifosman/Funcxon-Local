@@ -111,21 +111,6 @@ export default function WelcomeScreen({ navigation }: Props) {
           <View style={{ marginTop: spacing.lg }}>
             <TouchableOpacity
               activeOpacity={0.9}
-              onPress={() => navigation.navigate('SignUp')}
-              style={{
-                width: '100%',
-                paddingVertical: spacing.md,
-                borderRadius: radii.md,
-                backgroundColor: colors.primary,
-                alignItems: 'center',
-                justifyContent: 'center',
-                marginBottom: spacing.sm,
-              }}
-            >
-              <Text style={{ ...typography.titleMedium, color: '#FFFFFF' }}>Get started</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              activeOpacity={0.9}
               onPress={() => navigation.navigate('SignIn')}
               style={{
                 width: '100%',
@@ -135,9 +120,24 @@ export default function WelcomeScreen({ navigation }: Props) {
                 borderColor: colors.primary,
                 alignItems: 'center',
                 justifyContent: 'center',
+                marginBottom: spacing.sm,
               }}
             >
               <Text style={{ ...typography.titleMedium, color: colors.primary }}>Log in</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              activeOpacity={0.9}
+              onPress={() => navigation.navigate('SignUp')}
+              style={{
+                width: '100%',
+                paddingVertical: spacing.md,
+                borderRadius: radii.md,
+                backgroundColor: colors.primary,
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <Text style={{ ...typography.titleMedium, color: '#FFFFFF' }}>Get started</Text>
             </TouchableOpacity>
           </View>
         </View>

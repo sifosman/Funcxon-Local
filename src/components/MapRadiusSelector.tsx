@@ -1,4 +1,4 @@
-import React, { useState, useRef, useMemo, useCallback } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { 
   View, 
   Text, 
@@ -12,13 +12,16 @@ import {
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { colors, spacing, radii, typography } from '../theme';
-import * as Location from 'expo-location';
+import * as ExpoLocation from 'expo-location';
+import { WebView } from 'react-native-webview';
 
-// Load react-native-maps at module level (not inside component) for native platforms
+// Safely load react-native-maps at module level for native platforms
 let RNMaps: any = null;
+let mapsAvailable = false;
 if (Platform.OS !== 'web') {
   try {
     RNMaps = require('react-native-maps');
+    mapsAvailable = !!RNMaps?.default;
   } catch (e) {
     console.warn('react-native-maps not available:', e);
   }
@@ -79,21 +82,23 @@ export default function MapRadiusSelector({
   const handleGetCurrentLocation = async () => {
     setIsLoading(true);
     try {
-      const { status } = await Location.requestForegroundPermissionsAsync();
+      const { status } = await ExpoLocation.requestForegroundPermissionsAsync();
       if (status !== 'granted') {
         Alert.alert('Permission Denied', 'Location permission is needed to detect your position.');
         return;
       }
-      const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+      const loc = await ExpoLocation.getCurrentPositionAsync({ accuracy: ExpoLocation.Accuracy.Balanced });
       const currentLocation = { latitude: loc.coords.latitude, longitude: loc.coords.longitude };
       setSelectedLocation(currentLocation);
       
       // Center map on current location (native)
-      mapRef.current?.animateToRegion({
-        ...currentLocation,
-        latitudeDelta: 0.1,
-        longitudeDelta: 0.1,
-      }, 1000);
+      if (mapsAvailable && mapRef.current) {
+        mapRef.current.animateToRegion({
+          ...currentLocation,
+          latitudeDelta: 0.1,
+          longitudeDelta: 0.1,
+        }, 1000);
+      }
     } catch (error) {
       Alert.alert('Error', 'Unable to get your current location. Please try again.');
     } finally {
@@ -137,7 +142,7 @@ export default function MapRadiusSelector({
           </TouchableOpacity>
         </View>
 
-        {/* Map */}
+        {/* Map — use WebView-based Google Maps embed for reliability on all platforms */}
         <View style={styles.mapContainer}>
           {Platform.OS === 'web' ? (
             <iframe
@@ -146,47 +151,70 @@ export default function MapRadiusSelector({
               src={`https://www.google.com/maps/embed/v1/place?key=AIzaSyBjd1KYtTaAzxzdw5ayGwwMu5Sex-gKQLI&q=${selectedLocation.latitude},${selectedLocation.longitude}&zoom=12`}
               allowFullScreen
             />
-          ) : MapView ? (
-            <MapView
-              ref={mapRef}
-              style={styles.map}
-              provider={PROVIDER_GOOGLE}
-              initialRegion={{
-                ...initialLocation,
-                latitudeDelta: 0.1,
-                longitudeDelta: 0.1,
-              }}
-              onPress={handleMapPress}
-              showsUserLocation={true}
-              showsMyLocationButton={false}
-            >
-              {Circle && (
-                <Circle
-                  center={selectedLocation}
-                  radius={radiusInMeters}
-                  strokeColor={colors.primary}
-                  fillColor={colors.primary + '30'}
-                  strokeWidth={2}
-                />
-              )}
-              {Marker && (
-                <Marker coordinate={selectedLocation}>
-                  <View style={styles.marker}>
-                    <MaterialIcons name="location-on" size={32} color={colors.primary} />
-                  </View>
-                </Marker>
-              )}
-            </MapView>
           ) : (
-            <View style={[styles.mapFallback, { alignItems: 'center', justifyContent: 'center', padding: spacing.lg, backgroundColor: colors.surfaceMuted }]}>
-              <MaterialIcons name="map" size={48} color={colors.textMuted} />
-              <Text style={{ ...typography.body, color: colors.textPrimary, marginTop: spacing.sm, textAlign: 'center' }}>
-                Map not available
-              </Text>
-              <Text style={{ ...typography.caption, color: colors.textMuted, marginTop: spacing.xs, textAlign: 'center' }}>
-                Choose a radius below and tap Apply.
-              </Text>
-            </View>
+            <WebView
+              ref={webViewRef}
+              style={{ flex: 1 }}
+              originWhitelist={['*']}
+              javaScriptEnabled={true}
+              source={{
+                html: `
+                  <!DOCTYPE html>
+                  <html>
+                  <head>
+                    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+                    <style>html,body,#map{margin:0;padding:0;width:100%;height:100%;}</style>
+                  </head>
+                  <body>
+                    <div id="map"></div>
+                    <script>
+                      let map, marker, circle;
+                      function initMap() {
+                        const center = {lat: ${selectedLocation.latitude}, lng: ${selectedLocation.longitude}};
+                        map = new google.maps.Map(document.getElementById('map'), {
+                          center: center,
+                          zoom: 11,
+                          disableDefaultUI: true,
+                          zoomControl: true,
+                          gestureHandling: 'greedy',
+                        });
+                        marker = new google.maps.Marker({
+                          position: center,
+                          map: map,
+                          draggable: false,
+                        });
+                        circle = new google.maps.Circle({
+                          map: map,
+                          center: center,
+                          radius: ${radiusInMeters},
+                          fillColor: '${colors.primary}',
+                          fillOpacity: 0.15,
+                          strokeColor: '${colors.primary}',
+                          strokeWeight: 2,
+                        });
+                        map.addListener('click', function(e) {
+                          const lat = e.latLng.lat();
+                          const lng = e.latLng.lng();
+                          marker.setPosition({lat, lng});
+                          circle.setCenter({lat, lng});
+                          window.ReactNativeWebView.postMessage(JSON.stringify({lat, lng}));
+                        });
+                      }
+                    </script>
+                    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBjd1KYtTaAzxzdw5ayGwwMu5Sex-gKQLI&callback=initMap" async defer></script>
+                  </body>
+                  </html>
+                `,
+              }}
+              onMessage={(event) => {
+                try {
+                  const { lat, lng } = JSON.parse(event.nativeEvent.data);
+                  setSelectedLocation({ latitude: lat, longitude: lng });
+                } catch (e) {
+                  // ignore parse errors
+                }
+              }}
+            />
           )}
         </View>
 
