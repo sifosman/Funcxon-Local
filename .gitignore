@@ -43,3 +43,6 @@ yarn-error.*
 
 # APK files
 *.apk
+
+# Landing page (separate repo)
+funcxon-landing/

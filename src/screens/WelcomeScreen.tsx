@@ -3,18 +3,21 @@ import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { MaterialIcons } from '@expo/vector-icons';
 import { AuthStackParamList } from '../navigation/AuthNavigator';
 import { colors, spacing, radii, typography } from '../theme';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 type Props = NativeStackScreenProps<AuthStackParamList, 'Welcome'>;
 
 export default function WelcomeScreen({ navigation }: Props) {
+  const insets = useSafeAreaInsets();
+
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
       <ScrollView
         contentContainerStyle={{
           flexGrow: 1,
           paddingHorizontal: spacing.lg,
-          paddingTop: spacing.xl + 40, // Add top padding for status bar
-          paddingBottom: spacing.xl,
+          paddingTop: insets.top + spacing.xl,
+          paddingBottom: insets.bottom + spacing.xl * 2,
           justifyContent: 'flex-start', // Start from top instead of center
         }}
       >

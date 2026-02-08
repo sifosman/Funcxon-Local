@@ -33,13 +33,20 @@
           "apiKey": "AIzaSyBjd1KYtTaAzxzdw5ayGwwMu5Sex-gKQLI"
         }
       },
-      "edgeToEdgeEnabled": true,
+      "edgeToEdgeEnabled": false,
       "package": "com.anonymous.vibeventzapp",
+      "androidStatusBar": {
+        "backgroundColor": "#00000000",
+        "translucent": true,
+        "barStyle": "dark-content"
+      },
       "androidNavigationBar": {
-        "visible": "hidden"
+        "backgroundColor": "#00000000",
+        "barStyle": "dark-content",
+        "visible": "visible"
       },
       "navigationBar": {
-        "visible": "hidden"
+        "visible": "visible"
       }
     },
     "scheme": "vibeventz",

@@ -6,6 +6,9 @@
     "development": {
       "developmentClient": true,
       "distribution": "internal",
+      "android": {
+        "buildType": "apk"
+      },
       "env": {
         "GOOGLE_MAPS_API_KEY": "AIzaSyBjd1KYtTaAzxzdw5ayGwwMu5Sex-gKQLI",
         "EXPO_PUBLIC_SUPABASE_URL": "https://fhlocaqndxawkbztncwo.supabase.co",

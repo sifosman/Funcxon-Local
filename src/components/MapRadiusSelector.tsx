@@ -130,42 +130,44 @@ export default function MapRadiusSelector({
         </View>
 
         {/* Map (native only) */}
-        {Platform.OS === 'web' || !MapView ? (
-          <View style={[styles.map, { alignItems: 'center', justifyContent: 'center', padding: spacing.lg, backgroundColor: colors.surfaceMuted }]}>
-            <MaterialIcons name="map" size={48} color={colors.textMuted} />
-            <Text style={{ ...typography.body, color: colors.textPrimary, marginTop: spacing.sm, textAlign: 'center' }}>
-              Map is loading...
-            </Text>
-            <Text style={{ ...typography.caption, color: colors.textMuted, marginTop: spacing.xs, textAlign: 'center' }}>
-              Choose a radius below and tap Apply.
-            </Text>
-          </View>
-        ) : (
-          <MapView
-            ref={mapRef}
-            style={styles.map}
-            provider={PROVIDER_GOOGLE}
-            initialRegion={{
-              ...initialLocation,
-              latitudeDelta: 0.1,
-              longitudeDelta: 0.1,
-            }}
-            onPress={handleMapPress}
-          >
-            <Circle
-              center={selectedLocation}
-              radius={radiusInMeters}
-              strokeColor={colors.primary}
-              fillColor={colors.primary + '30'}
-              strokeWidth={2}
-            />
-            <Marker coordinate={selectedLocation}>
-              <View style={styles.marker}>
-                <MaterialIcons name="location-on" size={32} color={colors.primary} />
-              </View>
-            </Marker>
-          </MapView>
-        )}
+        <View style={styles.mapContainer}>
+          {Platform.OS === 'web' || !MapView ? (
+            <View style={[styles.mapFallback, { alignItems: 'center', justifyContent: 'center', padding: spacing.lg, backgroundColor: colors.surfaceMuted }]}>
+              <MaterialIcons name="map" size={48} color={colors.textMuted} />
+              <Text style={{ ...typography.body, color: colors.textPrimary, marginTop: spacing.sm, textAlign: 'center' }}>
+                Map is loading...
+              </Text>
+              <Text style={{ ...typography.caption, color: colors.textMuted, marginTop: spacing.xs, textAlign: 'center' }}>
+                Choose a radius below and tap Apply.
+              </Text>
+            </View>
+          ) : (
+            <MapView
+              ref={mapRef}
+              style={styles.map}
+              {...(PROVIDER_GOOGLE ? { provider: PROVIDER_GOOGLE } : {})}
+              initialRegion={{
+                ...initialLocation,
+                latitudeDelta: 0.1,
+                longitudeDelta: 0.1,
+              }}
+              onPress={handleMapPress}
+            >
+              <Circle
+                center={selectedLocation}
+                radius={radiusInMeters}
+                strokeColor={colors.primary}
+                fillColor={colors.primary + '30'}
+                strokeWidth={2}
+              />
+              <Marker coordinate={selectedLocation}>
+                <View style={styles.marker}>
+                  <MaterialIcons name="location-on" size={32} color={colors.primary} />
+                </View>
+              </Marker>
+            </MapView>
+          )}
+        </View>
 
         {/* Radius Controls */}
         <View style={styles.radiusControls}>
@@ -238,7 +240,13 @@ const styles = StyleSheet.create({
   locationButton: {
     padding: spacing.sm,
   },
+  mapContainer: {
+    flex: 1,
+  },
   map: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  mapFallback: {
     flex: 1,
   },
   marker: {

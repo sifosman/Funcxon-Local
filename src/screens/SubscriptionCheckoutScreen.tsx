@@ -3,9 +3,11 @@ import { Alert, Image, ScrollView, Text, TextInput, TouchableOpacity, View } fro
 import { MaterialIcons } from '@expo/vector-icons';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import * as WebBrowser from 'expo-web-browser';
 import { colors, radii, spacing, typography } from '../theme';
 import type { ProfileStackParamList } from '../navigation/ProfileNavigator';
 import { useApplicationForm } from '../context/ApplicationFormContext';
+import { buildPayFastPaymentData, getPayFastCheckoutUrl } from '../config/payfast';
 
 // Field component moved outside to prevent re-renders causing keyboard to close
 const Field = ({ label, value, onChangeText, placeholder, keyboardType }: { label: string; value: string; onChangeText: (t: string) => void; placeholder?: string; keyboardType?: 'default' | 'email-address' | 'phone-pad' | 'numeric'; }) => (
@@ -85,7 +87,7 @@ export default function SubscriptionCheckoutScreen() {
     return true;
   };
 
-  const handleContinue = () => {
+  const handleContinue = async () => {
     if (!validate()) return;
 
     updateStep4({ subscriptionPlan: tierName.toLowerCase() });
@@ -99,11 +101,42 @@ export default function SubscriptionCheckoutScreen() {
       return;
     }
 
-    Alert.alert(
-      'Proceed to PayFast',
-      'PayFast checkout will be wired up soon. For now, we will take you to the vendor application wizard.',
-      [{ text: 'Continue', onPress: () => navigation.navigate('ApplicationStep1') }],
-    );
+    const priceNum = parseFloat((priceLabel || '0').replace(/[^0-9.]/g, ''));
+    if (!priceNum || isNaN(priceNum)) {
+      Alert.alert('Invalid price', 'Could not determine the plan price.');
+      return;
+    }
+
+    const nameParts = fullName.trim().split(' ');
+    const firstName = nameParts[0] || '';
+    const lastName = nameParts.slice(1).join(' ') || '';
+
+    const paymentData = buildPayFastPaymentData({
+      amount: priceNum,
+      itemName: `Funcxon ${tierName} Plan (${billing})`,
+      itemDescription: `${tierName} subscription - billed ${billing}`,
+      firstName,
+      lastName,
+      email: email.trim(),
+      phone: phone.trim(),
+      subscriptionType: '1',
+      frequency: billing === 'yearly' ? '6' : '3',
+      recurringAmount: priceNum,
+      cycles: 0,
+      returnUrl: 'https://funcxon.com/payment/success',
+      cancelUrl: 'https://funcxon.com/payment/cancel',
+      notifyUrl: 'https://funcxon.com/api/payfast/notify',
+    });
+
+    const checkoutUrl = getPayFastCheckoutUrl(paymentData);
+
+    try {
+      await WebBrowser.openBrowserAsync(checkoutUrl);
+      // After returning from PayFast, proceed to vendor application
+      navigation.navigate('ApplicationStep1');
+    } catch (err) {
+      Alert.alert('Payment Error', 'Could not open PayFast checkout. Please try again.');
+    }
   };
 
   return (

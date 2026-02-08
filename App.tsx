@@ -3,6 +3,7 @@ import { StatusBar } from 'expo-status-bar';
 import { DefaultTheme, NavigationContainer } from '@react-navigation/native';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Platform, View } from 'react-native';
+import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { AppNavigator } from './src/navigation/AppNavigator';
 import { AuthProvider } from './src/auth/AuthContext';
 import { ApplicationFormProvider } from './src/context/ApplicationFormContext';
@@ -58,16 +59,20 @@ export default function App() {
   }
 
   return (
-    <QueryClientProvider client={queryClient}>
-      <AuthProvider>
-        <ApplicationFormProvider>
-          <NavigationContainer theme={navTheme}>
-            <AppContent helpVisible={helpVisible} setHelpVisible={setHelpVisible} />
-            <StatusBar style="dark" />
-          </NavigationContainer>
-        </ApplicationFormProvider>
-      </AuthProvider>
-    </QueryClientProvider>
+    <SafeAreaProvider>
+      <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={['top', 'bottom']}>
+        <QueryClientProvider client={queryClient}>
+          <AuthProvider>
+            <ApplicationFormProvider>
+              <NavigationContainer theme={navTheme}>
+                <AppContent helpVisible={helpVisible} setHelpVisible={setHelpVisible} />
+                <StatusBar style="dark" translucent backgroundColor="transparent" />
+              </NavigationContainer>
+            </ApplicationFormProvider>
+          </AuthProvider>
+        </QueryClientProvider>
+      </SafeAreaView>
+    </SafeAreaProvider>
   );
 }
 
