@@ -12,6 +12,8 @@ type OAuthProvider = 'google' | 'github' | 'facebook' | 'apple';
 export type AuthContextValue = {
   session: Session | null | undefined;
   user: Session['user'] | null | undefined;
+  userRole: 'attendee' | 'vendor' | null | undefined;
+  isLoading: boolean;
   signIn: (params: { email: string; password: string }) => Promise<{ error?: Error }>;
   signUp: (params: {
     email: string;
@@ -28,19 +30,74 @@ const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null | undefined>(undefined);
+  const [userRole, setUserRole] = useState<'attendee' | 'vendor' | null | undefined>(undefined);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Fetch user role from database
+  const fetchUserRole = async (userId: string) => {
+    try {
+      const { data: userRow, error: userError } = await supabase
+        .from('users')
+        .select('role')
+        .eq('auth_user_id', userId)
+        .maybeSingle();
+
+      if (!userError && userRow?.role) {
+        const normalizedRole = String(userRow.role).toLowerCase();
+        const isVendorRole = normalizedRole === 'vendor' || normalizedRole === 'subscriber';
+        setUserRole(isVendorRole ? 'vendor' : 'attendee');
+        return;
+      }
+
+      const { data: vendorRow, error: vendorError } = await supabase
+        .from('vendors')
+        .select('id, subscription_status, subscription_tier')
+        .eq('user_id', userId)
+        .maybeSingle();
+
+      if (!vendorError && vendorRow) {
+        const status = String(vendorRow.subscription_status ?? '').toLowerCase();
+        const tier = String(vendorRow.subscription_tier ?? '').toLowerCase();
+        const isVendor = status === 'active' || status === 'trial' || tier !== '';
+        setUserRole(isVendor ? 'vendor' : 'attendee');
+        return;
+      }
+
+      console.log('No user role found, defaulting to attendee');
+      setUserRole('attendee');
+    } catch (err) {
+      console.error('Error fetching user role:', err);
+      setUserRole('attendee');
+    }
+  };
 
   useEffect(() => {
+    // Get initial session
     supabase.auth
       .getSession()
       .then(({ data }) => {
         setSession(data.session ?? null);
+        if (data.session?.user) {
+          fetchUserRole(data.session.user.id);
+        } else {
+          setUserRole(null);
+        }
+        setIsLoading(false);
       })
       .catch(() => {
         setSession(null);
+        setUserRole(null);
+        setIsLoading(false);
       });
 
+    // Listen for auth state changes
     const { data } = supabase.auth.onAuthStateChange((_event, newSession) => {
       setSession(newSession ?? null);
+      if (newSession?.user) {
+        fetchUserRole(newSession.user.id);
+      } else {
+        setUserRole(null);
+      }
     });
 
     return () => {
@@ -165,6 +222,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       value={{
         session,
         user: session?.user,
+        userRole,
+        isLoading,
         signIn,
         signUp,
         signOut,

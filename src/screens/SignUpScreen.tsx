@@ -16,6 +16,8 @@ export default function SignUpScreen({ navigation }: Props) {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [name, setName] = useState('');
   const [role, setRole] = useState<'attendee' | 'vendor'>('attendee');
+  const [termsAccepted, setTermsAccepted] = useState(false);
+  const [privacyAccepted, setPrivacyAccepted] = useState(false);
   const [loading, setLoading] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
 
@@ -46,6 +48,12 @@ export default function SignUpScreen({ navigation }: Props) {
     if (password !== confirmPassword) {
       Alert.alert('Passwords do not match', 'Please make sure the passwords match.');
       setFormError('Passwords do not match.');
+      return;
+    }
+
+    if (!termsAccepted || !privacyAccepted) {
+      Alert.alert('Consent Required', 'Please accept the Terms and Conditions and Privacy Policy to continue.');
+      setFormError('Please accept the Terms and Conditions and Privacy Policy.');
       return;
     }
 
@@ -290,6 +298,75 @@ export default function SignUpScreen({ navigation }: Props) {
                 );
               })}
             </View>
+          </View>
+
+          {/* Terms & Privacy Consent */}
+          <View style={{ marginBottom: spacing.lg }}>
+            <TouchableOpacity
+              onPress={() => setTermsAccepted(!termsAccepted)}
+              style={{ flexDirection: 'row', alignItems: 'flex-start', marginBottom: spacing.md }}
+              activeOpacity={0.8}
+            >
+              <View
+                style={{
+                  width: 22,
+                  height: 22,
+                  borderRadius: 6,
+                  borderWidth: 2,
+                  borderColor: termsAccepted ? colors.primary : colors.borderSubtle,
+                  backgroundColor: termsAccepted ? colors.primary : colors.surface,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  marginRight: spacing.sm,
+                  marginTop: 1,
+                }}
+              >
+                {termsAccepted && <MaterialIcons name="check" size={14} color="#FFFFFF" />}
+              </View>
+              <Text style={{ ...typography.caption, color: colors.textSecondary, flex: 1, lineHeight: 18 }}>
+                I agree to the{' '}
+                <Text
+                  style={{ color: colors.primaryTeal, fontWeight: '600', textDecorationLine: 'underline' }}
+                  onPress={() => navigation.navigate('LegalDocument', { documentId: 'terms-and-conditions' })}
+                >
+                  Terms and Conditions
+                </Text>
+                {' '}*
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              onPress={() => setPrivacyAccepted(!privacyAccepted)}
+              style={{ flexDirection: 'row', alignItems: 'flex-start' }}
+              activeOpacity={0.8}
+            >
+              <View
+                style={{
+                  width: 22,
+                  height: 22,
+                  borderRadius: 6,
+                  borderWidth: 2,
+                  borderColor: privacyAccepted ? colors.primary : colors.borderSubtle,
+                  backgroundColor: privacyAccepted ? colors.primary : colors.surface,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  marginRight: spacing.sm,
+                  marginTop: 1,
+                }}
+              >
+                {privacyAccepted && <MaterialIcons name="check" size={14} color="#FFFFFF" />}
+              </View>
+              <Text style={{ ...typography.caption, color: colors.textSecondary, flex: 1, lineHeight: 18 }}>
+                I accept the{' '}
+                <Text
+                  style={{ color: colors.primaryTeal, fontWeight: '600', textDecorationLine: 'underline' }}
+                  onPress={() => navigation.navigate('LegalDocument', { documentId: 'privacy-policy' })}
+                >
+                  Privacy Policy
+                </Text>
+                {' '}(POPIA) *
+              </Text>
+            </TouchableOpacity>
           </View>
 
           <PrimaryButton title={loading ? 'Creating account...' : 'Sign up'} onPress={handleSignUp} disabled={loading} />

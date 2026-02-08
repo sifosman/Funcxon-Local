@@ -10,12 +10,14 @@ import { ApplicationProgress } from '../../components/ApplicationProgress';
 import { subscriptionPlans } from '../../config/subscriptionPlans';
 import { submitApplication, uploadFileToStorage } from '../../lib/applicationService';
 import { useAuth } from '../../auth/AuthContext';
+import { supabase } from '../../lib/supabaseClient';
 
 type ProfileStackParamList = {
   ApplicationStep3: undefined;
   ApplicationStep4: undefined;
   Payment: undefined;
   PortfolioProfile: undefined;
+  LegalDocument: { documentId: string };
 };
 
 export default function ApplicationStep4Screen() {
@@ -93,6 +95,9 @@ export default function ApplicationStep4Screen() {
       const result = await submitApplication(submission);
 
       if (result.success) {
+        // Send application submission confirmation email
+        await sendApplicationConfirmationEmail(submission);
+        
         Alert.alert(
           'Application Submitted!',
           'Your application has been submitted successfully. We will review it and get back to you within 3-5 business days.',
@@ -115,6 +120,46 @@ export default function ApplicationStep4Screen() {
       Alert.alert('Error', 'An unexpected error occurred. Please try again.');
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const sendApplicationConfirmationEmail = async (submission: any) => {
+    try {
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      if (userError || !user) {
+        console.log('No user found, cannot send confirmation email');
+        return;
+      }
+
+      // Get user profile details
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('full_name, business_name')
+        .eq('id', user.id)
+        .single();
+
+      const fullName = profile?.full_name || user.user_metadata?.full_name || 'Valued Applicant';
+      const businessName = profile?.business_name || submission.company_details?.businessName || '';
+
+      // Call the Supabase Edge Function to send confirmation email
+      const { data, error } = await supabase.functions.invoke('send-vendor-welcome-email', {
+        body: {
+          email: user.email,
+          fullName: fullName,
+          businessName: businessName || undefined,
+          tierName: submission.subscription_tier || 'Vendor',
+          applicationUrl: 'https://funcxon.com/vendor-dashboard',
+        },
+      });
+
+      if (error) {
+        console.error('Error sending application confirmation email:', error);
+        return;
+      }
+
+      console.log('Application confirmation email sent successfully:', data);
+    } catch (err) {
+      console.error('Failed to send application confirmation email:', err);
     }
   };
 
@@ -270,7 +315,10 @@ export default function ApplicationStep4Screen() {
               <View style={{ flex: 1 }}>
                 <Text style={{ ...typography.body, color: colors.textPrimary }}>
                   I accept the{' '}
-                  <Text style={{ color: colors.primaryTeal, fontWeight: '600' }}>
+                  <Text
+                    style={{ color: colors.primaryTeal, fontWeight: '600', textDecorationLine: 'underline' }}
+                    onPress={() => navigation.navigate('LegalDocument', { documentId: 'terms-and-conditions' })}
+                  >
                     Terms and Conditions
                   </Text>{' '}
                   *
@@ -312,7 +360,10 @@ export default function ApplicationStep4Screen() {
               <View style={{ flex: 1 }}>
                 <Text style={{ ...typography.body, color: colors.textPrimary }}>
                   I accept the{' '}
-                  <Text style={{ color: colors.primaryTeal, fontWeight: '600' }}>
+                  <Text
+                    style={{ color: colors.primaryTeal, fontWeight: '600', textDecorationLine: 'underline' }}
+                    onPress={() => navigation.navigate('LegalDocument', { documentId: 'privacy-policy' })}
+                  >
                     Privacy Policy
                   </Text>{' '}
                   *

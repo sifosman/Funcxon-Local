@@ -3,6 +3,7 @@ import WelcomeScreen from '../screens/WelcomeScreen';
 import SignInScreen from '../screens/SignInScreen';
 import SignUpScreen from '../screens/SignUpScreen';
 import EmailConfirmationScreen from '../screens/EmailConfirmationScreen';
+import LegalDocumentScreen from '../screens/LegalDocumentScreen';
 import { colors, typography } from '../theme';
 
 export type AuthStackParamList = {
@@ -10,6 +11,7 @@ export type AuthStackParamList = {
   SignIn: undefined;
   SignUp: undefined;
   EmailConfirmation: { email?: string; role?: 'attendee' | 'vendor' };
+  LegalDocument: { documentId: string };
 };
 
 const Stack = createNativeStackNavigator<AuthStackParamList>();
@@ -37,6 +39,7 @@ export function AuthNavigator() {
         component={EmailConfirmationScreen}
         options={{ title: 'Confirm your email' }}
       />
+      <Stack.Screen name="LegalDocument" component={LegalDocumentScreen} options={{ headerShown: false }} />
     </Stack.Navigator>
   );
 }

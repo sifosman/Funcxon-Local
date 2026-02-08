@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Alert, Image, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Alert, Image, Modal, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -8,11 +8,150 @@ import { colors, radii, spacing, typography } from '../theme';
 import type { ProfileStackParamList } from '../navigation/ProfileNavigator';
 import { useApplicationForm } from '../context/ApplicationFormContext';
 import { buildPayFastPaymentData, getPayFastCheckoutUrl } from '../config/payfast';
+import { supabase } from '../lib/supabaseClient';
 
-// Field component moved outside to prevent re-renders causing keyboard to close
-const Field = ({ label, value, onChangeText, placeholder, keyboardType }: { label: string; value: string; onChangeText: (t: string) => void; placeholder?: string; keyboardType?: 'default' | 'email-address' | 'phone-pad' | 'numeric'; }) => (
+const SOUTH_AFRICAN_PROVINCES = [
+  'Eastern Cape',
+  'Free State',
+  'Gauteng',
+  'KwaZulu-Natal',
+  'Limpopo',
+  'Mpumalanga',
+  'North West',
+  'Northern Cape',
+  'Western Cape',
+];
+
+const ProvinceDropdown = ({
+  value,
+  onSelect,
+  error,
+}: {
+  value: string;
+  onSelect: (province: string) => void;
+  error?: string;
+}) => {
+  const [visible, setVisible] = useState(false);
+
+  return (
+    <>
+      <TouchableOpacity
+        onPress={() => setVisible(true)}
+        activeOpacity={0.9}
+        style={{
+          borderWidth: 1,
+          borderColor: error ? '#EF4444' : colors.borderSubtle,
+          backgroundColor: colors.surface,
+          borderRadius: radii.md,
+          paddingHorizontal: spacing.md,
+          paddingVertical: spacing.sm,
+          flexDirection: 'row',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+        }}
+      >
+        <Text style={{ ...typography.body, color: value ? colors.textPrimary : colors.textMuted }}>
+          {value || 'Select province'}
+        </Text>
+        <MaterialIcons name="arrow-drop-down" size={24} color={error ? '#EF4444' : colors.textMuted} />
+      </TouchableOpacity>
+
+      <Modal
+        visible={visible}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setVisible(false)}
+      >
+        <TouchableOpacity
+          style={{
+            flex: 1,
+            backgroundColor: 'rgba(0,0,0,0.5)',
+            justifyContent: 'center',
+            alignItems: 'center',
+            padding: spacing.lg,
+          }}
+          onPress={() => setVisible(false)}
+        >
+          <View
+            style={{
+              backgroundColor: colors.surface,
+              borderRadius: radii.lg,
+              width: '100%',
+              maxHeight: 400,
+              overflow: 'hidden',
+            }}
+          >
+            <View
+              style={{
+                flexDirection: 'row',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                padding: spacing.md,
+                borderBottomWidth: 1,
+                borderBottomColor: colors.borderSubtle,
+              }}
+            >
+              <Text style={{ ...typography.titleMedium, color: colors.textPrimary }}>Select Province</Text>
+              <TouchableOpacity onPress={() => setVisible(false)}>
+                <MaterialIcons name="close" size={24} color={colors.textMuted} />
+              </TouchableOpacity>
+            </View>
+            <ScrollView style={{ maxHeight: 320 }}>
+              {SOUTH_AFRICAN_PROVINCES.map((province) => (
+                <TouchableOpacity
+                  key={province}
+                  onPress={() => {
+                    onSelect(province);
+                    setVisible(false);
+                  }}
+                  style={{
+                    padding: spacing.md,
+                    borderBottomWidth: 1,
+                    borderBottomColor: colors.borderSubtle,
+                    backgroundColor: value === province ? colors.surfaceMuted : colors.surface,
+                  }}
+                >
+                  <Text
+                    style={{
+                      ...typography.body,
+                      color: value === province ? colors.primary : colors.textPrimary,
+                      fontWeight: value === province ? '600' : '400',
+                    }}
+                  >
+                    {province}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
+        </TouchableOpacity>
+      </Modal>
+      {error && (
+        <Text style={{ ...typography.caption, color: '#EF4444', marginTop: spacing.xs }}>{error}</Text>
+      )}
+    </>
+  );
+};
+
+const Field = ({
+  label,
+  value,
+  onChangeText,
+  placeholder,
+  keyboardType,
+  error,
+}: {
+  label: string;
+  value: string;
+  onChangeText: (t: string) => void;
+  placeholder?: string;
+  keyboardType?: 'default' | 'email-address' | 'phone-pad' | 'numeric';
+  error?: string;
+}) => (
   <View style={{ marginBottom: spacing.md }}>
-    <Text style={{ ...typography.caption, color: colors.textSecondary, marginBottom: spacing.xs }}>{label}</Text>
+    <Text style={{ ...typography.caption, color: error ? '#EF4444' : colors.textSecondary, marginBottom: spacing.xs }}>
+      {label}
+    </Text>
     <TextInput
       value={value}
       onChangeText={onChangeText}
@@ -21,7 +160,7 @@ const Field = ({ label, value, onChangeText, placeholder, keyboardType }: { labe
       keyboardType={keyboardType ?? 'default'}
       style={{
         borderWidth: 1,
-        borderColor: colors.borderSubtle,
+        borderColor: error ? '#EF4444' : colors.borderSubtle,
         backgroundColor: colors.surface,
         borderRadius: radii.md,
         paddingHorizontal: spacing.md,
@@ -29,6 +168,9 @@ const Field = ({ label, value, onChangeText, placeholder, keyboardType }: { labe
         color: colors.textPrimary,
       }}
     />
+    {error && (
+      <Text style={{ ...typography.caption, color: '#EF4444', marginTop: spacing.xs }}>{error}</Text>
+    )}
   </View>
 );
 
@@ -59,6 +201,8 @@ export default function SubscriptionCheckoutScreen() {
   const [postalCode, setPostalCode] = useState('');
 
   const [termsAccepted, setTermsAccepted] = useState(false);
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [touched, setTouched] = useState<Record<string, boolean>>({});
 
   const summary = useMemo(() => {
     const planLabel = (tierName || '').toUpperCase();
@@ -66,38 +210,65 @@ export default function SubscriptionCheckoutScreen() {
     return { planLabel, periodLabel };
   }, [tierName, billing]);
 
-  const validate = () => {
-    if (!tierName) {
-      Alert.alert('Missing plan', 'Please go back and select a plan.');
-      return false;
+  const validateField = (field: string, value: string) => {
+    switch (field) {
+      case 'fullName':
+        if (!value.trim()) return 'Full name is required';
+        if (value.trim().length < 2) return 'Name must be at least 2 characters';
+        break;
+      case 'email':
+        if (!value.trim()) return 'Email is required';
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(value.trim())) return 'Please enter a valid email address';
+        break;
+      case 'phone':
+        if (!value.trim()) return 'Phone number is required';
+        if (value.trim().length < 10) return 'Phone number must be at least 10 digits';
+        break;
+      case 'province':
+        if (!value) return 'Please select a province';
+        break;
     }
-    if (!fullName.trim() || !email.trim() || !phone.trim()) {
-      Alert.alert('Missing details', 'Please enter your name, email, and phone number.');
-      return false;
-    }
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email.trim())) {
-      Alert.alert('Invalid email', 'Please enter a valid email address.');
-      return false;
-    }
+    return '';
+  };
+
+  const validateAll = () => {
+    const newErrors: Record<string, string> = {};
+    const fields = ['fullName', 'email', 'phone'] as const;
+    
+    fields.forEach((field) => {
+      const value = { fullName, email, phone }[field];
+      const error = validateField(field, value);
+      if (error) newErrors[field] = error;
+    });
+
     if (!termsAccepted) {
-      Alert.alert('Terms required', 'Please accept the terms to continue.');
-      return false;
+      newErrors.terms = 'Please accept the terms and conditions';
     }
-    return true;
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
   };
 
   const handleContinue = async () => {
-    if (!validate()) return;
+    // Mark all required fields as touched
+    setTouched({ fullName: true, email: true, phone: true, terms: true });
+    
+    if (!validateAll()) {
+      // Scroll to top to show errors
+      return;
+    }
 
+    console.log('Validation passed, updating step 4');
     updateStep4({ subscriptionPlan: tierName.toLowerCase() });
 
     if (isFree) {
-      Alert.alert(
-        'Free Plan Confirmed',
-        'Your free plan has been selected. Next, create your vendor profile.',
-        [{ text: 'Continue', onPress: () => navigation.navigate('ApplicationStep1') }],
-      );
+      console.log('Free plan selected, navigating to VendorSignupSuccess');
+      navigation.navigate('VendorSignupSuccess', {
+        email: email.trim(),
+        fullName: fullName.trim(),
+        tierName: tierName,
+      });
       return;
     }
 
@@ -132,10 +303,35 @@ export default function SubscriptionCheckoutScreen() {
 
     try {
       await WebBrowser.openBrowserAsync(checkoutUrl);
-      // After returning from PayFast, proceed to vendor application
+      // After returning from PayFast, send welcome email and proceed to application
+      await sendWelcomeEmail();
       navigation.navigate('ApplicationStep1');
     } catch (err) {
       Alert.alert('Payment Error', 'Could not open PayFast checkout. Please try again.');
+    }
+  };
+
+  const sendWelcomeEmail = async () => {
+    try {
+      // Call the Supabase Edge Function to send welcome email
+      const { data, error } = await supabase.functions.invoke('send-vendor-welcome-email', {
+        body: {
+          email: email.trim(),
+          fullName: fullName.trim(),
+          businessName: businessName.trim() || undefined,
+          tierName: tierName,
+          applicationUrl: 'https://funcxon.com/vendor-application',
+        },
+      });
+
+      if (error) {
+        console.error('Error sending welcome email:', error);
+        return;
+      }
+
+      console.log('Welcome email sent successfully:', data);
+    } catch (err) {
+      console.error('Failed to send welcome email:', err);
     }
   };
 
@@ -193,9 +389,44 @@ export default function SubscriptionCheckoutScreen() {
             }}
           >
             <Text style={{ ...typography.titleMedium, color: colors.textPrimary, marginBottom: spacing.md }}>Contact Details</Text>
-            <Field label="Full Name *" value={fullName} onChangeText={setFullName} placeholder="Your name" />
-            <Field label="Email *" value={email} onChangeText={setEmail} placeholder="you@email.com" keyboardType="email-address" />
-            <Field label="Phone *" value={phone} onChangeText={setPhone} placeholder="+27" keyboardType="phone-pad" />
+            <Field
+              label="Full Name *"
+              value={fullName}
+              onChangeText={(text) => {
+                setFullName(text);
+                if (touched.fullName) {
+                  setErrors((prev) => ({ ...prev, fullName: validateField('fullName', text) }));
+                }
+              }}
+              placeholder="Your name"
+              error={touched.fullName ? errors.fullName : undefined}
+            />
+            <Field
+              label="Email *"
+              value={email}
+              onChangeText={(text) => {
+                setEmail(text);
+                if (touched.email) {
+                  setErrors((prev) => ({ ...prev, email: validateField('email', text) }));
+                }
+              }}
+              placeholder="you@email.com"
+              keyboardType="email-address"
+              error={touched.email ? errors.email : undefined}
+            />
+            <Field
+              label="Phone *"
+              value={phone}
+              onChangeText={(text) => {
+                setPhone(text);
+                if (touched.phone) {
+                  setErrors((prev) => ({ ...prev, phone: validateField('phone', text) }));
+                }
+              }}
+              placeholder="+27"
+              keyboardType="phone-pad"
+              error={touched.phone ? errors.phone : undefined}
+            />
             <Field label="Business Name" value={businessName} onChangeText={setBusinessName} placeholder="Your business" />
             <Field label="VAT Number" value={vatNumber} onChangeText={setVatNumber} placeholder="Optional" />
           </View>
@@ -214,7 +445,21 @@ export default function SubscriptionCheckoutScreen() {
             <Field label="Address Line 1" value={addressLine1} onChangeText={setAddressLine1} placeholder="Street address" />
             <Field label="Address Line 2" value={addressLine2} onChangeText={setAddressLine2} placeholder="Unit / Complex" />
             <Field label="City" value={city} onChangeText={setCity} placeholder="City" />
-            <Field label="Province" value={province} onChangeText={setProvince} placeholder="Province" />
+            <View style={{ marginBottom: spacing.md }}>
+              <Text style={{ ...typography.caption, color: touched.province && errors.province ? '#EF4444' : colors.textSecondary, marginBottom: spacing.xs }}>
+                Province
+              </Text>
+              <ProvinceDropdown
+                value={province}
+                onSelect={(value) => {
+                  setProvince(value);
+                  if (touched.province) {
+                    setErrors((prev) => ({ ...prev, province: validateField('province', value) }));
+                  }
+                }}
+                error={touched.province ? errors.province : undefined}
+              />
+            </View>
             <Field label="Postal Code" value={postalCode} onChangeText={setPostalCode} placeholder="Postal code" keyboardType="numeric" />
           </View>
 
@@ -279,7 +524,7 @@ export default function SubscriptionCheckoutScreen() {
                 height: 22,
                 borderRadius: 6,
                 borderWidth: 2,
-                borderColor: termsAccepted ? colors.primary : colors.borderSubtle,
+                borderColor: errors.terms ? '#EF4444' : termsAccepted ? colors.primary : colors.borderSubtle,
                 backgroundColor: termsAccepted ? colors.primary : colors.surface,
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -288,10 +533,29 @@ export default function SubscriptionCheckoutScreen() {
             >
               {termsAccepted && <MaterialIcons name="check" size={14} color={colors.primaryForeground} />}
             </View>
-            <Text style={{ ...typography.caption, color: colors.textPrimary, flex: 1 }}>
-              I agree to the Terms and Conditions and confirm my details are correct.
+            <Text style={{ ...typography.caption, color: errors.terms ? '#EF4444' : colors.textPrimary, flex: 1 }}>
+              I agree to the{' '}
+              <Text
+                style={{ color: colors.primaryTeal, fontWeight: '600', textDecorationLine: 'underline' }}
+                onPress={() => navigation.navigate('LegalDocument', { documentId: 'terms-and-conditions' })}
+              >
+                Terms and Conditions
+              </Text>
+              {' '}and{' '}
+              <Text
+                style={{ color: colors.primaryTeal, fontWeight: '600', textDecorationLine: 'underline' }}
+                onPress={() => navigation.navigate('LegalDocument', { documentId: 'privacy-policy' })}
+              >
+                Privacy Policy
+              </Text>
+              {' '}and confirm my details are correct.
             </Text>
           </TouchableOpacity>
+          {errors.terms && (
+            <Text style={{ ...typography.caption, color: '#EF4444', marginTop: -spacing.md, marginBottom: spacing.md }}>
+              {errors.terms}
+            </Text>
+          )}
 
           <TouchableOpacity
             onPress={handleContinue}

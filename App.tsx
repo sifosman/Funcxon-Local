@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { DefaultTheme, NavigationContainer } from '@react-navigation/native';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -20,6 +20,7 @@ import {
 } from '@expo-google-fonts/playfair-display';
 import FloatingHelpButton from './src/components/FloatingHelpButton';
 import { HelpCenterModal } from './src/components/HelpCenterModal';
+import DataConsentModal, { hasAcceptedDataConsent } from './src/components/DataConsentModal';
 import { useVendorStatus } from './src/hooks/useVendorStatus';
 
 const queryClient = new QueryClient();
@@ -38,6 +39,17 @@ const navTheme = {
 
 export default function App() {
   const [helpVisible, setHelpVisible] = useState(false);
+  const [consentVisible, setConsentVisible] = useState(false);
+  const [consentChecked, setConsentChecked] = useState(false);
+
+  useEffect(() => {
+    hasAcceptedDataConsent().then((accepted) => {
+      if (!accepted) {
+        setConsentVisible(true);
+      }
+      setConsentChecked(true);
+    });
+  }, []);
   
   // Only load custom fonts on native platforms
   const [fontsLoaded] = useFonts({
@@ -54,7 +66,7 @@ export default function App() {
   });
 
   // On web, don't wait for fonts - use system fonts as fallback
-  if (!fontsLoaded && Platform.OS !== 'web') {
+  if ((!fontsLoaded && Platform.OS !== 'web') || !consentChecked) {
     return null;
   }
 
@@ -66,6 +78,10 @@ export default function App() {
             <ApplicationFormProvider>
               <NavigationContainer theme={navTheme}>
                 <AppContent helpVisible={helpVisible} setHelpVisible={setHelpVisible} />
+                <DataConsentModal
+                  visible={consentVisible}
+                  onAccept={() => setConsentVisible(false)}
+                />
                 <StatusBar style="dark" translucent backgroundColor="transparent" />
               </NavigationContainer>
             </ApplicationFormProvider>

@@ -149,6 +149,7 @@ export default function AccountScreen() {
             id: 'terms-policies',
             label: 'Funcxon Terms and Policies',
             icon: 'shield',
+            route: 'TermsAndPolicies',
         },
         {
             id: 'help-centre',

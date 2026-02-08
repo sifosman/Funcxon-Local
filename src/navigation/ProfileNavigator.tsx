@@ -12,6 +12,9 @@ import ApplicationStep4Screen from '../screens/subscriber/ApplicationStep4Screen
 import SubscriptionPlansScreen from '../screens/SubscriptionPlansScreen';
 import SubscriptionCheckoutScreen from '../screens/SubscriptionCheckoutScreen';
 import PortfolioAssistanceScreen from '../screens/PortfolioAssistanceScreen';
+import VendorSignupSuccessScreen from '../screens/VendorSignupSuccessScreen';
+import TermsAndPoliciesScreen from '../screens/TermsAndPoliciesScreen';
+import LegalDocumentScreen from '../screens/LegalDocumentScreen';
 import { colors, typography } from '../theme';
 
 export type ProfileStackParamList = {
@@ -27,7 +30,10 @@ export type ProfileStackParamList = {
     ApplicationStep4: undefined;
     SubscriptionPlans: undefined;
     SubscriptionCheckout: { tierName: string; billing: 'monthly' | 'yearly'; priceLabel: string; isFree: boolean };
+    VendorSignupSuccess: { email: string; fullName: string; tierName: string };
     PortfolioAssistance: undefined;
+    TermsAndPolicies: undefined;
+    LegalDocument: { documentId: string };
 };
 
 const Stack = createNativeStackNavigator<ProfileStackParamList>();
@@ -109,6 +115,21 @@ export function ProfileNavigator() {
             <Stack.Screen
                 name="PortfolioAssistance"
                 component={PortfolioAssistanceScreen}
+                options={{ headerShown: false }}
+            />
+            <Stack.Screen
+                name="VendorSignupSuccess"
+                component={VendorSignupSuccessScreen}
+                options={{ headerShown: false }}
+            />
+            <Stack.Screen
+                name="TermsAndPolicies"
+                component={TermsAndPoliciesScreen}
+                options={{ headerShown: false }}
+            />
+            <Stack.Screen
+                name="LegalDocument"
+                component={LegalDocumentScreen}
                 options={{ headerShown: false }}
             />
         </Stack.Navigator>

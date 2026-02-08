@@ -1,4 +1,4 @@
-import { View } from 'react-native';
+import { View, ActivityIndicator } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { MaterialIcons } from '@expo/vector-icons';
 import { AttendeeNavigator } from './AttendeeNavigator';
@@ -7,7 +7,9 @@ import { ProfileNavigator } from './ProfileNavigator';
 import DiscoverScreen from '../screens/DiscoverScreen';
 import PlannerScreen from '../screens/PlannerScreen';
 import FavouritesScreen from '../screens/FavouritesScreen';
+import PortfolioProfileScreen from '../screens/subscriber/PortfolioProfileScreen';
 import { colors, typography } from '../theme';
+import { useAuth } from '../auth/AuthContext';
 
 export type RootTabParamList = {
   Home: undefined;
@@ -21,8 +23,23 @@ export type RootTabParamList = {
 const Tab = createBottomTabNavigator<RootTabParamList>();
 
 export function RootNavigator() {
+  const { userRole, isLoading } = useAuth();
+
+  // Show loading indicator while determining user role
+  if (isLoading) {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: colors.background }}>
+        <ActivityIndicator size="large" color={colors.primaryTeal} />
+      </View>
+    );
+  }
+
+  // Determine initial route based on user role
+  const initialRouteName = userRole === 'vendor' ? 'Account' : 'Home';
+
   return (
     <Tab.Navigator
+      initialRouteName={initialRouteName}
       screenOptions={({ route }) => ({
         tabBarActiveTintColor: colors.primaryTeal,
         tabBarInactiveTintColor: colors.textMuted,

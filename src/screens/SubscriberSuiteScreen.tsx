@@ -11,6 +11,7 @@ type ProfileStackParamList = {
     SubscriberProfile: undefined;
     PortfolioProfile: undefined;
     PortfolioAssistance: undefined;
+    TermsAndPolicies: undefined;
 };
 
 type MenuItem = {
@@ -48,9 +49,9 @@ export default function SubscriberSuiteScreen() {
         {
             id: 'subscriber-legal-terms',
             title: 'Subscriber Legal Terms',
-            description: 'Review terms and conditions for subscribers',
+            description: 'Review terms, privacy policy, and data processing agreement',
             icon: 'description',
-            route: 'AccountMain', // Placeholder
+            route: 'TermsAndPolicies',
             iconColor: '#6366F1',
             iconBg: '#EEF2FF',
         },
