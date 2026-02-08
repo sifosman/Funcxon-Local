@@ -54,7 +54,13 @@
       "favicon": "./assets/favicon.png"
     },
     "plugins": [
-      "expo-web-browser"
+      "expo-web-browser",
+      [
+        "react-native-maps",
+        {
+          "googleMapsApiKey": "AIzaSyBjd1KYtTaAzxzdw5ayGwwMu5Sex-gKQLI"
+        }
+      ]
     ],
     "extra": {
       "eas": {

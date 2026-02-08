@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useMemo, useCallback } from 'react';
 import { 
   View, 
   Text, 
@@ -12,10 +12,21 @@ import {
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { colors, spacing, radii, typography } from '../theme';
+import * as Location from 'expo-location';
+
+// Load react-native-maps at module level (not inside component) for native platforms
+let RNMaps: any = null;
+if (Platform.OS !== 'web') {
+  try {
+    RNMaps = require('react-native-maps');
+  } catch (e) {
+    console.warn('react-native-maps not available:', e);
+  }
+}
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
-interface Location {
+interface LatLng {
   latitude: number;
   longitude: number;
 }
@@ -23,8 +34,8 @@ interface Location {
 interface MapRadiusSelectorProps {
   visible: boolean;
   onClose: () => void;
-  onLocationSelected: (location: Location, radiusKm: number) => void;
-  initialLocation?: Location;
+  onLocationSelected: (location: LatLng, radiusKm: number) => void;
+  initialLocation?: LatLng;
   initialRadius?: number;
 }
 
@@ -35,10 +46,11 @@ export default function MapRadiusSelector({
   initialLocation = { latitude: -26.2041, longitude: 28.0473 }, // Default: Johannesburg
   initialRadius = 20
 }: MapRadiusSelectorProps) {
-  const [selectedLocation, setSelectedLocation] = useState<Location>(initialLocation);
+  const [selectedLocation, setSelectedLocation] = useState<LatLng>(initialLocation);
   const [radiusKm, setRadiusKm] = useState(initialRadius);
   const [isLoading, setIsLoading] = useState(false);
   const mapRef = useRef<any>(null);
+  const webViewRef = useRef<any>(null);
 
   // Convert radius in km to meters for map circle
   const radiusInMeters = radiusKm * 1000;
@@ -46,19 +58,11 @@ export default function MapRadiusSelector({
   // Radius options (in km)
   const radiusOptions = [5, 10, 20, 50, 100, 200];
 
-  const mapsModule = Platform.OS === 'web' ? null : (() => {
-    try {
-      return require('react-native-maps');
-    } catch (e) {
-      console.warn('react-native-maps not available:', e);
-      return null;
-    }
-  })();
-  
-  const MapView = mapsModule?.default;
-  const Circle = mapsModule?.Circle;
-  const Marker = mapsModule?.Marker;
-  const PROVIDER_GOOGLE = mapsModule?.PROVIDER_GOOGLE;
+  // Use module-level loaded maps components
+  const MapView = RNMaps?.default;
+  const Circle = RNMaps?.Circle;
+  const Marker = RNMaps?.Marker;
+  const PROVIDER_GOOGLE = RNMaps?.PROVIDER_GOOGLE;
 
   const handleMapPress = (event: any) => {
     const { coordinate } = event.nativeEvent;
@@ -75,19 +79,23 @@ export default function MapRadiusSelector({
   const handleGetCurrentLocation = async () => {
     setIsLoading(true);
     try {
-      // In a real app, you'd use expo-location here
-      // For demo, we'll use a default location
-      const currentLocation = { latitude: -26.2041, longitude: 28.0473 };
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Permission Denied', 'Location permission is needed to detect your position.');
+        return;
+      }
+      const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+      const currentLocation = { latitude: loc.coords.latitude, longitude: loc.coords.longitude };
       setSelectedLocation(currentLocation);
       
-      // Center map on current location
+      // Center map on current location (native)
       mapRef.current?.animateToRegion({
         ...currentLocation,
         latitudeDelta: 0.1,
         longitudeDelta: 0.1,
       }, 1000);
     } catch (error) {
-      Alert.alert('Error', 'Unable to get your current location');
+      Alert.alert('Error', 'Unable to get your current location. Please try again.');
     } finally {
       setIsLoading(false);
     }
@@ -129,43 +137,56 @@ export default function MapRadiusSelector({
           </TouchableOpacity>
         </View>
 
-        {/* Map (native only) */}
+        {/* Map */}
         <View style={styles.mapContainer}>
-          {Platform.OS === 'web' || !MapView ? (
-            <View style={[styles.mapFallback, { alignItems: 'center', justifyContent: 'center', padding: spacing.lg, backgroundColor: colors.surfaceMuted }]}>
-              <MaterialIcons name="map" size={48} color={colors.textMuted} />
-              <Text style={{ ...typography.body, color: colors.textPrimary, marginTop: spacing.sm, textAlign: 'center' }}>
-                Map is loading...
-              </Text>
-              <Text style={{ ...typography.caption, color: colors.textMuted, marginTop: spacing.xs, textAlign: 'center' }}>
-                Choose a radius below and tap Apply.
-              </Text>
-            </View>
-          ) : (
+          {Platform.OS === 'web' ? (
+            <iframe
+              title="Google Map"
+              style={{ width: '100%', height: '100%', border: 'none' } as any}
+              src={`https://www.google.com/maps/embed/v1/place?key=AIzaSyBjd1KYtTaAzxzdw5ayGwwMu5Sex-gKQLI&q=${selectedLocation.latitude},${selectedLocation.longitude}&zoom=12`}
+              allowFullScreen
+            />
+          ) : MapView ? (
             <MapView
               ref={mapRef}
               style={styles.map}
-              {...(PROVIDER_GOOGLE ? { provider: PROVIDER_GOOGLE } : {})}
+              provider={PROVIDER_GOOGLE}
               initialRegion={{
                 ...initialLocation,
                 latitudeDelta: 0.1,
                 longitudeDelta: 0.1,
               }}
               onPress={handleMapPress}
+              showsUserLocation={true}
+              showsMyLocationButton={false}
             >
-              <Circle
-                center={selectedLocation}
-                radius={radiusInMeters}
-                strokeColor={colors.primary}
-                fillColor={colors.primary + '30'}
-                strokeWidth={2}
-              />
-              <Marker coordinate={selectedLocation}>
-                <View style={styles.marker}>
-                  <MaterialIcons name="location-on" size={32} color={colors.primary} />
-                </View>
-              </Marker>
+              {Circle && (
+                <Circle
+                  center={selectedLocation}
+                  radius={radiusInMeters}
+                  strokeColor={colors.primary}
+                  fillColor={colors.primary + '30'}
+                  strokeWidth={2}
+                />
+              )}
+              {Marker && (
+                <Marker coordinate={selectedLocation}>
+                  <View style={styles.marker}>
+                    <MaterialIcons name="location-on" size={32} color={colors.primary} />
+                  </View>
+                </Marker>
+              )}
             </MapView>
+          ) : (
+            <View style={[styles.mapFallback, { alignItems: 'center', justifyContent: 'center', padding: spacing.lg, backgroundColor: colors.surfaceMuted }]}>
+              <MaterialIcons name="map" size={48} color={colors.textMuted} />
+              <Text style={{ ...typography.body, color: colors.textPrimary, marginTop: spacing.sm, textAlign: 'center' }}>
+                Map not available
+              </Text>
+              <Text style={{ ...typography.caption, color: colors.textMuted, marginTop: spacing.xs, textAlign: 'center' }}>
+                Choose a radius below and tap Apply.
+              </Text>
+            </View>
           )}
         </View>
 
