@@ -330,8 +330,37 @@ export default function SubscriptionCheckoutScreen() {
       }
 
       console.log('Welcome email sent successfully:', data);
+      
+      // Send admin notification about new subscription
+      await sendAdminNotification();
     } catch (err) {
       console.error('Failed to send welcome email:', err);
+    }
+  };
+
+  const sendAdminNotification = async () => {
+    try {
+      const priceNum = parseFloat((priceLabel || '0').replace(/[^0-9.]/g, ''));
+      
+      const { data, error } = await supabase.functions.invoke('send-admin-notification', {
+        body: {
+          type: 'vendor-subscription-purchased',
+          vendorName: fullName.trim(),
+          vendorEmail: email.trim(),
+          businessName: businessName.trim() || undefined,
+          tierName: tierName,
+          amount: priceNum,
+        },
+      });
+
+      if (error) {
+        console.error('Error sending admin notification:', error);
+        return;
+      }
+
+      console.log('Admin notification sent successfully:', data);
+    } catch (err) {
+      console.error('Failed to send admin notification:', err);
     }
   };
 

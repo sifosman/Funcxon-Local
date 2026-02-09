@@ -158,8 +158,36 @@ export default function ApplicationStep4Screen() {
       }
 
       console.log('Application confirmation email sent successfully:', data);
+      
+      // Send admin notification about new application
+      await sendAdminNotification(submission, fullName, businessName, user.email);
     } catch (err) {
       console.error('Failed to send application confirmation email:', err);
+    }
+  };
+
+  const sendAdminNotification = async (submission: any, fullName: string, businessName: string, vendorEmail: string | undefined) => {
+    try {
+      const { data, error } = await supabase.functions.invoke('send-admin-notification', {
+        body: {
+          type: 'vendor-application-submitted',
+          vendorName: fullName,
+          vendorEmail: vendorEmail,
+          businessName: businessName || submission.company_details?.businessName,
+          tierName: submission.subscription_tier,
+          serviceCategories: submission.service_categories?.categories || [],
+          provinces: submission.coverage_provinces || [],
+        },
+      });
+
+      if (error) {
+        console.error('Error sending admin notification:', error);
+        return;
+      }
+
+      console.log('Admin notification sent successfully:', data);
+    } catch (err) {
+      console.error('Failed to send admin notification:', err);
     }
   };
 

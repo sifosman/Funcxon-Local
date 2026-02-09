@@ -1,0 +1,5 @@
+{
+  "name": "send-admin-notification",
+  "version": "1.0.0",
+  "description": "Send admin notification emails for various platform events via Brevo"
+}

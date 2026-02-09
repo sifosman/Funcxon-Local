@@ -4,6 +4,7 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { colors, spacing, radii, typography } from '../theme';
+import { supabase } from '../lib/supabaseClient';
 
 type ProfileStackParamList = {
   SubscriberSuite: undefined;
@@ -113,13 +114,15 @@ export default function PortfolioAssistanceScreen() {
     );
   };
 
-  const handleCallbackSubmit = () => {
+  const handleCallbackSubmit = async () => {
     if (!formData.phoneNumber || !formData.preferredTime || !formData.assistanceType) {
       Alert.alert('Missing Information', 'Please fill in all fields to request a callback.');
       return;
     }
 
-    // TODO: Submit to backend
+    // Send admin notification about callback request
+    await sendAdminNotification();
+
     Alert.alert(
       'Callback Requested',
       `Thank you! We'll call you at ${formData.preferredTime} to help with ${formData.assistanceType.toLowerCase()}. You'll receive a confirmation message shortly.`,
@@ -128,6 +131,33 @@ export default function PortfolioAssistanceScreen() {
         setFormData({ phoneNumber: '', preferredTime: '', assistanceType: '' });
       }}]
     );
+  };
+
+  const sendAdminNotification = async () => {
+    try {
+      // Get current user info
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      const { data, error } = await supabase.functions.invoke('send-admin-notification', {
+        body: {
+          type: 'portfolio-callback-requested',
+          vendorName: user?.user_metadata?.full_name || 'Unknown',
+          vendorEmail: user?.email,
+          phoneNumber: formData.phoneNumber,
+          preferredTime: formData.preferredTime,
+          assistanceType: formData.assistanceType,
+        },
+      });
+
+      if (error) {
+        console.error('Error sending admin notification:', error);
+        return;
+      }
+
+      console.log('Admin notification sent successfully:', data);
+    } catch (err) {
+      console.error('Failed to send admin notification:', err);
+    }
   };
 
   const assistanceOptions: AssistanceOption[] = [

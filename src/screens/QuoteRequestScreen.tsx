@@ -52,12 +52,39 @@ export default function QuoteRequestScreen({ route, navigation }: Props) {
         throw insertError;
       }
 
+      // Send admin notification about new quote request
+      await sendAdminNotification();
+
       Alert.alert('Quote requested', 'Your quote request has been sent (demo).');
       navigation.goBack();
     } catch (err: any) {
       Alert.alert('Error', err?.message ?? 'Failed to submit quote request.');
     } finally {
       setSubmitting(false);
+    }
+  }
+
+  async function sendAdminNotification() {
+    try {
+      const { data, error } = await supabase.functions.invoke('send-admin-notification', {
+        body: {
+          type: 'quote-requested',
+          customerName: name,
+          customerEmail: email,
+          vendorId: vendorId,
+          vendorName: vendorName,
+          quoteDetails: eventDetails || undefined,
+        },
+      });
+
+      if (error) {
+        console.error('Error sending admin notification:', error);
+        return;
+      }
+
+      console.log('Admin notification sent successfully:', data);
+    } catch (err) {
+      console.error('Failed to send admin notification:', err);
     }
   }
 

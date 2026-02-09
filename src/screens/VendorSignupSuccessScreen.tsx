@@ -22,8 +22,9 @@ export default function VendorSignupSuccessScreen() {
   const { email, fullName, tierName } = (route.params ?? {}) as RouteParams;
 
   useEffect(() => {
-    // Send welcome email when screen loads
+    // Send welcome email and admin notification when screen loads
     sendWelcomeEmail();
+    sendAdminNotification();
   }, []);
 
   const sendWelcomeEmail = async () => {
@@ -54,6 +55,33 @@ export default function VendorSignupSuccessScreen() {
       console.log('Welcome email sent successfully:', data);
     } catch (err) {
       console.error('Failed to send welcome email:', err);
+    }
+  };
+
+  const sendAdminNotification = async () => {
+    try {
+      if (!email || !fullName || !tierName) {
+        console.log('Missing required fields for admin notification');
+        return;
+      }
+
+      const { data, error } = await supabase.functions.invoke('send-admin-notification', {
+        body: {
+          type: 'vendor-free-signup',
+          vendorName: fullName,
+          vendorEmail: email,
+          tierName: tierName,
+        },
+      });
+
+      if (error) {
+        console.error('Error sending admin notification:', error);
+        return;
+      }
+
+      console.log('Admin notification sent successfully:', data);
+    } catch (err) {
+      console.error('Failed to send admin notification:', err);
     }
   };
 
