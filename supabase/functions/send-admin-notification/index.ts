@@ -168,26 +168,26 @@ function generateSubscriptionPurchasedEmail(payload: NotificationPayload) {
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
       <title>New Subscription</title>
     </head>
-    <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
-      <div style="background: linear-gradient(135deg, #2D5A4C 0%, #4A7C6F 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
+    <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #2B3840; max-width: 600px; margin: 0 auto; padding: 20px; background: #F8F6F0;">
+      <div style="background: linear-gradient(135deg, #2B9EB3 0%, #9DCFDB 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
         <h1 style="color: white; margin: 0; font-size: 24px;">New Subscription Purchased</h1>
       </div>
       
-      <div style="background: #ffffff; padding: 30px; border: 1px solid #e0e0e0; border-top: none; border-radius: 0 0 10px 10px;">
-        <p style="font-size: 16px; margin-bottom: 20px;">A new vendor has purchased a subscription plan.</p>
+      <div style="background: #ffffff; padding: 30px; border: 1px solid #D4CFBD; border-top: none; border-radius: 0 0 10px 10px;">
+        <p style="font-size: 16px; margin-bottom: 20px; color: #2B3840;">A new vendor has purchased a subscription plan.</p>
         
-        <div style="background: #f5f5f5; padding: 20px; border-radius: 8px; margin: 25px 0;">
-          <h3 style="margin-top: 0; color: #2D5A4C;">Vendor Details</h3>
-          <p><strong>Name:</strong> ${vendorName || 'N/A'}</p>
-          <p><strong>Email:</strong> ${vendorEmail || 'N/A'}</p>
-          <p><strong>Business:</strong> ${businessName || 'N/A'}</p>
-          <p><strong>Plan:</strong> ${tierName || 'N/A'}</p>
-          <p><strong>Amount:</strong> R${amount || '0'}</p>
+        <div style="background: #F5F1E8; padding: 20px; border-radius: 8px; margin: 25px 0; border: 1px solid #D4CFBD;">
+          <h3 style="margin-top: 0; color: #2B9EB3;">Vendor Details</h3>
+          <p style="color: #2B3840;"><strong>Name:</strong> ${vendorName || 'N/A'}</p>
+          <p style="color: #2B3840;"><strong>Email:</strong> ${vendorEmail || 'N/A'}</p>
+          <p style="color: #2B3840;"><strong>Business:</strong> ${businessName || 'N/A'}</p>
+          <p style="color: #2B3840;"><strong>Plan:</strong> ${tierName || 'N/A'}</p>
+          <p style="color: #2B3840;"><strong>Amount:</strong> R${amount || '0'}</p>
         </div>
         
         <div style="text-align: center; margin: 30px 0;">
           <a href="https://funcxon.com/admin/vendors" 
-             style="background: #2D5A4C; color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; font-weight: bold; display: inline-block;">
+             style="background: #2B9EB3; color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; font-weight: bold; display: inline-block;">
             View in Admin Panel
           </a>
         </div>
@@ -224,32 +224,32 @@ function generateApplicationSubmittedEmail(payload: NotificationPayload) {
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
       <title>New Application</title>
     </head>
-    <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
-      <div style="background: linear-gradient(135deg, #2D5A4C 0%, #4A7C6F 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
+    <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #2B3840; max-width: 600px; margin: 0 auto; padding: 20px; background: #F8F6F0;">
+      <div style="background: linear-gradient(135deg, #2B9EB3 0%, #9DCFDB 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
         <h1 style="color: white; margin: 0; font-size: 24px;">New Vendor Application Submitted</h1>
       </div>
       
-      <div style="background: #ffffff; padding: 30px; border: 1px solid #e0e0e0; border-top: none; border-radius: 0 0 10px 10px;">
-        <p style="font-size: 16px; margin-bottom: 20px;">A new vendor has submitted their application for review.</p>
+      <div style="background: #ffffff; padding: 30px; border: 1px solid #D4CFBD; border-top: none; border-radius: 0 0 10px 10px;">
+        <p style="font-size: 16px; margin-bottom: 20px; color: #2B3840;">A new vendor has submitted their application for review.</p>
         
-        <div style="background: #f5f5f5; padding: 20px; border-radius: 8px; margin: 25px 0;">
-          <h3 style="margin-top: 0; color: #2D5A4C;">Application Details</h3>
-          <p><strong>Name:</strong> ${vendorName || 'N/A'}</p>
-          <p><strong>Email:</strong> ${vendorEmail || 'N/A'}</p>
-          <p><strong>Business:</strong> ${businessName || 'N/A'}</p>
-          <p><strong>Selected Plan:</strong> ${tierName || 'N/A'}</p>
-          <p><strong>Categories:</strong> ${serviceCategories?.join(', ') || 'N/A'}</p>
-          <p><strong>Coverage:</strong> ${provinces?.join(', ') || 'N/A'}</p>
+        <div style="background: #F5F1E8; padding: 20px; border-radius: 8px; margin: 25px 0; border: 1px solid #D4CFBD;">
+          <h3 style="margin-top: 0; color: #2B9EB3;">Application Details</h3>
+          <p style="color: #2B3840;"><strong>Name:</strong> ${vendorName || 'N/A'}</p>
+          <p style="color: #2B3840;"><strong>Email:</strong> ${vendorEmail || 'N/A'}</p>
+          <p style="color: #2B3840;"><strong>Business:</strong> ${businessName || 'N/A'}</p>
+          <p style="color: #2B3840;"><strong>Selected Plan:</strong> ${tierName || 'N/A'}</p>
+          <p style="color: #2B3840;"><strong>Categories:</strong> ${serviceCategories?.join(', ') || 'N/A'}</p>
+          <p style="color: #2B3840;"><strong>Coverage:</strong> ${provinces?.join(', ') || 'N/A'}</p>
         </div>
         
         <div style="text-align: center; margin: 30px 0;">
           <a href="https://funcxon.com/admin/applications" 
-             style="background: #2D5A4C; color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; font-weight: bold; display: inline-block;">
+             style="background: #2B9EB3; color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; font-weight: bold; display: inline-block;">
             Review Application
           </a>
         </div>
         
-        <p style="font-size: 14px; color: #666;">Please review within 3-5 business days as per SLA.</p>
+        <p style="font-size: 14px; color: #5A7A85;">Please review within 3-5 business days as per SLA.</p>
       </div>
     </body>
     </html>
@@ -284,25 +284,25 @@ function generateFreeSignupEmail(payload: NotificationPayload) {
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
       <title>Free Plan Signup</title>
     </head>
-    <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
-      <div style="background: linear-gradient(135deg, #4A7C6F 0%, #6B9B8E 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
+    <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #2B3840; max-width: 600px; margin: 0 auto; padding: 20px; background: #F8F6F0;">
+      <div style="background: linear-gradient(135deg, #2B9EB3 0%, #9DCFDB 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
         <h1 style="color: white; margin: 0; font-size: 24px;">New Free Plan Signup</h1>
       </div>
       
-      <div style="background: #ffffff; padding: 30px; border: 1px solid #e0e0e0; border-top: none; border-radius: 0 0 10px 10px;">
-        <p style="font-size: 16px; margin-bottom: 20px;">A new vendor has signed up for a free plan.</p>
+      <div style="background: #ffffff; padding: 30px; border: 1px solid #D4CFBD; border-top: none; border-radius: 0 0 10px 10px;">
+        <p style="font-size: 16px; margin-bottom: 20px; color: #2B3840;">A new vendor has signed up for a free plan.</p>
         
-        <div style="background: #f5f5f5; padding: 20px; border-radius: 8px; margin: 25px 0;">
-          <h3 style="margin-top: 0; color: #2D5A4C;">Vendor Details</h3>
-          <p><strong>Name:</strong> ${vendorName || 'N/A'}</p>
-          <p><strong>Email:</strong> ${vendorEmail || 'N/A'}</p>
-          <p><strong>Business:</strong> ${businessName || 'N/A'}</p>
-          <p><strong>Plan:</strong> ${tierName || 'FREE'}</p>
+        <div style="background: #F5F1E8; padding: 20px; border-radius: 8px; margin: 25px 0; border: 1px solid #D4CFBD;">
+          <h3 style="margin-top: 0; color: #2B9EB3;">Vendor Details</h3>
+          <p style="color: #2B3840;"><strong>Name:</strong> ${vendorName || 'N/A'}</p>
+          <p style="color: #2B3840;"><strong>Email:</strong> ${vendorEmail || 'N/A'}</p>
+          <p style="color: #2B3840;"><strong>Business:</strong> ${businessName || 'N/A'}</p>
+          <p style="color: #2B3840;"><strong>Plan:</strong> ${tierName || 'FREE'}</p>
         </div>
         
         <div style="text-align: center; margin: 30px 0;">
           <a href="https://funcxon.com/admin/vendors" 
-             style="background: #2D5A4C; color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; font-weight: bold; display: inline-block;">
+             style="background: #2B9EB3; color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; font-weight: bold; display: inline-block;">
             View in Admin Panel
           </a>
         </div>
@@ -338,36 +338,36 @@ function generateQuoteRequestedEmail(payload: NotificationPayload) {
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
       <title>New Quote Request</title>
     </head>
-    <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
-      <div style="background: linear-gradient(135deg, #D97706 0%, #F59E0B 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
+    <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #2B3840; max-width: 600px; margin: 0 auto; padding: 20px; background: #F8F6F0;">
+      <div style="background: linear-gradient(135deg, #2B9EB3 0%, #9DCFDB 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
         <h1 style="color: white; margin: 0; font-size: 24px;">New Quote Request</h1>
       </div>
       
-      <div style="background: #ffffff; padding: 30px; border: 1px solid #e0e0e0; border-top: none; border-radius: 0 0 10px 10px;">
-        <p style="font-size: 16px; margin-bottom: 20px;">A customer has requested a quote from a vendor.</p>
+      <div style="background: #ffffff; padding: 30px; border: 1px solid #D4CFBD; border-top: none; border-radius: 0 0 10px 10px;">
+        <p style="font-size: 16px; margin-bottom: 20px; color: #2B3840;">A customer has requested a quote from a vendor.</p>
         
-        <div style="background: #f5f5f5; padding: 20px; border-radius: 8px; margin: 25px 0;">
-          <h3 style="margin-top: 0; color: #D97706;">Customer Details</h3>
-          <p><strong>Name:</strong> ${customerName || 'N/A'}</p>
-          <p><strong>Email:</strong> ${customerEmail || 'N/A'}</p>
+        <div style="background: #F5F1E8; padding: 20px; border-radius: 8px; margin: 25px 0; border: 1px solid #D4CFBD;">
+          <h3 style="margin-top: 0; color: #2B9EB3;">Customer Details</h3>
+          <p style="color: #2B3840;"><strong>Name:</strong> ${customerName || 'N/A'}</p>
+          <p style="color: #2B3840;"><strong>Email:</strong> ${customerEmail || 'N/A'}</p>
         </div>
         
-        <div style="background: #f5f5f5; padding: 20px; border-radius: 8px; margin: 25px 0;">
-          <h3 style="margin-top: 0; color: #2D5A4C;">Vendor Details</h3>
-          <p><strong>Name:</strong> ${vendorName || 'N/A'}</p>
-          <p><strong>Vendor ID:</strong> ${vendorId || 'N/A'}</p>
+        <div style="background: #F5F1E8; padding: 20px; border-radius: 8px; margin: 25px 0; border: 1px solid #D4CFBD;">
+          <h3 style="margin-top: 0; color: #5A7A85;">Vendor Details</h3>
+          <p style="color: #2B3840;"><strong>Name:</strong> ${vendorName || 'N/A'}</p>
+          <p style="color: #2B3840;"><strong>Vendor ID:</strong> ${vendorId || 'N/A'}</p>
         </div>
         
         ${quoteDetails ? `
-        <div style="background: #f5f5f5; padding: 20px; border-radius: 8px; margin: 25px 0;">
-          <h3 style="margin-top: 0; color: #333;">Quote Details</h3>
-          <p>${quoteDetails}</p>
+        <div style="background: #F5F1E8; padding: 20px; border-radius: 8px; margin: 25px 0; border: 1px solid #D4CFBD;">
+          <h3 style="margin-top: 0; color: #2B3840;">Quote Details</h3>
+          <p style="color: #2B3840;">${quoteDetails}</p>
         </div>
         ` : ''}
         
         <div style="text-align: center; margin: 30px 0;">
           <a href="https://funcxon.com/admin/quotes" 
-             style="background: #D97706; color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; font-weight: bold; display: inline-block;">
+             style="background: #2B9EB3; color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; font-weight: bold; display: inline-block;">
             View Quote Requests
           </a>
         </div>
@@ -407,35 +407,35 @@ function generateCallbackRequestedEmail(payload: NotificationPayload) {
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
       <title>Callback Requested</title>
     </head>
-    <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
-      <div style="background: linear-gradient(135deg, #8B5CF6 0%, #A78BFA 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
+    <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #2B3840; max-width: 600px; margin: 0 auto; padding: 20px; background: #F8F6F0;">
+      <div style="background: linear-gradient(135deg, #2B9EB3 0%, #9DCFDB 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
         <h1 style="color: white; margin: 0; font-size: 24px;">Portfolio Assistance Callback</h1>
       </div>
       
-      <div style="background: #ffffff; padding: 30px; border: 1px solid #e0e0e0; border-top: none; border-radius: 0 0 10px 10px;">
-        <p style="font-size: 16px; margin-bottom: 20px;">A vendor has requested a callback for portfolio assistance.</p>
+      <div style="background: #ffffff; padding: 30px; border: 1px solid #D4CFBD; border-top: none; border-radius: 0 0 10px 10px;">
+        <p style="font-size: 16px; margin-bottom: 20px; color: #2B3840;">A vendor has requested a callback for portfolio assistance.</p>
         
-        <div style="background: #f5f5f5; padding: 20px; border-radius: 8px; margin: 25px 0;">
-          <h3 style="margin-top: 0; color: #8B5CF6;">Vendor Details</h3>
-          <p><strong>Name:</strong> ${vendorName || 'N/A'}</p>
-          <p><strong>Email:</strong> ${vendorEmail || 'N/A'}</p>
+        <div style="background: #F5F1E8; padding: 20px; border-radius: 8px; margin: 25px 0; border: 1px solid #D4CFBD;">
+          <h3 style="margin-top: 0; color: #2B9EB3;">Vendor Details</h3>
+          <p style="color: #2B3840;"><strong>Name:</strong> ${vendorName || 'N/A'}</p>
+          <p style="color: #2B3840;"><strong>Email:</strong> ${vendorEmail || 'N/A'}</p>
         </div>
         
-        <div style="background: #f5f5f5; padding: 20px; border-radius: 8px; margin: 25px 0;">
-          <h3 style="margin-top: 0; color: #2D5A4C;">Callback Request</h3>
-          <p><strong>Phone:</strong> ${phoneNumber || 'N/A'}</p>
-          <p><strong>Preferred Time:</strong> ${preferredTime || 'N/A'}</p>
-          <p><strong>Assistance Needed:</strong> ${assistanceType || 'N/A'}</p>
+        <div style="background: #F5F1E8; padding: 20px; border-radius: 8px; margin: 25px 0; border: 1px solid #D4CFBD;">
+          <h3 style="margin-top: 0; color: #5A7A85;">Callback Request</h3>
+          <p style="color: #2B3840;"><strong>Phone:</strong> ${phoneNumber || 'N/A'}</p>
+          <p style="color: #2B3840;"><strong>Preferred Time:</strong> ${preferredTime || 'N/A'}</p>
+          <p style="color: #2B3840;"><strong>Assistance Needed:</strong> ${assistanceType || 'N/A'}</p>
         </div>
         
         <div style="text-align: center; margin: 30px 0;">
           <a href="https://funcxon.com/admin/callbacks" 
-             style="background: #8B5CF6; color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; font-weight: bold; display: inline-block;">
+             style="background: #2B9EB3; color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; font-weight: bold; display: inline-block;">
             Manage Callbacks
           </a>
         </div>
         
-        <p style="font-size: 14px; color: #666; margin-top: 20px;">
+        <p style="font-size: 14px; color: #5A7A85; margin-top: 20px;">
           <strong>Reminder:</strong> Response time is within 2 hours during business hours (Mon-Fri 9am-5pm, Sat 9am-1pm).
         </p>
       </div>
@@ -475,24 +475,24 @@ function generateNewUserEmail(payload: NotificationPayload) {
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
       <title>New User</title>
     </head>
-    <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
-      <div style="background: linear-gradient(135deg, #6366F1 0%, #818CF8 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
+    <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #2B3840; max-width: 600px; margin: 0 auto; padding: 20px; background: #F8F6F0;">
+      <div style="background: linear-gradient(135deg, #2B9EB3 0%, #9DCFDB 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
         <h1 style="color: white; margin: 0; font-size: 24px;">New User Registration</h1>
       </div>
       
-      <div style="background: #ffffff; padding: 30px; border: 1px solid #e0e0e0; border-top: none; border-radius: 0 0 10px 10px;">
-        <p style="font-size: 16px; margin-bottom: 20px;">A new user has registered on the platform.</p>
+      <div style="background: #ffffff; padding: 30px; border: 1px solid #D4CFBD; border-top: none; border-radius: 0 0 10px 10px;">
+        <p style="font-size: 16px; margin-bottom: 20px; color: #2B3840;">A new user has registered on the platform.</p>
         
-        <div style="background: #f5f5f5; padding: 20px; border-radius: 8px; margin: 25px 0;">
-          <h3 style="margin-top: 0; color: #6366F1;">User Details</h3>
-          <p><strong>Name:</strong> ${vendorName || 'N/A'}</p>
-          <p><strong>Email:</strong> ${vendorEmail || 'N/A'}</p>
-          <p><strong>Registered:</strong> ${new Date().toLocaleString()}</p>
+        <div style="background: #F5F1E8; padding: 20px; border-radius: 8px; margin: 25px 0; border: 1px solid #D4CFBD;">
+          <h3 style="margin-top: 0; color: #2B9EB3;">User Details</h3>
+          <p style="color: #2B3840;"><strong>Name:</strong> ${vendorName || 'N/A'}</p>
+          <p style="color: #2B3840;"><strong>Email:</strong> ${vendorEmail || 'N/A'}</p>
+          <p style="color: #2B3840;"><strong>Registered:</strong> ${new Date().toLocaleString()}</p>
         </div>
         
         <div style="text-align: center; margin: 30px 0;">
           <a href="https://funcxon.com/admin/users" 
-             style="background: #6366F1; color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; font-weight: bold; display: inline-block;">
+             style="background: #2B9EB3; color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; font-weight: bold; display: inline-block;">
             View Users
           </a>
         </div>
@@ -525,12 +525,12 @@ function generateGenericEmail(payload: NotificationPayload) {
       <meta charset="UTF-8">
       <title>Notification</title>
     </head>
-    <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
-      <div style="background: #f5f5f5; padding: 30px; border-radius: 10px;">
-        <h2 style="color: #2D5A4C;">Admin Notification</h2>
-        <p><strong>Type:</strong> ${payload.type}</p>
-        <p><strong>Time:</strong> ${new Date().toLocaleString()}</p>
-        <pre style="background: #fff; padding: 15px; border-radius: 5px; overflow-x: auto;">${JSON.stringify(payload, null, 2)}</pre>
+    <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #2B3840; max-width: 600px; margin: 0 auto; padding: 20px; background: #F8F6F0;">
+      <div style="background: #F5F1E8; padding: 30px; border-radius: 10px; border: 1px solid #D4CFBD;">
+        <h2 style="color: #2B9EB3;">Admin Notification</h2>
+        <p style="color: #2B3840;"><strong>Type:</strong> ${payload.type}</p>
+        <p style="color: #5A7A85;"><strong>Time:</strong> ${new Date().toLocaleString()}</p>
+        <pre style="background: #fff; padding: 15px; border-radius: 5px; overflow-x: auto; border: 1px solid #D4CFBD; color: #2B3840;">${JSON.stringify(payload, null, 2)}</pre>
       </div>
     </body>
     </html>
