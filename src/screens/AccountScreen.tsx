@@ -1,12 +1,13 @@
-import { useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Alert, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
-import { useNavigation } from '@react-navigation/native';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { colors, spacing, radii, typography } from '../theme';
 import { useAuth } from '../auth/AuthContext';
 import { supabase } from '../lib/supabaseClient';
 import type { ProfileStackParamList } from '../navigation/ProfileNavigator';
+import { HelpCenterModal } from '../components/HelpCenterModal';
 
 type MenuItem = {
     id: string;
@@ -20,8 +21,38 @@ type MenuItem = {
 
 export default function AccountScreen() {
     const navigation = useNavigation<NativeStackNavigationProp<ProfileStackParamList>>();
-    const { signOut, user } = useAuth();
+    const { signOut, user, userRole } = useAuth();
     const [expandedMenus, setExpandedMenus] = useState<Set<string>>(new Set());
+    const [helpVisible, setHelpVisible] = useState(false);
+    const [currentPlan, setCurrentPlan] = useState<string | null>(null);
+
+    const fetchCurrentPlan = useCallback(async () => {
+        if (!user?.id) return;
+        try {
+            const { data: userData } = await supabase
+                .from('users')
+                .select('id')
+                .eq('auth_user_id', user.id)
+                .maybeSingle();
+            if (!userData) return;
+
+            const { data: vendorData } = await supabase
+                .from('vendors')
+                .select('subscription_tier')
+                .eq('user_id', userData.id)
+                .maybeSingle();
+
+            setCurrentPlan(vendorData?.subscription_tier || null);
+        } catch {
+            // Silently fail
+        }
+    }, [user?.id]);
+
+    useFocusEffect(
+        useCallback(() => {
+            fetchCurrentPlan();
+        }, [fetchCurrentPlan]),
+    );
 
     const toggleMenu = (menuId: string) => {
         const newExpanded = new Set(expandedMenus);
@@ -89,16 +120,7 @@ export default function AccountScreen() {
     };
 
     const handleHelpCentre = () => {
-        // Open help center modal by dispatching a custom event
-        // The App.tsx will listen for this and show the modal
-        const event = new CustomEvent('openHelpCenter');
-        window.dispatchEvent?.(event);
-        // Also show an alert with contact info for now
-        Alert.alert(
-            'Help Centre',
-            'Contact us for assistance:\n\nEmail: support@funcxon.com\nWhatsApp: +27000000000\n\nDocumentation and FAQs coming soon!',
-            [{ text: 'OK' }]
-        );
+        setHelpVisible(true);
     };
 
     const menuItems: MenuItem[] = [
@@ -131,13 +153,16 @@ export default function AccountScreen() {
             icon: 'credit-card',
             submenu: [
                 { id: 'portfolio-profile', label: 'Portfolio Profile', icon: 'business-center', route: 'SubscriberLogin' },
+                { id: 'billing', label: 'Billing & Payments', icon: 'receipt-long', route: 'Billing' },
                 { id: 'subscriber-legal-terms', label: 'Subscriber Legal Terms', icon: 'description', route: 'SubscriberLogin' },
                 { id: 'activity-dashboard', label: 'Activity Dashboard', icon: 'bar-chart', route: 'SubscriberLogin' },
             ],
         },
         {
             id: 'listings-subscription',
-            label: 'Listings Subscription Offers',
+            label: currentPlan
+                ? `Listings Subscription Offers (${currentPlan.charAt(0).toUpperCase() + currentPlan.slice(1)} Plan)`
+                : 'Listings Subscription Offers',
             icon: 'local-offer',
             submenu: [
                 { id: 'subscription-plans', label: 'View Subscription Plans', icon: 'credit-card' },
@@ -249,6 +274,61 @@ export default function AccountScreen() {
             <ScrollView contentContainerStyle={{ paddingBottom: spacing.xl }}>
                 <View style={{ paddingHorizontal: spacing.lg, paddingTop: spacing.xl, paddingBottom: spacing.lg }}>
                     <Text style={{ ...typography.displayMedium, color: colors.textPrimary }}>My Account</Text>
+                    {user && (
+                        <View style={{ marginTop: spacing.sm }}>
+                            <Text style={{ ...typography.caption, color: colors.textSecondary, marginBottom: spacing.xs }}>
+                                {user.email}
+                            </Text>
+                            <View style={{ flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: spacing.xs }}>
+                                <View
+                                    style={{
+                                        paddingHorizontal: spacing.md,
+                                        paddingVertical: spacing.xs,
+                                        borderRadius: radii.full,
+                                        backgroundColor: userRole === 'vendor' ? colors.primaryTeal : colors.accent,
+                                    }}
+                                >
+                                    <Text
+                                        style={{
+                                            ...typography.caption,
+                                            fontWeight: '700',
+                                            color: userRole === 'vendor' ? '#FFFFFF' : colors.textPrimary,
+                                        }}
+                                    >
+                                        {userRole === 'vendor' ? 'Vendor' : 'Attendee'}
+                                    </Text>
+                                </View>
+                                {currentPlan && (
+                                    <View
+                                        style={{
+                                            paddingHorizontal: spacing.md,
+                                            paddingVertical: spacing.xs,
+                                            borderRadius: radii.full,
+                                            backgroundColor: currentPlan === 'free' ? '#9CA3AF' : currentPlan === 'premium' ? '#8B5CF6' : currentPlan === 'enterprise' ? '#DC2626' : colors.primary,
+                                        }}
+                                    >
+                                        <Text style={{ ...typography.caption, fontWeight: '700', color: '#FFFFFF' }}>
+                                            {currentPlan.charAt(0).toUpperCase() + currentPlan.slice(1)} Plan
+                                        </Text>
+                                    </View>
+                                )}
+                                {currentPlan && currentPlan !== 'enterprise' && (
+                                    <TouchableOpacity
+                                        onPress={() => navigation.navigate('SubscriptionPlans')}
+                                        style={{
+                                            paddingHorizontal: spacing.sm,
+                                            paddingVertical: spacing.xs,
+                                            borderRadius: radii.full,
+                                            borderWidth: 1,
+                                            borderColor: colors.primaryTeal,
+                                        }}
+                                    >
+                                        <Text style={{ ...typography.caption, color: colors.primaryTeal, fontWeight: '600', fontSize: 10 }}>Upgrade</Text>
+                                    </TouchableOpacity>
+                                )}
+                            </View>
+                        </View>
+                    )}
                 </View>
 
                 <View
@@ -269,6 +349,7 @@ export default function AccountScreen() {
                     {menuItems.map((item) => renderMenuItem(item))}
                 </View>
             </ScrollView>
+            <HelpCenterModal visible={helpVisible} onClose={() => setHelpVisible(false)} />
         </View>
     );
 }

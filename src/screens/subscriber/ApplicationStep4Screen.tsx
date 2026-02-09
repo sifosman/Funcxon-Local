@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity, ScrollView, Alert, ActivityIndicator } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
@@ -7,7 +7,7 @@ import { colors, spacing, radii, typography } from '../../theme';
 import { useApplicationForm } from '../../context/ApplicationFormContext';
 import { validateStep4 } from '../../utils/formValidation';
 import { ApplicationProgress } from '../../components/ApplicationProgress';
-import { subscriptionPlans } from '../../config/subscriptionPlans';
+import { getSubscriptionTiers } from '../../lib/subscription';
 import { submitApplication, uploadFileToStorage } from '../../lib/applicationService';
 import { useAuth } from '../../auth/AuthContext';
 import { supabase } from '../../lib/supabaseClient';
@@ -26,6 +26,32 @@ export default function ApplicationStep4Screen() {
   const { user } = useAuth();
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [tiers, setTiers] = useState<Array<{
+    id: number;
+    tier_name: string;
+    photo_limit: number;
+    price_monthly: number | null;
+    price_yearly: number | null;
+    features: Record<string, any> | null;
+    is_active: boolean;
+  }>>([]);
+  const [loading, setLoading] = useState(true);
+  const [selectedBilling, setSelectedBilling] = useState<'monthly' | 'yearly'>('monthly');
+
+  useEffect(() => {
+    loadTiers();
+  }, []);
+
+  const loadTiers = async () => {
+    try {
+      const data = await getSubscriptionTiers();
+      setTiers(data);
+    } catch (error) {
+      console.error('Failed to load tiers:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleSubmit = async () => {
     const validation = validateStep4(state.step4);
@@ -131,15 +157,15 @@ export default function ApplicationStep4Screen() {
         return;
       }
 
-      // Get user profile details
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('full_name, business_name')
-        .eq('id', user.id)
-        .single();
+      // Get user details from vendors table or user metadata
+      const { data: vendor } = await supabase
+        .from('vendors')
+        .select('name, email')
+        .eq('user_id', user.id)
+        .maybeSingle();
 
-      const fullName = profile?.full_name || user.user_metadata?.full_name || 'Valued Applicant';
-      const businessName = profile?.business_name || submission.company_details?.businessName || '';
+      const fullName = vendor?.name || user.user_metadata?.full_name || 'Valued Applicant';
+      const businessName = submission.company_details?.tradingName || submission.company_details?.registeredBusinessName || vendor?.name || '';
 
       // Call the Supabase Edge Function to send confirmation email
       const { data, error } = await supabase.functions.invoke('send-vendor-welcome-email', {
@@ -243,50 +269,87 @@ export default function ApplicationStep4Screen() {
               Choose the plan that best suits your needs
             </Text>
 
-            {subscriptionPlans.map((plan) => {
-              const isSelected = state.step4.subscriptionPlan === plan.id;
+          {/* Billing Toggle */}
+          <View style={{ flexDirection: 'row', backgroundColor: colors.surface, borderRadius: radii.full, padding: 4, marginBottom: spacing.md, borderWidth: 1, borderColor: colors.borderSubtle }}>
+            <TouchableOpacity
+              style={{ flex: 1, paddingVertical: spacing.sm, borderRadius: radii.full, alignItems: 'center', backgroundColor: selectedBilling === 'monthly' ? colors.primary : 'transparent' }}
+              onPress={() => setSelectedBilling('monthly')}
+            >
+              <Text style={{ ...typography.caption, color: selectedBilling === 'monthly' ? colors.primaryForeground : colors.textMuted, fontWeight: '500' }}>
+                Monthly
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={{ flex: 1, paddingVertical: spacing.sm, borderRadius: radii.full, alignItems: 'center', backgroundColor: selectedBilling === 'yearly' ? colors.primary : 'transparent' }}
+              onPress={() => setSelectedBilling('yearly')}
+            >
+              <Text style={{ ...typography.caption, color: selectedBilling === 'yearly' ? colors.primaryForeground : colors.textMuted, fontWeight: '500' }}>
+                Yearly (Save 20%)
+              </Text>
+            </TouchableOpacity>
+          </View>
+
+          {loading ? (
+            <View style={{ padding: spacing.xl, alignItems: 'center' }}>
+              <ActivityIndicator size="small" color={colors.primary} />
+              <Text style={{ ...typography.caption, color: colors.textMuted, marginTop: spacing.sm }}>Loading plans...</Text>
+            </View>
+          ) : (
+            tiers.map((tier) => {
+              const isSelected = state.step4.subscriptionPlan === tier.tier_name.toLowerCase();
+              const price = selectedBilling === 'monthly' ? tier.price_monthly : tier.price_yearly;
+              const isFree = !price || price === 0;
+              const priceLabel = isFree ? 'Free' : `R${Number(price).toLocaleString()}`;
+              const isPopular = tier.tier_name.toLowerCase() === 'premium';
               return (
                 <TouchableOpacity
-                  key={plan.id}
-                  onPress={() => updateStep4({ subscriptionPlan: plan.id })}
+                  key={tier.id}
+                  onPress={() => updateStep4({ subscriptionPlan: tier.tier_name.toLowerCase() })}
                   style={{
                     padding: spacing.lg,
                     marginBottom: spacing.md,
                     borderRadius: radii.lg,
                     borderWidth: 2,
-                    borderColor: isSelected ? colors.primaryTeal : colors.borderSubtle,
+                    borderColor: isSelected ? colors.primaryTeal : isPopular ? '#8B5CF6' : colors.borderSubtle,
                     backgroundColor: isSelected ? '#E0F2F7' : colors.surface,
                   }}
                 >
                   <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing.sm }}>
                     <View>
                       <Text style={{ ...typography.titleMedium, color: colors.textPrimary }}>
-                        {plan.name}
+                        {tier.tier_name.charAt(0).toUpperCase() + tier.tier_name.slice(1)}
                       </Text>
                       <Text style={{ ...typography.body, color: colors.textMuted, marginTop: 2 }}>
-                        {plan.price} {plan.billingPeriod}
+                        {priceLabel}/{selectedBilling.slice(0, -2)}ly
                       </Text>
                     </View>
                     {isSelected && <MaterialIcons name="check-circle" size={28} color={colors.primaryTeal} />}
-                    {plan.highlighted && !isSelected && (
-                      <View style={{ backgroundColor: colors.primaryTeal, paddingHorizontal: spacing.sm, paddingVertical: 4, borderRadius: radii.sm }}>
+                    {isPopular && !isSelected && (
+                      <View style={{ backgroundColor: '#8B5CF6', paddingHorizontal: spacing.sm, paddingVertical: 4, borderRadius: radii.sm }}>
                         <Text style={{ color: '#FFFFFF', fontSize: 10, fontWeight: '700' }}>POPULAR</Text>
                       </View>
                     )}
                   </View>
                   <View style={{ gap: spacing.xs }}>
-                    {plan.features.map((feature, idx) => (
-                      <View key={idx} style={{ flexDirection: 'row', alignItems: 'center' }}>
-                        <MaterialIcons name="check" size={16} color={colors.primaryTeal} style={{ marginRight: spacing.xs }} />
-                        <Text style={{ ...typography.caption, color: colors.textPrimary }}>
-                          {feature}
+                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                      <MaterialIcons name="photo-library" size={16} color={colors.primaryTeal} style={{ marginRight: spacing.xs }} />
+                      <Text style={{ ...typography.caption, color: colors.textPrimary }}>
+                        {tier.photo_limit} photos
+                      </Text>
+                    </View>
+                    {tier.features && Object.entries(tier.features).map(([key, value]) => (
+                      <View key={key} style={{ flexDirection: 'row', alignItems: 'center' }}>
+                        <MaterialIcons name={value ? 'check' : 'cancel'} size={16} color={value ? colors.primaryTeal : colors.textMuted} style={{ marginRight: spacing.xs }} />
+                        <Text style={{ ...typography.caption, color: value ? colors.textPrimary : colors.textMuted }}>
+                          {key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
                         </Text>
                       </View>
                     ))}
                   </View>
                 </TouchableOpacity>
               );
-            })}
+            })
+          )}
             {errors.subscriptionPlan && (
               <Text style={{ fontSize: 12, color: '#EF4444', marginTop: spacing.xs }}>
                 {errors.subscriptionPlan}

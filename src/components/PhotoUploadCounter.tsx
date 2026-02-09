@@ -52,6 +52,16 @@ export function PhotoUploadCounter({ vendorId, onUpgradePress }: PhotoUploadCoun
   const isAtLimit = remaining_photos === 0;
   const isNearLimit = usage_percentage >= 80;
 
+  const getTierBadgeColor = (tier: string) => {
+    switch (tier?.toLowerCase()) {
+      case 'basic': return colors.primary;
+      case 'premium': return '#8B5CF6';
+      case 'enterprise': return '#DC2626';
+      case 'free':
+      default: return colors.textMuted;
+    }
+  };
+
   return (
     <View style={styles.container}>
       <View style={styles.header}>
@@ -69,7 +79,7 @@ export function PhotoUploadCounter({ vendorId, onUpgradePress }: PhotoUploadCoun
           </Text>
         </View>
         
-        <View style={styles.tierBadge}>
+        <View style={[styles.tierBadge, { backgroundColor: getTierBadgeColor(subscription_tier) }]}>
           <Text style={styles.tierText}>
             {subscription_tier?.toUpperCase() || 'FREE'}
           </Text>

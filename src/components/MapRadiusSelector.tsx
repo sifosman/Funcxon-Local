@@ -54,6 +54,35 @@ export default function MapRadiusSelector({
   const [isLoading, setIsLoading] = useState(false);
   const mapRef = useRef<any>(null);
   const webViewRef = useRef<any>(null);
+  const hasAutoDetected = useRef(false);
+
+  // Auto-detect user location when the modal opens
+  useEffect(() => {
+    if (visible && !hasAutoDetected.current) {
+      hasAutoDetected.current = true;
+      (async () => {
+        try {
+          const { status } = await ExpoLocation.requestForegroundPermissionsAsync();
+          if (status !== 'granted') return;
+          setIsLoading(true);
+          const loc = await ExpoLocation.getCurrentPositionAsync({ accuracy: ExpoLocation.Accuracy.Balanced });
+          const currentLocation = { latitude: loc.coords.latitude, longitude: loc.coords.longitude };
+          setSelectedLocation(currentLocation);
+          if (mapsAvailable && mapRef.current) {
+            mapRef.current.animateToRegion({
+              ...currentLocation,
+              latitudeDelta: 0.1,
+              longitudeDelta: 0.1,
+            }, 1000);
+          }
+        } catch {
+          // Silently fall back to default location
+        } finally {
+          setIsLoading(false);
+        }
+      })();
+    }
+  }, [visible]);
 
   // Convert radius in km to meters for map circle
   const radiusInMeters = radiusKm * 1000;

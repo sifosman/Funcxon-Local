@@ -15,6 +15,10 @@ import PortfolioAssistanceScreen from '../screens/PortfolioAssistanceScreen';
 import VendorSignupSuccessScreen from '../screens/VendorSignupSuccessScreen';
 import TermsAndPoliciesScreen from '../screens/TermsAndPoliciesScreen';
 import LegalDocumentScreen from '../screens/LegalDocumentScreen';
+import UpdatePortfolioScreen from '../screens/subscriber/UpdatePortfolioScreen';
+import ActionItemsScreen from '../screens/subscriber/ActionItemsScreen';
+import CalendarUpdatesScreen from '../screens/subscriber/CalendarUpdatesScreen';
+import BillingScreen from '../screens/BillingScreen';
 import { colors, typography } from '../theme';
 
 export type ProfileStackParamList = {
@@ -32,6 +36,10 @@ export type ProfileStackParamList = {
     SubscriptionCheckout: { tierName: string; billing: 'monthly' | 'yearly'; priceLabel: string; isFree: boolean };
     VendorSignupSuccess: { email: string; fullName: string; tierName: string };
     PortfolioAssistance: undefined;
+    UpdatePortfolio: undefined;
+    ActionItems: undefined;
+    CalendarUpdates: undefined;
+    Billing: undefined;
     TermsAndPolicies: undefined;
     LegalDocument: { documentId: string };
 };
@@ -120,6 +128,26 @@ export function ProfileNavigator() {
             <Stack.Screen
                 name="VendorSignupSuccess"
                 component={VendorSignupSuccessScreen}
+                options={{ headerShown: false }}
+            />
+            <Stack.Screen
+                name="UpdatePortfolio"
+                component={UpdatePortfolioScreen}
+                options={{ headerShown: false }}
+            />
+            <Stack.Screen
+                name="ActionItems"
+                component={ActionItemsScreen}
+                options={{ headerShown: false }}
+            />
+            <Stack.Screen
+                name="CalendarUpdates"
+                component={CalendarUpdatesScreen}
+                options={{ headerShown: false }}
+            />
+            <Stack.Screen
+                name="Billing"
+                component={BillingScreen}
                 options={{ headerShown: false }}
             />
             <Stack.Screen

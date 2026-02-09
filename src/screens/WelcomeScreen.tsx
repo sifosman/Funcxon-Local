@@ -28,12 +28,14 @@ export default function WelcomeScreen({ navigation }: Props) {
             borderWidth: 1,
             borderColor: colors.borderSubtle,
             padding: spacing.xl,
+            width: '100%',
             maxWidth: 420,
             alignSelf: 'center',
             shadowColor: '#000',
             shadowOpacity: 0.08,
             shadowRadius: 10,
             shadowOffset: { width: 0, height: 4 },
+            elevation: 2,
           }}
         >
           <View style={{ alignItems: 'center', marginBottom: spacing.lg }}>
@@ -108,38 +110,41 @@ export default function WelcomeScreen({ navigation }: Props) {
             ))}
           </View>
 
-          <View style={{ marginTop: spacing.lg }}>
-            <TouchableOpacity
-              activeOpacity={0.9}
-              onPress={() => navigation.navigate('SignIn')}
-              style={{
-                width: '100%',
-                paddingVertical: spacing.md,
-                borderRadius: radii.md,
-                borderWidth: 1,
-                borderColor: colors.primary,
-                alignItems: 'center',
-                justifyContent: 'center',
-                marginBottom: spacing.sm,
-              }}
-            >
-              <Text style={{ ...typography.titleMedium, color: colors.primary }}>Log in</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              activeOpacity={0.9}
-              onPress={() => navigation.navigate('SignUp')}
-              style={{
-                width: '100%',
-                paddingVertical: spacing.md,
-                borderRadius: radii.md,
-                backgroundColor: colors.primary,
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-            >
-              <Text style={{ ...typography.titleMedium, color: '#FFFFFF' }}>Get started</Text>
-            </TouchableOpacity>
-          </View>
+        </View>
+
+        {/* Buttons placed outside the card so they never overlap card content */}
+        <View style={{ marginTop: spacing.lg, maxWidth: 420, alignSelf: 'center', width: '100%' }}>
+          <TouchableOpacity
+            activeOpacity={0.9}
+            onPress={() => navigation.navigate('SignIn')}
+            style={{
+              width: '100%',
+              paddingVertical: spacing.md,
+              borderRadius: radii.md,
+              borderWidth: 1,
+              borderColor: colors.primary,
+              alignItems: 'center',
+              justifyContent: 'center',
+              marginBottom: spacing.sm,
+              backgroundColor: colors.surface,
+            }}
+          >
+            <Text style={{ ...typography.titleMedium, color: colors.primary }}>Log in</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            activeOpacity={0.9}
+            onPress={() => navigation.navigate('SignUp')}
+            style={{
+              width: '100%',
+              paddingVertical: spacing.md,
+              borderRadius: radii.md,
+              backgroundColor: colors.primary,
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            <Text style={{ ...typography.titleMedium, color: '#FFFFFF' }}>Get started</Text>
+          </TouchableOpacity>
         </View>
       </ScrollView>
     </View>

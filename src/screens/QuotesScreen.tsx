@@ -1,6 +1,6 @@
-import { useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { ActivityIndicator, Alert, FlatList, Text, TouchableOpacity, View } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useQuery } from '@tanstack/react-query';
 import { MaterialIcons } from '@expo/vector-icons';
@@ -97,70 +97,17 @@ export default function QuotesScreen() {
         throw quotesError;
       }
 
-      if (!quotes || quotes.length === 0) {
-        const { data: vendors } = await supabase
-          .from('vendors')
-          .select('id, name, description, category_id')
-          .order('id', { ascending: true })
-          .limit(6);
-
-        const { data: categories } = await supabase
-          .from('categories')
-          .select('id, name');
-
-        const categoryMap = new Map(
-          (categories as CategorySeed[] | null)?.map((category) => [category.id, category.name]) ?? [],
-        );
-
-        const vendorPool = (vendors as VendorSeed[] | null) ?? [];
-
-        if (vendorPool.length > 0) {
-          const seedRows = vendorPool.slice(0, 5).map((vendor, index) => {
-            const categoryName = categoryMap.get(vendor.category_id ?? -1) ?? 'Service';
-            const status = index === 0
-              ? 'finalised'
-              : index === 1
-                ? 'pending'
-                : index === 2
-                  ? 'in_progress'
-                  : index === 3
-                    ? 'amended'
-                    : 'pending';
-            const quoteAmount = [4500, 1200, 650, 2800, 800][index] ?? 1200;
-            const eventDate = new Date();
-            eventDate.setDate(eventDate.getDate() + (index + 2) * 3);
-            return {
-              user_id: internalUser.id,
-              vendor_id: vendor.id,
-              name: vendor.name ?? 'Vendor Quote',
-              email: 'planner@funcxon.com',
-              status,
-              event_type: categoryName,
-              event_date: eventDate.toISOString().split('T')[0],
-              budget: `R ${Math.round(quoteAmount * 1.5).toLocaleString('en-ZA')}`,
-              quote_amount: quoteAmount,
-              details:
-                vendor.description ??
-                'A tailored package with setup, equipment, and on-site coordination included.',
-            };
-          });
-
-          await supabase.from('quote_requests').insert(seedRows);
-        }
-
-        const { data: seededQuotes } = await supabase
-          .from('quote_requests')
-          .select('id, vendor_id, name, email, status, details, event_type, event_date, budget, quote_amount, created_at')
-          .eq('user_id', internalUser.id)
-          .order('id', { ascending: false })
-          .limit(50);
-
-        return (seededQuotes as QuoteRequest[]) ?? [];
-      }
-
       return (quotes as QuoteRequest[]) ?? [];
     },
+    refetchOnMount: 'always',
   });
+
+  // Auto-refresh when screen gains focus
+  useFocusEffect(
+    useCallback(() => {
+      refetch();
+    }, [refetch]),
+  );
 
   const filtered = useMemo(() => {
     if (!data) return [];
@@ -505,6 +452,18 @@ export default function QuotesScreen() {
                     {item.status ?? 'requested'}
                   </Text>
                 </View>
+              </View>
+
+              <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: spacing.sm }}>
+                <MaterialIcons
+                  name={item.status === 'pending' ? 'schedule' : 'visibility'}
+                  size={14}
+                  color={item.status === 'pending' ? colors.textMuted : '#16A34A'}
+                  style={{ marginRight: spacing.xs }}
+                />
+                <Text style={{ ...typography.caption, color: item.status === 'pending' ? colors.textMuted : '#16A34A' }}>
+                  {item.status === 'pending' ? 'Awaiting vendor review' : 'Vendor has seen this request'}
+                </Text>
               </View>
 
               {item.details && (

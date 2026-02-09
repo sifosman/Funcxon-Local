@@ -1,16 +1,18 @@
 import { useState } from 'react';
-import { Alert, ScrollView, Text, View } from 'react-native';
+import { Alert, KeyboardAvoidingView, Platform, ScrollView, Text, View } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 
 import { supabase } from '../lib/supabaseClient';
 import type { AttendeeStackParamList } from '../navigation/AttendeeNavigator';
 import { colors, spacing, typography } from '../theme';
 import { PrimaryButton, ThemedInput } from '../components/ui';
+import { useAuth } from '../auth/AuthContext';
 
 type Props = NativeStackScreenProps<AttendeeStackParamList, 'QuoteRequest'>;
 
 export default function QuoteRequestScreen({ route, navigation }: Props) {
   const { vendorId, vendorName } = route.params;
+  const { user } = useAuth();
 
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -25,19 +27,20 @@ export default function QuoteRequestScreen({ route, navigation }: Props) {
 
     setSubmitting(true);
     try {
-      // For this demo, try to attach the request to the demo_attendee user if present.
-      const { data: userRows, error: userError } = await supabase
-        .from('users')
-        .select('id, username')
-        .eq('username', 'demo_attendee')
-        .limit(1);
+      // Resolve the internal user id from the authenticated user
+      let userId: number | null = null;
+      if (user?.id) {
+        const { data: userRow, error: userError } = await supabase
+          .from('users')
+          .select('id')
+          .eq('auth_user_id', user.id)
+          .maybeSingle();
 
-      if (userError) {
-        throw userError;
+        if (userError) {
+          throw userError;
+        }
+        userId = userRow?.id ?? null;
       }
-
-      const demoUser = userRows?.[0];
-      const userId = demoUser?.id ?? null;
 
       const { error: insertError } = await supabase.from('quote_requests').insert({
         vendor_id: vendorId,
@@ -89,9 +92,15 @@ export default function QuoteRequestScreen({ route, navigation }: Props) {
   }
 
   return (
+    <KeyboardAvoidingView
+      style={{ flex: 1 }}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
+    >
     <ScrollView
       style={{ flex: 1, backgroundColor: colors.background }}
-      contentContainerStyle={{ paddingHorizontal: spacing.lg, paddingVertical: spacing.lg }}
+      contentContainerStyle={{ paddingHorizontal: spacing.lg, paddingVertical: spacing.lg, paddingBottom: 120 }}
+      keyboardShouldPersistTaps="handled"
     >
       <View
         style={{
@@ -200,5 +209,6 @@ export default function QuoteRequestScreen({ route, navigation }: Props) {
         />
       </View>
     </ScrollView>
+    </KeyboardAvoidingView>
   );
 }

@@ -1,7 +1,8 @@
 import { useMemo, useState } from 'react';
-import { ActivityIndicator, Alert, Modal, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Alert, Modal, Platform, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import DateTimePicker from '@react-native-community/datetimepicker';
 
 import { supabase } from '../lib/supabaseClient';
 import { colors, spacing, radii, typography } from '../theme';
@@ -35,15 +36,34 @@ const tagOptions = [
   { label: 'Task', value: 'task', color: '#8B5CF6' },
 ];
 
+type BudgetItem = {
+  name: string;
+  spent: number;
+  total: number;
+};
+
 export default function PlannerScreen() {
   const { user } = useAuth();
+  const queryClient = useQueryClient();
   const [eventDetails, setEventDetails] = useState({
     name: '',
     theme: '',
     type: '',
     date: '',
   });
+  const [showDatePicker, setShowDatePicker] = useState(false);
   const [newTask, setNewTask] = useState('');
+  const [editingTask, setEditingTask] = useState<Task | null>(null);
+  const [editTaskTitle, setEditTaskTitle] = useState('');
+  const [addingTask, setAddingTask] = useState(false);
+  const [budgetItems, setBudgetItems] = useState<BudgetItem[]>([
+    { name: 'Venue', spent: 0, total: 0 },
+    { name: 'Catering', spent: 0, total: 0 },
+    { name: 'Photography', spent: 0, total: 0 },
+    { name: 'Flowers', spent: 0, total: 0 },
+  ]);
+  const [editingBudgetIdx, setEditingBudgetIdx] = useState<number | null>(null);
+  const [editBudgetForm, setEditBudgetForm] = useState({ name: '', spent: '', total: '' });
   const [calendarItems, setCalendarItems] = useState<CalendarItem[]>([
     {
       id: 1,
@@ -161,15 +181,6 @@ export default function PlannerScreen() {
 
   const tasks = data?.tasks ?? [];
   const remainingTasks = useMemo(() => tasks.filter((task) => task.status !== 'completed').length, [tasks]);
-  const budgetItems = useMemo(
-    () => [
-      { name: 'Venue', spent: 4500, total: 5500 },
-      { name: 'Catering', spent: 2800, total: 3000 },
-      { name: 'Photography', spent: 0, total: 2000 },
-      { name: 'Flowers', spent: 0, total: 800 },
-    ],
-    [],
-  );
   const budgetTotals = useMemo(() => {
     const total = budgetItems.reduce((sum, item) => sum + item.total, 0);
     const spent = budgetItems.reduce((sum, item) => sum + item.spent, 0);
@@ -179,28 +190,96 @@ export default function PlannerScreen() {
   const handleAddTask = async () => {
     const trimmed = newTask.trim();
     if (!trimmed || !data?.userId) return;
+    setAddingTask(true);
     const dueDate = new Date();
     dueDate.setDate(dueDate.getDate() + 7);
-    await supabase.from('tasks').insert({
-      user_id: data.userId,
-      title: trimmed,
-      status: 'pending',
-      due_date: dueDate.toISOString(),
-    });
+    // Optimistic update: add task to cache immediately
+    const tempTask: Task = { id: Date.now(), title: trimmed, status: 'pending', due_date: dueDate.toISOString() };
+    queryClient.setQueryData<PlannerData>(['planner-tasks', user?.id], (old) =>
+      old ? { ...old, tasks: [...old.tasks, tempTask] } : old
+    );
     setNewTask('');
-    await refetch();
+    try {
+      await supabase.from('tasks').insert({
+        user_id: data.userId,
+        title: trimmed,
+        status: 'pending',
+        due_date: dueDate.toISOString(),
+      });
+      await refetch();
+    } catch {
+      // Revert optimistic update on error
+      await refetch();
+    } finally {
+      setAddingTask(false);
+    }
   };
 
   const toggleTask = async (task: Task) => {
     if (!data?.userId) return;
     const nextStatus = task.status === 'completed' ? 'pending' : 'completed';
+    // Optimistic update
+    queryClient.setQueryData<PlannerData>(['planner-tasks', user?.id], (old) =>
+      old ? { ...old, tasks: old.tasks.map((t) => t.id === task.id ? { ...t, status: nextStatus } : t) } : old
+    );
     await supabase.from('tasks').update({ status: nextStatus }).eq('id', task.id);
     await refetch();
   };
 
   const deleteTask = async (taskId: number) => {
+    // Optimistic update
+    queryClient.setQueryData<PlannerData>(['planner-tasks', user?.id], (old) =>
+      old ? { ...old, tasks: old.tasks.filter((t) => t.id !== taskId) } : old
+    );
     await supabase.from('tasks').delete().eq('id', taskId);
     await refetch();
+  };
+
+  const handleEditTask = (task: Task) => {
+    setEditingTask(task);
+    setEditTaskTitle(task.title);
+  };
+
+  const handleSaveTaskEdit = async () => {
+    if (!editingTask || !editTaskTitle.trim()) return;
+    const newTitle = editTaskTitle.trim();
+    // Optimistic update
+    queryClient.setQueryData<PlannerData>(['planner-tasks', user?.id], (old) =>
+      old ? { ...old, tasks: old.tasks.map((t) => t.id === editingTask.id ? { ...t, title: newTitle } : t) } : old
+    );
+    setEditingTask(null);
+    await supabase.from('tasks').update({ title: newTitle }).eq('id', editingTask.id);
+    await refetch();
+  };
+
+  const handleEditBudget = (idx: number) => {
+    const item = budgetItems[idx];
+    setEditingBudgetIdx(idx);
+    setEditBudgetForm({ name: item.name, spent: String(item.spent), total: String(item.total) });
+  };
+
+  const handleSaveBudget = () => {
+    if (editingBudgetIdx === null) return;
+    setBudgetItems((prev) =>
+      prev.map((item, i) =>
+        i === editingBudgetIdx
+          ? { name: editBudgetForm.name || item.name, spent: parseFloat(editBudgetForm.spent) || 0, total: parseFloat(editBudgetForm.total) || 0 }
+          : item
+      )
+    );
+    setEditingBudgetIdx(null);
+  };
+
+  const handleAddBudgetItem = () => {
+    setBudgetItems((prev) => [...prev, { name: 'New Item', spent: 0, total: 0 }]);
+    const newIdx = budgetItems.length;
+    setEditingBudgetIdx(newIdx);
+    setEditBudgetForm({ name: 'New Item', spent: '0', total: '0' });
+  };
+
+  const handleDeleteBudgetItem = (idx: number) => {
+    setBudgetItems((prev) => prev.filter((_, i) => i !== idx));
+    if (editingBudgetIdx === idx) setEditingBudgetIdx(null);
   };
 
   const handleAddCalendarItem = () => {
@@ -401,11 +480,8 @@ export default function PlannerScreen() {
           </View>
           <View>
             <Text style={{ ...typography.caption, color: colors.textMuted }}>My Event Date</Text>
-            <TextInput
-              value={eventDetails.date}
-              onChangeText={(value) => setEventDetails((prev) => ({ ...prev, date: value }))}
-              placeholder="yyyy/mm/dd"
-              placeholderTextColor={colors.textMuted}
+            <TouchableOpacity
+              onPress={() => setShowDatePicker(true)}
               style={{
                 marginTop: spacing.xs,
                 borderWidth: 1,
@@ -414,9 +490,32 @@ export default function PlannerScreen() {
                 paddingHorizontal: spacing.md,
                 paddingVertical: spacing.sm,
                 backgroundColor: colors.surfaceMuted,
-                color: colors.textPrimary,
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'space-between',
               }}
-            />
+            >
+              <Text style={{ color: eventDetails.date ? colors.textPrimary : colors.textMuted }}>
+                {eventDetails.date || 'Select event date'}
+              </Text>
+              <MaterialIcons name="calendar-today" size={18} color={colors.primary} />
+            </TouchableOpacity>
+            {showDatePicker && (
+              <DateTimePicker
+                value={eventDetails.date ? new Date(eventDetails.date) : new Date()}
+                mode="date"
+                display={Platform.OS === 'ios' ? 'spinner' : 'calendar'}
+                onChange={(_event: any, selectedDate?: Date) => {
+                  setShowDatePicker(Platform.OS === 'ios');
+                  if (selectedDate) {
+                    setEventDetails((prev) => ({
+                      ...prev,
+                      date: selectedDate.toISOString().split('T')[0],
+                    }));
+                  }
+                }}
+              />
+            )}
           </View>
         </View>
       </View>
@@ -510,6 +609,9 @@ export default function PlannerScreen() {
                     {due}
                   </Text>
                 </View>
+                <TouchableOpacity onPress={() => handleEditTask(item)} style={{ marginRight: spacing.sm }}>
+                  <MaterialIcons name="edit" size={18} color={colors.primary} />
+                </TouchableOpacity>
                 <TouchableOpacity onPress={() => deleteTask(item.id)}>
                   <MaterialIcons name="delete" size={18} color={colors.textMuted} />
                 </TouchableOpacity>
@@ -522,6 +624,45 @@ export default function PlannerScreen() {
           {remainingTasks} remaining of {tasks.length} tasks
         </Text>
       </View>
+
+      {/* Edit Task Modal */}
+      <Modal visible={editingTask !== null} transparent animationType="fade" onRequestClose={() => setEditingTask(null)}>
+        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center', padding: spacing.lg }}>
+          <View style={{ backgroundColor: colors.surface, borderRadius: radii.lg, padding: spacing.lg, width: '100%', maxWidth: 400 }}>
+            <Text style={{ ...typography.titleMedium, color: colors.textPrimary, marginBottom: spacing.md }}>Edit Task</Text>
+            <TextInput
+              value={editTaskTitle}
+              onChangeText={setEditTaskTitle}
+              placeholder="Task title"
+              placeholderTextColor={colors.textMuted}
+              style={{
+                borderWidth: 1,
+                borderColor: colors.borderSubtle,
+                borderRadius: radii.md,
+                paddingHorizontal: spacing.md,
+                paddingVertical: spacing.sm,
+                backgroundColor: colors.surfaceMuted,
+                color: colors.textPrimary,
+                marginBottom: spacing.md,
+              }}
+            />
+            <View style={{ flexDirection: 'row', gap: spacing.sm }}>
+              <TouchableOpacity
+                onPress={() => setEditingTask(null)}
+                style={{ flex: 1, paddingVertical: spacing.sm, borderRadius: radii.md, borderWidth: 1, borderColor: colors.borderSubtle, alignItems: 'center' }}
+              >
+                <Text style={{ ...typography.body, color: colors.textPrimary }}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={handleSaveTaskEdit}
+                style={{ flex: 1, paddingVertical: spacing.sm, borderRadius: radii.md, backgroundColor: colors.primary, alignItems: 'center' }}
+              >
+                <Text style={{ ...typography.body, color: '#FFFFFF', fontWeight: '600' }}>Save</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
 
       <View
         style={{
@@ -556,11 +697,11 @@ export default function PlannerScreen() {
           </Text>
         </View>
 
-        {budgetItems.map((item) => {
+        {budgetItems.map((item, idx) => {
           const progress = item.total === 0 ? 0 : Math.min(item.spent / item.total, 1);
           return (
             <View
-              key={item.name}
+              key={`${item.name}-${idx}`}
               style={{
                 borderWidth: 1,
                 borderColor: colors.borderSubtle,
@@ -570,11 +711,19 @@ export default function PlannerScreen() {
                 backgroundColor: colors.surfaceMuted,
               }}
             >
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: spacing.xs }}>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.xs }}>
                 <Text style={{ ...typography.body, color: colors.textPrimary }}>{item.name}</Text>
-                <Text style={{ ...typography.body, color: colors.textSecondary }}>
-                  R{item.spent} / R{item.total}
-                </Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                  <Text style={{ ...typography.caption, color: colors.textSecondary, marginRight: spacing.sm }}>
+                    R{item.spent.toLocaleString('en-ZA')} / R{item.total.toLocaleString('en-ZA')}
+                  </Text>
+                  <TouchableOpacity onPress={() => handleEditBudget(idx)} style={{ marginRight: spacing.xs }}>
+                    <MaterialIcons name="edit" size={16} color={colors.primary} />
+                  </TouchableOpacity>
+                  <TouchableOpacity onPress={() => handleDeleteBudgetItem(idx)}>
+                    <MaterialIcons name="delete" size={16} color={colors.textMuted} />
+                  </TouchableOpacity>
+                </View>
               </View>
               <View style={{ height: 6, backgroundColor: colors.borderSubtle, borderRadius: radii.full }}>
                 <View
@@ -589,7 +738,83 @@ export default function PlannerScreen() {
             </View>
           );
         })}
+
+        <TouchableOpacity
+          onPress={handleAddBudgetItem}
+          style={{
+            marginTop: spacing.sm,
+            alignItems: 'center',
+            paddingVertical: spacing.sm,
+            borderRadius: radii.md,
+            borderWidth: 1,
+            borderColor: colors.borderSubtle,
+            backgroundColor: colors.surface,
+          }}
+        >
+          <Text style={{ ...typography.body, color: colors.textPrimary, fontWeight: '600' }}>+ Add Budget Item</Text>
+        </TouchableOpacity>
       </View>
+
+      {/* Edit Budget Modal */}
+      <Modal visible={editingBudgetIdx !== null} transparent animationType="fade" onRequestClose={() => setEditingBudgetIdx(null)}>
+        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center', padding: spacing.lg }}>
+          <View style={{ backgroundColor: colors.surface, borderRadius: radii.lg, padding: spacing.lg, width: '100%', maxWidth: 400 }}>
+            <Text style={{ ...typography.titleMedium, color: colors.textPrimary, marginBottom: spacing.md }}>Edit Budget Item</Text>
+            <Text style={{ ...typography.caption, color: colors.textMuted, marginBottom: spacing.xs }}>Name</Text>
+            <TextInput
+              value={editBudgetForm.name}
+              onChangeText={(v) => setEditBudgetForm((p) => ({ ...p, name: v }))}
+              placeholder="Item name"
+              placeholderTextColor={colors.textMuted}
+              style={{
+                borderWidth: 1, borderColor: colors.borderSubtle, borderRadius: radii.md,
+                paddingHorizontal: spacing.md, paddingVertical: spacing.sm,
+                backgroundColor: colors.surfaceMuted, color: colors.textPrimary, marginBottom: spacing.md,
+              }}
+            />
+            <Text style={{ ...typography.caption, color: colors.textMuted, marginBottom: spacing.xs }}>Amount Spent (R)</Text>
+            <TextInput
+              value={editBudgetForm.spent}
+              onChangeText={(v) => setEditBudgetForm((p) => ({ ...p, spent: v }))}
+              placeholder="0"
+              keyboardType="numeric"
+              placeholderTextColor={colors.textMuted}
+              style={{
+                borderWidth: 1, borderColor: colors.borderSubtle, borderRadius: radii.md,
+                paddingHorizontal: spacing.md, paddingVertical: spacing.sm,
+                backgroundColor: colors.surfaceMuted, color: colors.textPrimary, marginBottom: spacing.md,
+              }}
+            />
+            <Text style={{ ...typography.caption, color: colors.textMuted, marginBottom: spacing.xs }}>Total Budget (R)</Text>
+            <TextInput
+              value={editBudgetForm.total}
+              onChangeText={(v) => setEditBudgetForm((p) => ({ ...p, total: v }))}
+              placeholder="0"
+              keyboardType="numeric"
+              placeholderTextColor={colors.textMuted}
+              style={{
+                borderWidth: 1, borderColor: colors.borderSubtle, borderRadius: radii.md,
+                paddingHorizontal: spacing.md, paddingVertical: spacing.sm,
+                backgroundColor: colors.surfaceMuted, color: colors.textPrimary, marginBottom: spacing.md,
+              }}
+            />
+            <View style={{ flexDirection: 'row', gap: spacing.sm }}>
+              <TouchableOpacity
+                onPress={() => setEditingBudgetIdx(null)}
+                style={{ flex: 1, paddingVertical: spacing.sm, borderRadius: radii.md, borderWidth: 1, borderColor: colors.borderSubtle, alignItems: 'center' }}
+              >
+                <Text style={{ ...typography.body, color: colors.textPrimary }}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={handleSaveBudget}
+                style={{ flex: 1, paddingVertical: spacing.sm, borderRadius: radii.md, backgroundColor: colors.primary, alignItems: 'center' }}
+              >
+                <Text style={{ ...typography.body, color: '#FFFFFF', fontWeight: '600' }}>Save</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
 
       <View
         style={{

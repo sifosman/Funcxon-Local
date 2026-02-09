@@ -10,6 +10,9 @@ type ProfileStackParamList = {
     SubscriberLogin: undefined;
     SubscriberProfile: undefined;
     PortfolioType: undefined;
+    UpdatePortfolio: undefined;
+    ActionItems: undefined;
+    CalendarUpdates: undefined;
 };
 
 type MenuItem = {
@@ -40,6 +43,7 @@ export default function SubscriberProfileScreen() {
             title: 'Update Portfolio',
             description: 'Update and manage your existing portfolio listings',
             icon: 'edit',
+            route: 'UpdatePortfolio',
             iconColor: '#3B82F6',
             iconBg: '#DBEAFE',
         },
@@ -48,6 +52,7 @@ export default function SubscriberProfileScreen() {
             title: 'Action Items',
             description: 'View and manage your pending tasks and to-dos',
             icon: 'checklist',
+            route: 'ActionItems',
             iconColor: '#F59E0B',
             iconBg: '#FEF3C7',
         },
@@ -56,6 +61,7 @@ export default function SubscriberProfileScreen() {
             title: 'Calendar Updates',
             description: 'Check your schedule and upcoming events',
             icon: 'event',
+            route: 'CalendarUpdates',
             iconColor: '#8B5CF6',
             iconBg: '#EDE9FE',
         },

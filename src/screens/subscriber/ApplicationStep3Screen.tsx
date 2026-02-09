@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity, ScrollView, Image, Alert, Platform } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
@@ -11,6 +11,8 @@ import { validateStep3 } from '../../utils/formValidation';
 import { ApplicationProgress } from '../../components/ApplicationProgress';
 import { PhotoUploadCounter } from '../../components/PhotoUploadCounter';
 import { canUploadMorePhotos, incrementVendorPhotoCount, decrementVendorPhotoCount } from '../../lib/subscription';
+import { useAuth } from '../../auth/AuthContext';
+import { supabase } from '../../lib/supabaseClient';
 
 type ProfileStackParamList = {
   ApplicationStep2: undefined;
@@ -25,19 +27,36 @@ const MAX_DOCUMENT_SIZE = 10 * 1024 * 1024; // 10MB
 export default function ApplicationStep3Screen() {
   const navigation = useNavigation<NativeStackNavigationProp<ProfileStackParamList>>();
   const { state, updateStep3 } = useApplicationForm();
+  const { user } = useAuth();
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [vendorId, setVendorId] = useState<number | null>(null);
+
+  useEffect(() => {
+    async function loadVendorId() {
+      if (!user) return;
+      const { data } = await supabase
+        .from('vendors')
+        .select('id')
+        .eq('user_id', user.id)
+        .maybeSingle();
+      if (data) setVendorId(data.id);
+    }
+    loadVendorId();
+  }, [user]);
 
   const handlePickImages = async () => {
     try {
-      // Check if user can upload more photos
-      const canUpload = await canUploadMorePhotos(1);
-      if (!canUpload) {
-        Alert.alert(
-          'Photo Limit Reached',
-          'You\'ve reached your photo limit. Upgrade your subscription to add more photos.',
-          [{ text: 'OK' }]
-        );
-        return;
+      // Check if user can upload more photos (only if they have a vendor record)
+      if (vendorId) {
+        const canUpload = await canUploadMorePhotos(vendorId);
+        if (!canUpload) {
+          Alert.alert(
+            'Photo Limit Reached',
+            'You\'ve reached your photo limit. Upgrade your subscription to add more photos.',
+            [{ text: 'OK' }]
+          );
+          return;
+        }
       }
 
       // Request permission
@@ -86,9 +105,11 @@ export default function ApplicationStep3Screen() {
         const updatedImages = [...state.step3.images, ...newImages];
         updateStep3({ images: updatedImages });
 
-        // Increment photo count for each uploaded image
-        for (let i = 0; i < newImages.length; i++) {
-          await incrementVendorPhotoCount(1);
+        // Increment photo count for each uploaded image (only if vendor exists)
+        if (vendorId) {
+          for (let i = 0; i < newImages.length; i++) {
+            await incrementVendorPhotoCount(vendorId);
+          }
         }
 
         if (validImages.length > 0) {
@@ -206,7 +227,7 @@ export default function ApplicationStep3Screen() {
   const handleRemoveImage = async (index: number) => {
     try {
       // Decrement photo count in database
-      await decrementVendorPhotoCount(1); // TODO: use actual vendor ID
+      if (vendorId) await decrementVendorPhotoCount(vendorId);
       
       const newImages = state.step3.images.filter((_, i) => i !== index);
       updateStep3({ images: newImages });
@@ -269,14 +290,15 @@ export default function ApplicationStep3Screen() {
             <ApplicationProgress currentStep={3} />
           </View>
 
-          {/* Photo Upload Counter */}
-          <PhotoUploadCounter 
-            vendorId={1} // TODO: use actual vendor ID from context
-            onUpgradePress={() => {
-              // TODO: Navigate to subscription plans screen
-              Alert.alert('Upgrade', 'Subscription plans screen will be available soon.');
-            }}
-          />
+          {/* Photo Upload Counter — only shown if user already has a vendor record */}
+          {vendorId && (
+            <PhotoUploadCounter 
+              vendorId={vendorId}
+              onUpgradePress={() => {
+                navigation.navigate('ApplicationStep4' as any);
+              }}
+            />
+          )}
 
           {/* Portfolio Images */}
           <View

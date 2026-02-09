@@ -36,7 +36,7 @@ export default function FavouritesScreen() {
     error: shortlistsError,
     refetch: refetchShortlists,
   } = useQuery({
-    queryKey: ['shortlists', user?.id],
+    queryKey: ['shortlists', user?.id, favouriteIds],
     queryFn: () => getShortlists(user),
     enabled: !!user?.id,
   });
@@ -153,15 +153,8 @@ export default function FavouritesScreen() {
                 const hasNoteChange = shortlistId != null && noteValue.trim() !== (shortlistEntry?.notes ?? '').trim();
                 const isSaving = shortlistId != null ? !!savingNotes[shortlistId] : false;
                 return (
-              <TouchableOpacity
+              <View
                 key={vendor.id}
-                activeOpacity={0.9}
-                onPress={() =>
-                  navigation.navigate('Home', {
-                    screen: 'VendorProfile',
-                    params: { vendorId: vendor.id },
-                  })
-                }
                 style={{
                   borderRadius: radii.lg,
                   backgroundColor: colors.surface,
@@ -292,7 +285,7 @@ export default function FavouritesScreen() {
                     </Text>
                   </TouchableOpacity>
                 </View>
-              </TouchableOpacity>
+              </View>
                 );
               })()
             ))}

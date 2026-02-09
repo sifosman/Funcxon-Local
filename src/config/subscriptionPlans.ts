@@ -9,6 +9,18 @@ export interface SubscriptionPlan {
 
 export const subscriptionPlans: SubscriptionPlan[] = [
   {
+    id: "free",
+    name: "Free",
+    price: "R0",
+    billingPeriod: "forever",
+    features: [
+      "Basic profile listing",
+      "Up to 8 images",
+      "Contact information display",
+      "Email support"
+    ]
+  },
+  {
     id: "basic",
     name: "Basic",
     price: "TBC",
