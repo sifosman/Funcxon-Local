@@ -7,6 +7,7 @@ import { colors, spacing, radii, typography } from '../../theme';
 import { useApplicationForm } from '../../context/ApplicationFormContext';
 import { validateStep1 } from '../../utils/formValidation';
 import { ApplicationProgress } from '../../components/ApplicationProgress';
+import { AddressAutocompleteInput } from '../../components/AddressAutocompleteInput';
 
 type ProfileStackParamList = {
   PortfolioType: undefined;
@@ -211,50 +212,22 @@ export default function ApplicationStep1Screen() {
               </View>
 
               <View>
-                <Text style={{ ...typography.body, fontWeight: '500', color: colors.textPrimary, marginBottom: spacing.xs }}>
-                  Business Physical Address
-                </Text>
-                <TextInput
+                <AddressAutocompleteInput
+                  label="Business Physical Address"
                   placeholder="Enter physical business address"
                   value={state.step1.businessPhysicalAddress}
-                  onChangeText={(value) => handleChange('businessPhysicalAddress', value)}
-                  multiline
+                  onChangeValue={(value) => handleChange('businessPhysicalAddress', value)}
                   numberOfLines={2}
-                  style={{
-                    borderWidth: 1,
-                    borderColor: colors.borderSubtle,
-                    borderRadius: radii.md,
-                    paddingHorizontal: spacing.md,
-                    paddingVertical: spacing.sm,
-                    backgroundColor: colors.surface,
-                    fontSize: 14,
-                    color: colors.textPrimary,
-                    textAlignVertical: 'top',
-                  }}
                 />
               </View>
 
               <View>
-                <Text style={{ ...typography.body, fontWeight: '500', color: colors.textPrimary, marginBottom: spacing.xs }}>
-                  Billing Address
-                </Text>
-                <TextInput
+                <AddressAutocompleteInput
+                  label="Billing Address"
                   placeholder="Enter billing address"
                   value={state.step1.billingAddress}
-                  onChangeText={(value) => handleChange('billingAddress', value)}
-                  multiline
+                  onChangeValue={(value) => handleChange('billingAddress', value)}
                   numberOfLines={2}
-                  style={{
-                    borderWidth: 1,
-                    borderColor: colors.borderSubtle,
-                    borderRadius: radii.md,
-                    paddingHorizontal: spacing.md,
-                    paddingVertical: spacing.sm,
-                    backgroundColor: colors.surface,
-                    fontSize: 14,
-                    color: colors.textPrimary,
-                    textAlignVertical: 'top',
-                  }}
                 />
               </View>
 

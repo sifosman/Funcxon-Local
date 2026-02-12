@@ -1,12 +1,12 @@
 import { useState } from 'react';
-import { Alert, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Alert, Platform, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { AuthStackParamList } from '../navigation/AuthNavigator';
 import { useAuth } from '../auth/AuthContext';
 import { supabase } from '../lib/supabaseClient';
 import { colors, spacing, radii, typography } from '../theme';
 import { PrimaryButton, OutlineButton } from '../components/ui';
-import { MaterialIcons } from '@expo/vector-icons';
+import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 
 type Props = NativeStackScreenProps<AuthStackParamList, 'SignIn'>;
 
@@ -14,6 +14,7 @@ export default function SignInScreen({ navigation }: Props) {
   const { signIn, signInWithProvider } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [formSuccess, setFormSuccess] = useState<string | null>(null);
@@ -86,6 +87,13 @@ export default function SignInScreen({ navigation }: Props) {
     const { error } = await signInWithProvider('facebook');
     if (error) {
       Alert.alert('Facebook sign in failed', error.message);
+    }
+  };
+
+  const handleAppleSignIn = async () => {
+    const { error } = await signInWithProvider('apple');
+    if (error) {
+      Alert.alert('Apple sign in failed', error.message);
     }
   };
 
@@ -186,12 +194,23 @@ export default function SignInScreen({ navigation }: Props) {
             <TextInput
               value={password}
               onChangeText={setPassword}
-              secureTextEntry
+              secureTextEntry={!showPassword}
               autoCapitalize="none"
               placeholder="Password"
               placeholderTextColor={colors.textMuted}
               style={{ flex: 1, paddingVertical: spacing.sm, color: colors.textPrimary }}
             />
+            <TouchableOpacity
+              onPress={() => setShowPassword((prev) => !prev)}
+              style={{ paddingVertical: spacing.sm, paddingLeft: spacing.sm }}
+              activeOpacity={0.7}
+            >
+              <MaterialIcons
+                name={showPassword ? 'visibility-off' : 'visibility'}
+                size={20}
+                color={colors.textMuted}
+              />
+            </TouchableOpacity>
           </View>
 
           <TouchableOpacity
@@ -254,14 +273,51 @@ export default function SignInScreen({ navigation }: Props) {
                   alignItems: 'center',
                   justifyContent: 'center',
                   marginRight: spacing.sm,
-                  borderWidth: 1,
-                  borderColor: colors.borderSubtle,
+                  borderWidth: 2,
+                  borderTopColor: '#4285F4',
+                  borderRightColor: '#EA4335',
+                  borderBottomColor: '#34A853',
+                  borderLeftColor: '#FBBC05',
                 }}
               >
-                <Text style={{ ...typography.caption, color: colors.textPrimary }}>G</Text>
+                <Text style={{ ...typography.caption, color: '#4285F4', fontWeight: '800' }}>G</Text>
               </View>
               <Text style={{ ...typography.body, color: colors.textPrimary }}>Log in with Google</Text>
             </TouchableOpacity>
+
+            {(Platform.OS === 'ios' || Platform.OS === 'web') && (
+              <TouchableOpacity
+                activeOpacity={0.9}
+                onPress={handleAppleSignIn}
+                style={{
+                  width: '100%',
+                  paddingVertical: spacing.md,
+                  borderRadius: radii.md,
+                  borderWidth: 1,
+                  borderColor: colors.borderSubtle,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  flexDirection: 'row',
+                  backgroundColor: colors.surface,
+                  marginTop: spacing.sm,
+                }}
+              >
+                <View
+                  style={{
+                    width: 28,
+                    height: 28,
+                    borderRadius: 12,
+                    backgroundColor: '#000000',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    marginRight: spacing.sm,
+                  }}
+                >
+                  <Ionicons name="logo-apple" size={18} color="#FFFFFF" />
+                </View>
+                <Text style={{ ...typography.body, color: colors.textPrimary }}>Log in with Apple</Text>
+              </TouchableOpacity>
+            )}
 
             <TouchableOpacity
               activeOpacity={0.9}

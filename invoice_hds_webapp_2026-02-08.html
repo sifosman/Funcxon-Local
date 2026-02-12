@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Invoice - Funcxon Web App - R85,000</title>
+  <title>Invoice - Funcxon Web App - R35,000</title>
   <style>
     :root {
       --primary: #0b1f3b;
@@ -19,7 +19,7 @@
     header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; }
     .logo { display: flex; align-items: center; gap: 12px; }
     .logo-mark { width: 44px; height: 44px; border-radius: 8px; background: linear-gradient(135deg, var(--primary), var(--accent)); }
-    .logo-img { height: 88px; width: auto; border-radius: 8px; display: block; }
+    .logo-img { height: 88px; width: auto; border-radius: 8px; display: block; object-fit: contain; }
     h1 { margin: 0; font-size: 28px; color: var(--primary); }
     .meta { text-align: right; font-size: 14px; color: var(--muted); }
     .row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 24px; }
@@ -70,7 +70,7 @@
 
     <header>
       <div class="logo">
-        <img src="logo.png" alt="Company logo" class="logo-img" />
+        <img src="logo.png" alt="OWD Solutions Logo" class="logo-img" />
         <div>
           <h1>INVOICE</h1>
           <div class="muted">Funcxon Web Application Development</div>
@@ -94,9 +94,9 @@
       </div>
       <div class="card">
         <h3>Bill To</h3>
-        <p><strong>FX GROUP T/A HDS CUT & EDGE</strong></p>
-        <p>Yusuf Bhayla/Mohamed Bera</p>
-        <p>Email: ybhayla@gmail.com</p>
+        <p><strong>Howzit Eventz (Pty) Ltd</strong></p>
+        <p>Zulaykha Bhyat</p>
+        <p>Phone: 083 709 3579</p>
       </div>
     </div>
 
@@ -105,13 +105,132 @@
       <p style="font-size: 14px; color: var(--text); margin-bottom: 8px;">
         Development of a <strong>responsive web application</strong> version of the existing Funcxon mobile app (iOS &amp; Android).
         The web app will provide full feature parity with the mobile app, optimised for desktop and tablet browsers,
-        with responsive design, SEO, and web-specific UX patterns.
+        with responsive design, SEO, and web-specific UX patterns. Project timeline: <strong>2 months</strong>.
       </p>
       <p style="font-size: 13px; color: var(--muted);">
         <strong>Existing mobile app screens:</strong> 20+ screens &bull;
         <strong>Source files:</strong> 45+ components &bull;
         <strong>Backend:</strong> Supabase (shared with mobile &mdash; no backend rebuild required)
       </p>
+    </div>
+
+    <div class="card" style="margin-top: 16px;">
+      <h3>Payment Schedule</h3>
+      <table style="width: 100%; margin-top: 8px;">
+        <tr>
+          <td style="padding: 8px 0; border-bottom: 1px solid var(--border);">
+            <strong>Milestone 1 — Project Kick-off</strong><br>
+            Architecture setup, framework, routing, design system, and initial screens
+          </td>
+          <td class="right" style="padding: 8px 0; border-bottom: 1px solid var(--border);">R17,500.00</td>
+        </tr>
+        <tr>
+          <td style="padding: 8px 0;">
+            <strong>Milestone 2 — Final Delivery</strong><br>
+            All features complete, tested, and deployed to production
+          </td>
+          <td class="right" style="padding: 8px 0;">R17,500.00</td>
+        </tr>
+        <tr style="font-weight: 600; border-top: 1px solid var(--border);">
+          <td style="padding: 12px 0 4px;">Total Project Cost</td>
+          <td class="right" style="padding: 12px 0 4px;">R35,000.00</td>
+        </tr>
+      </table>
+      
+      <div style="margin-top: 16px; padding-top: 12px; border-top: 1px solid var(--border);">
+        <p><strong>Payment Terms:</strong></p>
+        <ul style="margin: 8px 0 0 16px; padding-left: 8px;">
+          <li>50% (R17,500) due upon project commencement</li>
+          <li>50% (R17,500) due upon project completion</li>
+        </ul>
+      </div>
+      
+      <div style="margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--border);">
+        <h3>Estimated Monthly Running Costs</h3>
+        <p>The following are estimated monthly costs for hosting and services that will be required to run the web application (billed directly to you by each service provider):</p>
+        
+        <table style="margin: 12px 0; width: 100%;">
+          <tr style="border-bottom: 1px solid var(--border);">
+            <th style="text-align: left; padding: 8px 0;">Service</th>
+            <th style="text-align: right; padding: 8px 0;">Monthly Cost (USD)</th>
+            <th style="text-align: right; padding: 8px 0;">ZAR (est.)</th>
+          </tr>
+          <tr>
+            <td style="padding: 8px 0;">
+              <strong>Vercel Pro</strong><br>
+              <span style="font-size: 13px; color: var(--muted);">Hosting, Serverless Functions, Edge Network</span>
+            </td>
+            <td class="right" style="padding: 8px 0;">$20</td>
+            <td class="right" style="padding: 8px 0;">~R370</td>
+          </tr>
+          <tr>
+            <td style="padding: 8px 0;">
+              <strong>Supabase Pro</strong><br>
+              <span style="font-size: 13px; color: var(--muted);">Database, Auth, Storage, Edge Functions</span>
+            </td>
+            <td class="right" style="padding: 8px 0;">$25</td>
+            <td class="right" style="padding: 8px 0;">~R463</td>
+          </tr>
+          <tr>
+            <td style="padding: 8px 0;">
+              <strong>Google Maps Platform</strong><br>
+              <span style="font-size: 13px; color: var(--muted);">Maps, Places, Geocoding (varies by usage)</span>
+            </td>
+            <td class="right" style="padding: 8px 0;">$10-$50</td>
+            <td class="right" style="padding: 8px 0;">~R185-925</td>
+          </tr>
+          <tr>
+            <td style="padding: 8px 0;">
+              <strong>Domain & SSL</strong><br>
+              <span style="font-size: 13px; color: var(--muted);">Annual cost divided by 12 months</span>
+            </td>
+            <td class="right" style="padding: 8px 0;">~$3</td>
+            <td class="right" style="padding: 8px 0;">~R56</td>
+          </tr>
+          <tr style="font-weight: 600; border-top: 1px solid var(--border);">
+            <td style="padding: 12px 0 4px;">Estimated Monthly Total (excl. VAT)</td>
+            <td class="right" style="padding: 12px 0 4px;">$58-$98</td>
+            <td class="right" style="padding: 12px 0 4px;">~R1,074-1,814</td>
+          </tr>
+        </table>
+        
+        <div style="background: #f8f9fa; border-radius: 8px; padding: 12px 16px; margin-top: 12px; font-size: 13px;">
+          <p style="margin: 0 0 8px 0; color: var(--muted);"><strong>Notes:</strong></p>
+          <ul style="margin: 0 0 0 16px; padding-left: 8px;">
+            <li>All prices are estimates based on standard usage and current exchange rates</li>
+            <li>Supabase Pro is already included in your existing monthly invoice</li>
+            <li>Google Maps costs can vary significantly based on monthly active users</li>
+            <li>Additional costs may apply for high traffic or specialized features</li>
+            <li>All services billed directly by their respective providers</li>
+          </ul>
+        </div>
+          <tr>
+            <td><strong>Supabase Pro</strong> (Already covered in monthly invoice)</td>
+            <td class="right">$25/month</td>
+            <td class="right">~R463.00</td>
+          </tr>
+          <tr>
+            <td><strong>Google Maps Platform</strong> (if exceeding free tier)</td>
+            <td class="right">$10-$50/month</td>
+            <td class="right">~R185-925</td>
+          </tr>
+          <tr>
+            <td><strong>Domain & SSL</strong> (annual cost divided by 12)</td>
+            <td class="right">~$2-5/month</td>
+            <td class="right">~R37-93</td>
+          </tr>
+          <tr style="font-weight: 600; border-top: 1px solid var(--border);">
+            <td>Estimated Total (excl. Supabase)</td>
+            <td></td>
+            <td class="right">~R592-1,388/month</td>
+          </tr>
+        </table>
+        
+        <p style="font-size: 13px; color: var(--muted); margin-top: 12px;">
+          <strong>Note:</strong> These are estimates based on standard usage. Actual costs may vary based on traffic, API usage, and other factors. 
+          The Supabase costs are already covered in your existing monthly invoice.
+        </p>
+      </div>
     </div>
 
     <div class="card" style="margin-top: 16px;">
@@ -127,68 +246,21 @@
         <tbody>
           <tr>
             <td>
-              <strong>Web Architecture &amp; Framework Setup</strong><br />
-              Next.js / React project scaffolding, responsive layout system, component library setup,
-              URL-based routing (replacing React Navigation), design system migration (theme, typography, colours).
+              <strong>Phase 1: Foundation & Core Features (Month 1)</strong><br />
+              Project setup, responsive design system, authentication, core screens, and basic functionality.
+              Includes: Web architecture, responsive layouts, search, discovery, and basic vendor profiles.
             </td>
-            <td class="right">2</td>
-            <td class="right">R12,000.00</td>
+            <td class="right">4 weeks</td>
+            <td class="right">R17,500.00</td>
           </tr>
           <tr>
             <td>
-              <strong>UI/UX Redesign &amp; Responsive Layouts</strong><br />
-              Redesign all 20+ screens for desktop/tablet/mobile web. Web navigation (top nav / sidebar replacing bottom tabs),
-              hover states, keyboard navigation, web-appropriate modals &amp; dropdowns, breadcrumbs.
+              <strong>Phase 2: Advanced Features & Launch (Month 2)</strong><br />
+              Advanced functionality, testing, and deployment. Includes: Vendor application flow,
+              subscription management, quotes system, vendor dashboard, and final optimizations.
             </td>
-            <td class="right">4&ndash;5</td>
-            <td class="right">R22,000.00</td>
-          </tr>
-          <tr>
-            <td>
-              <strong>Search, Discovery &amp; Map Module</strong><br />
-              Home search page with all filters (service type, event type, province/city, capacity, date range),
-              Discover page, web map integration (Google Maps / Leaflet replacing react-native-maps),
-              location detection via Web Geolocation API, sort &amp; filter UI for web.
-            </td>
-            <td class="right">2&ndash;3</td>
-            <td class="right">R14,000.00</td>
-          </tr>
-          <tr>
-            <td>
-              <strong>Vendor Application &amp; Subscription Flow</strong><br />
-              4-step vendor application form (company details, service/coverage, media upload, subscription &amp; legal)
-              adapted for web with drag-and-drop file upload, web file pickers, PayFast web checkout integration,
-              subscription plans display &amp; billing.
-            </td>
-            <td class="right">2&ndash;3</td>
-            <td class="right">R12,000.00</td>
-          </tr>
-          <tr>
-            <td>
-              <strong>Quotes, Planner &amp; Favourites</strong><br />
-              Quote request system, quote detail views, accept/decline flows, tour booking via WhatsApp web links,
-              event planner with task management &amp; calendar, favourites/shortlist with notes.
-            </td>
-            <td class="right">2</td>
-            <td class="right">R10,000.00</td>
-          </tr>
-          <tr>
-            <td>
-              <strong>Authentication &amp; Account Management</strong><br />
-              Web-specific Supabase auth flows (email/password, OAuth with web redirects for Google/Facebook/Apple),
-              sign-up with email confirmation, password reset, account screen with profile management, role-based access.
-            </td>
-            <td class="right">1&ndash;2</td>
-            <td class="right">R7,000.00</td>
-          </tr>
-          <tr>
-            <td>
-              <strong>Vendor Dashboard &amp; Help System</strong><br />
-              Vendor dashboard (stats, reviews, quote requests), admin dashboard,
-              help centre modal, floating help widget for web, portfolio assistance screens.
-            </td>
-            <td class="right">1</td>
-            <td class="right">R5,000.00</td>
+            <td class="right">4 weeks</td>
+            <td class="right">R17,500.00</td>
           </tr>
           <tr>
             <td>
@@ -206,25 +278,18 @@
       <div class="totals">
         <div></div>
         <div>
-          <div class="label">Subtotal</div>
-          <div class="value">R85,000.00</div>
-        </div>
-        <!-- If VAT applies, uncomment and edit below
-        <div></div>
-        <div>
-          <div class="label">VAT (15%)</div>
-          <div class="value">R12,750.00</div>
+          <div class="label">Payment Milestone 1 (50%)</div>
+          <div class="value">R17,500.00</div>
         </div>
         <div></div>
         <div>
-          <div class="label" style="font-size: 18px; font-weight: 700; color: var(--primary)">Total Due</div>
-          <div class="value" style="font-size: 18px; font-weight: 700; color: var(--primary)">R97,750.00</div>
+          <div class="label">Payment Milestone 2 (50%)</div>
+          <div class="value">R17,500.00</div>
         </div>
-        -->
         <div></div>
         <div>
-          <div class="label" style="font-size: 18px; font-weight: 700; color: var(--primary)">Total Due</div>
-          <div class="value" style="font-size: 18px; font-weight: 700; color: var(--primary)">R85,000.00</div>
+          <div class="label" style="font-size: 18px; font-weight: 700; color: var(--primary)">Total Project Cost</div>
+          <div class="value" style="font-size: 18px; font-weight: 700; color: var(--primary)">R35,000.00</div>
         </div>
       </div>
 
@@ -279,43 +344,6 @@
           <li>Keyboard shortcuts &amp; accessibility (WCAG 2.1)</li>
         </ul>
       </div>
-    </div>
-
-    <!-- Payment Schedule -->
-    <div class="card" style="margin-top: 16px;">
-      <h3>Proposed Payment Schedule</h3>
-      <table>
-        <tbody>
-          <tr>
-            <td><strong>Milestone 1 &mdash; Project Kick-off</strong><br/>
-              <span style="font-size: 12px; color: var(--muted);">Architecture setup, framework, routing, design system</span>
-            </td>
-            <td class="right"><strong>R30,000.00</strong><br/>
-              <span style="font-size: 12px; color: var(--muted);">~35% upfront deposit</span>
-            </td>
-          </tr>
-          <tr>
-            <td><strong>Milestone 2 &mdash; Core Screens Complete</strong><br/>
-              <span style="font-size: 12px; color: var(--muted);">Search, Discover, Vendor Profile, Auth, Account &mdash; viewable in staging</span>
-            </td>
-            <td class="right"><strong>R25,000.00</strong><br/>
-              <span style="font-size: 12px; color: var(--muted);">~30% midway</span>
-            </td>
-          </tr>
-          <tr>
-            <td><strong>Milestone 3 &mdash; Final Delivery</strong><br/>
-              <span style="font-size: 12px; color: var(--muted);">All features complete, tested, deployed to production</span>
-            </td>
-            <td class="right"><strong>R30,000.00</strong><br/>
-              <span style="font-size: 12px; color: var(--muted);">~35% on completion</span>
-            </td>
-          </tr>
-          <tr>
-            <td style="font-size: 16px; color: var(--primary);"><strong>Total</strong></td>
-            <td class="right" style="font-size: 16px; color: var(--primary);"><strong>R85,000.00</strong></td>
-          </tr>
-        </tbody>
-      </table>
     </div>
 
     <!-- Timeline -->

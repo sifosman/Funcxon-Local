@@ -1,11 +1,11 @@
 import { useState } from 'react';
-import { Alert, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Alert, Platform, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { AuthStackParamList } from '../navigation/AuthNavigator';
 import { useAuth } from '../auth/AuthContext';
 import { colors, spacing, radii, typography } from '../theme';
 import { PrimaryButton, OutlineButton } from '../components/ui';
-import { MaterialIcons } from '@expo/vector-icons';
+import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 
 type Props = NativeStackScreenProps<AuthStackParamList, 'SignUp'>;
 
@@ -14,6 +14,8 @@ export default function SignUpScreen({ navigation }: Props) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [name, setName] = useState('');
   const [role, setRole] = useState<'attendee' | 'vendor'>('attendee');
   const [termsAccepted, setTermsAccepted] = useState(false);
@@ -94,6 +96,13 @@ export default function SignUpScreen({ navigation }: Props) {
     const { error } = await signInWithProvider('facebook');
     if (error) {
       Alert.alert('Facebook sign up failed', error.message);
+    }
+  };
+
+  const handleAppleSignUp = async () => {
+    const { error } = await signInWithProvider('apple');
+    if (error) {
+      Alert.alert('Apple sign up failed', error.message);
     }
   };
 
@@ -222,12 +231,23 @@ export default function SignUpScreen({ navigation }: Props) {
             <TextInput
               value={password}
               onChangeText={setPassword}
-              secureTextEntry
+              secureTextEntry={!showPassword}
               autoCapitalize="none"
               placeholder="Password"
               placeholderTextColor={colors.textMuted}
               style={{ flex: 1, paddingVertical: spacing.sm, color: colors.textPrimary }}
             />
+            <TouchableOpacity
+              onPress={() => setShowPassword((prev) => !prev)}
+              style={{ paddingVertical: spacing.sm, paddingLeft: spacing.sm }}
+              activeOpacity={0.7}
+            >
+              <MaterialIcons
+                name={showPassword ? 'visibility-off' : 'visibility'}
+                size={20}
+                color={colors.textMuted}
+              />
+            </TouchableOpacity>
           </View>
 
           {/* Confirm Password */}
@@ -252,12 +272,23 @@ export default function SignUpScreen({ navigation }: Props) {
             <TextInput
               value={confirmPassword}
               onChangeText={setConfirmPassword}
-              secureTextEntry
+              secureTextEntry={!showConfirmPassword}
               autoCapitalize="none"
               placeholder="Confirm Password"
               placeholderTextColor={colors.textMuted}
               style={{ flex: 1, paddingVertical: spacing.sm, color: colors.textPrimary }}
             />
+            <TouchableOpacity
+              onPress={() => setShowConfirmPassword((prev) => !prev)}
+              style={{ paddingVertical: spacing.sm, paddingLeft: spacing.sm }}
+              activeOpacity={0.7}
+            >
+              <MaterialIcons
+                name={showConfirmPassword ? 'visibility-off' : 'visibility'}
+                size={20}
+                color={colors.textMuted}
+              />
+            </TouchableOpacity>
           </View>
 
           {/* Role selection */}
@@ -409,14 +440,51 @@ export default function SignUpScreen({ navigation }: Props) {
                   alignItems: 'center',
                   justifyContent: 'center',
                   marginRight: spacing.sm,
-                  borderWidth: 1,
-                  borderColor: colors.borderSubtle,
+                  borderWidth: 2,
+                  borderTopColor: '#4285F4',
+                  borderRightColor: '#EA4335',
+                  borderBottomColor: '#34A853',
+                  borderLeftColor: '#FBBC05',
                 }}
               >
-                <Text style={{ ...typography.caption, color: colors.textPrimary }}>G</Text>
+                <Text style={{ ...typography.caption, color: '#4285F4', fontWeight: '800' }}>G</Text>
               </View>
               <Text style={{ ...typography.body, color: colors.textPrimary }}>Sign up with Google</Text>
             </TouchableOpacity>
+
+            {(Platform.OS === 'ios' || Platform.OS === 'web') && (
+              <TouchableOpacity
+                activeOpacity={0.9}
+                onPress={handleAppleSignUp}
+                style={{
+                  width: '100%',
+                  paddingVertical: spacing.md,
+                  borderRadius: radii.md,
+                  borderWidth: 1,
+                  borderColor: colors.borderSubtle,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  flexDirection: 'row',
+                  backgroundColor: colors.surface,
+                  marginTop: spacing.sm,
+                }}
+              >
+                <View
+                  style={{
+                    width: 28,
+                    height: 28,
+                    borderRadius: 12,
+                    backgroundColor: '#000000',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    marginRight: spacing.sm,
+                  }}
+                >
+                  <Ionicons name="logo-apple" size={18} color="#FFFFFF" />
+                </View>
+                <Text style={{ ...typography.body, color: colors.textPrimary }}>Sign up with Apple</Text>
+              </TouchableOpacity>
+            )}
 
             <TouchableOpacity
               activeOpacity={0.9}

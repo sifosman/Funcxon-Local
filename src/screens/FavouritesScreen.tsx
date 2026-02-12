@@ -267,7 +267,7 @@ export default function FavouritesScreen() {
                     onPress={() =>
                       navigation.navigate('Home', {
                         screen: 'VendorProfile',
-                        params: { vendorId: vendor.id },
+                        params: { vendorId: vendor.id, from: 'Favourites' },
                       })
                     }
                     style={{

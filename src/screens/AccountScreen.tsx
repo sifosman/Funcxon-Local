@@ -119,6 +119,10 @@ export default function AccountScreen() {
         parentNav?.navigate?.('Home', { screen: 'VendorList' });
     };
 
+    const handleGoToSubscriptionPlans = () => {
+        navigation.navigate('SubscriptionPlans');
+    };
+
     const handleHelpCentre = () => {
         setHelpVisible(true);
     };
@@ -136,16 +140,6 @@ export default function AccountScreen() {
                 { id: 'marketing-permissions', label: 'Marketing Permissions', icon: 'notifications' },
                 { id: 'delete-account', label: 'Delete Account', icon: 'delete', color: colors.destructive },
             ],
-        },
-        {
-            id: 'my-planner',
-            label: 'My Planner',
-            icon: 'event',
-        },
-        {
-            id: 'my-quotes',
-            label: 'My Quotes',
-            icon: 'request-quote',
         },
         {
             id: 'subscriber-suite',
@@ -166,8 +160,8 @@ export default function AccountScreen() {
             icon: 'local-offer',
             submenu: [
                 { id: 'subscription-plans', label: 'View Subscription Plans', icon: 'credit-card' },
-                { id: 'subscription-vendors', label: 'Vendors / Service Professionals', icon: 'store', action: handleGoToListings },
-                { id: 'subscription-venues', label: 'Venues', icon: 'location-city', action: handleGoToListings },
+                { id: 'subscription-vendors', label: 'Vendors / Service Professionals', icon: 'store', action: handleGoToSubscriptionPlans },
+                { id: 'subscription-venues', label: 'Venues', icon: 'location-city', action: handleGoToSubscriptionPlans },
             ],
         },
         {

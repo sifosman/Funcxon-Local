@@ -120,6 +120,25 @@ export function validateStep3(data: Step3Data): ValidationResult {
     errors.images = 'Please upload at least one image';
   }
 
+  const hasDoc = (prefix: string) =>
+    data.documents.some((d) => typeof d.name === 'string' && d.name.startsWith(`${prefix}__`));
+
+  if (!hasDoc('bank_confirmation')) {
+    errors.bankConfirmation = 'Bank confirmation letter is required';
+  }
+
+  if (!hasDoc('id_copy')) {
+    errors.idCopy = 'ID copy is required';
+  }
+
+  if (!hasDoc('proof_of_residence')) {
+    errors.proofOfResidence = 'Proof of residence is required';
+  }
+
+  if (!hasDoc('company_logo')) {
+    errors.companyLogo = 'Company logo is required';
+  }
+
   return {
     isValid: Object.keys(errors).length === 0,
     errors,

@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, Image, Alert, Platform } from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView, Image, Alert, Platform, Linking } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import * as ImagePicker from 'expo-image-picker';
 import * as DocumentPicker from 'expo-document-picker';
+import * as FileSystem from 'expo-file-system/legacy';
 import { colors, spacing, radii, typography } from '../../theme';
 import { useApplicationForm } from '../../context/ApplicationFormContext';
 import { validateStep3 } from '../../utils/formValidation';
@@ -23,6 +24,17 @@ type ProfileStackParamList = {
 const MAX_IMAGE_SIZE = 10 * 1024 * 1024; // 10MB
 const MAX_VIDEO_SIZE = 50 * 1024 * 1024; // 50MB
 const MAX_DOCUMENT_SIZE = 10 * 1024 * 1024; // 10MB
+
+type RequiredDocKey = 'bank_confirmation' | 'id_copy' | 'proof_of_residence' | 'company_logo';
+type DocKey = RequiredDocKey | 'cipro';
+
+const BUSINESS_DOCS: Array<{ key: DocKey; label: string; required: boolean; acceptLabel?: string }> = [
+  { key: 'bank_confirmation', label: 'Bank Confirmation letter', required: true },
+  { key: 'id_copy', label: 'ID copy', required: true },
+  { key: 'cipro', label: 'CIPRO', required: false, acceptLabel: 'If applicable' },
+  { key: 'proof_of_residence', label: 'Proof of residence', required: true },
+  { key: 'company_logo', label: 'Company Logo', required: true },
+];
 
 export default function ApplicationStep3Screen() {
   const navigation = useNavigation<NativeStackNavigationProp<ProfileStackParamList>>();
@@ -122,7 +134,16 @@ export default function ApplicationStep3Screen() {
     }
   };
 
-  const handlePickDocuments = async () => {
+  const getBusinessDoc = (key: DocKey) =>
+    state.step3.documents.find((d) => typeof d.name === 'string' && d.name.startsWith(`${key}__`));
+
+  const upsertBusinessDoc = (key: DocKey, doc: { uri: string; name: string; type: string; size: number }) => {
+    const prefix = `${key}__`;
+    const kept = state.step3.documents.filter((d) => !(typeof d.name === 'string' && d.name.startsWith(prefix)));
+    updateStep3({ documents: [...kept, doc] });
+  };
+
+  const handlePickDocumentFor = async (key: DocKey) => {
     try {
       const result = await DocumentPicker.getDocumentAsync({
         type: [
@@ -131,40 +152,77 @@ export default function ApplicationStep3Screen() {
           'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
         ],
         copyToCacheDirectory: true,
-        multiple: true,
+        multiple: false,
       });
 
       if (!result.canceled && result.assets) {
-        // Validate file sizes
-        const validDocuments = result.assets.filter((asset) => {
-          if (asset.size && asset.size > MAX_DOCUMENT_SIZE) {
-            Alert.alert(
-              'File Too Large',
-              `${asset.name} exceeds 10MB limit.`
-            );
-            return false;
-          }
-          return true;
-        });
+        const asset = result.assets[0];
+        if (asset.size && asset.size > MAX_DOCUMENT_SIZE) {
+          Alert.alert('File Too Large', `${asset.name} exceeds 10MB limit.`);
+          return;
+        }
 
-        // Add valid documents to state
-        const newDocuments = validDocuments.map((asset) => ({
+        const newDoc = {
           uri: asset.uri,
-          name: asset.name,
+          name: `${key}__${asset.name}`,
           type: asset.mimeType || 'application/pdf',
           size: asset.size || 0,
-        }));
+        };
 
-        const updatedDocuments = [...state.step3.documents, ...newDocuments];
-        updateStep3({ documents: updatedDocuments });
+        upsertBusinessDoc(key, newDoc);
 
-        if (validDocuments.length > 0) {
-          Alert.alert('Success', `${validDocuments.length} document(s) added successfully.`);
-        }
+        Alert.alert('Success', `${asset.name} uploaded successfully.`);
       }
     } catch (error) {
       console.error('Document picker error:', error);
       Alert.alert('Error', 'Failed to pick documents. Please try again.');
+    }
+  };
+
+  const handleRemoveBusinessDoc = (key: DocKey) => {
+    const prefix = `${key}__`;
+    const updated = state.step3.documents.filter((d) => !(typeof d.name === 'string' && d.name.startsWith(prefix)));
+    updateStep3({ documents: updated });
+  };
+
+  const handleDownloadBusinessDoc = async (key: DocKey) => {
+    const doc = getBusinessDoc(key);
+    if (!doc) return;
+
+    const originalName = doc.name.split('__').slice(1).join('__') || 'document';
+    const safeName = originalName.replace(/[\\/:*?"<>|]+/g, '_');
+
+    try {
+      if (Platform.OS === 'android') {
+        const permissions = await FileSystem.StorageAccessFramework.requestDirectoryPermissionsAsync();
+        if (!permissions.granted) {
+          return;
+        }
+
+        const fileUri = await FileSystem.StorageAccessFramework.createFileAsync(
+          permissions.directoryUri,
+          safeName,
+          doc.type || 'application/pdf',
+        );
+
+        const base64 = await FileSystem.readAsStringAsync(doc.uri, {
+          encoding: FileSystem.EncodingType.Base64,
+        });
+
+        await FileSystem.writeAsStringAsync(fileUri, base64, {
+          encoding: FileSystem.EncodingType.Base64,
+        });
+
+        const contentUri = await FileSystem.getContentUriAsync(fileUri);
+        await Linking.openURL(contentUri);
+        return;
+      }
+
+      const destUri = `${FileSystem.documentDirectory}${safeName}`;
+      await FileSystem.copyAsync({ from: doc.uri, to: destUri });
+      await Linking.openURL(destUri);
+    } catch {
+      Alert.alert('Unable to download file', 'Please try again.');
     }
   };
 
@@ -237,11 +295,6 @@ export default function ApplicationStep3Screen() {
       const newImages = state.step3.images.filter((_, i) => i !== index);
       updateStep3({ images: newImages });
     }
-  };
-
-  const handleRemoveDocument = (index: number) => {
-    const newDocuments = state.step3.documents.filter((_, i) => i !== index);
-    updateStep3({ documents: newDocuments });
   };
 
   const handleRemoveVideo = (index: number) => {
@@ -477,62 +530,145 @@ export default function ApplicationStep3Screen() {
             }}
           >
             <Text style={{ ...typography.titleMedium, color: colors.textPrimary, marginBottom: spacing.xs }}>
-              Business Documents (Optional)
+              Business Documents
             </Text>
             <Text style={{ ...typography.caption, color: colors.textMuted, marginBottom: spacing.md }}>
-              Upload business registration, certificates, insurance, etc.
+              Upload the required business documents below.
             </Text>
 
-            {state.step3.documents.length > 0 && (
-              <View style={{ gap: spacing.sm, marginBottom: spacing.md }}>
-                {state.step3.documents.map((doc, index) => (
-                  <View
-                    key={index}
-                    style={{
-                      flexDirection: 'row',
-                      alignItems: 'center',
-                      padding: spacing.md,
-                      backgroundColor: colors.background,
-                      borderRadius: radii.md,
-                    }}
-                  >
-                    <MaterialIcons name="description" size={24} color={colors.primaryTeal} />
-                    <View style={{ flex: 1, marginLeft: spacing.md }}>
-                      <Text style={{ ...typography.body, color: colors.textPrimary }} numberOfLines={1}>
-                        {doc.name}
-                      </Text>
-                      <Text style={{ ...typography.caption, color: colors.textMuted }}>
-                        {(doc.size / 1024).toFixed(1)} KB
+            <View style={{ gap: spacing.sm }}>
+              {BUSINESS_DOCS.map((d) => {
+                const uploaded = getBusinessDoc(d.key);
+                const requiredTag = d.required ? 'Required' : d.acceptLabel || 'Optional';
+
+                const errorKey =
+                  d.key === 'bank_confirmation'
+                    ? 'bankConfirmation'
+                    : d.key === 'id_copy'
+                      ? 'idCopy'
+                      : d.key === 'proof_of_residence'
+                        ? 'proofOfResidence'
+                        : d.key === 'company_logo'
+                          ? 'companyLogo'
+                          : null;
+
+                const errorText = errorKey ? errors[errorKey] : undefined;
+
+                return (
+                  <View key={d.key}>
+                    <View
+                      style={{
+                        padding: spacing.md,
+                        borderRadius: radii.md,
+                        backgroundColor: colors.background,
+                        borderWidth: 1,
+                        borderColor: errorText ? '#EF4444' : colors.borderSubtle,
+                      }}
+                    >
+                      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.md }}>
+                        <View style={{ flex: 1 }}>
+                          <Text style={{ ...typography.body, color: colors.textPrimary, fontWeight: '600' }}>{d.label}</Text>
+                          <Text style={{ ...typography.caption, color: colors.textMuted, marginTop: 2 }}>
+                            {uploaded ? uploaded.name.split('__').slice(1).join('__') : requiredTag}
+                          </Text>
+                        </View>
+
+                        {uploaded ? (
+                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
+                            <MaterialIcons name="check-circle" size={20} color="#22C55E" />
+                            <TouchableOpacity
+                              onPress={() => handleDownloadBusinessDoc(d.key)}
+                              style={{
+                                paddingHorizontal: spacing.sm,
+                                paddingVertical: 6,
+                                borderRadius: radii.full,
+                                backgroundColor: '#E0F2F7',
+                                flexDirection: 'row',
+                                alignItems: 'center',
+                                gap: 6,
+                              }}
+                              activeOpacity={0.8}
+                            >
+                              <MaterialIcons name="download" size={16} color={colors.primaryTeal} />
+                              <Text style={{ ...typography.caption, color: colors.primaryTeal, fontWeight: '700' }}>Download</Text>
+                            </TouchableOpacity>
+                          </View>
+                        ) : (
+                          <View
+                            style={{
+                              paddingHorizontal: spacing.sm,
+                              paddingVertical: 6,
+                              borderRadius: radii.full,
+                              backgroundColor: d.required ? '#FEE2E2' : '#FEF3C7',
+                            }}
+                          >
+                            <Text style={{ ...typography.caption, color: d.required ? '#991B1B' : '#92400E', fontWeight: '700' }}>
+                              {requiredTag}
+                            </Text>
+                          </View>
+                        )}
+                      </View>
+
+                      <View style={{ flexDirection: 'row', gap: spacing.sm, marginTop: spacing.md }}>
+                        <TouchableOpacity
+                          onPress={() => handlePickDocumentFor(d.key)}
+                          style={{
+                            flex: 1,
+                            borderWidth: 1,
+                            borderColor: colors.primaryTeal,
+                            borderRadius: radii.md,
+                            paddingVertical: spacing.sm,
+                            alignItems: 'center',
+                            flexDirection: 'row',
+                            justifyContent: 'center',
+                            gap: 6,
+                            backgroundColor: '#FFFFFF',
+                          }}
+                          activeOpacity={0.8}
+                        >
+                          <MaterialIcons name="upload-file" size={18} color={colors.primaryTeal} />
+                          <Text style={{ color: colors.primaryTeal, fontWeight: '700' }}>
+                            {uploaded ? 'Replace' : 'Upload'}
+                          </Text>
+                        </TouchableOpacity>
+
+                        {uploaded && (
+                          <TouchableOpacity
+                            onPress={() => handleRemoveBusinessDoc(d.key)}
+                            style={{
+                              borderWidth: 1,
+                              borderColor: '#EF4444',
+                              borderRadius: radii.md,
+                              paddingVertical: spacing.sm,
+                              paddingHorizontal: spacing.md,
+                              alignItems: 'center',
+                              flexDirection: 'row',
+                              justifyContent: 'center',
+                              gap: 6,
+                              backgroundColor: '#FFFFFF',
+                            }}
+                            activeOpacity={0.8}
+                          >
+                            <MaterialIcons name="delete" size={18} color="#EF4444" />
+                            <Text style={{ color: '#EF4444', fontWeight: '700' }}>Remove</Text>
+                          </TouchableOpacity>
+                        )}
+                      </View>
+
+                      <Text style={{ ...typography.caption, color: colors.textMuted, marginTop: spacing.sm }}>
+                        PDF, DOC, DOCX (Max 10MB)
                       </Text>
                     </View>
-                    <TouchableOpacity onPress={() => handleRemoveDocument(index)}>
-                      <MaterialIcons name="delete" size={20} color="#EF4444" />
-                    </TouchableOpacity>
-                  </View>
-                ))}
-              </View>
-            )}
 
-            <TouchableOpacity
-              onPress={handlePickDocuments}
-              style={{
-                borderWidth: 2,
-                borderColor: colors.borderSubtle,
-                borderStyle: 'dashed',
-                borderRadius: radii.md,
-                padding: spacing.lg,
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-            >
-              <MaterialIcons name="upload-file" size={36} color={colors.textMuted} />
-              <Text style={{ ...typography.body, color: colors.textMuted, marginTop: spacing.sm }}>
-                Upload Documents
-              </Text>
-              <Text style={{ ...typography.caption, color: colors.textMuted, marginTop: 4 }}>
-                PDF, DOC, DOCX (Max 10MB each)
-              </Text>
-            </TouchableOpacity>
+                    {errorText && (
+                      <Text style={{ fontSize: 12, color: '#EF4444', marginTop: spacing.xs }}>
+                        {errorText}
+                      </Text>
+                    )}
+                  </View>
+                );
+              })}
+            </View>
           </View>
 
           {/* Note about uploads */}

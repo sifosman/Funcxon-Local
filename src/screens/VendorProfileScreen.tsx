@@ -1,10 +1,11 @@
-import { useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, Alert, Image, Linking, Platform, ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { ActivityIndicator, Alert, BackHandler, Image, Linking, Platform, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { useQuery } from '@tanstack/react-query';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { WebView } from 'react-native-webview';
 import * as Location from 'expo-location';
 import { MaterialIcons } from '@expo/vector-icons';
+import { useFocusEffect } from '@react-navigation/native';
 
 import { supabase } from '../lib/supabaseClient';
 import type { AttendeeStackParamList } from '../navigation/AttendeeNavigator';
@@ -60,6 +61,47 @@ export default function VendorProfileScreen({ route, navigation }: Props) {
   const [activeTab, setActiveTab] = useState<'about' | 'catalog' | 'reviews' | 'calendar'>('about');
   const [favouriteIds, setFavouriteIds] = useState<number[]>([]);
   const { user } = useAuth();
+
+  const cameFromFavourites = route.params?.from === 'Favourites';
+
+  const handleBackNavigation = useCallback(() => {
+    if (cameFromFavourites) {
+      const tabNav = navigation.getParent();
+      navigation.popToTop();
+      tabNav?.navigate('Favourites' as never);
+      return;
+    }
+
+    navigation.goBack();
+  }, [cameFromFavourites, navigation]);
+
+  useEffect(() => {
+    if (!cameFromFavourites) return;
+
+    navigation.setOptions({
+      headerLeft: () => (
+        <TouchableOpacity
+          onPress={handleBackNavigation}
+          style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12 }}
+        >
+          <MaterialIcons name="arrow-back" size={20} color={colors.textPrimary} />
+        </TouchableOpacity>
+      ),
+    });
+  }, [cameFromFavourites, handleBackNavigation, navigation]);
+
+  useFocusEffect(
+    useCallback(() => {
+      if (!cameFromFavourites) return;
+
+      const sub = BackHandler.addEventListener('hardwareBackPress', () => {
+        handleBackNavigation();
+        return true;
+      });
+
+      return () => sub.remove();
+    }, [cameFromFavourites, handleBackNavigation]),
+  );
 
   const mapModule = useMemo(() => {
     if (Platform.OS === 'web') return null;
@@ -379,12 +421,12 @@ export default function VendorProfileScreen({ route, navigation }: Props) {
       contentContainerStyle={{ paddingHorizontal: spacing.lg, paddingVertical: spacing.lg }}
     >
       <TouchableOpacity
-        onPress={() => navigation.goBack()}
+        onPress={handleBackNavigation}
         style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.lg }}
       >
         <MaterialIcons name="arrow-back" size={20} color={colors.textPrimary} />
         <Text style={{ ...typography.body, color: colors.textPrimary, marginLeft: spacing.sm }}>
-          Back to vendors
+          Back
         </Text>
       </TouchableOpacity>
 

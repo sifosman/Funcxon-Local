@@ -144,10 +144,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     // On native (Expo), use AuthSession so we can return to the app.
     // Use the app scheme for production builds to ensure proper redirect
-    const redirectUrl = Platform.select({
-      web: AuthSession.makeRedirectUri(),
-      default: 'vibeventz://auth/callback',
-    });
+    const redirectUrl = AuthSession.makeRedirectUri({ scheme: 'vibeventz', path: 'auth/callback' });
 
     console.log('AuthContext signInWithProvider (native) redirectUrl:', redirectUrl);
 
@@ -178,33 +175,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       console.log('AuthContext signInWithProvider (native) WebBrowser result type:', result.type);
 
       if (result.type === 'cancel' || result.type === 'dismiss') {
-        return { error: new Error('Google sign-in was cancelled') };
+        return { error: new Error(`${provider} sign-in was cancelled`) };
       }
 
       if (result.type === 'success' && result.url) {
-        try {
-          const urlObj = new URL(result.url);
-          const fragment = urlObj.hash.startsWith('#') ? urlObj.hash.slice(1) : urlObj.hash;
-          const params = new URLSearchParams(fragment);
-
-          const accessToken = params.get('access_token');
-          const refreshToken = params.get('refresh_token');
-
-          if (!accessToken || !refreshToken) {
-            return { error: new Error('Missing tokens in redirect URL') };
-          }
-
-          const { error: setError } = await supabase.auth.setSession({
-            access_token: accessToken,
-            refresh_token: refreshToken,
-          });
-
-          if (setError) {
-            return { error: setError ?? undefined };
-          }
-        } catch (parseErr: any) {
-          console.log('AuthContext signInWithProvider (native) token parse error:', parseErr);
-          return { error: parseErr instanceof Error ? parseErr : new Error(String(parseErr)) };
+        const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(result.url);
+        if (exchangeError) {
+          return { error: exchangeError ?? undefined };
         }
       }
     } catch (err: any) {

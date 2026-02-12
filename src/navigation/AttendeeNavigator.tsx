@@ -8,7 +8,7 @@ import { colors, typography } from '../theme';
 
 export type AttendeeStackParamList = {
   VendorList: undefined;
-  VendorProfile: { vendorId: number };
+  VendorProfile: { vendorId: number; from?: 'Favourites' };
   QuoteRequest: { vendorId: number; vendorName: string };
   Planner: undefined;
 };

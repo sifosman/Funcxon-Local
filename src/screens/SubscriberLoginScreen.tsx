@@ -13,6 +13,7 @@ export default function SubscriberLoginScreen() {
     const navigation = useNavigation<NativeStackNavigationProp<ProfileStackParamList>>();
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
+    const [showPassword, setShowPassword] = useState(false);
     const [loading, setLoading] = useState(false);
 
     const handleLogin = async () => {
@@ -161,7 +162,7 @@ export default function SubscriberLoginScreen() {
                             <TextInput
                                 value={password}
                                 onChangeText={setPassword}
-                                secureTextEntry
+                                secureTextEntry={!showPassword}
                                 autoCapitalize="none"
                                 placeholder="••••••••"
                                 placeholderTextColor={colors.textMuted}
@@ -172,6 +173,17 @@ export default function SubscriberLoginScreen() {
                                     fontSize: 14,
                                 }}
                             />
+                            <TouchableOpacity
+                                onPress={() => setShowPassword((prev) => !prev)}
+                                style={{ paddingVertical: spacing.sm, paddingLeft: spacing.sm }}
+                                activeOpacity={0.7}
+                            >
+                                <MaterialIcons
+                                    name={showPassword ? 'visibility-off' : 'visibility'}
+                                    size={18}
+                                    color={colors.textMuted}
+                                />
+                            </TouchableOpacity>
                         </View>
                     </View>
 
