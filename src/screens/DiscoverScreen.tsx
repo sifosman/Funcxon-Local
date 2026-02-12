@@ -20,22 +20,45 @@ export default function DiscoverScreen() {
   const [onlyWithPrice, setOnlyWithPrice] = useState(false);
   const [category, setCategory] = useState<CategoryFilter>('all');
   const [sortBy, setSortBy] = useState<SortBy>('default');
-  const [favouriteIds, setFavouriteIds] = useState<number[]>([]);
+  const [favouriteIds, setFavouriteIds] = useState<{ vendorIds: number[]; venueIds: number[] }>({
+    vendorIds: [],
+    venueIds: [],
+  });
   const { user } = useAuth();
 
   const { data, isLoading, error } = useQuery<VendorListItem[]>({
-    queryKey: ['discover-vendors'],
+    queryKey: ['discover-unified'],
     queryFn: async () => {
-      const { data, error } = await supabase
+      // Fetch vendors
+      const { data: vendors, error: vendorError } = await supabase
         .from('vendors')
-        .select('id, name, price_range, rating, review_count, image_url')
+        .select('id, name, price_range, rating, review_count, image_url, description')
         .limit(30);
 
-      if (error) {
-        throw error;
-      }
+      if (vendorError) throw vendorError;
 
-      return (data as VendorListItem[]) ?? [];
+      // Fetch venues
+      const { data: venues, error: venueError } = await supabase
+        .from('venue_listings')
+        .select('id, name, rating, image_url, description')
+        .limit(30);
+
+      if (venueError) throw venueError;
+
+      const vendorItems: VendorListItem[] = (vendors ?? []).map(v => ({ ...v, type: 'vendor' }));
+      
+      const venueItems: VendorListItem[] = (venues ?? []).map(v => ({
+        id: v.id,
+        name: v.name,
+        price_range: null,
+        rating: v.rating,
+        review_count: 0,
+        image_url: v.image_url,
+        description: v.description,
+        type: 'venue'
+      }));
+
+      return [...vendorItems, ...venueItems];
     },
   });
 
@@ -102,6 +125,8 @@ export default function DiscoverScreen() {
   const query = search.trim().toLowerCase();
 
   const classifyCategory = (item: VendorListItem): CategoryFilter => {
+    if (item.type === 'venue') return 'venues';
+
     const name = (item.name ?? '').toLowerCase();
 
     if (name.includes('venue') || name.includes('hall') || name.includes('hotel')) {
@@ -169,24 +194,24 @@ export default function DiscoverScreen() {
   useEffect(() => {
     let isMounted = true;
     if (!user?.id) {
-      setFavouriteIds([]);
+      setFavouriteIds({ vendorIds: [], venueIds: [] });
       return () => {
         isMounted = false;
       };
     }
-    getFavourites(user).then((ids) => {
-      if (isMounted) setFavouriteIds(ids);
+    getFavourites(user).then((result) => {
+      if (isMounted) setFavouriteIds(result);
     });
     return () => {
       isMounted = false;
     };
   }, [user?.id]);
 
-  const handleToggleFavourite = async (vendorId: number) => {
+  const handleToggleFavourite = async (id: number, type: 'vendor' | 'venue' = 'vendor') => {
     if (!user?.id) {
       return;
     }
-    const next = await toggleFavourite(user, vendorId);
+    const next = await toggleFavourite(user, id, type);
     setFavouriteIds(next);
   };
 
@@ -437,12 +462,12 @@ export default function DiscoverScreen() {
       ) : (
         sorted.map((item) => (
           <TouchableOpacity
-            key={item.id}
+            key={`${item.type}-${item.id}`}
             activeOpacity={0.9}
             onPress={() =>
               navigation.navigate('Home', {
-                screen: 'VendorProfile',
-                params: { vendorId: item.id },
+                screen: item.type === 'venue' ? 'VenueProfile' : 'VendorProfile',
+                params: item.type === 'venue' ? { venueId: item.id } : { vendorId: item.id },
               })
             }
             style={{ marginBottom: spacing.md }}
@@ -470,7 +495,7 @@ export default function DiscoverScreen() {
                   <TouchableOpacity
                     onPress={(event) => {
                       event.stopPropagation();
-                      handleToggleFavourite(item.id);
+                      handleToggleFavourite(item.id, item.type);
                     }}
                     style={{
                       position: 'absolute',
@@ -487,9 +512,19 @@ export default function DiscoverScreen() {
                     }}
                   >
                     <MaterialIcons
-                      name={favouriteIds.includes(item.id) ? 'favorite' : 'favorite-border'}
+                      name={
+                        (item.type === 'vendor' && favouriteIds.vendorIds.includes(item.id)) ||
+                        (item.type === 'venue' && favouriteIds.venueIds.includes(item.id))
+                          ? 'favorite'
+                          : 'favorite-border'
+                      }
                       size={18}
-                      color={favouriteIds.includes(item.id) ? colors.primaryTeal : colors.textMuted}
+                      color={
+                        (item.type === 'vendor' && favouriteIds.vendorIds.includes(item.id)) ||
+                        (item.type === 'venue' && favouriteIds.venueIds.includes(item.id))
+                          ? colors.primaryTeal
+                          : colors.textMuted
+                      }
                     />
                   </TouchableOpacity>
                 </View>
@@ -507,7 +542,7 @@ export default function DiscoverScreen() {
                   <TouchableOpacity
                     onPress={(event) => {
                       event.stopPropagation();
-                      handleToggleFavourite(item.id);
+                      handleToggleFavourite(item.id, item.type);
                     }}
                     style={{
                       position: 'absolute',
@@ -524,9 +559,19 @@ export default function DiscoverScreen() {
                     }}
                   >
                     <MaterialIcons
-                      name={favouriteIds.includes(item.id) ? 'favorite' : 'favorite-border'}
+                      name={
+                        (item.type === 'vendor' && favouriteIds.vendorIds.includes(item.id)) ||
+                        (item.type === 'venue' && favouriteIds.venueIds.includes(item.id))
+                          ? 'favorite'
+                          : 'favorite-border'
+                      }
                       size={18}
-                      color={favouriteIds.includes(item.id) ? colors.primaryTeal : colors.textMuted}
+                      color={
+                        (item.type === 'vendor' && favouriteIds.vendorIds.includes(item.id)) ||
+                        (item.type === 'venue' && favouriteIds.venueIds.includes(item.id))
+                          ? colors.primaryTeal
+                          : colors.textMuted
+                      }
                     />
                   </TouchableOpacity>
                 </View>
@@ -539,8 +584,11 @@ export default function DiscoverScreen() {
                     marginBottom: spacing.xs,
                   }}
                 >
-                  {item.name ?? 'Untitled vendor'}
+                  {item.name ?? 'Untitled'}
                 </Text>
+                {item.type === 'venue' && (
+                   <Text style={{ ...typography.caption, color: colors.primaryTeal, marginBottom: spacing.xs }}>Venue</Text>
+                )}
                 <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.xs }}>
                   <Text
                     style={{

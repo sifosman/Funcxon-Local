@@ -59,7 +59,10 @@ export default function VendorProfileScreen({ route, navigation }: Props) {
   const [mapRegion, setMapRegion] = useState<Region | null>(null);
   const [mapError, setMapError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'about' | 'catalog' | 'reviews' | 'calendar'>('about');
-  const [favouriteIds, setFavouriteIds] = useState<number[]>([]);
+  const [favouriteIds, setFavouriteIds] = useState<{ vendorIds: number[]; venueIds: number[] }>({
+    vendorIds: [],
+    venueIds: [],
+  });
   const { user } = useAuth();
 
   const cameFromFavourites = route.params?.from === 'Favourites';
@@ -250,13 +253,13 @@ export default function VendorProfileScreen({ route, navigation }: Props) {
   useEffect(() => {
     let isMounted = true;
     if (!user?.id) {
-      setFavouriteIds([]);
+      setFavouriteIds({ vendorIds: [], venueIds: [] });
       return () => {
         isMounted = false;
       };
     }
-    getFavourites(user).then((ids) => {
-      if (isMounted) setFavouriteIds(ids);
+    getFavourites(user).then((result) => {
+      if (isMounted) setFavouriteIds(result);
     });
     return () => {
       isMounted = false;
@@ -269,7 +272,7 @@ export default function VendorProfileScreen({ route, navigation }: Props) {
       Alert.alert('Sign in required', 'Please sign in to save favourites.');
       return;
     }
-    const next = await toggleFavourite(user, vendor.id);
+    const next = await toggleFavourite(user, vendor.id, 'vendor');
     setFavouriteIds(next);
   };
 
@@ -465,9 +468,9 @@ export default function VendorProfileScreen({ route, navigation }: Props) {
               }}
             >
               <MaterialIcons
-                name={favouriteIds.includes(vendor.id) ? 'favorite' : 'favorite-border'}
+                name={favouriteIds.vendorIds.includes(vendor.id) ? 'favorite' : 'favorite-border'}
                 size={18}
-                color={favouriteIds.includes(vendor.id) ? colors.primaryTeal : colors.textMuted}
+                color={favouriteIds.vendorIds.includes(vendor.id) ? colors.primaryTeal : colors.textMuted}
               />
             </TouchableOpacity>
             {vendor.logo_url && (

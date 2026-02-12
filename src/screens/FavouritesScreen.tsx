@@ -5,22 +5,22 @@ import { useQuery } from '@tanstack/react-query';
 import { MaterialIcons } from '@expo/vector-icons';
 import { colors, radii, spacing, typography } from '../theme';
 import { supabase } from '../lib/supabaseClient';
-import { getShortlists, toggleFavourite, updateShortlistNotes } from '../lib/favourites';
+import { getFavourites, getShortlists, toggleFavourite, updateShortlistNotes } from '../lib/favourites';
 import type { VendorListItem } from './AttendeeHomeScreen';
 import { useAuth } from '../auth/AuthContext';
 
 export default function FavouritesScreen() {
   const navigation = useNavigation<any>();
   const { user } = useAuth();
-  const [favouriteIds, setFavouriteIds] = useState<number[]>([]);
+  const [favouriteIds, setFavouriteIds] = useState<{ vendorIds: number[], venueIds: number[] }>({ vendorIds: [], venueIds: [] });
   const [loadingIds, setLoadingIds] = useState(true);
   const [noteDrafts, setNoteDrafts] = useState<Record<number, string>>({});
   const [savingNotes, setSavingNotes] = useState<Record<number, boolean>>({});
 
   const loadFavourites = useCallback(async () => {
     setLoadingIds(true);
-    const entries = await getShortlists(user);
-    setFavouriteIds(entries.map((entry) => entry.vendorId));
+    const result = await getFavourites(user);
+    setFavouriteIds(result);
     setLoadingIds(false);
   }, [user]);
 
@@ -36,45 +36,74 @@ export default function FavouritesScreen() {
     error: shortlistsError,
     refetch: refetchShortlists,
   } = useQuery({
-    queryKey: ['shortlists', user?.id, favouriteIds],
+    queryKey: ['shortlists', user?.id],
     queryFn: () => getShortlists(user),
     enabled: !!user?.id,
   });
 
   const {
-    data: favouriteVendors,
+    data: favouriteItems,
     isLoading,
     error,
     refetch,
   } = useQuery<VendorListItem[]>({
-    queryKey: ['favourites-vendors', user?.id, favouriteIds],
+    queryKey: ['favourites-items', user?.id, favouriteIds],
     queryFn: async () => {
-      if (!user?.id || favouriteIds.length === 0) return [];
-      const { data, error } = await supabase
-        .from('vendors')
-        .select('id, name, price_range, rating, review_count, image_url, description')
-        .in('id', favouriteIds);
+      if (!user?.id || (favouriteIds.vendorIds.length === 0 && favouriteIds.venueIds.length === 0)) return [];
+      
+      const items: VendorListItem[] = [];
 
-      if (error) {
-        throw error;
+      if (favouriteIds.vendorIds.length > 0) {
+        const { data: vendors, error: vendorError } = await supabase
+          .from('vendors')
+          .select('id, name, price_range, rating, review_count, image_url, description, city, province')
+          .in('id', favouriteIds.vendorIds);
+          
+        if (vendorError) throw vendorError;
+        
+        if (vendors) {
+          items.push(...vendors.map(v => ({ ...v, type: 'vendor' as const })));
+        }
       }
 
-      const ordered = favouriteIds
-        .map((id) => data?.find((vendor) => vendor.id === id))
-        .filter(Boolean) as VendorListItem[];
+      if (favouriteIds.venueIds.length > 0) {
+        const { data: venues, error: venueError } = await supabase
+          .from('venue_listings')
+          .select('id, name, rating, image_url, description, city, province')
+          .in('id', favouriteIds.venueIds);
+          
+        if (venueError) throw venueError;
+        
+        if (venues) {
+          items.push(...venues.map(v => ({
+            id: v.id,
+            name: v.name,
+            price_range: null,
+            rating: v.rating,
+            review_count: 0,
+            image_url: v.image_url,
+            description: v.description,
+            province: v.province,
+            city: v.city,
+            category_id: null,
+            type: 'venue' as const
+          })));
+        }
+      }
 
-      return ordered;
+      return items;
     },
-    enabled: !!user?.id && favouriteIds.length > 0,
+    enabled: !!user?.id && (favouriteIds.vendorIds.length > 0 || favouriteIds.venueIds.length > 0),
   });
 
-  const hasFavourites = favouriteIds.length > 0;
+  const hasFavourites = favouriteIds.vendorIds.length > 0 || favouriteIds.venueIds.length > 0;
 
-  const handleRemove = async (vendorId: number) => {
+  const handleRemove = async (id: number, type: 'vendor' | 'venue') => {
     if (!user?.id) return;
-    const next = await toggleFavourite(user, vendorId);
+    const next = await toggleFavourite(user, id, type);
     setFavouriteIds(next);
   };
+
 
   const handleNoteChange = (shortlistId: number, value: string) => {
     setNoteDrafts((prev) => ({ ...prev, [shortlistId]: value }));
@@ -125,7 +154,7 @@ export default function FavouritesScreen() {
           </View>
         )}
 
-        {!loadingIds && !isLoading && !shortlistsLoading && hasFavourites && favouriteVendors && (
+        {!loadingIds && !isLoading && !shortlistsLoading && hasFavourites && favouriteItems && (
           <View style={{ gap: spacing.md }}>
             <View style={{ flexDirection: 'row', marginBottom: spacing.sm }}>
               <View
@@ -139,13 +168,15 @@ export default function FavouritesScreen() {
                 }}
               >
                 <Text style={{ ...typography.caption, color: colors.textSecondary }}>
-                  All ({favouriteVendors.length})
+                  All ({favouriteItems.length})
                 </Text>
               </View>
             </View>
-            {favouriteVendors.map((vendor) => (
+            {favouriteItems.map((item) => (
               (() => {
-                const shortlistEntry = shortlistEntries?.find((entry) => entry.vendorId === vendor.id);
+                const shortlistEntry = shortlistEntries?.find((entry) => 
+                  item.type === 'venue' ? entry.venueId === item.id : entry.vendorId === item.id
+                );
                 const shortlistId = shortlistEntry?.id;
                 const noteValue = shortlistId != null
                   ? noteDrafts[shortlistId] ?? shortlistEntry?.notes ?? ''
@@ -154,7 +185,7 @@ export default function FavouritesScreen() {
                 const isSaving = shortlistId != null ? !!savingNotes[shortlistId] : false;
                 return (
               <View
-                key={vendor.id}
+                key={`${item.type}-${item.id}`}
                 style={{
                   borderRadius: radii.lg,
                   backgroundColor: colors.surface,
@@ -163,8 +194,8 @@ export default function FavouritesScreen() {
                   overflow: 'hidden',
                 }}
               >
-                {vendor.image_url ? (
-                  <Image source={{ uri: vendor.image_url }} style={{ width: '100%', height: 160 }} />
+                {item.image_url ? (
+                  <Image source={{ uri: item.image_url }} style={{ width: '100%', height: 160 }} />
                 ) : (
                   <View
                     style={{
@@ -179,7 +210,7 @@ export default function FavouritesScreen() {
                   </View>
                 )}
                 <TouchableOpacity
-                  onPress={() => handleRemove(vendor.id)}
+                  onPress={() => handleRemove(item.id, item.type)}
                   style={{
                     position: 'absolute',
                     top: spacing.sm,
@@ -198,20 +229,23 @@ export default function FavouritesScreen() {
                   <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
                     <View style={{ flex: 1, paddingRight: spacing.md }}>
                       <Text style={{ ...typography.titleMedium, color: colors.textPrimary }}>
-                        {vendor.name ?? 'Untitled vendor'}
+                        {item.name ?? 'Untitled'}
                       </Text>
-                      {vendor.description ? (
+                      {item.description ? (
                         <Text style={{ ...typography.caption, color: colors.textMuted, marginTop: spacing.xs }} numberOfLines={2}>
-                          {vendor.description}
+                          {item.description}
                         </Text>
                       ) : null}
+                      {item.type === 'venue' && (
+                         <Text style={{ ...typography.caption, color: colors.primaryTeal, marginTop: 4 }}>Venue</Text>
+                      )}
                     </View>
                     <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                       <MaterialIcons name="star" size={14} color="#F59E0B" />
                       <Text style={{ ...typography.caption, color: colors.textSecondary, marginLeft: spacing.xs }}>
-                        {typeof vendor.rating === 'number' ? vendor.rating.toFixed(1) : 'No rating yet'}
-                        {typeof vendor.review_count === 'number' && vendor.review_count > 0
-                          ? ` (${vendor.review_count})`
+                        {typeof item.rating === 'number' ? item.rating.toFixed(1) : 'No rating yet'}
+                        {typeof item.review_count === 'number' && item.review_count > 0
+                          ? ` (${item.review_count})`
                           : ''}
                       </Text>
                     </View>
@@ -231,7 +265,7 @@ export default function FavouritesScreen() {
                       <TextInput
                         value={noteValue}
                         onChangeText={(value) => handleNoteChange(shortlistId, value)}
-                        placeholder="Add a note about this vendor"
+                        placeholder={`Add a note about this ${item.type}`}
                         placeholderTextColor={colors.textMuted}
                         multiline
                         style={{
@@ -266,8 +300,10 @@ export default function FavouritesScreen() {
                   <TouchableOpacity
                     onPress={() =>
                       navigation.navigate('Home', {
-                        screen: 'VendorProfile',
-                        params: { vendorId: vendor.id, from: 'Favourites' },
+                        screen: item.type === 'venue' ? 'VenueProfile' : 'VendorProfile',
+                        params: item.type === 'venue' 
+                          ? { venueId: item.id, from: 'Favourites' }
+                          : { vendorId: item.id, from: 'Favourites' },
                       })
                     }
                     style={{

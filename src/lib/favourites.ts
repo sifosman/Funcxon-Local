@@ -17,31 +17,37 @@ async function resolveUserId(user?: AuthUserRef): Promise<number | null> {
   return data?.id ?? null;
 }
 
-export async function getFavourites(user?: AuthUserRef): Promise<number[]> {
+export async function getFavourites(user?: AuthUserRef): Promise<{ vendorIds: number[], venueIds: number[] }> {
   const internalUserId = await resolveUserId(user);
-  if (!internalUserId) return [];
+  if (!internalUserId) return { vendorIds: [], venueIds: [] };
 
   const { data, error } = await supabase
     .from('shortlists')
-    .select('vendor_id')
+    .select('vendor_id, venue_id')
     .eq('user_id', internalUserId);
 
   if (error || !data) {
-    return [];
+    return { vendorIds: [], venueIds: [] };
   }
 
-  return data
+  const vendorIds = data
     .map((row) => row.vendor_id)
     .filter((value): value is number => typeof value === 'number');
+    
+  const venueIds = data
+    .map((row) => row.venue_id)
+    .filter((value): value is number => typeof value === 'number');
+
+  return { vendorIds, venueIds };
 }
 
-export async function getShortlists(user?: AuthUserRef): Promise<{ id: number; vendorId: number; notes: string | null }[]> {
+export async function getShortlists(user?: AuthUserRef): Promise<{ id: number; vendorId?: number | null; venueId?: number | null; notes: string | null }[]> {
   const internalUserId = await resolveUserId(user);
   if (!internalUserId) return [];
 
   const { data, error } = await supabase
     .from('shortlists')
-    .select('id, vendor_id, notes')
+    .select('id, vendor_id, venue_id, notes')
     .eq('user_id', internalUserId)
     .order('created_at', { ascending: false });
 
@@ -49,20 +55,25 @@ export async function getShortlists(user?: AuthUserRef): Promise<{ id: number; v
     return [];
   }
 
-  return data
-    .map((row) => ({ id: row.id, vendorId: row.vendor_id, notes: row.notes ?? null }))
-    .filter((row) => typeof row.vendorId === 'number');
+  return data.map((row) => ({
+    id: row.id,
+    vendorId: row.vendor_id,
+    venueId: row.venue_id,
+    notes: row.notes ?? null
+  }));
 }
 
-export async function toggleFavourite(user: AuthUserRef, vendorId: number): Promise<number[]> {
+export async function toggleFavourite(user: AuthUserRef, id: number, type: 'vendor' | 'venue' = 'vendor'): Promise<{ vendorIds: number[], venueIds: number[] }> {
   const internalUserId = await resolveUserId(user);
-  if (!internalUserId) return [];
+  if (!internalUserId) return { vendorIds: [], venueIds: [] };
+
+  const column = type === 'venue' ? 'venue_id' : 'vendor_id';
 
   const { data: existing, error: existingError } = await supabase
     .from('shortlists')
     .select('id')
     .eq('user_id', internalUserId)
-    .eq('vendor_id', vendorId)
+    .eq(column, id)
     .maybeSingle();
 
   if (existingError && existingError.code !== 'PGRST116') {
@@ -77,21 +88,23 @@ export async function toggleFavourite(user: AuthUserRef, vendorId: number): Prom
   } else {
     await supabase
       .from('shortlists')
-      .insert({ user_id: internalUserId, vendor_id: vendorId });
+      .insert({ user_id: internalUserId, [column]: id });
   }
 
   return getFavourites(user);
 }
 
-export async function isFavourite(user: AuthUserRef, vendorId: number): Promise<boolean> {
+export async function isFavourite(user: AuthUserRef, id: number, type: 'vendor' | 'venue' = 'vendor'): Promise<boolean> {
   const internalUserId = await resolveUserId(user);
   if (!internalUserId) return false;
+
+  const column = type === 'venue' ? 'venue_id' : 'vendor_id';
 
   const { data } = await supabase
     .from('shortlists')
     .select('id')
     .eq('user_id', internalUserId)
-    .eq('vendor_id', vendorId)
+    .eq(column, id)
     .maybeSingle();
 
   return !!data?.id;

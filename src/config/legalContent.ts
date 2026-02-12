@@ -452,12 +452,22 @@ export const allLegalDocuments: LegalDocument[] = [
   termsAndConditions,
 ];
 
-export const legalDocumentIndex = [
+export interface LegalIndexItem {
+  id: string;
+  title: string;
+  description: string;
+  icon: 'privacy-tip' | 'web' | 'description' | 'gavel';
+  iconColor: string;
+  iconBg: string;
+  comingSoon?: boolean;
+}
+
+export const legalDocumentIndex: LegalIndexItem[] = [
   {
     id: 'privacy-policy',
     title: 'Privacy Policy',
     description: 'How we collect, use, and protect your personal information',
-    icon: 'privacy-tip' as const,
+    icon: 'privacy-tip',
     iconColor: '#2B9EB3',
     iconBg: '#E0F2F7',
   },
@@ -465,7 +475,7 @@ export const legalDocumentIndex = [
     id: 'cookie-policy',
     title: 'Cookie Policy',
     description: 'How we use cookies and tracking technologies',
-    icon: 'cookie' as const,
+    icon: 'web',
     iconColor: '#D97706',
     iconBg: '#FEF3C7',
   },
@@ -473,7 +483,7 @@ export const legalDocumentIndex = [
     id: 'data-processing-agreement',
     title: 'Data Processing Agreement',
     description: 'POPIA-compliant data processing terms for vendors',
-    icon: 'description' as const,
+    icon: 'description',
     iconColor: '#6366F1',
     iconBg: '#EEF2FF',
   },
@@ -481,7 +491,7 @@ export const legalDocumentIndex = [
     id: 'terms-and-conditions',
     title: 'Terms and Conditions',
     description: 'General terms for using the Funcxon platform',
-    icon: 'gavel' as const,
+    icon: 'gavel',
     iconColor: '#059669',
     iconBg: '#D1FAE5',
   },
