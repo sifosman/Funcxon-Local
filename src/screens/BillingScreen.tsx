@@ -41,12 +41,26 @@ type Invoice = {
     created_at: string;
 };
 
+type VenueBillingInfo = {
+    subscription_plan_key: string;
+    subscription_status: string;
+    billing_period: string | null;
+    billing_email: string | null;
+    billing_name: string | null;
+    billing_phone: string | null;
+    subscription_started_at: string | null;
+    subscription_expires_at: string | null;
+    next_payment_due: string | null;
+    last_payment_at: string | null;
+};
+
 export default function BillingScreen() {
     const navigation = useNavigation<NativeStackNavigationProp<ProfileStackParamList>>();
     const { user } = useAuth();
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
     const [billing, setBilling] = useState<BillingInfo | null>(null);
+    const [venueBilling, setVenueBilling] = useState<VenueBillingInfo | null>(null);
     const [invoices, setInvoices] = useState<Invoice[]>([]);
     const [payingNow, setPayingNow] = useState(false);
 
@@ -66,43 +80,69 @@ export default function BillingScreen() {
                 .maybeSingle();
 
             if (vendorError || !vendorData) {
-                setLoading(false);
-                return;
+                setBilling(null);
+                setInvoices([]);
+            } else {
+                // Get tier pricing
+                const { data: tierData } = await supabase
+                    .from('subscription_tiers')
+                    .select('price_monthly, price_yearly')
+                    .eq('tier_name', vendorData.subscription_tier || 'free')
+                    .maybeSingle();
+
+                setBilling({
+                    vendor_id: vendorData.id,
+                    vendor_name: vendorData.name,
+                    subscription_tier: vendorData.subscription_tier || 'free',
+                    subscription_status: vendorData.subscription_status || 'inactive',
+                    billing_period: vendorData.billing_period,
+                    billing_email: vendorData.billing_email || vendorData.email,
+                    billing_name: vendorData.billing_name,
+                    billing_phone: vendorData.billing_phone,
+                    subscription_started_at: vendorData.subscription_started_at,
+                    subscription_expires_at: vendorData.subscription_expires_at,
+                    next_payment_due: vendorData.next_payment_due,
+                    last_payment_at: vendorData.last_payment_at,
+                    price_monthly: tierData?.price_monthly ? Number(tierData.price_monthly) : null,
+                    price_yearly: tierData?.price_yearly ? Number(tierData.price_yearly) : null,
+                });
+
+                // Load invoices
+                const { data: invoiceData } = await supabase
+                    .from('subscription_invoices')
+                    .select('*')
+                    .eq('vendor_id', vendorData.id)
+                    .order('created_at', { ascending: false })
+                    .limit(20);
+
+                setInvoices(invoiceData || []);
             }
 
-            // Get tier pricing
-            const { data: tierData } = await supabase
-                .from('subscription_tiers')
-                .select('price_monthly, price_yearly')
-                .eq('tier_name', vendorData.subscription_tier || 'free')
+            // Get venue subscription info (if any)
+            const { data: venueData, error: venueError } = await supabase
+                .from('venues')
+                .select(
+                    'subscription_plan_key, subscription_status, billing_period, billing_email, billing_name, billing_phone, subscription_started_at, subscription_expires_at, next_payment_due, last_payment_at',
+                )
+                .eq('user_id', user.id)
                 .maybeSingle();
 
-            setBilling({
-                vendor_id: vendorData.id,
-                vendor_name: vendorData.name,
-                subscription_tier: vendorData.subscription_tier || 'free',
-                subscription_status: vendorData.subscription_status || 'inactive',
-                billing_period: vendorData.billing_period,
-                billing_email: vendorData.billing_email || vendorData.email,
-                billing_name: vendorData.billing_name,
-                billing_phone: vendorData.billing_phone,
-                subscription_started_at: vendorData.subscription_started_at,
-                subscription_expires_at: vendorData.subscription_expires_at,
-                next_payment_due: vendorData.next_payment_due,
-                last_payment_at: vendorData.last_payment_at,
-                price_monthly: tierData?.price_monthly ? Number(tierData.price_monthly) : null,
-                price_yearly: tierData?.price_yearly ? Number(tierData.price_yearly) : null,
-            });
-
-            // Load invoices
-            const { data: invoiceData } = await supabase
-                .from('subscription_invoices')
-                .select('*')
-                .eq('vendor_id', vendorData.id)
-                .order('created_at', { ascending: false })
-                .limit(20);
-
-            setInvoices(invoiceData || []);
+            if (venueError || !venueData) {
+                setVenueBilling(null);
+            } else {
+                setVenueBilling({
+                    subscription_plan_key: venueData.subscription_plan_key || 'get_started',
+                    subscription_status: venueData.subscription_status || 'inactive',
+                    billing_period: venueData.billing_period,
+                    billing_email: venueData.billing_email,
+                    billing_name: venueData.billing_name,
+                    billing_phone: venueData.billing_phone,
+                    subscription_started_at: venueData.subscription_started_at,
+                    subscription_expires_at: venueData.subscription_expires_at,
+                    next_payment_due: venueData.next_payment_due,
+                    last_payment_at: venueData.last_payment_at,
+                });
+            }
         } catch (err) {
             console.error('Failed to load billing data:', err);
         } finally {
@@ -176,24 +216,24 @@ export default function BillingScreen() {
         });
     };
 
-    const getDaysUntilExpiry = () => {
-        if (!billing?.subscription_expires_at) return null;
+    const getDaysUntilExpiry = (expiresAt: string | null) => {
+        if (!expiresAt) return null;
         const now = new Date();
-        const expiry = new Date(billing.subscription_expires_at);
+        const expiry = new Date(expiresAt);
         const diffMs = expiry.getTime() - now.getTime();
         return Math.ceil(diffMs / (1000 * 60 * 60 * 24));
     };
 
-    const getExpiryColor = () => {
-        const days = getDaysUntilExpiry();
+    const getExpiryColor = (expiresAt: string | null) => {
+        const days = getDaysUntilExpiry(expiresAt);
         if (days === null) return colors.textMuted;
         if (days <= 0) return '#DC2626';
         if (days <= 5) return '#F59E0B';
         return '#16A34A';
     };
 
-    const getExpiryLabel = () => {
-        const days = getDaysUntilExpiry();
+    const getExpiryLabel = (expiresAt: string | null) => {
+        const days = getDaysUntilExpiry(expiresAt);
         if (days === null) return 'No expiry set';
         if (days <= 0) return 'Expired';
         if (days === 1) return 'Expires tomorrow';
@@ -241,7 +281,7 @@ export default function BillingScreen() {
         );
     }
 
-    if (!billing) {
+    if (!billing && !venueBilling) {
         return (
             <View style={{ flex: 1, backgroundColor: colors.background }}>
                 <View style={{ paddingHorizontal: spacing.lg, paddingTop: spacing.xl }}>
@@ -259,15 +299,17 @@ export default function BillingScreen() {
                         No Billing Account
                     </Text>
                     <Text style={{ ...typography.body, color: colors.textMuted, marginTop: spacing.sm, textAlign: 'center' }}>
-                        You need to be a registered vendor to view billing information.
+                        You need an active vendor or venue subscription to view billing information.
                     </Text>
                 </View>
             </View>
         );
     }
 
-    const isFree = billing.subscription_tier === 'free';
-    const currentPrice = billing.billing_period === 'yearly' ? billing.price_yearly : billing.price_monthly;
+    const isFree = billing ? billing.subscription_tier === 'free' : true;
+    const currentPrice = billing
+        ? (billing.billing_period === 'yearly' ? billing.price_yearly : billing.price_monthly)
+        : null;
 
     return (
         <View style={{ flex: 1, backgroundColor: colors.background }}>
@@ -294,6 +336,7 @@ export default function BillingScreen() {
                 </View>
 
                 {/* Current Plan Card */}
+                {billing && (
                 <View style={{ paddingHorizontal: spacing.lg, marginBottom: spacing.md }}>
                     <View style={{
                         backgroundColor: colors.surface,
@@ -359,9 +402,95 @@ export default function BillingScreen() {
                         </TouchableOpacity>
                     </View>
                 </View>
+                )}
+
+                {/* Venue Subscription Card */}
+                {venueBilling && (
+                    <View style={{ paddingHorizontal: spacing.lg, marginBottom: spacing.md }}>
+                        <View
+                            style={{
+                                backgroundColor: colors.surface,
+                                borderRadius: radii.lg,
+                                padding: spacing.lg,
+                                borderWidth: 1,
+                                borderColor: colors.borderSubtle,
+                            }}
+                        >
+                            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                                <View style={{ flex: 1 }}>
+                                    <Text style={{ ...typography.caption, color: colors.textMuted }}>Venue Subscription</Text>
+                                    <Text style={{ ...typography.titleMedium, color: colors.textPrimary, marginTop: 2 }}>
+                                        {venueBilling.subscription_plan_key.replace(/_/g, ' ').toUpperCase()}
+                                    </Text>
+                                </View>
+                                <View
+                                    style={{
+                                        paddingHorizontal: spacing.md,
+                                        paddingVertical: spacing.xs,
+                                        borderRadius: radii.full,
+                                        backgroundColor: getStatusColor(venueBilling.subscription_status) + '20',
+                                    }}
+                                >
+                                    <Text
+                                        style={{
+                                            ...typography.caption,
+                                            color: getStatusColor(venueBilling.subscription_status),
+                                            fontWeight: '700',
+                                            textTransform: 'uppercase',
+                                        }}
+                                    >
+                                        {venueBilling.subscription_status}
+                                    </Text>
+                                </View>
+                            </View>
+
+                            <View style={{ marginTop: spacing.md }}>
+                                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.sm }}>
+                                    <Text style={{ ...typography.body, color: colors.textMuted }}>Started</Text>
+                                    <Text style={{ ...typography.body, color: colors.textPrimary, fontWeight: '500' }}>
+                                        {formatDate(venueBilling.subscription_started_at)}
+                                    </Text>
+                                </View>
+                                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.sm }}>
+                                    <View>
+                                        <Text style={{ ...typography.body, color: colors.textMuted }}>Expires</Text>
+                                        <Text style={{ ...typography.caption, color: getExpiryColor(venueBilling.subscription_expires_at), fontWeight: '600' }}>
+                                            {getExpiryLabel(venueBilling.subscription_expires_at)}
+                                        </Text>
+                                    </View>
+                                    <Text style={{ ...typography.body, color: colors.textPrimary, fontWeight: '500' }}>
+                                        {formatDate(venueBilling.subscription_expires_at)}
+                                    </Text>
+                                </View>
+                                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                                    <Text style={{ ...typography.body, color: colors.textMuted }}>Last Payment</Text>
+                                    <Text style={{ ...typography.body, color: colors.textPrimary, fontWeight: '500' }}>
+                                        {formatDate(venueBilling.last_payment_at)}
+                                    </Text>
+                                </View>
+                            </View>
+
+                            <TouchableOpacity
+                                onPress={() => navigation.navigate('VenueListingPlans')}
+                                style={{
+                                    marginTop: spacing.md,
+                                    paddingVertical: spacing.sm,
+                                    borderRadius: radii.md,
+                                    borderWidth: 1,
+                                    borderColor: colors.primary,
+                                    alignItems: 'center',
+                                }}
+                            >
+                                <Text style={{ ...typography.body, color: colors.primary, fontWeight: '600' }}>
+                                    {venueBilling.subscription_plan_key === 'get_started' ? 'Upgrade Venue Plan' : 'View Venue Plans'}
+                                </Text>
+                            </TouchableOpacity>
+                        </View>
+                    </View>
+                )}
 
                 {/* Expiry & Next Payment */}
-                {!isFree && (
+                {billing && !isFree && (
                     <View style={{ paddingHorizontal: spacing.lg, marginBottom: spacing.md }}>
                         <View style={{
                             backgroundColor: colors.surface,
@@ -384,8 +513,8 @@ export default function BillingScreen() {
                                     <Text style={{ ...typography.body, color: colors.textPrimary, fontWeight: '500' }}>
                                         {formatDate(billing.subscription_expires_at)}
                                     </Text>
-                                    <Text style={{ ...typography.caption, color: getExpiryColor(), fontWeight: '600' }}>
-                                        {getExpiryLabel()}
+                                    <Text style={{ ...typography.caption, color: getExpiryColor(billing.subscription_expires_at), fontWeight: '600' }}>
+                                        {getExpiryLabel(billing.subscription_expires_at)}
                                     </Text>
                                 </View>
                             </View>
@@ -427,7 +556,7 @@ export default function BillingScreen() {
                 )}
 
                 {/* Pay Now Button */}
-                {!isFree && (
+                {billing && !isFree && (
                     <View style={{ paddingHorizontal: spacing.lg, marginBottom: spacing.md }}>
                         <TouchableOpacity
                             onPress={handlePayNow}
@@ -453,6 +582,7 @@ export default function BillingScreen() {
                 )}
 
                 {/* Invoice History */}
+                {billing && (
                 <View style={{ paddingHorizontal: spacing.lg }}>
                     <Text style={{ ...typography.titleMedium, color: colors.textPrimary, marginBottom: spacing.md }}>
                         Payment History
@@ -531,6 +661,7 @@ export default function BillingScreen() {
                         ))
                     )}
                 </View>
+                )}
             </ScrollView>
         </View>
     );

@@ -2,6 +2,8 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { Image, Text, TouchableOpacity, View } from 'react-native';
 import AttendeeHomeScreen from '../screens/AttendeeHomeScreen';
 import VendorProfileScreen from '../screens/VendorProfileScreen';
+import VenueProfileScreen from '../screens/VenueProfileScreen';
+import BookTourScreen from '../screens/BookTourScreen';
 import QuoteRequestScreen from '../screens/QuoteRequestScreen';
 import PlannerScreen from '../screens/PlannerScreen';
 import { colors, typography } from '../theme';
@@ -9,7 +11,9 @@ import { colors, typography } from '../theme';
 export type AttendeeStackParamList = {
   VendorList: undefined;
   VendorProfile: { vendorId: number; from?: 'Favourites' };
-  QuoteRequest: { vendorId: number; vendorName: string };
+  VenueProfile: { venueId: number; from?: 'Favourites' };
+  QuoteRequest: { vendorId: number; vendorName: string; type?: 'vendor' | 'venue' };
+  BookTour: { venueId: number; venueName: string };
   Planner: undefined;
 };
 
@@ -40,9 +44,19 @@ export function AttendeeNavigator() {
         options={{ title: 'Vendor profile' }}
       />
       <Stack.Screen
+        name="VenueProfile"
+        component={VenueProfileScreen}
+        options={{ title: 'Venue profile' }}
+      />
+      <Stack.Screen
         name="QuoteRequest"
         component={QuoteRequestScreen}
         options={{ title: 'Request a quote' }}
+      />
+      <Stack.Screen
+        name="BookTour"
+        component={BookTourScreen}
+        options={{ title: 'Book a venue tour' }}
       />
       <Stack.Screen
         name="Planner"

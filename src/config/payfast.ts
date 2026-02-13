@@ -16,6 +16,8 @@ export type PayFastPaymentData = {
   // Merchant details
   merchant_id: string;
   merchant_key: string;
+  // Merchant payment reference
+  m_payment_id?: string;
   // Transaction details
   amount: string;
   item_name: string;
@@ -44,6 +46,7 @@ export function buildPayFastPaymentData(opts: {
   amount: number;
   itemName: string;
   itemDescription?: string;
+  paymentId?: string;
   firstName?: string;
   lastName?: string;
   email?: string;
@@ -63,6 +66,7 @@ export function buildPayFastPaymentData(opts: {
     item_name: opts.itemName,
   };
 
+  if (opts.paymentId) data.m_payment_id = opts.paymentId;
   if (opts.itemDescription) data.item_description = opts.itemDescription;
   if (opts.firstName) data.name_first = opts.firstName;
   if (opts.lastName) data.name_last = opts.lastName;

@@ -176,9 +176,11 @@ const Field = ({
 
 type RouteParams = {
   tierName: string;
-  billing: 'monthly' | 'yearly';
+  billing: 'monthly' | 'yearly' | '6_month' | '12_month';
   priceLabel: string;
   isFree: boolean;
+  productType?: 'vendor' | 'venue';
+  planKey?: string;
 };
 
 export default function SubscriptionCheckoutScreen() {
@@ -186,7 +188,7 @@ export default function SubscriptionCheckoutScreen() {
   const route = useRoute();
   const { updateStep4 } = useApplicationForm();
 
-  const { tierName, billing, priceLabel, isFree } = (route.params ?? {}) as RouteParams;
+  const { tierName, billing, priceLabel, isFree, productType, planKey } = (route.params ?? {}) as RouteParams;
 
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
@@ -204,11 +206,28 @@ export default function SubscriptionCheckoutScreen() {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [touched, setTouched] = useState<Record<string, boolean>>({});
 
+  const notifyUrl = `${process.env.EXPO_PUBLIC_SUPABASE_URL || 'https://fhlocaqndxawkbztncwo.supabase.co'}/functions/v1/payfast-itn`;
+
   const summary = useMemo(() => {
     const planLabel = (tierName || '').toUpperCase();
-    const periodLabel = billing === 'yearly' ? 'Yearly' : 'Monthly';
+    const periodLabel =
+      billing === 'yearly'
+        ? 'Yearly'
+        : billing === '6_month'
+          ? '6-Month'
+          : billing === '12_month'
+            ? '12-Month'
+            : 'Monthly';
     return { planLabel, periodLabel };
   }, [tierName, billing]);
+
+  const normalizeVendorTierKey = (rawTierName: string): string => {
+    const t = (rawTierName ?? '').trim().toLowerCase();
+    if (t === 'get started' || t === 'get_started' || t === 'free') return 'free';
+    if (t === 'premium plus' || t === 'premium_plus' || t === 'premiumplus') return 'premium_plus';
+    if (t === 'premium') return 'premium';
+    return t.replace(/\s+/g, '_');
+  };
 
   const validateField = (field: string, value: string) => {
     switch (field) {
@@ -260,9 +279,57 @@ export default function SubscriptionCheckoutScreen() {
     }
 
     console.log('Validation passed, updating step 4');
-    updateStep4({ subscriptionPlan: tierName.toLowerCase() });
+    const normalizedVendorTier = normalizeVendorTierKey(tierName);
+    updateStep4({ subscriptionPlan: normalizedVendorTier });
+
+    const { data: auth } = await supabase.auth.getUser();
+    const authUserId = auth?.user?.id;
 
     if (isFree) {
+      if (productType === 'venue' && authUserId) {
+        const { error: upsertErr } = await supabase
+          .from('venues')
+          .upsert(
+            {
+              user_id: authUserId,
+              subscription_plan_key: planKey || 'get_started',
+              subscription_status: 'active',
+              billing_period: 'monthly',
+              billing_email: email.trim(),
+              billing_name: fullName.trim(),
+              billing_phone: phone.trim(),
+              subscription_started_at: new Date().toISOString(),
+            },
+            { onConflict: 'user_id' },
+          );
+
+        if (upsertErr) {
+          console.error('Failed to upsert venue (free plan):', upsertErr);
+        }
+      }
+
+      if (productType !== 'venue' && authUserId) {
+        const { error: upsertErr } = await supabase
+          .from('vendors')
+          .upsert(
+            {
+              user_id: authUserId,
+              subscription_tier: normalizedVendorTier,
+              subscription_status: 'active',
+              billing_period: 'monthly',
+              billing_email: email.trim(),
+              billing_name: fullName.trim(),
+              billing_phone: phone.trim(),
+              subscription_started_at: new Date().toISOString(),
+            },
+            { onConflict: 'user_id' },
+          );
+
+        if (upsertErr) {
+          console.error('Failed to upsert vendor (free plan):', upsertErr);
+        }
+      }
+
       console.log('Free plan selected, navigating to VendorSignupSuccess');
       navigation.navigate('VendorSignupSuccess', {
         email: email.trim(),
@@ -282,22 +349,71 @@ export default function SubscriptionCheckoutScreen() {
     const firstName = nameParts[0] || '';
     const lastName = nameParts.slice(1).join(' ') || '';
 
+    const payfastPaymentId = `pf_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
+
     const paymentData = buildPayFastPaymentData({
       amount: priceNum,
-      itemName: `Funcxon ${tierName} Plan (${billing})`,
-      itemDescription: `${tierName} subscription - billed ${billing}`,
+      paymentId: payfastPaymentId,
+      itemName: `${productType === 'venue' ? 'Funcxon Venue' : 'Funcxon'} ${tierName} Plan (${billing})`,
+      itemDescription: `${productType === 'venue' ? 'Venue' : 'Vendor'} subscription - billed ${billing}`,
       firstName,
       lastName,
       email: email.trim(),
       phone: phone.trim(),
-      subscriptionType: '1',
+      subscriptionType: billing === '6_month' || billing === '12_month' ? '2' : '1',
       frequency: billing === 'yearly' ? '6' : '3',
-      recurringAmount: priceNum,
-      cycles: 0,
+      recurringAmount: billing === '6_month' || billing === '12_month' ? undefined : priceNum,
+      cycles: billing === '6_month' || billing === '12_month' ? undefined : 0,
       returnUrl: 'https://funcxon.com/payment/success',
       cancelUrl: 'https://funcxon.com/payment/cancel',
-      notifyUrl: 'https://funcxon.com/api/payfast/notify',
+      notifyUrl,
     });
+
+    if (productType === 'venue' && authUserId) {
+      const billingPeriodToStore = billing === 'yearly' ? '12_month' : billing;
+      const { error: upsertErr } = await supabase
+        .from('venues')
+        .upsert(
+          {
+            user_id: authUserId,
+            subscription_plan_key: planKey || 'monthly',
+            subscription_status: 'inactive',
+            billing_period: billingPeriodToStore,
+            pending_payment_id: payfastPaymentId,
+            billing_email: email.trim(),
+            billing_name: fullName.trim(),
+            billing_phone: phone.trim(),
+          },
+          { onConflict: 'user_id' },
+        );
+
+      if (upsertErr) {
+        console.error('Failed to upsert venue (paid plan pre-record):', upsertErr);
+      }
+    }
+
+    if (productType !== 'venue' && authUserId) {
+      const billingPeriodToStore = billing === 'yearly' ? 'yearly' : billing;
+      const { error: upsertErr } = await supabase
+        .from('vendors')
+        .upsert(
+          {
+            user_id: authUserId,
+            subscription_tier: normalizedVendorTier,
+            subscription_status: 'inactive',
+            billing_period: billingPeriodToStore,
+            pending_payment_id: payfastPaymentId,
+            billing_email: email.trim(),
+            billing_name: fullName.trim(),
+            billing_phone: phone.trim(),
+          },
+          { onConflict: 'user_id' },
+        );
+
+      if (upsertErr) {
+        console.error('Failed to upsert vendor (paid plan pre-record):', upsertErr);
+      }
+    }
 
     const checkoutUrl = getPayFastCheckoutUrl(paymentData);
 
@@ -314,7 +430,8 @@ export default function SubscriptionCheckoutScreen() {
   const sendWelcomeEmail = async () => {
     try {
       // Call the Supabase Edge Function to send welcome email
-      const { data, error } = await supabase.functions.invoke('send-vendor-welcome-email', {
+      const functionName = productType === 'venue' ? 'send-vendor-welcome-email' : 'send-vendor-welcome-email';
+      const { data, error } = await supabase.functions.invoke(functionName, {
         body: {
           email: email.trim(),
           fullName: fullName.trim(),

@@ -369,17 +369,39 @@ export default function FavouritesScreen() {
                 ? 'As you explore vendors, tap the heart icon to add them to your favourites.'
                 : 'Sign in to save vendors to your favourites list.'}
             </Text>
-            <View
-              style={{
-                marginTop: spacing.lg,
-                paddingHorizontal: spacing.lg,
-                paddingVertical: spacing.sm,
-                borderRadius: radii.md,
-                backgroundColor: colors.primary,
-              }}
-            >
-              <TouchableOpacity onPress={() => navigation.navigate('Home')}>
-                <Text style={{ ...typography.body, color: '#FFFFFF', fontWeight: '600' }}>Discover vendors</Text>
+            <View style={{ gap: spacing.sm, marginTop: spacing.lg }}>
+              <TouchableOpacity 
+                onPress={() => navigation.navigate('Discover', { category: 'venues' })}
+                style={{
+                  paddingHorizontal: spacing.lg,
+                  paddingVertical: spacing.sm,
+                  borderRadius: radii.md,
+                  backgroundColor: colors.primary,
+                }}
+              >
+                <Text style={{ ...typography.body, color: '#FFFFFF', fontWeight: '600', textAlign: 'center' }}>Discover Venues</Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                onPress={() => navigation.navigate('Discover', { category: 'all' })}
+                style={{
+                  paddingHorizontal: spacing.lg,
+                  paddingVertical: spacing.sm,
+                  borderRadius: radii.md,
+                  backgroundColor: colors.primary,
+                }}
+              >
+                <Text style={{ ...typography.body, color: '#FFFFFF', fontWeight: '600', textAlign: 'center' }}>Discover Vendors</Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                onPress={() => navigation.navigate('Discover', { category: 'all' })}
+                style={{
+                  paddingHorizontal: spacing.lg,
+                  paddingVertical: spacing.sm,
+                  borderRadius: radii.md,
+                  backgroundColor: colors.primary,
+                }}
+              >
+                <Text style={{ ...typography.body, color: '#FFFFFF', fontWeight: '600', textAlign: 'center' }}>Discover Service Professionals</Text>
               </TouchableOpacity>
             </View>
           </View>

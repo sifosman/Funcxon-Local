@@ -15,7 +15,15 @@ import PortfolioAssistanceScreen from '../screens/PortfolioAssistanceScreen';
 import VendorSignupSuccessScreen from '../screens/VendorSignupSuccessScreen';
 import TermsAndPoliciesScreen from '../screens/TermsAndPoliciesScreen';
 import LegalDocumentScreen from '../screens/LegalDocumentScreen';
+import VenueListingPlansScreen from '../screens/VenueListingPlansScreen';
 import UpdatePortfolioScreen from '../screens/subscriber/UpdatePortfolioScreen';
+import UpdateVendorPortfolioScreen from '../screens/subscriber/UpdateVendorPortfolioScreen';
+import UpdateVenuePortfolioScreen from '../screens/subscriber/UpdateVenuePortfolioScreen';
+import VenueCatalogueScreen from '../screens/subscriber/VenueCatalogueScreen';
+import VendorCatalogueScreen from '../screens/subscriber/VendorCatalogueScreen';
+import VenueQuoteRequestsScreen from '../screens/subscriber/VenueQuoteRequestsScreen';
+import VenueTourBookingsScreen from '../screens/subscriber/VenueTourBookingsScreen';
+import VenueAnalyticsScreen from '../screens/subscriber/VenueAnalyticsScreen';
 import ActionItemsScreen from '../screens/subscriber/ActionItemsScreen';
 import CalendarUpdatesScreen from '../screens/subscriber/CalendarUpdatesScreen';
 import BillingScreen from '../screens/BillingScreen';
@@ -33,10 +41,25 @@ export type ProfileStackParamList = {
     ApplicationStep3: undefined;
     ApplicationStep4: undefined;
     SubscriptionPlans: undefined;
-    SubscriptionCheckout: { tierName: string; billing: 'monthly' | 'yearly'; priceLabel: string; isFree: boolean };
+    VenueListingPlans: undefined;
+    SubscriptionCheckout: {
+        tierName: string;
+        billing: 'monthly' | 'yearly' | '6_month' | '12_month';
+        priceLabel: string;
+        isFree: boolean;
+        productType?: 'vendor' | 'venue';
+        planKey?: string;
+    };
     VendorSignupSuccess: { email: string; fullName: string; tierName: string };
     PortfolioAssistance: undefined;
     UpdatePortfolio: undefined;
+    UpdateVendorPortfolio: undefined;
+    UpdateVenuePortfolio: undefined;
+    VenueCatalogue: undefined;
+    VendorCatalogue: undefined;
+    VenueQuoteRequests: undefined;
+    VenueTourBookings: undefined;
+    VenueAnalytics: undefined;
     ActionItems: undefined;
     CalendarUpdates: undefined;
     Billing: undefined;
@@ -116,6 +139,11 @@ export function ProfileNavigator() {
                 options={{ headerShown: false }}
             />
             <Stack.Screen
+                name="VenueListingPlans"
+                component={VenueListingPlansScreen}
+                options={{ headerShown: false }}
+            />
+            <Stack.Screen
                 name="SubscriptionCheckout"
                 component={SubscriptionCheckoutScreen}
                 options={{ headerShown: false }}
@@ -133,6 +161,41 @@ export function ProfileNavigator() {
             <Stack.Screen
                 name="UpdatePortfolio"
                 component={UpdatePortfolioScreen}
+                options={{ headerShown: false }}
+            />
+            <Stack.Screen
+                name="UpdateVendorPortfolio"
+                component={UpdateVendorPortfolioScreen}
+                options={{ headerShown: false }}
+            />
+            <Stack.Screen
+                name="UpdateVenuePortfolio"
+                component={UpdateVenuePortfolioScreen}
+                options={{ headerShown: false }}
+            />
+            <Stack.Screen
+                name="VenueCatalogue"
+                component={VenueCatalogueScreen}
+                options={{ headerShown: false }}
+            />
+            <Stack.Screen
+                name="VendorCatalogue"
+                component={VendorCatalogueScreen}
+                options={{ headerShown: false }}
+            />
+            <Stack.Screen
+                name="VenueQuoteRequests"
+                component={VenueQuoteRequestsScreen}
+                options={{ headerShown: false }}
+            />
+            <Stack.Screen
+                name="VenueTourBookings"
+                component={VenueTourBookingsScreen}
+                options={{ headerShown: false }}
+            />
+            <Stack.Screen
+                name="VenueAnalytics"
+                component={VenueAnalyticsScreen}
                 options={{ headerShown: false }}
             />
             <Stack.Screen

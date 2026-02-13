@@ -7,6 +7,7 @@
     "android": "expo run:android",
     "ios": "expo run:ios",
     "web": "expo start --web",
+    "typecheck": "tsc --noEmit",
     "agent:smoke": "node scripts/agentBrowserSmoke.mjs",
     "test:e2e": "playwright test"
   },

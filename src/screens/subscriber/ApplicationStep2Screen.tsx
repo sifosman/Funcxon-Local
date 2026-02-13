@@ -24,6 +24,13 @@ export default function ApplicationStep2Screen() {
   const isVenues = state.portfolioType === 'venues';
   const isVendors = state.portfolioType === 'vendors';
 
+  const updateHall = (index: number, patch: { name?: string; capacity?: string }) => {
+    const nextHalls = (state.step2.halls ?? Array.from({ length: 5 }, () => ({ name: '', capacity: '' })) ).map((h, i) =>
+      i === index ? { ...h, ...patch } : h
+    );
+    updateStep2({ halls: nextHalls });
+  };
+
   const toggleArrayItem = (field: keyof typeof state.step2, value: string) => {
     const currentArray = state.step2[field] as string[];
     const newArray = currentArray.includes(value)
@@ -281,6 +288,217 @@ export default function ApplicationStep2Screen() {
                     {errors.eventTypes}
                   </Text>
                 )}
+              </View>
+
+              {/* Awards / Nominations */}
+              <View
+                style={{
+                  backgroundColor: colors.surface,
+                  borderRadius: radii.lg,
+                  padding: spacing.lg,
+                  marginBottom: spacing.lg,
+                  borderWidth: 1,
+                  borderColor: colors.borderSubtle,
+                  shadowColor: '#000',
+                  shadowOpacity: 0.05,
+                  shadowRadius: 8,
+                  shadowOffset: { width: 0, height: 2 },
+                  elevation: 2,
+                }}
+              >
+                <Text style={{ ...typography.titleMedium, color: colors.textPrimary, marginBottom: spacing.xs }}>
+                  Awards / Nominations
+                </Text>
+                <Text style={{ ...typography.caption, color: colors.textMuted, marginBottom: spacing.md }}>
+                  List any awards or nominations your venue has received
+                </Text>
+                <TextInput
+                  placeholder="e.g., Best Wedding Venue 2024, Top 10 Event Spaces..."
+                  value={state.step2.awardsAndNominations ?? ''}
+                  onChangeText={(value) => updateStep2({ awardsAndNominations: value })}
+                  multiline
+                  numberOfLines={4}
+                  style={{
+                    borderWidth: 1,
+                    borderColor: colors.borderSubtle,
+                    borderRadius: radii.md,
+                    paddingHorizontal: spacing.md,
+                    paddingVertical: spacing.sm,
+                    backgroundColor: colors.surface,
+                    fontSize: 14,
+                    color: colors.textPrimary,
+                    textAlignVertical: 'top',
+                    minHeight: 110,
+                  }}
+                />
+              </View>
+
+              {/* Browser Tags */}
+              <View
+                style={{
+                  backgroundColor: colors.surface,
+                  borderRadius: radii.lg,
+                  padding: spacing.lg,
+                  marginBottom: spacing.lg,
+                  borderWidth: 1,
+                  borderColor: colors.borderSubtle,
+                  shadowColor: '#000',
+                  shadowOpacity: 0.05,
+                  shadowRadius: 8,
+                  shadowOffset: { width: 0, height: 2 },
+                  elevation: 2,
+                }}
+              >
+                <Text style={{ ...typography.titleMedium, color: colors.textPrimary, marginBottom: spacing.xs }}>
+                  Browser Tags
+                </Text>
+                <Text style={{ ...typography.caption, color: colors.textMuted, marginBottom: spacing.md }}>
+                  Add keywords that help users find your venue (comma separated)
+                </Text>
+                <TextInput
+                  placeholder="e.g., outdoor, garden, rustic, modern, luxury..."
+                  value={state.step2.browserTags ?? ''}
+                  onChangeText={(value) => updateStep2({ browserTags: value })}
+                  style={{
+                    borderWidth: 1,
+                    borderColor: colors.borderSubtle,
+                    borderRadius: radii.md,
+                    paddingHorizontal: spacing.md,
+                    paddingVertical: spacing.sm,
+                    backgroundColor: colors.surface,
+                    fontSize: 14,
+                    color: colors.textPrimary,
+                  }}
+                />
+              </View>
+
+              {/* Number of Halls on Property */}
+              <View
+                style={{
+                  backgroundColor: colors.surface,
+                  borderRadius: radii.lg,
+                  padding: spacing.lg,
+                  marginBottom: spacing.lg,
+                  borderWidth: 1,
+                  borderColor: colors.borderSubtle,
+                  shadowColor: '#000',
+                  shadowOpacity: 0.05,
+                  shadowRadius: 8,
+                  shadowOffset: { width: 0, height: 2 },
+                  elevation: 2,
+                }}
+              >
+                <Text style={{ ...typography.titleMedium, color: colors.textPrimary, marginBottom: spacing.xs }}>
+                  Number of Halls on Property
+                </Text>
+                <Text style={{ ...typography.caption, color: colors.textMuted, marginBottom: spacing.md }}>
+                  Add details for each hall/space at your venue (up to 5)
+                </Text>
+
+                {Array.from({ length: 5 }, (_, idx) => {
+                  const hall = state.step2.halls?.[idx] ?? { name: '', capacity: '' };
+                  const hallNumber = idx + 1;
+                  return (
+                    <View
+                      key={`hall-${hallNumber}`}
+                      style={{
+                        borderWidth: 1,
+                        borderColor: colors.borderSubtle,
+                        borderRadius: radii.lg,
+                        padding: spacing.md,
+                        marginBottom: spacing.md,
+                        backgroundColor: colors.surface,
+                      }}
+                    >
+                      <View style={{ flexDirection: 'row', gap: spacing.md }}>
+                        <View style={{ flex: 1 }}>
+                          <Text style={{ ...typography.body, fontWeight: '600', color: colors.textPrimary, marginBottom: spacing.xs }}>
+                            Hall {hallNumber} Name
+                          </Text>
+                          <TextInput
+                            placeholder="e.g., Main Hall, Garden Pavilion..."
+                            value={hall.name}
+                            onChangeText={(value) => updateHall(idx, { name: value })}
+                            style={{
+                              borderWidth: 1,
+                              borderColor: colors.borderSubtle,
+                              borderRadius: radii.md,
+                              paddingHorizontal: spacing.md,
+                              paddingVertical: spacing.sm,
+                              backgroundColor: colors.surface,
+                              fontSize: 14,
+                              color: colors.textPrimary,
+                            }}
+                          />
+                        </View>
+
+                        <View style={{ flex: 1 }}>
+                          <Text style={{ ...typography.body, fontWeight: '600', color: colors.textPrimary, marginBottom: spacing.xs }}>
+                            Hall {hallNumber} Capacity
+                          </Text>
+                          <TextInput
+                            placeholder="e.g., 200 guests"
+                            value={hall.capacity}
+                            onChangeText={(value) => updateHall(idx, { capacity: value })}
+                            style={{
+                              borderWidth: 1,
+                              borderColor: colors.borderSubtle,
+                              borderRadius: radii.md,
+                              paddingHorizontal: spacing.md,
+                              paddingVertical: spacing.sm,
+                              backgroundColor: colors.surface,
+                              fontSize: 14,
+                              color: colors.textPrimary,
+                            }}
+                          />
+                        </View>
+                      </View>
+                    </View>
+                  );
+                })}
+              </View>
+
+              {/* Venue Payment Terms & Conditions */}
+              <View
+                style={{
+                  backgroundColor: colors.surface,
+                  borderRadius: radii.lg,
+                  padding: spacing.lg,
+                  marginBottom: spacing.lg,
+                  borderWidth: 1,
+                  borderColor: colors.borderSubtle,
+                  shadowColor: '#000',
+                  shadowOpacity: 0.05,
+                  shadowRadius: 8,
+                  shadowOffset: { width: 0, height: 2 },
+                  elevation: 2,
+                }}
+              >
+                <Text style={{ ...typography.titleMedium, color: colors.textPrimary, marginBottom: spacing.xs }}>
+                  Venue Payment Terms & Conditions
+                </Text>
+                <Text style={{ ...typography.caption, color: colors.textMuted, marginBottom: spacing.md }}>
+                  Describe your payment terms, deposit requirements, and conditions
+                </Text>
+                <TextInput
+                  placeholder="e.g., 50% deposit required to secure booking, balance due 14 days before event..."
+                  value={state.step2.paymentTermsAndConditions ?? ''}
+                  onChangeText={(value) => updateStep2({ paymentTermsAndConditions: value })}
+                  multiline
+                  numberOfLines={4}
+                  style={{
+                    borderWidth: 1,
+                    borderColor: colors.borderSubtle,
+                    borderRadius: radii.md,
+                    paddingHorizontal: spacing.md,
+                    paddingVertical: spacing.sm,
+                    backgroundColor: colors.surface,
+                    fontSize: 14,
+                    color: colors.textPrimary,
+                    textAlignVertical: 'top',
+                    minHeight: 110,
+                  }}
+                />
               </View>
             </>
           )}

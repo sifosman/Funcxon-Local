@@ -5,16 +5,24 @@ import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { colors, spacing, radii, typography } from '../theme';
 import type { ProfileStackParamList } from '../navigation/ProfileNavigator';
+import { useApplicationForm } from '../context/ApplicationFormContext';
 
 // Dev mode - accepts any credentials
 const DEV_MODE = __DEV__;
 
 export default function SubscriberLoginScreen() {
     const navigation = useNavigation<NativeStackNavigationProp<ProfileStackParamList>>();
+    const { resetForm, setPortfolioType } = useApplicationForm();
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [showPassword, setShowPassword] = useState(false);
     const [loading, setLoading] = useState(false);
+
+    const handleRegisterPortfolio = (type: 'venues' | 'vendors') => {
+        resetForm();
+        setPortfolioType(type);
+        navigation.navigate('ApplicationStep1');
+    };
 
     const handleLogin = async () => {
         if (!email || !password) {
@@ -209,6 +217,43 @@ export default function SubscriberLoginScreen() {
                             {loading ? 'Logging in...' : 'Login'}
                         </Text>
                     </TouchableOpacity>
+
+                    <View style={{ marginTop: spacing.md }}>
+                        <TouchableOpacity
+                            onPress={() => handleRegisterPortfolio('venues')}
+                            style={{
+                                paddingVertical: spacing.md,
+                                borderRadius: radii.lg,
+                                alignItems: 'center',
+                                borderWidth: 1,
+                                borderColor: colors.borderSubtle,
+                                backgroundColor: colors.surface,
+                            }}
+                            activeOpacity={0.8}
+                        >
+                            <Text style={{ ...typography.body, fontWeight: '600', color: colors.textPrimary }}>
+                                Register your venue
+                            </Text>
+                        </TouchableOpacity>
+
+                        <TouchableOpacity
+                            onPress={() => handleRegisterPortfolio('vendors')}
+                            style={{
+                                marginTop: spacing.sm,
+                                paddingVertical: spacing.md,
+                                borderRadius: radii.lg,
+                                alignItems: 'center',
+                                borderWidth: 1,
+                                borderColor: colors.borderSubtle,
+                                backgroundColor: colors.surface,
+                            }}
+                            activeOpacity={0.8}
+                        >
+                            <Text style={{ ...typography.body, fontWeight: '600', color: colors.textPrimary }}>
+                                Register your vendor/service business
+                            </Text>
+                        </TouchableOpacity>
+                    </View>
 
                     {/* Attendee conversion CTAs */}
                     <View style={{ marginTop: spacing.md }}>

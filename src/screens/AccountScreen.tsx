@@ -123,8 +123,35 @@ export default function AccountScreen() {
         navigation.navigate('SubscriptionPlans');
     };
 
+    const handleGoToVenueListingPlans = () => {
+        navigation.navigate('VenueListingPlans');
+    };
+
     const handleHelpCentre = () => {
         setHelpVisible(true);
+    };
+
+    const handleDeleteAccount = async () => {
+        Alert.alert(
+            'Delete Account',
+            'This will permanently delete your account and all associated data. Are you absolutely sure?',
+            [
+                { text: 'Cancel', style: 'cancel' },
+                { 
+                    text: 'Delete Forever', 
+                    style: 'destructive',
+                    onPress: async () => {
+                        // TODO: Implement actual account deletion logic
+                        // This should delete user data from all relevant tables
+                        // and then delete the auth user
+                        Alert.alert(
+                            'Feature Coming Soon',
+                            'Account deletion will be available soon. For now, please contact support to delete your account.'
+                        );
+                    }
+                }
+            ]
+        );
     };
 
     const menuItems: MenuItem[] = [
@@ -138,7 +165,6 @@ export default function AccountScreen() {
                 { id: 'become-vendor', label: 'Become a Vendor', icon: 'store', action: handleBecomeVendor },
                 { id: 'change-password', label: 'Change Password', icon: 'lock' },
                 { id: 'marketing-permissions', label: 'Marketing Permissions', icon: 'notifications' },
-                { id: 'delete-account', label: 'Delete Account', icon: 'delete', color: colors.destructive },
             ],
         },
         {
@@ -161,7 +187,7 @@ export default function AccountScreen() {
             submenu: [
                 { id: 'subscription-plans', label: 'View Subscription Plans', icon: 'credit-card' },
                 { id: 'subscription-vendors', label: 'Vendors / Service Professionals', icon: 'store', action: handleGoToSubscriptionPlans },
-                { id: 'subscription-venues', label: 'Venues', icon: 'location-city', action: handleGoToSubscriptionPlans },
+                { id: 'subscription-venues', label: 'Venues', icon: 'location-city', action: handleGoToVenueListingPlans },
             ],
         },
         {
@@ -343,7 +369,11 @@ export default function AccountScreen() {
                     {menuItems.map((item) => renderMenuItem(item))}
                 </View>
             </ScrollView>
-            <HelpCenterModal visible={helpVisible} onClose={() => setHelpVisible(false)} />
+            <HelpCenterModal 
+                visible={helpVisible} 
+                onClose={() => setHelpVisible(false)} 
+                onDeleteAccount={handleDeleteAccount}
+            />
         </View>
     );
 }

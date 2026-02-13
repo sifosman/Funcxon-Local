@@ -12,6 +12,7 @@ import { validateStep3 } from '../../utils/formValidation';
 import { ApplicationProgress } from '../../components/ApplicationProgress';
 import { PhotoUploadCounter } from '../../components/PhotoUploadCounter';
 import { canUploadMorePhotos, incrementVendorPhotoCount, decrementVendorPhotoCount } from '../../lib/subscription';
+import { getMyVenueEntitlement } from '../../lib/venueSubscription';
 import { useAuth } from '../../auth/AuthContext';
 import { supabase } from '../../lib/supabaseClient';
 
@@ -42,22 +43,73 @@ export default function ApplicationStep3Screen() {
   const { user } = useAuth();
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [vendorId, setVendorId] = useState<number | null>(null);
+  const [vendorVideoLimit, setVendorVideoLimit] = useState<number | null>(null);
+  const [venueLimits, setVenueLimits] = useState<{ photoLimit: number; videoLimit: number } | null>(null);
 
   useEffect(() => {
     async function loadVendorId() {
       if (!user) return;
       const { data } = await supabase
         .from('vendors')
-        .select('id')
+        .select('id, subscription_tier')
         .eq('user_id', user.id)
         .maybeSingle();
-      if (data) setVendorId(data.id);
+
+      if (data) {
+        setVendorId(data.id);
+        const tier = String((data as any).subscription_tier ?? '').toLowerCase();
+        const limit = tier === 'premium_plus' ? 10 : tier === 'premium' ? 5 : 0;
+        setVendorVideoLimit(limit);
+      } else {
+        setVendorVideoLimit(null);
+      }
     }
     loadVendorId();
   }, [user]);
 
+  useEffect(() => {
+    async function loadVenueLimits() {
+      if (!user) return;
+      if (state.portfolioType !== 'venues') {
+        setVenueLimits(null);
+        return;
+      }
+
+      const ent = await getMyVenueEntitlement(user.id);
+      setVenueLimits({ photoLimit: ent.photoUploadLimit, videoLimit: ent.videoUploadLimit });
+    }
+
+    loadVenueLimits();
+  }, [state.portfolioType, user]);
+
   const handlePickImages = async () => {
     try {
+      // Venue upload limit enforcement
+      if (state.portfolioType === 'venues') {
+        const limit = venueLimits?.photoLimit ?? 10;
+        const remaining = Math.max(0, limit - state.step3.images.length);
+        if (remaining <= 0) {
+          Alert.alert(
+            'Photo Limit Reached',
+            "You've reached your photo upload limit for your current venue plan.",
+            [{ text: 'OK' }],
+          );
+          return;
+        }
+      }
+
+      // Vendor upload limit enforcement (based on subscription tier)
+      if (state.portfolioType !== 'venues' && vendorVideoLimit !== null) {
+        const remaining = Math.max(0, vendorVideoLimit - state.step3.videos.length);
+        if (remaining <= 0) {
+          const message = vendorVideoLimit === 0
+            ? 'Video uploads are available on paid vendor plans. Please upgrade to upload videos.'
+            : "You've reached your video upload limit for your current vendor plan.";
+          Alert.alert('Video Limit Reached', message, [{ text: 'OK' }]);
+          return;
+        }
+      }
+
       // Check if user can upload more photos (only if they have a vendor record)
       if (vendorId) {
         const canUpload = await canUploadMorePhotos(vendorId);
@@ -83,12 +135,17 @@ export default function ApplicationStep3Screen() {
       }
 
       // Launch image picker
+      const venueRemaining =
+        state.portfolioType === 'venues'
+          ? Math.max(0, (venueLimits?.photoLimit ?? 10) - state.step3.images.length)
+          : 10;
+      const selectionLimit = Math.max(1, Math.min(10, venueRemaining));
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ['images'],
         allowsMultipleSelection: true,
         allowsEditing: false,
         quality: 0.8,
-        selectionLimit: 10, // Reasonable limit for batch upload
+        selectionLimit, // Cap by plan remaining slots
       });
 
       if (!result.canceled && result.assets) {
@@ -115,6 +172,20 @@ export default function ApplicationStep3Screen() {
 
         // Update state with new images
         const updatedImages = [...state.step3.images, ...newImages];
+
+        if (state.portfolioType === 'venues') {
+          const limit = venueLimits?.photoLimit ?? 10;
+          if (updatedImages.length > limit) {
+            Alert.alert(
+              'Photo Limit Reached',
+              `Your venue plan allows up to ${limit} photo(s).`,
+              [{ text: 'OK' }],
+            );
+            updateStep3({ images: updatedImages.slice(0, limit) });
+            return;
+          }
+        }
+
         updateStep3({ images: updatedImages });
 
         // Increment photo count for each uploaded image (only if vendor exists)
@@ -228,6 +299,20 @@ export default function ApplicationStep3Screen() {
 
   const handlePickVideos = async () => {
     try {
+      // Venue upload limit enforcement
+      if (state.portfolioType === 'venues') {
+        const limit = venueLimits?.videoLimit ?? 1;
+        const remaining = Math.max(0, limit - state.step3.videos.length);
+        if (remaining <= 0) {
+          Alert.alert(
+            'Video Limit Reached',
+            "You've reached your video upload limit for your current venue plan.",
+            [{ text: 'OK' }],
+          );
+          return;
+        }
+      }
+
       // Request permission
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (status !== 'granted') {
@@ -240,11 +325,20 @@ export default function ApplicationStep3Screen() {
       }
 
       // Launch video picker
+      const vendorRemaining =
+        state.portfolioType !== 'venues' && vendorVideoLimit !== null
+          ? Math.max(0, vendorVideoLimit - state.step3.videos.length)
+          : 5;
+      const venueRemaining =
+        state.portfolioType === 'venues'
+          ? Math.max(0, (venueLimits?.videoLimit ?? 1) - state.step3.videos.length)
+          : vendorRemaining;
+      const selectionLimit = Math.max(1, Math.min(5, venueRemaining));
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ['videos'],
         allowsMultipleSelection: true,
         allowsEditing: false,
-        selectionLimit: 5, // Reasonable limit for videos
+        selectionLimit, // Cap by plan remaining slots
       });
 
       if (!result.canceled && result.assets) {
@@ -270,6 +364,20 @@ export default function ApplicationStep3Screen() {
         }));
 
         const updatedVideos = [...state.step3.videos, ...newVideos];
+
+        if (state.portfolioType === 'venues') {
+          const limit = venueLimits?.videoLimit ?? 1;
+          if (updatedVideos.length > limit) {
+            Alert.alert(
+              'Video Limit Reached',
+              `Your venue plan allows up to ${limit} video(s).`,
+              [{ text: 'OK' }],
+            );
+            updateStep3({ videos: updatedVideos.slice(0, limit) });
+            return;
+          }
+        }
+
         updateStep3({ videos: updatedVideos });
 
         if (validVideos.length > 0) {

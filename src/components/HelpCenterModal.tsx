@@ -1,17 +1,18 @@
 import { useMemo } from 'react';
-import { Linking, Modal, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Alert, Linking, Modal, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { colors, spacing, radii, typography } from '../theme';
 
 type HelpCenterModalProps = {
   visible: boolean;
   onClose: () => void;
+  onDeleteAccount?: () => void;
 };
 
 const SUPPORT_EMAIL = process.env.EXPO_PUBLIC_SUPPORT_EMAIL || 'support@funcxon.com';
 const SUPPORT_WHATSAPP = process.env.EXPO_PUBLIC_SUPPORT_WHATSAPP || '+27000000000';
 
-export function HelpCenterModal({ visible, onClose }: HelpCenterModalProps) {
+export function HelpCenterModal({ visible, onClose, onDeleteAccount }: HelpCenterModalProps) {
   const whatsappLink = useMemo(() => {
     const number = SUPPORT_WHATSAPP.replace(/[^0-9+]/g, '');
     const message = encodeURIComponent('Hi, I need assistance with Funcxon.');
@@ -29,6 +30,21 @@ export function HelpCenterModal({ visible, onClose }: HelpCenterModalProps) {
 
   const handleEmail = () => {
     Linking.openURL(`mailto:${SUPPORT_EMAIL}?subject=Support%20request`).catch(() => null);
+  };
+
+  const handleDeleteAccount = () => {
+    Alert.alert(
+      'Delete Account',
+      'Are you sure you want to delete your account? This action cannot be undone and will permanently remove all your data.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { 
+          text: 'Delete', 
+          style: 'destructive',
+          onPress: onDeleteAccount
+        }
+      ]
+    );
   };
 
   return (
@@ -91,6 +107,22 @@ export function HelpCenterModal({ visible, onClose }: HelpCenterModalProps) {
               <TouchableOpacity style={styles.secondaryBtn}>
                 <MaterialIcons name="arrow-forward" size={18} color={colors.textPrimary} />
                 <Text style={styles.secondaryBtnText}>Request a manager (coming soon)</Text>
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.card}>
+              <View style={styles.cardHeader}>
+                <View style={styles.iconCircleRed}>
+                  <MaterialIcons name="delete-outline" size={18} color={colors.primaryForeground} />
+                </View>
+                <Text style={styles.cardTitle}>Account Management</Text>
+              </View>
+              <Text style={styles.cardBody}>
+                Manage your account settings or permanently delete your account and all associated data.
+              </Text>
+              <TouchableOpacity style={styles.dangerBtn} onPress={handleDeleteAccount}>
+                <MaterialIcons name="delete" size={18} color="#FFFFFF" />
+                <Text style={styles.dangerBtnText}>Delete Account</Text>
               </TouchableOpacity>
             </View>
           </ScrollView>
@@ -182,6 +214,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  iconCircleRed: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#DC2626',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   chip: {
     alignSelf: 'flex-start',
     paddingHorizontal: spacing.md,
@@ -230,5 +270,20 @@ const styles = StyleSheet.create({
     ...typography.body,
     color: colors.textPrimary,
     fontWeight: '600',
+  },
+  dangerBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: spacing.md,
+    borderRadius: radii.md,
+    backgroundColor: '#DC2626',
+    gap: spacing.xs,
+    marginTop: spacing.sm,
+  },
+  dangerBtnText: {
+    ...typography.body,
+    color: '#FFFFFF',
+    fontWeight: '700',
   },
 });

@@ -137,6 +137,19 @@ export default function VenueProfileScreen({ route, navigation }: Props) {
     [venue?.image_url, venue?.additional_photos],
   );
 
+  const halls = useMemo(() => {
+    const raw = (venue?.features as any)?.halls;
+    if (!Array.isArray(raw)) return [] as Array<{ name: string; capacity: string }>;
+    return raw
+      .map((h: any) => ({ name: String(h?.name ?? ''), capacity: String(h?.capacity ?? '') }))
+      .filter((h: any) => Boolean(h.name.trim()) || Boolean(h.capacity.trim()));
+  }, [venue?.features]);
+
+  const maxHallCapacity = useMemo(() => {
+    const raw = (venue?.features as any)?.maxHallCapacity;
+    return typeof raw === 'number' && Number.isFinite(raw) ? raw : null;
+  }, [venue?.features]);
+
   // Feature checks
   const canBookTours = useMemo(() => {
     if (!venue?.features) return false;
@@ -364,6 +377,15 @@ export default function VenueProfileScreen({ route, navigation }: Props) {
             </Text>
           </View>
         )}
+
+        {!venue.capacity && maxHallCapacity && (
+          <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: spacing.xs }}>
+            <MaterialIcons name="people" size={16} color={colors.textMuted} />
+            <Text style={{ ...typography.body, color: colors.textSecondary, marginLeft: 6 }}>
+              Up to {maxHallCapacity} guests
+            </Text>
+          </View>
+        )}
       </View>
 
       {/* Gallery */}
@@ -483,6 +505,48 @@ export default function VenueProfileScreen({ route, navigation }: Props) {
 
       {activeTab === 'about' && (
         <View>
+          {halls.length > 0 && (
+            <View
+              style={{
+                marginBottom: spacing.lg,
+                padding: spacing.lg,
+                borderRadius: radii.lg,
+                backgroundColor: colors.surface,
+                borderWidth: 1,
+                borderColor: colors.borderSubtle,
+              }}
+            >
+              <Text
+                style={{
+                  ...typography.titleMedium,
+                  color: colors.textPrimary,
+                  marginBottom: spacing.md,
+                }}
+              >
+                Halls & Capacities
+              </Text>
+              {halls.map((hall, idx) => (
+                <View
+                  key={`${hall.name}-${idx}`}
+                  style={{
+                    flexDirection: 'row',
+                    justifyContent: 'space-between',
+                    alignItems: 'flex-start',
+                    marginBottom: spacing.sm,
+                    gap: spacing.md,
+                  }}
+                >
+                  <Text style={{ ...typography.body, color: colors.textPrimary, flex: 1 }}>
+                    {hall.name || `Hall ${idx + 1}`}
+                  </Text>
+                  <Text style={{ ...typography.body, color: colors.textSecondary }}>
+                    {hall.capacity}
+                  </Text>
+                </View>
+              ))}
+            </View>
+          )}
+
           {/* About */}
           {venue.description ? (
             <View

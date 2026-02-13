@@ -17,6 +17,8 @@ type ProfileStackParamList = {
   ApplicationStep4: undefined;
   Payment: undefined;
   PortfolioProfile: undefined;
+  UpdateVenuePortfolio: undefined;
+  UpdateVendorPortfolio: undefined;
   LegalDocument: { documentId: string };
 };
 
@@ -38,6 +40,14 @@ export default function ApplicationStep4Screen() {
   const [loading, setLoading] = useState(true);
   const [selectedBilling, setSelectedBilling] = useState<'monthly' | 'yearly'>('monthly');
 
+  const normalizeVendorTierKey = (rawTierName: string): string => {
+    const t = (rawTierName ?? '').trim().toLowerCase();
+    if (t === 'get started' || t === 'get_started' || t === 'free') return 'free';
+    if (t === 'premium plus' || t === 'premium_plus' || t === 'premiumplus') return 'premium_plus';
+    if (t === 'premium') return 'premium';
+    return t.replace(/\s+/g, '_');
+  };
+
   useEffect(() => {
     loadTiers();
   }, []);
@@ -54,6 +64,13 @@ export default function ApplicationStep4Screen() {
   };
 
   const handleSubmit = async () => {
+    if (!user?.id) {
+      Alert.alert('Error', 'You must be signed in to submit an application');
+      return;
+    }
+
+    setIsSubmitting(true);
+
     const validation = validateStep4(state.step4);
 
     if (!validation.isValid) {
@@ -61,13 +78,6 @@ export default function ApplicationStep4Screen() {
       Alert.alert('Validation Error', 'Please fix the errors before continuing');
       return;
     }
-
-    if (!user) {
-      Alert.alert('Error', 'Please sign in to submit your application');
-      return;
-    }
-
-    setIsSubmitting(true);
 
     try {
       // Upload files to Supabase Storage first
@@ -121,6 +131,62 @@ export default function ApplicationStep4Screen() {
       const result = await submitApplication(submission);
 
       if (result.success) {
+        if (state.portfolioType === 'venues') {
+          const parseCapacityNumber = (value: string): number | null => {
+            const numbers = (value ?? '').match(/\d[\d,]*/g);
+            if (!numbers || numbers.length === 0) return null;
+            const last = numbers[numbers.length - 1];
+            const parsed = parseInt(last.replace(/,/g, ''), 10);
+            return Number.isFinite(parsed) ? parsed : null;
+          };
+
+          const halls = (state.step2.halls ?? []).map((h) => ({
+            name: (h?.name ?? '').trim(),
+            capacity: (h?.capacity ?? '').trim(),
+          }));
+          const hallCapacities = halls
+            .map((h) => parseCapacityNumber(h.capacity))
+            .filter((n): n is number => typeof n === 'number' && Number.isFinite(n));
+          const maxHallCapacity = hallCapacities.length ? Math.max(...hallCapacities) : null;
+
+          const listingName =
+            state.step1.tradingName?.trim() ||
+            state.step1.registeredBusinessName?.trim() ||
+            'Venue Listing';
+
+          try {
+            const { data: existing } = await supabase
+              .from('venue_listings')
+              .select('features')
+              .eq('user_id', user.id)
+              .maybeSingle();
+
+            const existingFeatures = (existing as any)?.features ?? {};
+            const nextFeatures = {
+              ...(existingFeatures ?? {}),
+              halls,
+              maxHallCapacity,
+            };
+
+            await supabase
+              .from('venue_listings')
+              .upsert(
+                {
+                  user_id: user.id,
+                  name: listingName,
+                  description: state.step2.description?.trim() || null,
+                  venue_type: state.step2.venueType ?? null,
+                  venue_capacity: state.step2.venueCapacity ?? null,
+                  capacity: maxHallCapacity,
+                  features: nextFeatures,
+                } as any,
+                { onConflict: 'user_id' },
+              );
+          } catch (e) {
+            console.warn('Failed to persist venue hall capacity details:', e);
+          }
+        }
+
         // Send application submission confirmation email
         await sendApplicationConfirmationEmail(submission);
         
@@ -133,7 +199,11 @@ export default function ApplicationStep4Screen() {
               onPress: () => {
                 // Reset form and navigate to portfolio profile
                 updateStep4({ subscriptionPlan: '', termsAccepted: false, privacyAccepted: false, marketingConsent: false });
-                navigation.navigate('PortfolioProfile');
+                if (state.portfolioType === 'venues') {
+                  navigation.navigate('UpdateVenuePortfolio');
+                } else {
+                  navigation.navigate('UpdateVendorPortfolio');
+                }
               },
             },
           ]
@@ -296,7 +366,8 @@ export default function ApplicationStep4Screen() {
             </View>
           ) : (
             tiers.map((tier) => {
-              const isSelected = state.step4.subscriptionPlan === tier.tier_name.toLowerCase();
+              const tierKey = normalizeVendorTierKey(tier.tier_name);
+              const isSelected = state.step4.subscriptionPlan === tierKey;
               const price = selectedBilling === 'monthly' ? tier.price_monthly : tier.price_yearly;
               const isFree = !price || price === 0;
               const priceLabel = isFree ? 'Free' : `R${Number(price).toLocaleString()}`;
@@ -304,7 +375,7 @@ export default function ApplicationStep4Screen() {
               return (
                 <TouchableOpacity
                   key={tier.id}
-                  onPress={() => updateStep4({ subscriptionPlan: tier.tier_name.toLowerCase() })}
+                  onPress={() => updateStep4({ subscriptionPlan: tierKey })}
                   style={{
                     padding: spacing.lg,
                     marginBottom: spacing.md,

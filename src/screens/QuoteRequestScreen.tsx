@@ -11,7 +11,7 @@ import { useAuth } from '../auth/AuthContext';
 type Props = NativeStackScreenProps<AttendeeStackParamList, 'QuoteRequest'>;
 
 export default function QuoteRequestScreen({ route, navigation }: Props) {
-  const { vendorId, vendorName } = route.params;
+  const { vendorId, vendorName, type = 'vendor' } = route.params;
   const { user } = useAuth();
 
   const [name, setName] = useState('');
@@ -42,17 +42,28 @@ export default function QuoteRequestScreen({ route, navigation }: Props) {
         userId = userRow?.id ?? null;
       }
 
-      const { error: insertError } = await supabase.from('quote_requests').insert({
-        vendor_id: vendorId,
-        user_id: userId,
-        name,
-        email,
-        status: 'pending',
-        details: eventDetails || null,
-      });
+      if (type === 'venue') {
+         const { error: insertError } = await supabase.from('venue_quote_requests').insert({
+          venue_id: vendorId, // Reusing vendorId param as ID
+          user_id: userId,
+          name,
+          email,
+          status: 'pending',
+          message: eventDetails || null, // Note: venues table uses 'message' instead of 'details'
+        });
 
-      if (insertError) {
-        throw insertError;
+        if (insertError) throw insertError;
+      } else {
+        const { error: insertError } = await supabase.from('quote_requests').insert({
+          vendor_id: vendorId,
+          user_id: userId,
+          name,
+          email,
+          status: 'pending',
+          details: eventDetails || null,
+        });
+
+        if (insertError) throw insertError;
       }
 
       // Send admin notification about new quote request

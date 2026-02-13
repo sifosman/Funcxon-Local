@@ -69,7 +69,7 @@ export default function WelcomeScreen({ navigation }: Props) {
             {[
               {
                 icon: 'search',
-                title: 'Discover the perfect vendors',
+                title: 'Discover the perfect venues, vendors and service professional',
                 body: 'Browse a curated marketplace of top-tier event professionals.',
               },
               {
@@ -79,7 +79,7 @@ export default function WelcomeScreen({ navigation }: Props) {
               },
               {
                 icon: 'celebration',
-                title: 'Plan your event in one place',
+                title: 'Plan your entire event in one place',
                 body: 'Manage bookings, communication, and planning seamlessly.',
               },
             ].map((item) => (

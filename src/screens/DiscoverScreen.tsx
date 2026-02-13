@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, ScrollView, Text, TextInput, TouchableOpacity, View, Image } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute } from '@react-navigation/native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useQuery } from '@tanstack/react-query';
 
@@ -15,10 +15,12 @@ type SortBy = 'default' | 'rating-desc' | 'reviews-desc' | 'price-asc';
 
 export default function DiscoverScreen() {
   const navigation = useNavigation<any>();
+  const route = useRoute<any>();
+  const initialCategory = route.params?.category || 'all';
   const [search, setSearch] = useState('');
   const [minRating, setMinRating] = useState<number | null>(null);
   const [onlyWithPrice, setOnlyWithPrice] = useState(false);
-  const [category, setCategory] = useState<CategoryFilter>('all');
+  const [category, setCategory] = useState<CategoryFilter>(initialCategory);
   const [sortBy, setSortBy] = useState<SortBy>('default');
   const [favouriteIds, setFavouriteIds] = useState<{ vendorIds: number[]; venueIds: number[] }>({
     vendorIds: [],

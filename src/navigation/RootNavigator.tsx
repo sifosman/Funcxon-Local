@@ -4,7 +4,6 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { AttendeeNavigator } from './AttendeeNavigator';
 import { QuotesNavigator } from './QuotesNavigator';
 import { ProfileNavigator } from './ProfileNavigator';
-import DiscoverScreen from '../screens/DiscoverScreen';
 import PlannerScreen from '../screens/PlannerScreen';
 import FavouritesScreen from '../screens/FavouritesScreen';
 import PortfolioProfileScreen from '../screens/subscriber/PortfolioProfileScreen';
@@ -13,7 +12,6 @@ import { useAuth } from '../auth/AuthContext';
 
 export type RootTabParamList = {
   Home: undefined;
-  Discover: undefined;
   Favourites: undefined;
   Quotes: undefined;
   Planner: undefined;
@@ -73,8 +71,6 @@ export function RootNavigator() {
 
           if (route.name === 'Home') {
             iconName = 'search';
-          } else if (route.name === 'Discover') {
-            iconName = 'travel-explore';
           } else if (route.name === 'Favourites') {
             iconName = 'favorite';
           } else if (route.name === 'Quotes') {

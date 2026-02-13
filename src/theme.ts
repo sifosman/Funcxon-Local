@@ -95,4 +95,11 @@ export const typography = {
     fontWeight: '600' as const,
     fontFamily: 'PlayfairDisplay_600SemiBold',
   },
+  label: {
+    fontSize: 14,
+    fontWeight: '500' as const,
+    fontFamily: 'Montserrat_500Medium',
+    marginBottom: 8,
+    color: colors.textPrimary,
+  },
 };

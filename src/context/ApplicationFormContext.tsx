@@ -36,6 +36,13 @@ export interface Step2Data {
   venueCapacity?: string;
   amenities: string[];
   eventTypes: string[];
+  awardsAndNominations?: string;
+  browserTags?: string;
+  halls?: Array<{
+    name: string;
+    capacity: string;
+  }>;
+  paymentTermsAndConditions?: string;
   serviceCategories: string[];
   serviceSubcategories: string[];
   provinces: string[];
@@ -119,6 +126,10 @@ const initialState: ApplicationFormState = {
   step2: {
     amenities: [],
     eventTypes: [],
+    awardsAndNominations: '',
+    browserTags: '',
+    halls: Array.from({ length: 5 }, () => ({ name: '', capacity: '' })),
+    paymentTermsAndConditions: '',
     serviceCategories: [],
     serviceSubcategories: [],
     provinces: [],
