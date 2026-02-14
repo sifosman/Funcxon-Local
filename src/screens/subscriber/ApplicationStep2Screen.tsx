@@ -24,6 +24,102 @@ export default function ApplicationStep2Screen() {
   const isVenues = state.portfolioType === 'venues';
   const isVendors = state.portfolioType === 'vendors';
 
+  const renderCheckboxCardRow = (opts: {
+    key: string;
+    label: string;
+    isSelected: boolean;
+    onPress: () => void;
+  }) => {
+    return (
+      <TouchableOpacity
+        key={opts.key}
+        onPress={opts.onPress}
+        activeOpacity={0.9}
+        style={{
+          flexDirection: 'row',
+          alignItems: 'center',
+          paddingVertical: spacing.md,
+          paddingHorizontal: spacing.md,
+          borderRadius: radii.lg,
+          borderWidth: 1,
+          borderColor: colors.borderSubtle,
+          backgroundColor: colors.surface,
+          marginBottom: spacing.sm,
+        }}
+      >
+        <View
+          style={{
+            width: 22,
+            height: 22,
+            borderRadius: 5,
+            borderWidth: 1,
+            borderColor: opts.isSelected ? colors.primaryTeal : colors.borderStrong,
+            backgroundColor: opts.isSelected ? colors.primaryTeal : colors.surface,
+            alignItems: 'center',
+            justifyContent: 'center',
+            marginRight: spacing.md,
+          }}
+        >
+          {opts.isSelected && <MaterialIcons name="check" size={16} color="#FFFFFF" />}
+        </View>
+        <Text style={{ ...typography.body, color: colors.textPrimary, fontWeight: '500' }}>{opts.label}</Text>
+      </TouchableOpacity>
+    );
+  };
+
+  const renderCheckboxCardGridItem = (opts: {
+    key: string;
+    label: string;
+    isSelected: boolean;
+    onPress: () => void;
+  }) => {
+    return (
+      <TouchableOpacity
+        key={opts.key}
+        onPress={opts.onPress}
+        activeOpacity={0.9}
+        style={{
+          width: '48%',
+          flexDirection: 'row',
+          alignItems: 'center',
+          paddingVertical: spacing.md,
+          paddingHorizontal: spacing.md,
+          borderRadius: radii.lg,
+          borderWidth: 1,
+          borderColor: colors.borderSubtle,
+          backgroundColor: colors.surface,
+          marginBottom: spacing.sm,
+        }}
+      >
+        <View
+          style={{
+            width: 22,
+            height: 22,
+            borderRadius: 5,
+            borderWidth: 1,
+            borderColor: opts.isSelected ? colors.primaryTeal : colors.borderStrong,
+            backgroundColor: opts.isSelected ? colors.primaryTeal : colors.surface,
+            alignItems: 'center',
+            justifyContent: 'center',
+            marginRight: spacing.md,
+          }}
+        >
+          {opts.isSelected && <MaterialIcons name="check" size={16} color="#FFFFFF" />}
+        </View>
+        <Text
+          style={{
+            ...typography.body,
+            color: colors.textPrimary,
+            fontWeight: '500',
+            flex: 1,
+          }}
+        >
+          {opts.label}
+        </Text>
+      </TouchableOpacity>
+    );
+  };
+
   const updateHall = (index: number, patch: { name?: string; capacity?: string }) => {
     const nextHalls = (state.step2.halls ?? Array.from({ length: 5 }, () => ({ name: '', capacity: '' })) ).map((h, i) =>
       i === index ? { ...h, ...patch } : h
@@ -118,29 +214,17 @@ export default function ApplicationStep2Screen() {
                 <Text style={{ ...typography.titleMedium, color: colors.textPrimary, marginBottom: spacing.md }}>
                   Venue Type *
                 </Text>
-                <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm }}>
-                  {venueTypes.map((type) => {
-                    const isSelected = state.step2.venueType === type;
-                    return (
-                      <TouchableOpacity
-                        key={type}
-                        onPress={() => updateStep2({ venueType: type })}
-                        style={{
-                          paddingHorizontal: spacing.md,
-                          paddingVertical: spacing.sm,
-                          borderRadius: radii.full,
-                          backgroundColor: isSelected ? colors.primaryTeal : colors.surface,
-                          borderWidth: 1,
-                          borderColor: isSelected ? colors.primaryTeal : colors.borderSubtle,
-                        }}
-                      >
-                        <Text style={{ color: isSelected ? '#FFFFFF' : colors.textPrimary, fontSize: 13 }}>
-                          {type}
-                        </Text>
-                      </TouchableOpacity>
-                    );
-                  })}
-                </View>
+                <Text style={{ ...typography.caption, color: colors.textMuted, marginBottom: spacing.md }}>
+                  Select all venue types that apply to your business
+                </Text>
+                {venueTypes.map((type) =>
+                  renderCheckboxCardRow({
+                    key: type,
+                    label: type,
+                    isSelected: state.step2.venueType === type,
+                    onPress: () => updateStep2({ venueType: type }),
+                  }),
+                )}
                 {errors.venueType && (
                   <Text style={{ fontSize: 12, color: '#EF4444', marginTop: spacing.xs }}>
                     {errors.venueType}
@@ -214,31 +298,19 @@ export default function ApplicationStep2Screen() {
                 }}
               >
                 <Text style={{ ...typography.titleMedium, color: colors.textPrimary, marginBottom: spacing.md }}>
-                  Amenities
+                  Venue Features / Amenities
                 </Text>
-                <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm }}>
-                  {amenitiesList.map((amenity) => {
-                    const isSelected = state.step2.amenities.includes(amenity);
-                    return (
-                      <TouchableOpacity
-                        key={amenity}
-                        onPress={() => toggleArrayItem('amenities', amenity)}
-                        style={{
-                          paddingHorizontal: spacing.md,
-                          paddingVertical: spacing.sm,
-                          borderRadius: radii.full,
-                          backgroundColor: isSelected ? colors.primaryTeal : colors.surface,
-                          borderWidth: 1,
-                          borderColor: isSelected ? colors.primaryTeal : colors.borderSubtle,
-                        }}
-                      >
-                        <Text style={{ color: isSelected ? '#FFFFFF' : colors.textPrimary, fontSize: 13 }}>
-                          {amenity}
-                        </Text>
-                      </TouchableOpacity>
-                    );
-                  })}
-                </View>
+                <Text style={{ ...typography.caption, color: colors.textMuted, marginBottom: spacing.md }}>
+                  Select all features and amenities available at your venue
+                </Text>
+                {amenitiesList.map((amenity) =>
+                  renderCheckboxCardRow({
+                    key: amenity,
+                    label: amenity,
+                    isSelected: state.step2.amenities.includes(amenity),
+                    onPress: () => toggleArrayItem('amenities', amenity),
+                  }),
+                )}
               </View>
 
               {/* Event Types */}
@@ -258,30 +330,20 @@ export default function ApplicationStep2Screen() {
                 }}
               >
                 <Text style={{ ...typography.titleMedium, color: colors.textPrimary, marginBottom: spacing.md }}>
-                  Event Types *
+                  Type of Events
                 </Text>
-                <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm }}>
-                  {eventTypes.map((event) => {
-                    const isSelected = state.step2.eventTypes.includes(event);
-                    return (
-                      <TouchableOpacity
-                        key={event}
-                        onPress={() => toggleArrayItem('eventTypes', event)}
-                        style={{
-                          paddingHorizontal: spacing.md,
-                          paddingVertical: spacing.sm,
-                          borderRadius: radii.full,
-                          backgroundColor: isSelected ? colors.primaryTeal : colors.surface,
-                          borderWidth: 1,
-                          borderColor: isSelected ? colors.primaryTeal : colors.borderSubtle,
-                        }}
-                      >
-                        <Text style={{ color: isSelected ? '#FFFFFF' : colors.textPrimary, fontSize: 13 }}>
-                          {event}
-                        </Text>
-                      </TouchableOpacity>
-                    );
-                  })}
+                <Text style={{ ...typography.caption, color: colors.textMuted, marginBottom: spacing.md }}>
+                  Select all event types your venue can host
+                </Text>
+                <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between' }}>
+                  {eventTypes.map((event) =>
+                    renderCheckboxCardGridItem({
+                      key: event,
+                      label: event,
+                      isSelected: state.step2.eventTypes.includes(event),
+                      onPress: () => toggleArrayItem('eventTypes', event),
+                    }),
+                  )}
                 </View>
                 {errors.eventTypes && (
                   <Text style={{ fontSize: 12, color: '#EF4444', marginTop: spacing.xs }}>
@@ -307,10 +369,10 @@ export default function ApplicationStep2Screen() {
                 }}
               >
                 <Text style={{ ...typography.titleMedium, color: colors.textPrimary, marginBottom: spacing.xs }}>
-                  Awards / Nominations
+                  Awards & Nominations
                 </Text>
                 <Text style={{ ...typography.caption, color: colors.textMuted, marginBottom: spacing.md }}>
-                  List any awards or nominations your venue has received
+                  List any awards or nominations your venue has received (optional)
                 </Text>
                 <TextInput
                   placeholder="e.g., Best Wedding Venue 2024, Top 10 Event Spaces..."
@@ -776,7 +838,7 @@ export default function ApplicationStep2Screen() {
             }}
           >
             <Text style={{ ...typography.titleMedium, color: colors.textPrimary, marginBottom: spacing.xs }}>
-              Business Description *
+              Venue Bio *
             </Text>
             <Text style={{ ...typography.caption, color: colors.textMuted, marginBottom: spacing.md }}>
               Minimum 50 characters

@@ -11,8 +11,8 @@ export const colors = {
   surfaceMuted: '#F5F1E8', // muted surface hsl(45, 40%, 94%)
 
   // Brand primaries - Teal/Cyan from Replit
-  primary: '#2B9EB3', // teal primary hsl(195, 65%, 45%)
-  primaryTeal: '#2B9EB3', // same as primary for consistency
+  primary: '#477372', // teal primary hsl(195, 65%, 45%)
+  primaryTeal: '#477372', // same as primary for consistency
   primaryForeground: '#FFFFFF', // white text on primary
   
   // Secondary colors
@@ -40,7 +40,7 @@ export const colors = {
   chipBackground: '#F5F1E8', // chip background color
   
   // Chart colors (from Replit)
-  chart1: '#2B9EB3', // primary teal
+  chart1: '#477372', // primary teal
   chart2: '#9DCFDB', // secondary teal
   chart3: '#D9EBE8', // accent
   chart4: '#3F6F71', // darker teal

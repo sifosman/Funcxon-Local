@@ -33,7 +33,7 @@ const BUSINESS_DOCS: Array<{ key: DocKey; label: string; required: boolean; acce
   { key: 'bank_confirmation', label: 'Bank Confirmation letter', required: true },
   { key: 'id_copy', label: 'ID copy', required: true },
   { key: 'cipro', label: 'CIPRO', required: false, acceptLabel: 'If applicable' },
-  { key: 'proof_of_residence', label: 'Proof of residence', required: true },
+  { key: 'proof_of_residence', label: 'Proof of trading address', required: true },
   { key: 'company_logo', label: 'Company Logo', required: true },
 ];
 

@@ -102,7 +102,7 @@ export function validateStep2(data: Step2Data, portfolioType: 'vendors' | 'venue
   }
 
   if (!data.description.trim()) {
-    errors.description = 'Business description is required';
+    errors.description = 'Venue bio is required';
   } else if (data.description.trim().length < 50) {
     errors.description = 'Description must be at least 50 characters';
   }
@@ -132,7 +132,7 @@ export function validateStep3(data: Step3Data): ValidationResult {
   }
 
   if (!hasDoc('proof_of_residence')) {
-    errors.proofOfResidence = 'Proof of residence is required';
+    errors.proofOfResidence = 'Proof of trading address is required';
   }
 
   if (!hasDoc('company_logo')) {
