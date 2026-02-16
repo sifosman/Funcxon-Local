@@ -24,6 +24,7 @@ import * as Location from 'expo-location';
 import { getFavourites, toggleFavourite } from '../lib/favourites';
 import { useAuth } from '../auth/AuthContext';
 import { provinces, getCitiesByProvince } from '../config/locations';
+import { amenitiesList } from '../config/venueTypes';
 import MapRadiusSelector from '../components/MapRadiusSelector';
 
 export type VendorListItem = {
@@ -39,6 +40,7 @@ export type VendorListItem = {
   location?: string | null;
   category_id?: number | null;
   venue_type?: string | null;
+  amenities?: string[] | null;
   service_options?: string[] | null;
   vendor_tags?: string[] | null;
   capacity?: number | null;
@@ -56,7 +58,15 @@ type DropdownOption = {
   sort_order: number | null;
 };
 
-type OpenPickerType = 'category' | 'subcategory' | 'province' | 'city' | 'capacity_band' | 'distance' | null;
+type OpenPickerType =
+  | 'category'
+  | 'subcategory'
+  | 'venue_amenities'
+  | 'province'
+  | 'city'
+  | 'capacity_band'
+  | 'distance'
+  | null;
 
 type CategoryOption = {
   id: number;
@@ -265,6 +275,7 @@ export default function AttendeeHomeScreen() {
   const [selectedCategoryIds, setSelectedCategoryIds] = useState<number[]>([]);
   const [selectedVenueTypes, setSelectedVenueTypes] = useState<string[]>([]);
   const [selectedSubcategories, setSelectedSubcategories] = useState<string[]>([]);
+  const [selectedVenueAmenities, setSelectedVenueAmenities] = useState<string[]>([]);
   const [selectedProvinces, setSelectedProvinces] = useState<string[]>([]);
   const [selectedCities, setSelectedCities] = useState<string[]>([]);
   const [distanceKm, setDistanceKm] = useState<string>('');
@@ -315,7 +326,11 @@ export default function AttendeeHomeScreen() {
   const availableSubcategories = useMemo(() => {
     if (serviceType === 'Venues') return [] as string[];
 
-    const subcats = selectedCategoryIds
+    const resolvedCategoryIds = selectedCategoryIds.length
+      ? selectedCategoryIds
+      : VENDOR_CATEGORIES.map((c) => c.id);
+
+    const subcats = resolvedCategoryIds
       .map((id) => VENDOR_CATEGORIES.find((c) => c.id === id)?.subcategories ?? [])
       .flat();
 
@@ -350,7 +365,7 @@ export default function AttendeeHomeScreen() {
       // Fetch venues
       const { data: venues, error: venueError } = await supabase
         .from('venue_listings')
-        .select('id, name, rating, review_count, image_url, location, description, venue_type, capacity, features')
+        .select('id, name, rating, review_count, image_url, location, description, venue_type, capacity, amenities, features')
         .limit(50);
 
       if (venueError) throw venueError;
@@ -391,6 +406,7 @@ export default function AttendeeHomeScreen() {
           location: v.location,
           category_id: null, // Venues are their own category effectively
           venue_type: v.venue_type ?? null,
+          amenities: Array.isArray(v.amenities) ? v.amenities : null,
           capacity: v.capacity ?? null,
           features: v.features ?? null,
           type: 'venue',
@@ -589,6 +605,7 @@ export default function AttendeeHomeScreen() {
     const selectedVendorCategorySet = new Set(selectedCategoryIds);
     const selectedVenueTypeSet = new Set(selectedVenueTypes.map((t) => t.toLowerCase()));
     const selectedSubcategorySet = new Set(selectedSubcategories.map((t) => t.toLowerCase()));
+    const selectedVenueAmenitySet = new Set(selectedVenueAmenities.map((t) => t.toLowerCase()));
 
     const matchesAnySelectedSubcategory = (item: VendorListItem): boolean => {
       if (selectedSubcategorySet.size === 0) return true;
@@ -597,6 +614,14 @@ export default function AttendeeHomeScreen() {
       const tags = Array.isArray(item.vendor_tags) ? item.vendor_tags : [];
       const haystack = [...options, ...tags].map((v) => String(v ?? '').toLowerCase());
       return haystack.some((v) => selectedSubcategorySet.has(v));
+    };
+
+    const matchesAnySelectedVenueAmenity = (item: VendorListItem): boolean => {
+      if (selectedVenueAmenitySet.size === 0) return true;
+      if (item.type !== 'venue') return true;
+      const itemAmenities = Array.isArray(item.amenities) ? item.amenities : [];
+      const haystack = itemAmenities.map((v) => String(v ?? '').toLowerCase());
+      return haystack.some((v) => selectedVenueAmenitySet.has(v));
     };
 
     return data.filter((item) => {
@@ -617,10 +642,8 @@ export default function AttendeeHomeScreen() {
       let matchesType = true;
       if (serviceType === 'Venues') {
         matchesType = item.type === 'venue';
-      } else if (serviceType === 'Vendors') {
+      } else if (serviceType === 'Vendors' || serviceType === 'Service Providers') {
         matchesType = item.type === 'vendor';
-      } else if (serviceType === 'Service Providers') {
-        matchesType = item.type === 'vendor'; // Service Providers are treated as vendors
       }
 
       let matchesCategory = true;
@@ -650,10 +673,31 @@ export default function AttendeeHomeScreen() {
       }
 
       const matchesSubcategory = matchesAnySelectedSubcategory(item);
+      const matchesAmenity = matchesAnySelectedVenueAmenity(item);
 
-      return matchesSearch && matchesType && matchesCategory && matchesSubcategory && matchesProvince && matchesCity && matchesCapacity;
+      return (
+        matchesSearch &&
+        matchesType &&
+        matchesCategory &&
+        matchesSubcategory &&
+        matchesAmenity &&
+        matchesProvince &&
+        matchesCity &&
+        matchesCapacity
+      );
     });
-  }, [data, search, serviceType, selectedCategoryIds, selectedVenueTypes, selectedSubcategories, selectedProvinces, selectedCities, selectedCapacity]);
+  }, [
+    data,
+    search,
+    serviceType,
+    selectedCategoryIds,
+    selectedVenueTypes,
+    selectedSubcategories,
+    selectedVenueAmenities,
+    selectedProvinces,
+    selectedCities,
+    selectedCapacity,
+  ]);
 
   const orderedVendors = useMemo(() => {
     if (!filteredVendors.length) return [];
@@ -923,10 +967,10 @@ export default function AttendeeHomeScreen() {
               Service type
             </Text>
             <View style={{ flexDirection: 'row', columnGap: spacing.sm }}>
-              {(['Venues', 'Service Providers', 'All'] as ServiceType[]).map((type) => {
+              {(['Venues', 'Vendors', 'All'] as ServiceType[]).map((type) => {
                 const selected = serviceType === type;
                 const label =
-                  type === 'Service Providers' ? 'Vendor &\nService\nProfessionals' : type === 'Venues' ? 'Venue\nPortfolios' : 'All';
+                  type === 'Vendors' ? 'Vendors' : type === 'Venues' ? 'Venue\nPortfolios' : 'All';
                 return (
                   <TouchableOpacity
                     key={type}
@@ -980,7 +1024,7 @@ export default function AttendeeHomeScreen() {
                       if (serviceType === 'Venues') {
                         return selectedVenueTypes.length ? selectedVenueTypes.join(', ') : 'Search by Category';
                       }
-                      if (serviceType === 'Service Providers') {
+                      if (serviceType === 'Vendors') {
                         const vendorLabels = selectedCategoryIds
                           .map((id) => VENDOR_CATEGORIES.find((c) => c.id === id)?.label)
                           .filter(Boolean)
@@ -1001,31 +1045,61 @@ export default function AttendeeHomeScreen() {
               </TouchableOpacity>
             </View>
 
-            <View style={{ marginTop: spacing.md }}>
-              <Text style={{ ...typography.caption, color: colors.textSecondary, marginBottom: spacing.xs }}>
-                What are you looking for?
-              </Text>
-              <TouchableOpacity activeOpacity={0.9} onPress={() => setOpenPicker('subcategory')}>
-                <View
-                  style={{
-                    borderRadius: radii.md,
-                    borderWidth: 1,
-                    borderColor: '#D1D5DB',
-                    paddingHorizontal: spacing.md,
-                    paddingVertical: spacing.sm,
-                    backgroundColor: '#FFFFFF',
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                  }}
-                >
-                  <Text style={{ ...typography.body, color: colors.textPrimary }}>
-                    {selectedSubcategories.length ? selectedSubcategories.join(', ') : 'What are you looking for?'}
-                  </Text>
-                  <Text style={{ ...typography.caption, color: colors.textMuted }}>▼</Text>
-                </View>
-              </TouchableOpacity>
-            </View>
+            {(serviceType === 'Vendors' || serviceType === 'All') && (
+              <View style={{ marginTop: spacing.md }}>
+                <Text style={{ ...typography.caption, color: colors.textSecondary, marginBottom: spacing.xs }}>
+                  What are you looking for?
+                </Text>
+                <TouchableOpacity activeOpacity={0.9} onPress={() => setOpenPicker('subcategory')}>
+                  <View
+                    style={{
+                      borderRadius: radii.md,
+                      borderWidth: 1,
+                      borderColor: '#D1D5DB',
+                      paddingHorizontal: spacing.md,
+                      paddingVertical: spacing.sm,
+                      backgroundColor: '#FFFFFF',
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                    }}
+                  >
+                    <Text style={{ ...typography.body, color: colors.textPrimary }}>
+                      {selectedSubcategories.length ? selectedSubcategories.join(', ') : 'What are you looking for?'}
+                    </Text>
+                    <Text style={{ ...typography.caption, color: colors.textMuted }}>▼</Text>
+                  </View>
+                </TouchableOpacity>
+              </View>
+            )}
+
+            {(serviceType === 'Venues' || serviceType === 'All') && (
+              <View style={{ marginTop: spacing.md }}>
+                <Text style={{ ...typography.caption, color: colors.textSecondary, marginBottom: spacing.xs }}>
+                  Venue Amenities
+                </Text>
+                <TouchableOpacity activeOpacity={0.9} onPress={() => setOpenPicker('venue_amenities')}>
+                  <View
+                    style={{
+                      borderRadius: radii.md,
+                      borderWidth: 1,
+                      borderColor: '#D1D5DB',
+                      paddingHorizontal: spacing.md,
+                      paddingVertical: spacing.sm,
+                      backgroundColor: '#FFFFFF',
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                    }}
+                  >
+                    <Text style={{ ...typography.body, color: colors.textPrimary }}>
+                      {selectedVenueAmenities.length ? selectedVenueAmenities.join(', ') : 'Venue Amenities'}
+                    </Text>
+                    <Text style={{ ...typography.caption, color: colors.textMuted }}>▼</Text>
+                  </View>
+                </TouchableOpacity>
+              </View>
+            )}
 
             <View style={{ marginTop: spacing.md }}>
               <Text style={{ ...typography.caption, color: colors.textSecondary, marginBottom: spacing.xs }}>
@@ -1405,6 +1479,20 @@ export default function AttendeeHomeScreen() {
                   <Text style={{ ...typography.caption, color: colors.textPrimary, fontWeight: '600' }}>{sub}</Text>
                 </View>
               ))}
+
+              {selectedVenueAmenities.map((amenity) => (
+                <View
+                  key={`amenity-${amenity}`}
+                  style={{
+                    backgroundColor: colors.surfaceMuted,
+                    paddingHorizontal: spacing.md,
+                    paddingVertical: 6,
+                    borderRadius: radii.full,
+                  }}
+                >
+                  <Text style={{ ...typography.caption, color: colors.textPrimary, fontWeight: '600' }}>{amenity}</Text>
+                </View>
+              ))}
             </View>
           </View>
         )}
@@ -1674,6 +1762,8 @@ export default function AttendeeHomeScreen() {
                 ? 'Search by Category'
                 : openPicker === 'subcategory'
                 ? 'What are you looking for?'
+                : openPicker === 'venue_amenities'
+                ? 'Venue Amenities'
                 : openPicker === 'province'
                 ? 'Select Provinces (Multi-select)'
                 : openPicker === 'city'
@@ -1759,7 +1849,7 @@ export default function AttendeeHomeScreen() {
                   if (serviceType === 'Venues') {
                     return renderVenueTypes();
                   }
-                  if (serviceType === 'Service Providers') {
+                  if (serviceType === 'Vendors' || serviceType === 'Service Providers') {
                     return renderVendorCategories();
                   }
 
@@ -1795,24 +1885,6 @@ export default function AttendeeHomeScreen() {
                           }}
                         >
                           Sub-options are available for Vendor & Service Professionals.
-                        </Text>
-                      </View>
-                    );
-                  }
-
-                  if (selectedCategoryIds.length === 0) {
-                    return (
-                      <View style={{ alignItems: 'center', paddingVertical: spacing.xl }}>
-                        <MaterialIcons name="category" size={48} color={colors.textMuted} />
-                        <Text
-                          style={{
-                            ...typography.body,
-                            color: colors.textSecondary,
-                            marginTop: spacing.md,
-                            textAlign: 'center',
-                          }}
-                        >
-                          Select at least one vendor category to see available options.
                         </Text>
                       </View>
                     );
@@ -1877,6 +1949,45 @@ export default function AttendeeHomeScreen() {
                       );
                     }),
                   ];
+                })()
+              ) : openPicker === 'venue_amenities' ? (
+                (() => {
+                  const options = Array.from(
+                    new Set((amenitiesList ?? []).map((v) => String(v ?? '').trim()).filter(Boolean)),
+                  ).sort();
+
+                  return options.map((amenity) => {
+                    const isSelected = selectedVenueAmenities.includes(amenity);
+                    return (
+                      <TouchableOpacity
+                        key={amenity}
+                        onPress={() => {
+                          const next = isSelected
+                            ? selectedVenueAmenities.filter((a) => a !== amenity)
+                            : [...selectedVenueAmenities, amenity];
+                          setSelectedVenueAmenities(next);
+                        }}
+                        style={{ paddingVertical: spacing.sm, flexDirection: 'row', alignItems: 'center' }}
+                      >
+                        <View
+                          style={{
+                            width: 24,
+                            height: 24,
+                            borderRadius: 4,
+                            borderWidth: 2,
+                            borderColor: isSelected ? colors.primary : '#D1D5DB',
+                            backgroundColor: isSelected ? colors.primary : '#FFFFFF',
+                            marginRight: spacing.sm,
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                          }}
+                        >
+                          {isSelected && <MaterialIcons name="check" size={16} color="#FFFFFF" />}
+                        </View>
+                        <Text style={{ ...typography.body, color: colors.textPrimary }}>{amenity}</Text>
+                      </TouchableOpacity>
+                    );
+                  });
                 })()
               ) : openPicker === 'province' ? (
                 provinces.map((province) => {

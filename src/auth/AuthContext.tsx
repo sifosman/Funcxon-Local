@@ -136,9 +136,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const signInWithProvider: AuthContextValue['signInWithProvider'] = async (provider) => {
+    const scopes = provider === 'facebook' ? 'email public_profile' : undefined;
+
     // On web, let Supabase handle the redirect directly.
     if (Platform.OS === 'web') {
-      const { error } = await supabase.auth.signInWithOAuth({ provider });
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider,
+        options: scopes ? { scopes } : undefined,
+      });
       return { error: error ?? undefined };
     }
 
@@ -153,6 +158,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       options: {
         redirectTo: redirectUrl,
         skipBrowserRedirect: true,
+        ...(scopes ? { scopes } : {}),
       },
     });
 

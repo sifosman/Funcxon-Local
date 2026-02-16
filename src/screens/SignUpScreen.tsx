@@ -99,12 +99,6 @@ export default function SignUpScreen({ navigation }: Props) {
     }
   };
 
-  const handleAppleSignUp = async () => {
-    const { error } = await signInWithProvider('apple');
-    if (error) {
-      Alert.alert('Apple sign up failed', error.message);
-    }
-  };
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
@@ -452,39 +446,6 @@ export default function SignUpScreen({ navigation }: Props) {
               <Text style={{ ...typography.body, color: colors.textPrimary }}>Sign up with Google</Text>
             </TouchableOpacity>
 
-            {(Platform.OS === 'ios' || Platform.OS === 'web') && (
-              <TouchableOpacity
-                activeOpacity={0.9}
-                onPress={handleAppleSignUp}
-                style={{
-                  width: '100%',
-                  paddingVertical: spacing.md,
-                  borderRadius: radii.md,
-                  borderWidth: 1,
-                  borderColor: colors.borderSubtle,
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  flexDirection: 'row',
-                  backgroundColor: colors.surface,
-                  marginTop: spacing.sm,
-                }}
-              >
-                <View
-                  style={{
-                    width: 28,
-                    height: 28,
-                    borderRadius: 12,
-                    backgroundColor: '#000000',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    marginRight: spacing.sm,
-                  }}
-                >
-                  <Ionicons name="logo-apple" size={18} color="#FFFFFF" />
-                </View>
-                <Text style={{ ...typography.body, color: colors.textPrimary }}>Sign up with Apple</Text>
-              </TouchableOpacity>
-            )}
 
             <TouchableOpacity
               activeOpacity={0.9}
