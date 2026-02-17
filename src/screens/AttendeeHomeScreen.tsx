@@ -365,7 +365,7 @@ export default function AttendeeHomeScreen() {
       // Fetch venues
       const { data: venues, error: venueError } = await supabase
         .from('venue_listings')
-        .select('id, name, rating, review_count, image_url, location, description, venue_type, capacity, amenities, features')
+        .select('id, name, rating, review_count, image_url, location, description, venue_type, venue_capacity, amenities, features')
         .limit(50);
 
       if (venueError) throw venueError;
@@ -393,6 +393,7 @@ export default function AttendeeHomeScreen() {
       // Map venues to match VendorListItem structure
       const venueItems: VendorListItem[] = (venues ?? []).map((v: any) => {
         const parsedLocation = parseLocationParts(v.location);
+        console.log(`Venue ${v.name}: location="${v.location}" -> city=${parsedLocation.city}, province=${parsedLocation.province}`);
         return {
           id: v.id,
           name: v.name,
@@ -407,7 +408,7 @@ export default function AttendeeHomeScreen() {
           category_id: null, // Venues are their own category effectively
           venue_type: v.venue_type ?? null,
           amenities: Array.isArray(v.amenities) ? v.amenities : null,
-          capacity: v.capacity ?? null,
+          capacity: v.venue_capacity ?? null,
           features: v.features ?? null,
           type: 'venue',
         };
@@ -434,7 +435,7 @@ export default function AttendeeHomeScreen() {
 
       const { data: venues, error: venueError } = await supabase
         .from('venue_listings')
-        .select('id, name, rating, review_count, image_url, location, description, features')
+        .select('id, name, rating, review_count, image_url, location, description, venue_type, venue_capacity, amenities, features')
         .limit(20);
 
       if (venueError) throw venueError;
@@ -461,6 +462,7 @@ export default function AttendeeHomeScreen() {
         .filter((v: any) => Boolean(v?.features?.featured))
         .map((v: any) => {
           const parsedLocation = parseLocationParts(v.location);
+          console.log(`Featured Venue ${v.name}: location="${v.location}" -> city=${parsedLocation.city}, province=${parsedLocation.province}`);
           return {
             id: v.id,
             name: v.name,
@@ -473,7 +475,7 @@ export default function AttendeeHomeScreen() {
             city: v.city ?? parsedLocation.city,
             location: v.location,
             category_id: null,
-            capacity: v.capacity ?? null,
+            capacity: v.venue_capacity ?? null,
             features: v.features ?? null,
             type: 'venue',
           };

@@ -30,13 +30,14 @@ type VenueRecord = {
   city: string | null;
   province: string | null;
   location: string | null;
-  capacity: number | null;
+  venue_capacity: string | null;
   venue_type: string | null;
   amenities: string[] | null;
+  event_types: string[] | null;
   website_url: string | null;
   instagram_url: string | null;
   whatsapp_number: string | null;
-  email: string | null;
+  contact_email: string | null;
   additional_photos: string[] | null;
   subscription_status: string | null;
   subscription_plan: string | null;
@@ -306,6 +307,31 @@ export default function VenueProfileScreen({ route, navigation }: Props) {
     ? `https://www.google.com/maps?q=${encodeURIComponent(mapQuery)}&output=embed`
     : null;
 
+  const renderBulletSection = (title: string, items?: string[] | null) => {
+    if (!items || items.length === 0) return null;
+    return (
+      <View style={{ marginBottom: spacing.md }}>
+        <Text style={{ ...typography.body, color: colors.primaryTeal, fontWeight: '600', marginBottom: spacing.xs }}>
+          {title}
+        </Text>
+        {items.map((item) => (
+          <View key={item} style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 4 }}>
+            <View
+              style={{
+                width: 6,
+                height: 6,
+                borderRadius: 3,
+                backgroundColor: colors.primaryTeal,
+                marginRight: spacing.sm,
+              }}
+            />
+            <Text style={{ ...typography.caption, color: colors.textPrimary }}>{item}</Text>
+          </View>
+        ))}
+      </View>
+    );
+  };
+
   return (
     <ScrollView
       style={{ flex: 1, backgroundColor: colors.background }}
@@ -369,16 +395,16 @@ export default function VenueProfileScreen({ route, navigation }: Props) {
           </Text>
         </View>
 
-        {venue.capacity && (
+        {venue.venue_capacity && (
           <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: spacing.xs }}>
             <MaterialIcons name="people" size={16} color={colors.textMuted} />
             <Text style={{ ...typography.body, color: colors.textSecondary, marginLeft: 6 }}>
-              Up to {venue.capacity} guests
+              Up to {venue.venue_capacity} guests
             </Text>
           </View>
         )}
 
-        {!venue.capacity && maxHallCapacity && (
+        {!venue.venue_capacity && maxHallCapacity && (
           <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: spacing.xs }}>
             <MaterialIcons name="people" size={16} color={colors.textMuted} />
             <Text style={{ ...typography.body, color: colors.textSecondary, marginLeft: 6 }}>
@@ -585,6 +611,158 @@ export default function VenueProfileScreen({ route, navigation }: Props) {
             </View>
           )}
 
+          {/* Features & Amenities */}
+          {(venue.amenities?.length || venue.event_types?.length || venue.venue_type) ? (
+            <View
+              style={{
+                marginBottom: spacing.lg,
+                padding: spacing.lg,
+                borderRadius: radii.lg,
+                backgroundColor: colors.surface,
+                borderWidth: 1,
+                borderColor: colors.borderSubtle,
+              }}
+            >
+              <Text style={{ ...typography.titleMedium, color: colors.textPrimary, marginBottom: spacing.md }}>
+                Features & Amenities
+              </Text>
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
+                <View style={{ width: '50%', paddingRight: spacing.sm }}>
+                  {venue.venue_type && (
+                    <View style={{ marginBottom: spacing.sm }}>
+                      <Text style={{ ...typography.caption, color: colors.textSecondary, marginBottom: spacing.xs }}>
+                        Venue Type
+                      </Text>
+                      <Text style={{ ...typography.body, color: colors.textPrimary }}>{venue.venue_type}</Text>
+                    </View>
+                  )}
+                  {venue.venue_capacity && (
+                    <View style={{ marginBottom: spacing.sm }}>
+                      <Text style={{ ...typography.caption, color: colors.textSecondary, marginBottom: spacing.xs }}>
+                        Capacity
+                      </Text>
+                      <Text style={{ ...typography.body, color: colors.textPrimary }}>{venue.venue_capacity} guests</Text>
+                    </View>
+                  )}
+                  {renderBulletSection('Amenities', venue.amenities)}
+                </View>
+                <View style={{ width: '50%', paddingLeft: spacing.sm }}>
+                  {renderBulletSection('Event Types', venue.event_types)}
+                </View>
+              </View>
+            </View>
+          ) : null}
+
+          {/* Tags / highlights */}
+          {venue.amenities && venue.amenities.length > 0 && (
+            <View
+              style={{
+                marginBottom: spacing.lg,
+                padding: spacing.lg,
+                borderRadius: radii.lg,
+                backgroundColor: colors.surface,
+                borderWidth: 1,
+                borderColor: colors.borderSubtle,
+              }}
+            >
+              <Text
+                style={{
+                  ...typography.titleMedium,
+                  color: colors.textPrimary,
+                  marginBottom: spacing.sm,
+                }}
+              >
+                Highlights
+              </Text>
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
+                {venue.amenities.map((tag) => (
+                  <View
+                    key={tag}
+                    style={{
+                      paddingHorizontal: spacing.md,
+                      paddingVertical: spacing.xs,
+                      borderRadius: radii.full,
+                      backgroundColor: colors.surfaceMuted,
+                      marginRight: spacing.sm,
+                      marginBottom: spacing.sm,
+                    }}
+                  >
+                    <Text style={{ ...typography.caption, color: colors.textPrimary }}>{tag}</Text>
+                  </View>
+                ))}
+              </View>
+            </View>
+          )}
+
+          {/* Contact */}
+          {(venue.whatsapp_number || venue.contact_email || venue.website_url || venue.instagram_url) && (
+            <View
+              style={{
+                marginBottom: spacing.lg,
+                padding: spacing.lg,
+                borderRadius: radii.lg,
+                backgroundColor: colors.surface,
+                borderWidth: 1,
+                borderColor: colors.borderSubtle,
+              }}
+            >
+              <Text style={{ ...typography.titleMedium, color: colors.textPrimary, marginBottom: spacing.md }}>
+                Contact
+              </Text>
+              <View style={{ gap: spacing.sm }}>
+                {venue.whatsapp_number && venue.venue_capacity && (
+                  <TouchableOpacity
+                    onPress={() => handleBookTour()}
+                    style={{
+                      backgroundColor: colors.primaryTeal,
+                      paddingVertical: spacing.md,
+                      borderRadius: radii.md,
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      marginBottom: spacing.sm,
+                    }}
+                  >
+                    <MaterialIcons name="event-available" size={18} color="#FFFFFF" />
+                    <Text style={{ color: '#FFFFFF', fontWeight: '600', marginLeft: spacing.sm }}>Book Venue Tour</Text>
+                  </TouchableOpacity>
+                )}
+                {venue.whatsapp_number && (
+                  <TouchableOpacity
+                    onPress={() => handleOpenUrl(`https://wa.me/${venue.whatsapp_number?.replace(/[^0-9]/g, '')}`)}
+                    style={{
+                      backgroundColor: '#22C55E',
+                      paddingVertical: spacing.md,
+                      borderRadius: radii.md,
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}
+                  >
+                    <MaterialIcons name="chat" size={18} color="#FFFFFF" />
+                    <Text style={{ color: '#FFFFFF', fontWeight: '600', marginLeft: spacing.sm }}>Contact via WhatsApp</Text>
+                  </TouchableOpacity>
+                )}
+                {venue.contact_email && (
+                  <TouchableOpacity
+                    onPress={() => handleOpenUrl(`mailto:${venue.contact_email}`)}
+                    style={{
+                      backgroundColor: '#3B82F6',
+                      paddingVertical: spacing.md,
+                      borderRadius: radii.md,
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}
+                  >
+                    <MaterialIcons name="email" size={18} color="#FFFFFF" />
+                    <Text style={{ color: '#FFFFFF', fontWeight: '600', marginLeft: spacing.sm }}>Contact via Email</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+            </View>
+          )}
+
           {/* Location & Map */}
           {(mapQuery || venue.location) && (
             <View
@@ -636,7 +814,7 @@ export default function VenueProfileScreen({ route, navigation }: Props) {
                   <MapViewComponent
                     style={{ flex: 1 }}
                     region={mapRegion}
-                    provider={Platform.OS === 'android' ? GoogleProvider : undefined}
+                    provider={GoogleProvider}
                   >
                     {MarkerComponent && (
                       <MarkerComponent
@@ -723,7 +901,7 @@ export default function VenueProfileScreen({ route, navigation }: Props) {
 
       {activeTab === 'contact' && (
         <View>
-          {(venue.whatsapp_number || venue.email || (canShowLinks && (venue.website_url || venue.instagram_url))) ? (
+          {(venue.whatsapp_number || venue.contact_email || venue.website_url || venue.instagram_url) ? (
             <View
               style={{
                 marginBottom: spacing.lg,
@@ -754,9 +932,9 @@ export default function VenueProfileScreen({ route, navigation }: Props) {
                     <Text style={{ color: '#FFFFFF', fontWeight: '600', marginLeft: spacing.sm }}>WhatsApp</Text>
                   </TouchableOpacity>
                 )}
-                {venue.email && (
+                {venue.contact_email && (
                   <TouchableOpacity
-                    onPress={() => handleOpenUrl(`mailto:${venue.email}`)}
+                    onPress={() => handleOpenUrl(`mailto:${venue.contact_email}`)}
                     style={{
                       backgroundColor: '#3B82F6',
                       paddingVertical: spacing.md,
@@ -770,7 +948,7 @@ export default function VenueProfileScreen({ route, navigation }: Props) {
                     <Text style={{ color: '#FFFFFF', fontWeight: '600', marginLeft: spacing.sm }}>Email</Text>
                   </TouchableOpacity>
                 )}
-                {canShowLinks && venue.website_url && (
+                {venue.website_url && (
                    <TouchableOpacity
                     onPress={() => handleOpenUrl(venue.website_url)}
                     style={{
@@ -788,7 +966,7 @@ export default function VenueProfileScreen({ route, navigation }: Props) {
                     <Text style={{ color: colors.textPrimary, fontWeight: '600', marginLeft: spacing.sm }}>Website</Text>
                   </TouchableOpacity>
                 )}
-                {canShowLinks && venue.instagram_url && (
+                {venue.instagram_url && (
                    <TouchableOpacity
                     onPress={() => handleOpenUrl(venue.instagram_url)}
                     style={{

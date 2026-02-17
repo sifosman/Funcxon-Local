@@ -35,6 +35,10 @@
       },
       "edgeToEdgeEnabled": false,
       "package": "com.anonymous.vibeventzapp",
+      "permissions": [
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_COARSE_LOCATION"
+      ],
       "androidStatusBar": {
         "backgroundColor": "#00000000",
         "translucent": true,
