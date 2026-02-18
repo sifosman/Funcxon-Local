@@ -2,11 +2,21 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 
 import QuotesScreen from '../screens/QuotesScreen';
 import QuoteDetailScreen from '../screens/QuoteDetailScreen';
+import QuoteResponseScreen from '../screens/QuoteResponseScreen';
+import QuoteHistoryScreen from '../screens/QuoteHistoryScreen';
 import { colors } from '../theme';
 
 export type QuotesStackParamList = {
   QuotesList: undefined;
   QuoteDetail: { quoteId: number };
+  QuoteResponse: {
+    revisionId: number;
+    quoteRequestId: number;
+    vendorName?: string;
+    amount?: number;
+    description?: string;
+  };
+  QuoteHistory: { quoteRequestId: number };
 };
 
 const Stack = createNativeStackNavigator<QuotesStackParamList>();
@@ -34,6 +44,16 @@ export function QuotesNavigator() {
         name="QuoteDetail"
         component={QuoteDetailScreen}
         options={{ title: 'Quote details' }}
+      />
+      <Stack.Screen
+        name="QuoteResponse"
+        component={QuoteResponseScreen}
+        options={{ title: 'Review quote' }}
+      />
+      <Stack.Screen
+        name="QuoteHistory"
+        component={QuoteHistoryScreen}
+        options={{ title: 'Quote history' }}
       />
     </Stack.Navigator>
   );

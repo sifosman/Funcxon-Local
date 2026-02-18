@@ -5,6 +5,7 @@ import VendorProfileScreen from '../screens/VendorProfileScreen';
 import VenueProfileScreen from '../screens/VenueProfileScreen';
 import BookTourScreen from '../screens/BookTourScreen';
 import QuoteRequestScreen from '../screens/QuoteRequestScreen';
+import CreateReviewScreen from '../screens/CreateReviewScreen';
 import PlannerScreen from '../screens/PlannerScreen';
 import { colors, typography } from '../theme';
 
@@ -14,6 +15,7 @@ export type AttendeeStackParamList = {
   VenueProfile: { venueId: number; from?: 'Favourites' };
   QuoteRequest: { vendorId: number; vendorName: string; type?: 'vendor' | 'venue' };
   BookTour: { venueId: number; venueName: string };
+  CreateReview: { type: 'vendor' | 'venue'; targetId: number; targetName: string };
   Planner: undefined;
 };
 
@@ -52,6 +54,11 @@ export function AttendeeNavigator() {
         name="QuoteRequest"
         component={QuoteRequestScreen}
         options={{ title: 'Request a quote' }}
+      />
+      <Stack.Screen
+        name="CreateReview"
+        component={CreateReviewScreen}
+        options={{ title: 'Leave a review' }}
       />
       <Stack.Screen
         name="BookTour"

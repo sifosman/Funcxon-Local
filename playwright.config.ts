@@ -9,7 +9,7 @@ export default defineConfig({
   workers: process.env.CI ? 1 : undefined,
   reporter: 'html',
   use: {
-    baseURL: 'http://localhost:19006',
+    baseURL: 'http://localhost:8082',
     storageState: './tests/e2e/.auth/storageState.json',
     trace: 'on-first-retry',
   },
@@ -20,8 +20,8 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: 'npx expo start --web --port 19006',
-    url: 'http://localhost:19006',
+    command: 'npx expo start --web --port 8082',
+    url: 'http://localhost:8082',
     reuseExistingServer: !process.env.CI,
     timeout: 120 * 1000,
   },

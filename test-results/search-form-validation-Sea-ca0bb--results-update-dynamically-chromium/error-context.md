@@ -1,0 +1,312 @@
+# Page snapshot
+
+```yaml
+- generic [ref=e1]:
+  - generic [ref=e10]:
+    - generic [ref=e20]:
+      - generic [ref=e22]:
+        - generic [ref=e23]: Connect, Collaborate, Celebrate
+        - generic [ref=e24]: Welcome to Funcxon! Your all in one Event Coordinator. Plan, browse, compare, get quotes, and book venues and service professionals in one place.
+        - generic [ref=e25]:
+          - generic [ref=e26]: Service type
+          - generic [ref=e27]:
+            - generic [ref=e29] [cursor=pointer]: Venue Portfolios
+            - generic [ref=e31] [cursor=pointer]: Vendors
+            - generic [ref=e33] [cursor=pointer]: All
+          - generic [ref=e34]:
+            - generic [ref=e35]: Search by category
+            - generic [ref=e37] [cursor=pointer]:
+              - generic [ref=e38]: Search by Category
+              - generic [ref=e39]: ▼
+          - generic [ref=e40]:
+            - generic [ref=e41]: What are you looking for?
+            - generic [ref=e43] [cursor=pointer]:
+              - generic [ref=e44]: What are you looking for?
+              - generic [ref=e45]: ▼
+          - generic [ref=e46]:
+            - generic [ref=e47]: Venue Amenities
+            - generic [ref=e49] [cursor=pointer]:
+              - generic [ref=e50]: Venue Amenities
+              - generic [ref=e51]: ▼
+          - generic [ref=e52]:
+            - generic [ref=e53]: Event Capacity
+            - generic [ref=e55] [cursor=pointer]:
+              - generic [ref=e56]: Event Capacity
+              - generic [ref=e57]: ▼
+          - generic [ref=e58]:
+            - generic [ref=e59]: Search Area
+            - generic [ref=e60] [cursor=pointer]:
+              - generic [ref=e61]:
+                - generic [ref=e62]: 
+                - generic [ref=e63]: Select search area
+              - generic [ref=e64]: 
+          - generic [ref=e65]:
+            - generic [ref=e66]: Provinces
+            - generic [ref=e68] [cursor=pointer]:
+              - generic [ref=e69]: Select Provinces
+              - generic [ref=e70]: ▼
+          - generic [ref=e71]:
+            - generic [ref=e72]: Cities
+            - generic [ref=e74] [cursor=pointer]:
+              - generic [ref=e75]: Select Cities
+              - generic [ref=e76]: ▼
+            - generic [ref=e79] [cursor=pointer]: Use my location
+          - generic [ref=e80]:
+            - generic [ref=e83] [cursor=pointer]: Search
+            - generic [ref=e86] [cursor=pointer]: Clear All
+          - generic [ref=e88] [cursor=pointer]:
+            - generic [ref=e89]: 
+            - generic [ref=e90]: "Sort: Name (↑)"
+      - generic [ref=e91]:
+        - generic [ref=e93]: Featured Vendors
+        - generic [ref=e94]:
+          - generic [ref=e96]:
+            - generic [ref=e97] [cursor=pointer]:
+              - generic [ref=e102]: Featured
+              - generic [ref=e103]:
+                - generic [ref=e104]:
+                  - generic [ref=e105]: Demo Vendor Business
+                  - generic [ref=e107]: 
+                - generic [ref=e108]:
+                  - generic [ref=e109]: 
+                  - generic [ref=e110]: "0.0"
+                - generic [ref=e111]: Vendor account created for testing vendor routing and help button.
+                - generic [ref=e113]: Johannesburg, South Africa
+            - generic [ref=e116] [cursor=pointer]: View Details
+          - generic [ref=e118]:
+            - generic [ref=e119] [cursor=pointer]:
+              - generic [ref=e124]: Featured
+              - generic [ref=e125]:
+                - generic [ref=e126]:
+                  - generic [ref=e127]: Willow Creek Barn Venue
+                  - generic [ref=e129]: 
+                - generic [ref=e130]:
+                  - generic [ref=e131]: 
+                  - generic [ref=e132]: "4.5"
+                - generic [ref=e133]: Rustic-chic barn venue with warm lighting, open lawns, and a cozy indoor space—perfect for intimate celebrations.
+                - generic [ref=e135]: Stellenbosch, South Africa
+            - generic [ref=e138] [cursor=pointer]: View Details
+          - generic [ref=e140]:
+            - generic [ref=e141] [cursor=pointer]:
+              - generic [ref=e146]: Featured
+              - generic [ref=e147]:
+                - generic [ref=e148]:
+                  - generic [ref=e149]: The Grand Conservatory
+                  - generic [ref=e151]: 
+                - generic [ref=e152]:
+                  - generic [ref=e153]: 
+                  - generic [ref=e154]: "4.9"
+                - generic [ref=e155]: A glass conservatory surrounded by greenery with natural light, beautiful acoustics, and a premium bridal suite.
+                - generic [ref=e157]: Pretoria, South Africa
+            - generic [ref=e160] [cursor=pointer]: View Details
+          - generic [ref=e162]:
+            - generic [ref=e163] [cursor=pointer]:
+              - generic [ref=e168]: Featured
+              - generic [ref=e169]:
+                - generic [ref=e170]:
+                  - generic [ref=e171]: The Loft Engagement Venue
+                  - generic [ref=e173]: 
+                - generic [ref=e174]:
+                  - generic [ref=e175]: 
+                  - generic [ref=e176]: "4.6"
+                - generic [ref=e177]: Stylish urban loft space perfect for intimate engagement parties with modern industrial decor.
+                - generic [ref=e179]: Cape Town, Western Cape
+            - generic [ref=e182] [cursor=pointer]: View Details
+          - generic [ref=e184]:
+            - generic [ref=e185] [cursor=pointer]:
+              - generic [ref=e190]: Featured
+              - generic [ref=e191]:
+                - generic [ref=e192]:
+                  - generic [ref=e193]: Bliss Baby Shower Venue
+                  - generic [ref=e195]: 
+                - generic [ref=e196]:
+                  - generic [ref=e197]: 
+                  - generic [ref=e198]: "4.9"
+                - generic [ref=e199]: Elegant and intimate venue specializing in beautiful baby shower celebrations with delicate decor.
+                - generic [ref=e201]: Johannesburg, Gauteng
+            - generic [ref=e204] [cursor=pointer]: View Details
+          - generic [ref=e206]:
+            - generic [ref=e207] [cursor=pointer]:
+              - generic [ref=e212]: Featured
+              - generic [ref=e213]:
+                - generic [ref=e214]:
+                  - generic [ref=e215]: Starlight Matric Dance Venue
+                  - generic [ref=e217]: 
+                - generic [ref=e218]:
+                  - generic [ref=e219]: 
+                  - generic [ref=e220]: "4.6"
+                - generic [ref=e221]: Glamorous venue perfect for matric dances and prom nights with professional lighting and sound.
+                - generic [ref=e223]: Durban, KwaZulu-Natal
+            - generic [ref=e226] [cursor=pointer]: View Details
+          - generic [ref=e228]:
+            - generic [ref=e229] [cursor=pointer]:
+              - generic [ref=e234]: Featured
+              - generic [ref=e235]:
+                - generic [ref=e236]:
+                  - generic [ref=e237]: Knowledge Hub Conference Venue
+                  - generic [ref=e239]: 
+                - generic [ref=e240]:
+                  - generic [ref=e241]: 
+                  - generic [ref=e242]: "4.8"
+                - generic [ref=e243]: Specialized conference venue with breakout rooms and professional presentation facilities.
+                - generic [ref=e245]: Durban, KwaZulu-Natal
+            - generic [ref=e248] [cursor=pointer]: View Details
+          - generic [ref=e250]:
+            - generic [ref=e251] [cursor=pointer]:
+              - generic [ref=e256]: Featured
+              - generic [ref=e257]:
+                - generic [ref=e258]:
+                  - generic [ref=e259]: Elegant Gardens Venue
+                  - generic [ref=e261]: 
+                - generic [ref=e262]:
+                  - generic [ref=e263]: 
+                  - generic [ref=e264]: "4.8"
+                - generic [ref=e265]: Beautiful garden venue for weddings and special events with stunning landscapes, flexible indoor-outdoor spaces, and on-site coordination.
+                - generic [ref=e267]: Cape Town, South Africa
+            - generic [ref=e270] [cursor=pointer]: View Details
+          - generic [ref=e272]:
+            - generic [ref=e273] [cursor=pointer]:
+              - generic [ref=e278]: Featured
+              - generic [ref=e279]:
+                - generic [ref=e280]:
+                  - generic [ref=e281]: WonderLand Kids Party Venue
+                  - generic [ref=e283]: 
+                - generic [ref=e284]:
+                  - generic [ref=e285]: 
+                  - generic [ref=e286]: "4.7"
+                - generic [ref=e287]: Magical wonderland themed venue perfect for children's parties with characters and entertainment.
+                - generic [ref=e289]: Pretoria, Gauteng
+            - generic [ref=e292] [cursor=pointer]: View Details
+          - generic [ref=e294]:
+            - generic [ref=e295] [cursor=pointer]:
+              - generic [ref=e300]: Featured
+              - generic [ref=e301]:
+                - generic [ref=e302]:
+                  - generic [ref=e303]: Summit Corporate Conference Center
+                  - generic [ref=e305]: 
+                - generic [ref=e306]:
+                  - generic [ref=e307]: 
+                  - generic [ref=e308]: "4.7"
+                - generic [ref=e309]: Professional conference center with modern facilities for corporate events and business meetings.
+                - generic [ref=e311]: Pretoria, Gauteng
+            - generic [ref=e314] [cursor=pointer]: View Details
+          - generic [ref=e316]:
+            - generic [ref=e317] [cursor=pointer]:
+              - generic [ref=e322]: Featured
+              - generic [ref=e323]:
+                - generic [ref=e324]:
+                  - generic [ref=e325]: Sunset Ridge Estate
+                  - generic [ref=e327]: 
+                - generic [ref=e328]:
+                  - generic [ref=e329]: 
+                  - generic [ref=e330]: "4.6"
+                - generic [ref=e331]: A scenic estate with panoramic sunset views, modern amenities, and multiple ceremony spots ideal for weddings and corporate retreats.
+                - generic [ref=e333]: Johannesburg, South Africa
+            - generic [ref=e336] [cursor=pointer]: View Details
+          - generic [ref=e338]:
+            - generic [ref=e339] [cursor=pointer]:
+              - generic [ref=e344]: Featured
+              - generic [ref=e345]:
+                - generic [ref=e346]:
+                  - generic [ref=e347]: Ocean Pearl Reception Hall
+                  - generic [ref=e349]: 
+                - generic [ref=e350]:
+                  - generic [ref=e351]: 
+                  - generic [ref=e352]: "4.7"
+                - generic [ref=e353]: Elegant oceanfront reception hall with premium finishes, a spacious dance floor, and customizable decor packages.
+                - generic [ref=e355]: Durban, South Africa
+            - generic [ref=e358] [cursor=pointer]: View Details
+          - generic [ref=e360]:
+            - generic [ref=e361] [cursor=pointer]:
+              - generic [ref=e366]: Featured
+              - generic [ref=e367]:
+                - generic [ref=e368]:
+                  - generic [ref=e369]: Garden Rose Wedding Venue
+                  - generic [ref=e371]: 
+                - generic [ref=e372]:
+                  - generic [ref=e373]: 
+                  - generic [ref=e374]: "4.8"
+                - generic [ref=e375]: Luxury garden venue with rose gardens, perfect for romantic weddings. Indoor and outdoor ceremony options available.
+                - generic [ref=e377]: Johannesburg, Gauteng
+            - generic [ref=e380] [cursor=pointer]: View Details
+          - generic [ref=e382]:
+            - generic [ref=e383] [cursor=pointer]:
+              - generic [ref=e388]: Featured
+              - generic [ref=e389]:
+                - generic [ref=e390]:
+                  - generic [ref=e391]: Oceanview Wedding Estate
+                  - generic [ref=e393]: 
+                - generic [ref=e394]:
+                  - generic [ref=e395]: 
+                  - generic [ref=e396]: "4.7"
+                - generic [ref=e397]: Clifftop venue with ocean views, ideal for weddings and corporate retreats.
+                - generic [ref=e399]: Cape Town, Western Cape
+            - generic [ref=e402] [cursor=pointer]: View Details
+    - tablist [ref=e404]:
+      - tab "  Search" [selected] [ref=e406] [cursor=pointer]:
+        - generic [ref=e407]:
+          - generic [ref=e410]: 
+          - generic [ref=e412]: 
+        - generic [ref=e413]: Search
+      - tab "  Favourites" [ref=e415] [cursor=pointer]:
+        - generic [ref=e416]:
+          - generic [ref=e419]: 
+          - generic [ref=e421]: 
+        - generic [ref=e422]: Favourites
+      - tab "  Quotes" [ref=e424] [cursor=pointer]:
+        - generic [ref=e425]:
+          - generic [ref=e428]: 
+          - generic [ref=e430]: 
+        - generic [ref=e431]: Quotes
+      - tab "  Planner" [ref=e433] [cursor=pointer]:
+        - generic [ref=e434]:
+          - generic [ref=e437]: 
+          - generic [ref=e439]: 
+        - generic [ref=e440]: Planner
+      - tab "  Account" [ref=e442] [cursor=pointer]:
+        - generic [ref=e443]:
+          - generic [ref=e446]: 
+          - generic [ref=e448]: 
+        - generic [ref=e449]: Account
+  - dialog [ref=e451]:
+    - generic [ref=e459]:
+      - generic [ref=e460]:
+        - generic [ref=e462]: 
+        - generic [ref=e463]: Your Privacy Matters
+        - generic [ref=e464]: Funcxon is committed to protecting your personal information in compliance with the Protection of Personal Information Act (POPIA).
+      - generic [ref=e465]:
+        - generic [ref=e466]: "We collect and process your data for:"
+        - generic [ref=e467]:
+          - generic [ref=e468]: 
+          - generic [ref=e469]: Account creation and authentication
+        - generic [ref=e470]:
+          - generic [ref=e471]: 
+          - generic [ref=e472]: Facilitating bookings and event planning
+        - generic [ref=e473]:
+          - generic [ref=e474]: 
+          - generic [ref=e475]: Processing payments securely
+        - generic [ref=e476]:
+          - generic [ref=e477]: 
+          - generic [ref=e478]: Sending booking and payment notifications
+        - generic [ref=e479]:
+          - generic [ref=e480]: 
+          - generic [ref=e481]: Fraud prevention and security
+      - generic [ref=e482]:
+        - generic [ref=e485] [cursor=pointer]:
+          - generic [ref=e486]:
+            - generic [ref=e487]: Essential Data Processing
+            - generic [ref=e489]: REQUIRED
+          - generic [ref=e490]: I consent to the collection and processing of my personal information as necessary to provide platform services, including account management, bookings, and payments.
+        - generic [ref=e493] [cursor=pointer]:
+          - generic [ref=e494]:
+            - generic [ref=e495]: Analytics & Improvement
+            - generic [ref=e497]: OPTIONAL
+          - generic [ref=e498]: I consent to the use of analytics to help improve the platform experience, including usage patterns and performance data.
+      - generic [ref=e499]:
+        - generic [ref=e500]: 
+        - generic [ref=e501]: You can review our full Privacy Policy and manage your consent preferences at any time in My Account > Terms & Policies. You may withdraw consent by contacting our Information Officer.
+      - generic:
+        - generic [ref=e502]: 
+        - generic [ref=e503]: Accept & Continue
+      - generic [ref=e504]: Please accept essential data processing to continue
+```

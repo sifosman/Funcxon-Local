@@ -38,28 +38,14 @@ export default function BookTourScreen({ route, navigation }: Props) {
 
     setSubmitting(true);
     try {
-      // Resolve the internal user id from the authenticated user
-      let userId: number | null = null;
-      if (user?.id) {
-        const { data: userRow, error: userError } = await supabase
-          .from('users')
-          .select('id')
-          .eq('auth_user_id', user.id)
-          .maybeSingle();
-
-        if (userError) {
-          throw userError;
-        }
-        userId = userRow?.id ?? null;
-      }
-
       const { error: insertError } = await supabase.from('venue_tour_bookings').insert({
-        venue_id: venueId,
-        user_id: userId,
-        name,
-        email,
-        phone,
-        booking_date: date.toISOString(),
+        listing_id: venueId,
+        requester_user_id: user?.id ?? null,
+        requester_name: name,
+        requester_email: email,
+        requester_phone: phone,
+        requested_date: date.toISOString().slice(0, 10),
+        requested_time: null,
         message: message || null,
         status: 'pending',
       });

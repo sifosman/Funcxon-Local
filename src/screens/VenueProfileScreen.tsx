@@ -12,6 +12,7 @@ import type { AttendeeStackParamList } from '../navigation/AttendeeNavigator';
 import { colors, spacing, radii, typography } from '../theme';
 import { getFavourites, toggleFavourite } from '../lib/favourites';
 import { useAuth } from '../auth/AuthContext';
+import { PrimaryButton } from '../components/ui';
 
 type Props = NativeStackScreenProps<AttendeeStackParamList, 'VenueProfile'>;
 
@@ -44,11 +45,21 @@ type VenueRecord = {
   features: Record<string, any> | null;
 };
 
+ type VenueReview = {
+   id: number;
+   rating: number;
+   title: string | null;
+   review_text: string | null;
+   is_verified: boolean | null;
+   created_at: string | null;
+   status: string | null;
+ };
+
 export default function VenueProfileScreen({ route, navigation }: Props) {
   const { venueId } = route.params;
   const [mapRegion, setMapRegion] = useState<Region | null>(null);
   const [mapError, setMapError] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'about' | 'amenities' | 'contact'>('about');
+  const [activeTab, setActiveTab] = useState<'about' | 'amenities' | 'reviews' | 'calendar'>('about');
   const [favouriteIds, setFavouriteIds] = useState<{ vendorIds: number[]; venueIds: number[] }>({
     vendorIds: [],
     venueIds: [],
@@ -126,6 +137,61 @@ export default function VenueProfileScreen({ route, navigation }: Props) {
       }
 
       return data as VenueRecord;
+    },
+  });
+
+  const {
+    data: reviews,
+    isLoading: reviewsLoading,
+    error: reviewsError,
+  } = useQuery<VenueReview[]>({
+    queryKey: ['venue-reviews', venueId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('venue_reviews')
+        .select('id, rating, title, review_text, is_verified, created_at, status')
+        .eq('venue_id', venueId)
+        .or('status.is.null,status.eq.approved')
+        .order('created_at', { ascending: false })
+        .limit(50);
+
+      if (error) {
+        throw error;
+      }
+
+      return (data as VenueReview[]) ?? [];
+    },
+    enabled: typeof venueId === 'number',
+  });
+
+  const {
+    data: canLeaveReview,
+    isLoading: eligibilityLoading,
+  } = useQuery<boolean>({
+    queryKey: ['venue-review-eligibility', venueId, user?.id],
+    enabled: typeof venueId === 'number' && !!user?.id,
+    queryFn: async () => {
+      if (!user?.id) return false;
+
+      const { count: quoteCount, error: quoteError } = await supabase
+        .from('venue_quote_requests')
+        .select('id', { count: 'exact', head: true })
+        .eq('listing_id', venueId)
+        .eq('requester_user_id', user.id)
+        .in('status', ['accepted', 'finalised']);
+
+      if (quoteError) throw quoteError;
+
+      const { count: tourCount, error: tourError } = await supabase
+        .from('venue_tour_bookings')
+        .select('id', { count: 'exact', head: true })
+        .eq('listing_id', venueId)
+        .eq('requester_user_id', user.id)
+        .in('status', ['accepted', 'finalised']);
+
+      if (tourError) throw tourError;
+
+      return (quoteCount ?? 0) > 0 || (tourCount ?? 0) > 0;
     },
   });
 
@@ -238,20 +304,17 @@ export default function VenueProfileScreen({ route, navigation }: Props) {
     Linking.openURL(url).catch(() => null);
   };
 
+  const whatsappUrl = venue?.whatsapp_number
+    ? `https://wa.me/${venue.whatsapp_number.replace(/[^0-9]/g, '')}`
+    : null;
+  const emailUrl = venue?.contact_email ? `mailto:${venue.contact_email}` : null;
+
   const handleRequestQuote = () => {
     if (!venue) return;
     navigation.navigate('QuoteRequest', { 
       vendorId: venue.id, 
       vendorName: venue.name,
       type: 'venue' // Pass type to differentiate
-    });
-  };
-
-  const handleBookTour = () => {
-    if (!venue) return;
-    navigation.navigate('BookTour', { 
-      venueId: venue.id, 
-      venueName: venue.name 
     });
   };
 
@@ -452,39 +515,6 @@ export default function VenueProfileScreen({ route, navigation }: Props) {
         )}
       </View>
 
-      {/* Actions */}
-      <View style={{ flexDirection: 'row', gap: spacing.md, marginBottom: spacing.lg }}>
-        <TouchableOpacity
-          onPress={handleRequestQuote}
-          style={{
-            flex: 1,
-            backgroundColor: colors.primary,
-            paddingVertical: spacing.md,
-            borderRadius: radii.md,
-            alignItems: 'center',
-            justifyContent: 'center',
-          }}
-        >
-          <Text style={{ color: '#FFFFFF', fontWeight: '600' }}>Request Quote</Text>
-        </TouchableOpacity>
-        
-        {canBookTours && (
-          <TouchableOpacity
-            onPress={handleBookTour}
-            style={{
-              flex: 1,
-              backgroundColor: colors.primaryTeal,
-              paddingVertical: spacing.md,
-              borderRadius: radii.md,
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
-          >
-            <Text style={{ color: '#FFFFFF', fontWeight: '600' }}>Book Tour</Text>
-          </TouchableOpacity>
-        )}
-      </View>
-
       {/* Tabs */}
       <View
         style={{
@@ -500,7 +530,8 @@ export default function VenueProfileScreen({ route, navigation }: Props) {
         {([
           { key: 'about', label: 'About' },
           { key: 'amenities', label: 'Amenities' },
-          { key: 'contact', label: 'Contact' },
+          { key: 'reviews', label: 'Reviews' },
+          { key: 'calendar', label: 'Calendar' },
         ] as const).map((tab) => {
           const isActive = activeTab === tab.key;
           return (
@@ -710,26 +741,9 @@ export default function VenueProfileScreen({ route, navigation }: Props) {
                 Contact
               </Text>
               <View style={{ gap: spacing.sm }}>
-                {venue.whatsapp_number && venue.venue_capacity && (
-                  <TouchableOpacity
-                    onPress={() => handleBookTour()}
-                    style={{
-                      backgroundColor: colors.primaryTeal,
-                      paddingVertical: spacing.md,
-                      borderRadius: radii.md,
-                      flexDirection: 'row',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      marginBottom: spacing.sm,
-                    }}
-                  >
-                    <MaterialIcons name="event-available" size={18} color="#FFFFFF" />
-                    <Text style={{ color: '#FFFFFF', fontWeight: '600', marginLeft: spacing.sm }}>Book Venue Tour</Text>
-                  </TouchableOpacity>
-                )}
                 {venue.whatsapp_number && (
                   <TouchableOpacity
-                    onPress={() => handleOpenUrl(`https://wa.me/${venue.whatsapp_number?.replace(/[^0-9]/g, '')}`)}
+                    onPress={() => handleOpenUrl(whatsappUrl)}
                     style={{
                       backgroundColor: '#22C55E',
                       paddingVertical: spacing.md,
@@ -745,7 +759,7 @@ export default function VenueProfileScreen({ route, navigation }: Props) {
                 )}
                 {venue.contact_email && (
                   <TouchableOpacity
-                    onPress={() => handleOpenUrl(`mailto:${venue.contact_email}`)}
+                    onPress={() => handleOpenUrl(emailUrl)}
                     style={{
                       backgroundColor: '#3B82F6',
                       paddingVertical: spacing.md,
@@ -899,9 +913,24 @@ export default function VenueProfileScreen({ route, navigation }: Props) {
         </View>
       )}
 
-      {activeTab === 'contact' && (
+      {activeTab === 'reviews' && (
         <View>
-          {(venue.whatsapp_number || venue.contact_email || venue.website_url || venue.instagram_url) ? (
+          {reviewsLoading ? (
+            <View
+              style={{
+                marginBottom: spacing.lg,
+                padding: spacing.lg,
+                borderRadius: radii.lg,
+                backgroundColor: colors.surface,
+                borderWidth: 1,
+                borderColor: colors.borderSubtle,
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <ActivityIndicator />
+            </View>
+          ) : reviewsError instanceof Error ? (
             <View
               style={{
                 marginBottom: spacing.lg,
@@ -912,79 +941,143 @@ export default function VenueProfileScreen({ route, navigation }: Props) {
                 borderColor: colors.borderSubtle,
               }}
             >
-              <Text style={{ ...typography.titleMedium, color: colors.textPrimary, marginBottom: spacing.md }}>
-                Contact Information
+              <Text style={{ ...typography.titleMedium, color: colors.textPrimary, marginBottom: spacing.sm }}>
+                Failed to load reviews
               </Text>
-              <View style={{ gap: spacing.sm }}>
-                {venue.whatsapp_number && (
-                   <TouchableOpacity
-                    onPress={() => handleOpenUrl(`https://wa.me/${venue.whatsapp_number?.replace(/[^0-9]/g, '')}`)}
-                    style={{
-                      backgroundColor: '#22C55E',
-                      paddingVertical: spacing.md,
-                      borderRadius: radii.md,
-                      flexDirection: 'row',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                    }}
-                  >
-                    <MaterialIcons name="chat" size={18} color="#FFFFFF" />
-                    <Text style={{ color: '#FFFFFF', fontWeight: '600', marginLeft: spacing.sm }}>WhatsApp</Text>
-                  </TouchableOpacity>
-                )}
-                {venue.contact_email && (
-                  <TouchableOpacity
-                    onPress={() => handleOpenUrl(`mailto:${venue.contact_email}`)}
-                    style={{
-                      backgroundColor: '#3B82F6',
-                      paddingVertical: spacing.md,
-                      borderRadius: radii.md,
-                      flexDirection: 'row',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                    }}
-                  >
-                    <MaterialIcons name="email" size={18} color="#FFFFFF" />
-                    <Text style={{ color: '#FFFFFF', fontWeight: '600', marginLeft: spacing.sm }}>Email</Text>
-                  </TouchableOpacity>
-                )}
-                {venue.website_url && (
-                   <TouchableOpacity
-                    onPress={() => handleOpenUrl(venue.website_url)}
-                    style={{
-                      backgroundColor: colors.surface,
-                      borderWidth: 1,
-                      borderColor: colors.borderSubtle,
-                      paddingVertical: spacing.md,
-                      borderRadius: radii.md,
-                      flexDirection: 'row',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                    }}
-                  >
-                    <MaterialIcons name="language" size={18} color={colors.textPrimary} />
-                    <Text style={{ color: colors.textPrimary, fontWeight: '600', marginLeft: spacing.sm }}>Website</Text>
-                  </TouchableOpacity>
-                )}
-                {venue.instagram_url && (
-                   <TouchableOpacity
-                    onPress={() => handleOpenUrl(venue.instagram_url)}
-                    style={{
-                      backgroundColor: colors.surface,
-                      borderWidth: 1,
-                      borderColor: colors.borderSubtle,
-                      paddingVertical: spacing.md,
-                      borderRadius: radii.md,
-                      flexDirection: 'row',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                    }}
-                  >
-                    <MaterialIcons name="photo-camera" size={18} color={colors.textPrimary} />
-                    <Text style={{ color: colors.textPrimary, fontWeight: '600', marginLeft: spacing.sm }}>Instagram</Text>
-                  </TouchableOpacity>
-                )}
-              </View>
+              <Text style={{ ...typography.body, color: colors.textMuted }}>{reviewsError.message}</Text>
+            </View>
+          ) : !reviews || reviews.length === 0 ? (
+            <View
+              style={{
+                marginBottom: spacing.lg,
+                padding: spacing.lg,
+                borderRadius: radii.lg,
+                backgroundColor: colors.surface,
+                borderWidth: 1,
+                borderColor: colors.borderSubtle,
+                alignItems: 'center',
+              }}
+            >
+              <MaterialIcons name="rate-review" size={48} color={colors.textMuted} />
+              <Text
+                style={{
+                  ...typography.body,
+                  color: colors.textSecondary,
+                  marginTop: spacing.md,
+                  textAlign: 'center',
+                }}
+              >
+                No reviews yet.
+              </Text>
+            </View>
+          ) : (
+            <View style={{ gap: spacing.md, marginBottom: spacing.lg }}>
+              {reviews.map((review) => (
+                <View
+                  key={review.id}
+                  style={{
+                    padding: spacing.lg,
+                    borderRadius: radii.lg,
+                    backgroundColor: colors.surface,
+                    borderWidth: 1,
+                    borderColor: colors.borderSubtle,
+                  }}
+                >
+                  <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                      {Array.from({ length: 5 }).map((_, idx) => (
+                        <MaterialIcons
+                          key={idx}
+                          name={review.rating >= idx + 1 ? 'star' : 'star-border'}
+                          size={16}
+                          color="#F59E0B"
+                        />
+                      ))}
+                      {review.is_verified ? (
+                        <View
+                          style={{
+                            marginLeft: spacing.sm,
+                            backgroundColor: '#DCFCE7',
+                            paddingHorizontal: spacing.sm,
+                            paddingVertical: 4,
+                            borderRadius: radii.full,
+                            borderWidth: 1,
+                            borderColor: '#BBF7D0',
+                          }}
+                        >
+                          <Text style={{ ...typography.caption, color: '#166534', fontWeight: '600' }}>
+                            Verified
+                          </Text>
+                        </View>
+                      ) : null}
+                    </View>
+                  </View>
+
+                  {review.title ? (
+                    <Text
+                      style={{
+                        ...typography.titleMedium,
+                        color: colors.textPrimary,
+                        marginTop: spacing.sm,
+                      }}
+                    >
+                      {review.title}
+                    </Text>
+                  ) : null}
+
+                  {review.review_text ? (
+                    <Text style={{ ...typography.body, color: colors.textSecondary, marginTop: spacing.sm, lineHeight: 20 }}>
+                      {review.review_text}
+                    </Text>
+                  ) : (
+                    <Text style={{ ...typography.body, color: colors.textMuted, marginTop: spacing.sm }}>
+                      No written review provided.
+                    </Text>
+                  )}
+
+                  {review.created_at ? (
+                    <Text style={{ ...typography.caption, color: colors.textMuted, marginTop: spacing.sm }}>
+                      {new Date(review.created_at).toLocaleDateString()}
+                    </Text>
+                  ) : null}
+                </View>
+              ))}
+            </View>
+          )}
+
+          {user?.id ? (
+            <View
+              style={{
+                marginBottom: spacing.lg,
+                padding: spacing.lg,
+                borderRadius: radii.lg,
+                backgroundColor: colors.surface,
+                borderWidth: 1,
+                borderColor: colors.borderSubtle,
+              }}
+            >
+              <Text style={{ ...typography.titleMedium, color: colors.textPrimary, marginBottom: spacing.sm }}>
+                Leave a review
+              </Text>
+              <Text style={{ ...typography.body, color: colors.textSecondary, marginBottom: spacing.md }}>
+                Reviews are available after you have used this venue.
+              </Text>
+              <PrimaryButton
+                title={eligibilityLoading ? 'Checking eligibility...' : 'Leave a review'}
+                disabled={!canLeaveReview || eligibilityLoading}
+                onPress={() =>
+                  navigation.navigate('CreateReview', {
+                    type: 'venue',
+                    targetId: venue.id,
+                    targetName: venue.name,
+                  })
+                }
+              />
+              {!eligibilityLoading && !canLeaveReview ? (
+                <Text style={{ ...typography.caption, color: colors.textMuted, marginTop: spacing.sm }}>
+                  You can leave a review once your tour booking or quote is accepted/finalised.
+                </Text>
+              ) : null}
             </View>
           ) : (
             <View
@@ -997,11 +1090,123 @@ export default function VenueProfileScreen({ route, navigation }: Props) {
                 borderColor: colors.borderSubtle,
               }}
             >
-              <Text style={{ ...typography.body, color: colors.textMuted }}>No direct contact information available.</Text>
+              <Text style={{ ...typography.body, color: colors.textSecondary }}>
+                Sign in to leave a review.
+              </Text>
             </View>
           )}
         </View>
       )}
+
+      {activeTab === 'calendar' && (
+        <View
+          style={{
+            marginBottom: spacing.lg,
+            padding: spacing.lg,
+            borderRadius: radii.lg,
+            backgroundColor: colors.surface,
+            borderWidth: 1,
+            borderColor: colors.borderSubtle,
+          }}
+        >
+          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.md }}>
+            <MaterialIcons name="calendar-today" size={18} color={colors.primaryTeal} />
+            <Text style={{ ...typography.titleMedium, color: colors.textPrimary, marginLeft: spacing.sm }}>
+              Availability Calendar
+            </Text>
+          </View>
+          <View style={{ alignItems: 'center', paddingVertical: spacing.lg }}>
+            <MaterialIcons name="event" size={48} color={colors.textMuted} />
+            <Text style={{ ...typography.body, color: colors.textPrimary, marginTop: spacing.md, fontWeight: '600' }}>
+              Check Availability
+            </Text>
+            <Text style={{ ...typography.caption, color: colors.textMuted, textAlign: 'center', marginTop: spacing.xs }}>
+              View real-time availability and book directly with {venue.name}
+            </Text>
+          </View>
+          <View style={{ gap: spacing.sm }}>
+            <View
+              style={{
+                backgroundColor: '#DCFCE7',
+                borderRadius: radii.md,
+                padding: spacing.md,
+                borderWidth: 1,
+                borderColor: '#BBF7D0',
+              }}
+            >
+              <Text style={{ ...typography.body, color: '#166534', fontWeight: '600', textAlign: 'center' }}>
+                Available Dates
+              </Text>
+              <Text style={{ ...typography.caption, color: '#166534', textAlign: 'center', marginTop: 4 }}>
+                Contact to confirm specific dates and pricing
+              </Text>
+            </View>
+            <View
+              style={{
+                backgroundColor: '#FEE2E2',
+                borderRadius: radii.md,
+                padding: spacing.md,
+                borderWidth: 1,
+                borderColor: '#FECACA',
+              }}
+            >
+              <Text style={{ ...typography.body, color: '#991B1B', fontWeight: '600', textAlign: 'center' }}>
+                Booking Notice
+              </Text>
+              <Text style={{ ...typography.caption, color: '#991B1B', textAlign: 'center', marginTop: 4 }}>
+                Popular dates require advance booking
+              </Text>
+            </View>
+          </View>
+          <TouchableOpacity
+            onPress={() =>
+              whatsappUrl
+                ? handleOpenUrl(whatsappUrl)
+                : emailUrl
+                  ? handleOpenUrl(emailUrl)
+                  : handleRequestQuote()
+            }
+            style={{
+              marginTop: spacing.md,
+              backgroundColor: colors.primaryTeal,
+              paddingVertical: spacing.md,
+              borderRadius: radii.md,
+              alignItems: 'center',
+              flexDirection: 'row',
+              justifyContent: 'center',
+            }}
+          >
+            <MaterialIcons name="calendar-today" size={16} color="#FFFFFF" />
+            <Text style={{ color: '#FFFFFF', fontWeight: '600', marginLeft: spacing.sm }}>
+              Contact for Availability
+            </Text>
+          </TouchableOpacity>
+        </View>
+      )}
+
+      {/* Request Quote entry */}
+      <View
+        style={{
+          paddingVertical: spacing.lg,
+          borderTopWidth: 1,
+          borderTopColor: colors.borderSubtle,
+          marginTop: spacing.lg,
+        }}
+      >
+        <Text
+          style={{
+            ...typography.titleMedium,
+            color: colors.textPrimary,
+            marginBottom: spacing.sm,
+          }}
+        >
+          Request a quote
+        </Text>
+        <Text style={{ ...typography.body, color: colors.textSecondary, marginBottom: spacing.md }}>
+          Share your event details and request a custom quote from this venue.
+        </Text>
+        <PrimaryButton title="Request a quote" onPress={handleRequestQuote} />
+      </View>
     </ScrollView>
   );
 }

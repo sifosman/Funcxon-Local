@@ -141,8 +141,14 @@ export default function QuotesScreen() {
     switch (status) {
       case 'pending':
         return { backgroundColor: '#EDE7FF', color: '#5B4BBA' };
+      case 'quoted':
+        return { backgroundColor: '#E0F2FE', color: '#0369A1' };
       case 'finalised':
         return { backgroundColor: '#DCFCE7', color: '#166534' };
+      case 'accepted':
+        return { backgroundColor: '#DCFCE7', color: '#16A34A' };
+      case 'rejected':
+        return { backgroundColor: '#FEE2E2', color: '#DC2626' };
       case 'amended':
         return { backgroundColor: '#FFEDD5', color: '#9A3412' };
       case 'in_progress':
@@ -169,7 +175,44 @@ export default function QuotesScreen() {
       return;
     }
 
-    if (quote.status === 'finalised') {
+    // If a quote has been sent (has quote_amount and status is quoted), navigate to response screen
+    if (quote.status === 'quoted' || (typeof quote.quote_amount === 'number' && quote.quote_amount > 0)) {
+      // Fetch the latest revision for this quote
+      try {
+        setActionLoadingId(quote.id);
+        const { data: revisions, error: revError } = await supabase
+          .from('quote_revisions')
+          .select('id, quote_amount, description, status')
+          .eq('quote_request_id', quote.id)
+          .eq('status', 'sent')
+          .order('revision_number', { ascending: false })
+          .limit(1);
+
+        if (revError) throw revError;
+
+        const latestRevision = revisions?.[0];
+        if (latestRevision) {
+          navigation.navigate('QuoteResponse', {
+            revisionId: latestRevision.id,
+            quoteRequestId: quote.id,
+            vendorName: quote.name || undefined,
+            amount: latestRevision.quote_amount || undefined,
+            description: latestRevision.description || undefined,
+          });
+        } else {
+          // Fallback if no revision found
+          Alert.alert('Quote Ready', 'A quote has been prepared for you. View details to see more.');
+        }
+      } catch (err) {
+        console.error('Error fetching revision:', err);
+        Alert.alert('Error', 'Failed to load quote details');
+      } finally {
+        setActionLoadingId(null);
+      }
+      return;
+    }
+
+    if (quote.status === 'finalised' || quote.status === 'accepted') {
       navigation.navigate('Home', {
         screen: 'VendorProfile',
         params: { vendorId: quote.vendor_id },
@@ -406,15 +449,17 @@ export default function QuotesScreen() {
           const requestedDate = item.event_date || item.created_at
             ? new Date(item.event_date || item.created_at || '').toLocaleDateString('en-ZA')
             : null;
-          const actionLabel = item.status === 'finalised'
+          const actionLabel = item.status === 'finalised' || item.status === 'accepted'
             ? 'Rate and Review'
-            : item.status === 'amended'
-              ? 'Approve'
-              : item.status === 'pending'
-                ? 'Amend'
-                : item.status === 'tour_requested'
-                  ? 'Contact Venue'
-                  : 'View Details';
+            : item.status === 'quoted' || (typeof item.quote_amount === 'number' && item.quote_amount > 0)
+              ? 'Review & Accept'
+              : item.status === 'amended'
+                ? 'Approve'
+                : item.status === 'pending'
+                  ? 'Amend'
+                  : item.status === 'tour_requested'
+                    ? 'Contact Venue'
+                    : 'View Details';
           const actionLoading = actionLoadingId === item.id;
           return (
             <View

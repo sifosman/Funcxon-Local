@@ -23,7 +23,7 @@ import { OutlineButton, PrimaryButton, ThemedInput } from '../components/ui';
 import * as Location from 'expo-location';
 import { getFavourites, toggleFavourite } from '../lib/favourites';
 import { useAuth } from '../auth/AuthContext';
-import { provinces, getCitiesByProvince } from '../config/locations';
+import { provinces, getCitiesByProvince, getAllCities } from '../config/locations';
 import { amenitiesList } from '../config/venueTypes';
 import MapRadiusSelector from '../components/MapRadiusSelector';
 
@@ -278,6 +278,7 @@ export default function AttendeeHomeScreen() {
   const [selectedVenueAmenities, setSelectedVenueAmenities] = useState<string[]>([]);
   const [selectedProvinces, setSelectedProvinces] = useState<string[]>([]);
   const [selectedCities, setSelectedCities] = useState<string[]>([]);
+  const [citySearchQuery, setCitySearchQuery] = useState('');
   const [distanceKm, setDistanceKm] = useState<string>('');
   const [selectedCapacity, setSelectedCapacity] = useState<DropdownOption | null>(null);
   const [openPicker, setOpenPicker] = useState<OpenPickerType>(null);
@@ -314,13 +315,54 @@ export default function AttendeeHomeScreen() {
       .filter(Boolean);
 
     if (parts.length === 1) {
-      return { city: parts[0], province: parts[0] };
+      // For single-part locations, try to determine if it's a city or province
+      const singlePart = parts[0];
+      
+      // Check if it's a known province
+      const knownProvinces = [
+        'Gauteng', 'Western Cape', 'Eastern Cape', 'Northern Cape', 
+        'North West', 'Free State', 'KwaZulu-Natal', 'Limpopo', 'Mpumalanga'
+      ];
+      
+      const isProvince = knownProvinces.some(province => 
+        singlePart.toLowerCase().includes(province.toLowerCase()) ||
+        province.toLowerCase().includes(singlePart.toLowerCase())
+      );
+      
+      if (isProvince) {
+        return { city: null, province: singlePart };
+      } else {
+        // Assume it's a city
+        return { city: singlePart, province: null };
+      }
     }
 
-    return {
-      city: parts[0] ?? null,
-      province: parts[parts.length - 1] ?? null,
-    };
+    // For multi-part locations, first part is city, last is province
+    const lastPart = parts[parts.length - 1];
+    
+    // Check if the last part is a known province
+    const knownProvinces = [
+      'Gauteng', 'Western Cape', 'Eastern Cape', 'Northern Cape', 
+      'North West', 'Free State', 'KwaZulu-Natal', 'Limpopo', 'Mpumalanga'
+    ];
+    
+    const isKnownProvince = knownProvinces.some(province => 
+      lastPart.toLowerCase().includes(province.toLowerCase()) ||
+      province.toLowerCase().includes(lastPart.toLowerCase())
+    );
+    
+    if (isKnownProvince) {
+      return {
+        city: parts[0] ?? null,
+        province: lastPart,
+      };
+    } else {
+      // Last part is not a known province, treat only first part as city
+      return {
+        city: parts[0] ?? null,
+        province: null,
+      };
+    }
   };
 
   const availableSubcategories = useMemo(() => {
@@ -596,10 +638,18 @@ export default function AttendeeHomeScreen() {
     };
 
     const getVenueMaxCapacity = (item: VendorListItem): number | null => {
+      // Check for direct number value
       const direct = typeof item.capacity === 'number' ? item.capacity : null;
+      
+      // Check for string capacity (from venue_capacity field)
+      const stringCapacity = typeof item.capacity === 'string' ? parseCapacityNumber(item.capacity) : null;
+      
+      // Check features for maxHallCapacity
       const fromFeatures = (item.features as any)?.maxHallCapacity;
       if (typeof fromFeatures === 'number' && Number.isFinite(fromFeatures)) return fromFeatures;
-      return direct;
+      
+      // Return the first valid capacity found
+      return direct ?? stringCapacity;
     };
 
     const selectedCapacityThreshold = getSelectedCapacityThreshold();
@@ -660,11 +710,32 @@ export default function AttendeeHomeScreen() {
       const itemProvince = (item.province ?? '').toLowerCase();
       const itemCity = (item.city ?? '').toLowerCase();
       
+      // More precise province matching - avoid partial matches that could be false positives
       const matchesProvince = selectedProvinces.length === 0 || 
-        selectedProvinces.some(p => itemProvince.includes(p.toLowerCase()));
+        selectedProvinces.some(p => {
+          const pLower = p.toLowerCase();
+          // Exact match or contains match but with additional validation
+          return itemProvince === pLower || 
+                 (itemProvince.includes(pLower) && pLower.length > 3); // Only allow contains for longer province names
+        });
       
+      // More precise city matching
       const matchesCity = selectedCities.length === 0 || 
-        selectedCities.some(c => itemCity.includes(c.toLowerCase()));
+        selectedCities.some(c => {
+          const cLower = c.toLowerCase();
+          // Exact match or contains match with validation
+          return itemCity === cLower || 
+                 (itemCity.includes(cLower) && cLower.length > 2); // Only allow contains for longer city names
+        });
+      
+      // Special case: If province is selected but item has no province, 
+      // check if the location string contains the province name
+      const matchesLocationProvince = selectedProvinces.length === 0 || 
+        selectedProvinces.some(p => {
+          const pLower = p.toLowerCase();
+          const locationLower = (item.location ?? '').toLowerCase();
+          return locationLower.includes(pLower);
+        });
 
       let matchesCapacity = true;
       if (selectedCapacityThreshold !== null) {
@@ -683,7 +754,7 @@ export default function AttendeeHomeScreen() {
         matchesCategory &&
         matchesSubcategory &&
         matchesAmenity &&
-        matchesProvince &&
+        (matchesProvince || matchesLocationProvince) &&
         matchesCity &&
         matchesCapacity
       );
@@ -1188,7 +1259,10 @@ export default function AttendeeHomeScreen() {
               <Text style={{ ...typography.caption, color: colors.textSecondary, marginBottom: spacing.xs }}>
                 Cities
               </Text>
-              <TouchableOpacity activeOpacity={0.9} onPress={() => setOpenPicker('city')}>
+              <TouchableOpacity activeOpacity={0.9} onPress={() => {
+                    setCitySearchQuery(''); // Reset search when opening
+                    setOpenPicker('city');
+                  }}>
                 <View
                   style={{
                     borderRadius: radii.md,
@@ -1284,8 +1358,10 @@ export default function AttendeeHomeScreen() {
                     setSelectedCategoryIds([]);
                     setSelectedVenueTypes([]);
                     setSelectedSubcategories([]);
+                    setSelectedVenueAmenities([]);
                     setSelectedProvinces([]);
                     setSelectedCities([]);
+                    setCitySearchQuery('');
                     setDistanceKm('');
                     setSelectedCapacity(null);
                     setDetectedProvinceLabel(null);
@@ -1293,6 +1369,7 @@ export default function AttendeeHomeScreen() {
                     setLocationRegion(null);
                     setSortBy('name');
                     setSortOrder('asc');
+                    setHasSearched(false); // Also reset search state
                   }}
                 />
               </View>
@@ -1513,9 +1590,9 @@ export default function AttendeeHomeScreen() {
               color: colors.textPrimary,
             }}
           >
-            Featured
+            {hasSearched ? 'Search' : 'Featured'}
             {'\n'}
-            Vendors
+            {hasSearched ? 'Results' : 'Vendors'}
           </Text>
         </View>
 
@@ -1602,7 +1679,9 @@ export default function AttendeeHomeScreen() {
                           borderRadius: radii.full,
                         }}
                       >
-                        <Text style={{ ...typography.caption, color: '#FFFFFF', fontWeight: '700' }}>Featured</Text>
+                        <Text style={{ ...typography.caption, color: '#FFFFFF', fontWeight: '700' }}>
+                          {hasSearched ? 'Result' : 'Featured'}
+                        </Text>
                       </View>
                     </View>
 
@@ -2042,15 +2121,79 @@ export default function AttendeeHomeScreen() {
                 (() => {
                   const availableCities = selectedProvinces.length > 0
                     ? selectedProvinces.flatMap(p => getCitiesByProvince(p))
-                    : [];
+                    : getAllCities();
+                  
+                  // Filter cities based on search query
+                  const filteredCities = citySearchQuery.trim()
+                    ? availableCities.filter(city => 
+                        city.toLowerCase().includes(citySearchQuery.toLowerCase())
+                      )
+                    : availableCities;
                   
                   if (selectedProvinces.length === 0) {
+                    // Show all cities with search when no province selected
                     return (
-                      <View style={{ alignItems: 'center', paddingVertical: spacing.xl }}>
-                        <MaterialIcons name="location-city" size={48} color={colors.textMuted} />
-                        <Text style={{ ...typography.body, color: colors.textSecondary, marginTop: spacing.md, textAlign: 'center' }}>
-                          Please select at least one province first to see available cities.
-                        </Text>
+                      <View style={{ flex: 1 }}>
+                        <View style={{ paddingHorizontal: spacing.lg, paddingBottom: spacing.md }}>
+                          <ThemedInput
+                            placeholder="Search cities..."
+                            value={citySearchQuery}
+                            onChangeText={setCitySearchQuery}
+                            style={{ marginBottom: spacing.md }}
+                          />
+                        </View>
+                        
+                        {filteredCities.length === 0 ? (
+                          <View style={{ alignItems: 'center', paddingVertical: spacing.xl }}>
+                            <MaterialIcons name="search-off" size={48} color={colors.textMuted} />
+                            <Text style={{ ...typography.body, color: colors.textSecondary, marginTop: spacing.md, textAlign: 'center' }}>
+                              No cities found matching "{citySearchQuery}"
+                            </Text>
+                          </View>
+                        ) : (
+                          <ScrollView style={{ maxHeight: 300 }}>
+                            {filteredCities.sort().map((city) => {
+                              const isSelected = selectedCities.includes(city);
+                              return (
+                                <TouchableOpacity
+                                  key={city}
+                                  onPress={() => {
+                                    if (isSelected) {
+                                      setSelectedCities(selectedCities.filter(c => c !== city));
+                                    } else {
+                                      setSelectedCities([...selectedCities, city]);
+                                    }
+                                  }}
+                                  style={{
+                                    paddingVertical: spacing.sm,
+                                    flexDirection: 'row',
+                                    alignItems: 'center',
+                                    paddingHorizontal: spacing.lg,
+                                  }}
+                                >
+                                  <View
+                                    style={{
+                                      width: 24,
+                                      height: 24,
+                                      borderRadius: 12,
+                                      borderWidth: 2,
+                                      borderColor: isSelected ? colors.primary : '#D1D5DB',
+                                      backgroundColor: isSelected ? colors.primary : '#FFFFFF',
+                                      marginRight: spacing.sm,
+                                    }}
+                                  >
+                                    {isSelected && (
+                                      <MaterialIcons name="check" size={16} color="#FFFFFF" style={{ alignSelf: 'center' }} />
+                                    )}
+                                  </View>
+                                  <Text style={{ ...typography.body, color: colors.textPrimary, flex: 1 }}>
+                                    {city}
+                                  </Text>
+                                </TouchableOpacity>
+                              );
+                            })}
+                          </ScrollView>
+                        )}
                       </View>
                     );
                   }

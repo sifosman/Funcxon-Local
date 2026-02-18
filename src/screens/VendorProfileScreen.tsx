@@ -162,6 +162,43 @@ export default function VendorProfileScreen({ route, navigation }: Props) {
     },
   });
 
+  const {
+    data: canLeaveReview,
+    isLoading: eligibilityLoading,
+  } = useQuery<boolean>({
+    queryKey: ['vendor-review-eligibility', vendorId, user?.id],
+    enabled: !!vendorId && !!user?.id,
+    queryFn: async () => {
+      if (!user?.id) return false;
+
+      const { data: userRow, error: userError } = await supabase
+        .from('users')
+        .select('id')
+        .eq('auth_user_id', user.id)
+        .maybeSingle();
+
+      if (userError) {
+        throw userError;
+      }
+
+      const internalUserId = (userRow as any)?.id ?? null;
+      if (!internalUserId) return false;
+
+      const { count, error } = await supabase
+        .from('quote_requests')
+        .select('id', { count: 'exact', head: true })
+        .eq('vendor_id', vendorId)
+        .eq('user_id', internalUserId)
+        .in('status', ['accepted', 'finalised']);
+
+      if (error) {
+        throw error;
+      }
+
+      return (count ?? 0) > 0;
+    },
+  });
+
   const mapQuery = useMemo(() => {
     const rawLink = vendor?.google_maps_link ?? '';
     const queryMatch = rawLink.match(/[?&]q=([^&]+)/i);
@@ -967,6 +1004,57 @@ export default function VendorProfileScreen({ route, navigation }: Props) {
               </View>
             ))}
           </View>
+
+          {user?.id ? (
+            <View
+              style={{
+                marginBottom: spacing.lg,
+                padding: spacing.lg,
+                borderRadius: radii.lg,
+                backgroundColor: colors.surface,
+                borderWidth: 1,
+                borderColor: colors.borderSubtle,
+              }}
+            >
+              <Text style={{ ...typography.titleMedium, color: colors.textPrimary, marginBottom: spacing.sm }}>
+                Leave a review
+              </Text>
+              <Text style={{ ...typography.body, color: colors.textSecondary, marginBottom: spacing.md }}>
+                Reviews are available after you have used this service.
+              </Text>
+              <PrimaryButton
+                title={eligibilityLoading ? 'Checking eligibility...' : 'Leave a review'}
+                disabled={!canLeaveReview || eligibilityLoading}
+                onPress={() =>
+                  navigation.navigate('CreateReview', {
+                    type: 'vendor',
+                    targetId: vendor.id,
+                    targetName: name,
+                  })
+                }
+              />
+              {!eligibilityLoading && !canLeaveReview ? (
+                <Text style={{ ...typography.caption, color: colors.textMuted, marginTop: spacing.sm }}>
+                  You can leave a review once your booking or quote is accepted/finalised.
+                </Text>
+              ) : null}
+            </View>
+          ) : (
+            <View
+              style={{
+                marginBottom: spacing.lg,
+                padding: spacing.lg,
+                borderRadius: radii.lg,
+                backgroundColor: colors.surface,
+                borderWidth: 1,
+                borderColor: colors.borderSubtle,
+              }}
+            >
+              <Text style={{ ...typography.body, color: colors.textSecondary }}>
+                Sign in to leave a review.
+              </Text>
+            </View>
+          )}
 
           {/* Review functionality removed - only users who have used the service can leave reviews */}
           {/* This feature will be re-implemented with proper booking verification */}

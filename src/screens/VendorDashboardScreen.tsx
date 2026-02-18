@@ -1,8 +1,20 @@
-import { ActivityIndicator, FlatList, Text, View } from 'react-native';
+import { ActivityIndicator, FlatList, Text, TouchableOpacity, View } from 'react-native';
 import { useQuery } from '@tanstack/react-query';
+import { useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import { supabase } from '../lib/supabaseClient';
 import { colors, spacing, radii, typography } from '../theme';
+
+type ProfileStackParamList = {
+  VendorQuoteCreate: {
+    quoteRequestId: number;
+    clientName?: string;
+    clientEmail?: string;
+    eventDetails?: string;
+  };
+  VendorQuoteHistory: { quoteRequestId: number };
+};
 
 type VendorSummary = {
   id: number;
@@ -27,6 +39,7 @@ type QuoteRequest = {
 };
 
 export default function VendorDashboardScreen() {
+  const navigation = useNavigation<NativeStackNavigationProp<ProfileStackParamList>>();
   const {
     data: vendor,
     isLoading: vendorLoading,
@@ -282,7 +295,15 @@ export default function VendorDashboardScreen() {
           data={quotes}
           keyExtractor={(item) => `quote-${item.id}`}
           renderItem={({ item }) => (
-            <View
+            <TouchableOpacity
+              onPress={() =>
+                navigation.navigate('VendorQuoteCreate', {
+                  quoteRequestId: item.id,
+                  clientName: item.name || undefined,
+                  clientEmail: item.email || undefined,
+                  eventDetails: item.details || undefined,
+                })
+              }
               style={{
                 paddingVertical: spacing.sm,
                 borderBottomWidth: 1,
@@ -310,20 +331,34 @@ export default function VendorDashboardScreen() {
                     color: colors.textSecondary,
                     marginTop: spacing.xs,
                   }}
+                  numberOfLines={2}
                 >
                   {item.details}
                 </Text>
               )}
-              <Text
-                style={{
-                  ...typography.caption,
-                  color: colors.textSecondary,
-                  marginTop: spacing.xs,
-                }}
-              >
-                Status: {item.status ?? 'pending'}
-              </Text>
-            </View>
+              <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: spacing.xs }}>
+                <Text
+                  style={{
+                    ...typography.caption,
+                    color: item.status === 'pending' ? '#D97706' : colors.textSecondary,
+                    fontWeight: item.status === 'pending' ? '600' : '400',
+                  }}
+                >
+                  Status: {item.status ?? 'pending'}
+                </Text>
+                {item.status === 'pending' && (
+                  <Text
+                    style={{
+                      ...typography.caption,
+                      color: colors.primary,
+                      marginLeft: spacing.sm,
+                    }}
+                  >
+                    Tap to create quote →
+                  </Text>
+                )}
+              </View>
+            </TouchableOpacity>
           )}
         />
       )}

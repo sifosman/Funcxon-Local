@@ -27,33 +27,35 @@ export default function QuoteRequestScreen({ route, navigation }: Props) {
 
     setSubmitting(true);
     try {
-      // Resolve the internal user id from the authenticated user
-      let userId: number | null = null;
-      if (user?.id) {
-        const { data: userRow, error: userError } = await supabase
-          .from('users')
-          .select('id')
-          .eq('auth_user_id', user.id)
-          .maybeSingle();
-
-        if (userError) {
-          throw userError;
-        }
-        userId = userRow?.id ?? null;
-      }
-
       if (type === 'venue') {
-         const { error: insertError } = await supabase.from('venue_quote_requests').insert({
-          venue_id: vendorId, // Reusing vendorId param as ID
-          user_id: userId,
-          name,
-          email,
+        const { error: insertError } = await supabase.from('venue_quote_requests').insert({
+          listing_id: vendorId,
+          requester_user_id: user?.id ?? null,
+          requester_name: name,
+          requester_email: email,
+          requester_phone: null,
+          event_date: null,
+          message: eventDetails || null,
           status: 'pending',
-          message: eventDetails || null, // Note: venues table uses 'message' instead of 'details'
         });
 
         if (insertError) throw insertError;
       } else {
+        // Resolve the internal user id from the authenticated user
+        let userId: number | null = null;
+        if (user?.id) {
+          const { data: userRow, error: userError } = await supabase
+            .from('users')
+            .select('id')
+            .eq('auth_user_id', user.id)
+            .maybeSingle();
+
+          if (userError) {
+            throw userError;
+          }
+          userId = userRow?.id ?? null;
+        }
+
         const { error: insertError } = await supabase.from('quote_requests').insert({
           vendor_id: vendorId,
           user_id: userId,
@@ -69,12 +71,54 @@ export default function QuoteRequestScreen({ route, navigation }: Props) {
       // Send admin notification about new quote request
       await sendAdminNotification();
 
-      Alert.alert('Quote requested', 'Your quote request has been sent (demo).');
+      // Send vendor notification about new quote request
+      if (type === 'vendor') {
+        await sendVendorNotification(vendorId, vendorName);
+      }
+
+      Alert.alert('Quote requested', 'Your quote request has been sent.');
       navigation.goBack();
     } catch (err: any) {
       Alert.alert('Error', err?.message ?? 'Failed to submit quote request.');
     } finally {
       setSubmitting(false);
+    }
+  }
+
+  async function sendVendorNotification(vendorId: number, vendorName: string) {
+    try {
+      // Get vendor email from database
+      const { data: vendor, error: vendorError } = await supabase
+        .from('vendors')
+        .select('email, name')
+        .eq('id', vendorId)
+        .maybeSingle();
+
+      if (vendorError || !vendor?.email) {
+        console.log('Vendor email not found, skipping vendor notification');
+        return;
+      }
+
+      const { data, error } = await supabase.functions.invoke('send-quote-notifications', {
+        body: {
+          type: 'quote-requested-vendor',
+          quoteRequestId: vendorId,
+          clientName: name,
+          clientEmail: email,
+          vendorBusinessName: vendorName,
+          vendorEmail: vendor.email,
+          eventDetails: eventDetails || undefined,
+        },
+      });
+
+      if (error) {
+        console.error('Error sending vendor notification:', error);
+        return;
+      }
+
+      console.log('Vendor notification sent successfully:', data);
+    } catch (err) {
+      console.error('Failed to send vendor notification:', err);
     }
   }
 

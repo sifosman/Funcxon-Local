@@ -108,3 +108,7 @@ export const getCitiesByProvince = (provinceName: string): string[] => {
 export const getProvinceNames = (): string[] => {
   return provinces.map(p => p.name);
 };
+
+export const getAllCities = (): string[] => {
+  return provinces.flatMap(p => p.cities).sort();
+};

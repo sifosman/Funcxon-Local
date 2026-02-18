@@ -4,7 +4,19 @@ test.describe('Search Form Validation', () => {
   test.beforeEach(async ({ page }) => {
     // Navigate to homescreen
     await page.goto('/');
-    // Wait for the app to load
+    await page.waitForTimeout(3000);
+    
+    // Check if we need to login (handle auth redirect)
+    try {
+      await expect(page.getByText('Account', { exact: true })).toBeVisible({ timeout: 5000 });
+      console.log('User is already authenticated');
+    } catch (error) {
+      console.log('User not authenticated, checking for login flow');
+      // If not authenticated, we should be on welcome/login screen
+      // For now, proceed with testing the search form without auth
+    }
+    
+    // Additional wait for app to stabilize
     await page.waitForTimeout(2000);
   });
 

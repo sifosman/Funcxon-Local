@@ -24,6 +24,8 @@ import VendorCatalogueScreen from '../screens/subscriber/VendorCatalogueScreen';
 import VenueQuoteRequestsScreen from '../screens/subscriber/VenueQuoteRequestsScreen';
 import VenueTourBookingsScreen from '../screens/subscriber/VenueTourBookingsScreen';
 import VenueAnalyticsScreen from '../screens/subscriber/VenueAnalyticsScreen';
+import VendorQuoteCreateScreen from '../screens/subscriber/VendorQuoteCreateScreen';
+import VendorQuoteHistoryScreen from '../screens/subscriber/VendorQuoteHistoryScreen';
 import ActionItemsScreen from '../screens/subscriber/ActionItemsScreen';
 import CalendarUpdatesScreen from '../screens/subscriber/CalendarUpdatesScreen';
 import BillingScreen from '../screens/BillingScreen';
@@ -60,6 +62,13 @@ export type ProfileStackParamList = {
     VenueQuoteRequests: undefined;
     VenueTourBookings: undefined;
     VenueAnalytics: undefined;
+    VendorQuoteCreate: {
+        quoteRequestId: number;
+        clientName?: string;
+        clientEmail?: string;
+        eventDetails?: string;
+    };
+    VendorQuoteHistory: { quoteRequestId: number };
     ActionItems: undefined;
     CalendarUpdates: undefined;
     Billing: undefined;
@@ -186,6 +195,16 @@ export function ProfileNavigator() {
             <Stack.Screen
                 name="VenueQuoteRequests"
                 component={VenueQuoteRequestsScreen}
+                options={{ headerShown: false }}
+            />
+            <Stack.Screen
+                name="VendorQuoteCreate"
+                component={VendorQuoteCreateScreen}
+                options={{ headerShown: false }}
+            />
+            <Stack.Screen
+                name="VendorQuoteHistory"
+                component={VendorQuoteHistoryScreen}
                 options={{ headerShown: false }}
             />
             <Stack.Screen
