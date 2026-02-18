@@ -15,7 +15,7 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import { supabase } from '../../lib/supabaseClient';
 import { colors, spacing, radii, typography } from '../../theme';
-import { PrimaryButton, ThemedInput } from '../../components/ui';
+import { OutlineButton, PrimaryButton, ThemedInput } from '../../components/ui';
 import { useAuth } from '../../auth/AuthContext';
 
 type SubscriberStackParamList = {
@@ -475,12 +475,10 @@ export default function VendorQuoteCreateScreen() {
             onPress={sendQuote}
             disabled={saving}
           />
-          <PrimaryButton
+          <OutlineButton
             title={saving ? 'Saving...' : 'Save as Draft'}
             onPress={saveDraft}
-            disabled={saving}
-            style={{ backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.borderSubtle }}
-            textStyle={{ color: colors.textPrimary }}
+            style={{ marginTop: spacing.md }}
           />
         </View>
       </ScrollView>
