@@ -3,7 +3,6 @@ import { ActivityIndicator, Alert, BackHandler, Image, Linking, Platform, Scroll
 import { useQuery } from '@tanstack/react-query';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { WebView } from 'react-native-webview';
-import * as Location from 'expo-location';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 
@@ -46,6 +45,8 @@ type VendorRecord = {
   additional_photos: string[] | null;
   vendor_tags: string[] | null;
   venue_capacity: number | null;
+  city: string | null;
+  province: string | null;
 };
 
 type Review = {
@@ -56,8 +57,6 @@ type Review = {
 
 export default function VendorProfileScreen({ route, navigation }: Props) {
   const { vendorId } = route.params;
-  const [mapRegion, setMapRegion] = useState<Region | null>(null);
-  const [mapError, setMapError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'about' | 'catalog' | 'reviews' | 'calendar'>('about');
   const [favouriteIds, setFavouriteIds] = useState<{ vendorIds: number[]; venueIds: number[] }>({
     vendorIds: [],
@@ -106,18 +105,6 @@ export default function VendorProfileScreen({ route, navigation }: Props) {
     }, [cameFromFavourites, handleBackNavigation]),
   );
 
-  const mapModule = useMemo(() => {
-    if (Platform.OS === 'web') return null;
-    try {
-      return require('react-native-maps');
-    } catch (error) {
-      return null;
-    }
-  }, []);
-  const MapViewComponent = mapModule?.default;
-  const MarkerComponent = mapModule?.Marker;
-  const GoogleProvider = mapModule?.PROVIDER_GOOGLE;
-
   const {
     data: vendor,
     isLoading: vendorLoading,
@@ -127,9 +114,7 @@ export default function VendorProfileScreen({ route, navigation }: Props) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('vendors')
-        .select(
-          'id, name, description, image_url, logo_url, price_range, rating, review_count, dietary_options, cuisine_types, subscription_tier, location, google_maps_link, website_url, instagram_url, whatsapp_number, email, amenities, service_options, additional_photos, vendor_tags, venue_capacity',
-        )
+        .select('*')
         .eq('id', vendorId)
         .single();
 
@@ -200,13 +185,24 @@ export default function VendorProfileScreen({ route, navigation }: Props) {
   });
 
   const mapQuery = useMemo(() => {
+    // First try to extract location from google_maps_link if available
     const rawLink = vendor?.google_maps_link ?? '';
     const queryMatch = rawLink.match(/[?&]q=([^&]+)/i);
     if (queryMatch?.[1]) {
       return decodeURIComponent(queryMatch[1]);
     }
-    return vendor?.location ?? '';
-  }, [vendor?.google_maps_link, vendor?.location]);
+    // Fall back to location field
+    if (vendor?.location?.trim()) {
+      return vendor.location.trim();
+    }
+    // Last resort: use city + province if available
+    const city = vendor?.city?.trim() ?? '';
+    const province = vendor?.province?.trim() ?? '';
+    if (city || province) {
+      return `${city}${city && province ? ', ' : ''}${province}`;
+    }
+    return '';
+  }, [vendor?.google_maps_link, vendor?.location, vendor?.city, vendor?.province]);
 
   const galleryImages = useMemo(
     () => [vendor?.image_url, ...(vendor?.additional_photos ?? [])].filter(Boolean) as string[],
@@ -220,7 +216,7 @@ export default function VendorProfileScreen({ route, navigation }: Props) {
     (vendor?.amenities as string[] | undefined) ?? [],
     (vendor?.service_options as string[] | undefined) ?? [],
   ];
-  const tags = Array.from(new Set(tagArrays.flat().filter(Boolean)));
+  const tags = Array.from(new Set(tagArrays.flat().filter(Boolean))) ?? [];
 
   const hasReviews = !!reviews && reviews.length > 0;
   const averageRating = typeof vendor?.rating === 'number'
@@ -253,39 +249,6 @@ export default function VendorProfileScreen({ route, navigation }: Props) {
     { label: 'Attention to Detail', value: averageRating ?? 0 },
     { label: 'Communication', value: averageRating ?? 0 },
   ];
-
-  useEffect(() => {
-    let isMounted = true;
-
-    const resolveLocation = async () => {
-      if (!mapQuery) {
-        setMapRegion(null);
-        return;
-      }
-
-      try {
-        const results = await Location.geocodeAsync(mapQuery);
-        if (!isMounted) return;
-        if (results.length > 0) {
-          const { latitude, longitude } = results[0];
-          setMapRegion({
-            latitude,
-            longitude,
-            latitudeDelta: 0.02,
-            longitudeDelta: 0.02,
-          });
-        }
-      } catch (error) {
-        if (!isMounted) return;
-        setMapError('Unable to load map location.');
-      }
-    };
-
-    resolveLocation();
-    return () => {
-      isMounted = false;
-    };
-  }, [mapQuery]);
 
   useEffect(() => {
     let isMounted = true;
@@ -383,6 +346,11 @@ export default function VendorProfileScreen({ route, navigation }: Props) {
   const emailUrl = vendor.email ? `mailto:${vendor.email}` : null;
   const webMapEmbedUrl = mapQuery
     ? `https://www.google.com/maps?q=${encodeURIComponent(mapQuery)}&output=embed`
+    : null;
+  
+  // Static map image for better mobile compatibility
+  const staticMapUrl = mapQuery
+    ? `https://maps.googleapis.com/maps/api/staticmap?center=${encodeURIComponent(mapQuery)}&zoom=14&size=640x480&scale=2&markers=color:red%7C${encodeURIComponent(mapQuery)}&key=AIzaSyBjd1KYtTaAzxzdw5ayGwwMu5Sex-gKQLI`
     : null;
 
   const renderBulletSection = (title: string, items?: string[] | null) => {
@@ -672,7 +640,7 @@ export default function VendorProfileScreen({ route, navigation }: Props) {
                 Highlights
               </Text>
               <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
-                {tags.map((tag) => (
+                {tags?.map((tag) => (
                   <View
                     key={tag}
                     style={{
@@ -766,11 +734,6 @@ export default function VendorProfileScreen({ route, navigation }: Props) {
                   {vendor.location}
                 </Text>
               )}
-              {mapError && (
-                <Text style={{ ...typography.caption, color: '#EF4444', marginBottom: spacing.sm }}>
-                  {mapError}
-                </Text>
-              )}
               <View
                 style={{
                   height: 220,
@@ -784,25 +747,23 @@ export default function VendorProfileScreen({ route, navigation }: Props) {
               >
                 {Platform.OS === 'web' ? (
                   webMapEmbedUrl ? (
-                    <WebView source={{ uri: webMapEmbedUrl }} style={{ flex: 1 }} />
+                    <iframe
+                      title="Google Map"
+                      style={{ width: '100%', height: '100%', border: 'none' } as any}
+                      src={webMapEmbedUrl}
+                      allowFullScreen
+                    />
                   ) : (
                     <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
                       <Text style={{ ...typography.caption, color: colors.textMuted }}>Map unavailable</Text>
                     </View>
                   )
-                ) : mapRegion && MapViewComponent ? (
-                  <MapViewComponent
-                    style={{ flex: 1 }}
-                    region={mapRegion}
-                    provider={GoogleProvider}
-                  >
-                    {MarkerComponent && (
-                      <MarkerComponent
-                        coordinate={{ latitude: mapRegion.latitude, longitude: mapRegion.longitude }}
-                        title={name}
-                      />
-                    )}
-                  </MapViewComponent>
+                ) : staticMapUrl ? (
+                  <Image
+                    source={{ uri: staticMapUrl }}
+                    style={{ width: '100%', height: '100%' }}
+                    resizeMode="cover"
+                  />
                 ) : (
                   <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
                     <Text style={{ ...typography.caption, color: colors.textMuted }}>Map unavailable</Text>

@@ -54,6 +54,9 @@ export default function SignInScreen({ navigation }: Props) {
     }
 
     setFormSuccess('Signed in successfully. Redirecting...');
+    setTimeout(() => {
+      navigation.getParent()?.navigate('Main');
+    }, 500);
   };
 
   const handleForgotPassword = async () => {
@@ -80,6 +83,8 @@ export default function SignInScreen({ navigation }: Props) {
     const { error } = await signInWithProvider('google');
     if (error) {
       Alert.alert('Google sign in failed', error.message);
+    } else {
+      navigation.getParent()?.navigate('Main');
     }
   };
 
@@ -87,6 +92,8 @@ export default function SignInScreen({ navigation }: Props) {
     const { error } = await signInWithProvider('facebook');
     if (error) {
       Alert.alert('Facebook sign in failed', error.message);
+    } else {
+      navigation.getParent()?.navigate('Main');
     }
   };
 

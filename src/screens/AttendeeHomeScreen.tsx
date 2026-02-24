@@ -1410,7 +1410,7 @@ export default function AttendeeHomeScreen() {
           >
             Near you
           </Text>
-          {nearbyVendors.map((item) => (
+          {nearbyVendors?.map((item) => (
             <TouchableOpacity
               key={`${item.type}-${item.id}`}
               activeOpacity={0.9}
@@ -1512,7 +1512,7 @@ export default function AttendeeHomeScreen() {
               </View>
 
               {serviceType !== 'Venues' &&
-                selectedCategoryIds.map((id) => {
+                selectedCategoryIds?.map((id) => {
                   const label = VENDOR_CATEGORIES.find((c) => c.id === id)?.label;
                   if (!label) return null;
                   return (
@@ -1531,7 +1531,7 @@ export default function AttendeeHomeScreen() {
                 })}
 
               {serviceType === 'Venues' &&
-                selectedVenueTypes.map((vt) => (
+                selectedVenueTypes?.map((vt) => (
                   <View
                     key={`venue-type-${vt}`}
                     style={{
@@ -1545,7 +1545,7 @@ export default function AttendeeHomeScreen() {
                   </View>
                 ))}
 
-              {selectedSubcategories.map((sub) => (
+              {selectedSubcategories?.map((sub) => (
                 <View
                   key={`sub-${sub}`}
                   style={{
@@ -1559,7 +1559,7 @@ export default function AttendeeHomeScreen() {
                 </View>
               ))}
 
-              {selectedVenueAmenities.map((amenity) => (
+              {selectedVenueAmenities?.map((amenity) => (
                 <View
                   key={`amenity-${amenity}`}
                   style={{
@@ -1616,7 +1616,7 @@ export default function AttendeeHomeScreen() {
           </View>
         ) : (
           <View style={{ paddingHorizontal: spacing.lg, paddingBottom: spacing.lg }}>
-            {displayedListings.map((item) => (
+            {displayedListings?.map((item) => (
               <View
                 key={`${item.type}-${item.id}`}
                 style={{

@@ -3,7 +3,6 @@ import { ActivityIndicator, Alert, BackHandler, Image, Linking, Platform, Scroll
 import { useQuery } from '@tanstack/react-query';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { WebView } from 'react-native-webview';
-import * as Location from 'expo-location';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 
@@ -13,6 +12,17 @@ import { colors, spacing, radii, typography } from '../theme';
 import { getFavourites, toggleFavourite } from '../lib/favourites';
 import { useAuth } from '../auth/AuthContext';
 import { PrimaryButton } from '../components/ui';
+
+let RNMaps: any = null;
+let mapsAvailable = false;
+if (Platform.OS !== 'web') {
+  try {
+    RNMaps = require('react-native-maps');
+    mapsAvailable = !!RNMaps?.default;
+  } catch (e) {
+    console.warn('react-native-maps not available:', e);
+  }
+}
 
 type Props = NativeStackScreenProps<AttendeeStackParamList, 'VenueProfile'>;
 
@@ -57,8 +67,6 @@ type VenueRecord = {
 
 export default function VenueProfileScreen({ route, navigation }: Props) {
   const { venueId } = route.params;
-  const [mapRegion, setMapRegion] = useState<Region | null>(null);
-  const [mapError, setMapError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'about' | 'amenities' | 'reviews' | 'calendar'>('about');
   const [favouriteIds, setFavouriteIds] = useState<{ vendorIds: number[]; venueIds: number[] }>({
     vendorIds: [],
@@ -106,18 +114,6 @@ export default function VenueProfileScreen({ route, navigation }: Props) {
       return () => sub.remove();
     }, [cameFromFavourites, handleBackNavigation]),
   );
-
-  const mapModule = useMemo(() => {
-    if (Platform.OS === 'web') return null;
-    try {
-      return require('react-native-maps');
-    } catch (error) {
-      return null;
-    }
-  }, []);
-  const MapViewComponent = mapModule?.default;
-  const MarkerComponent = mapModule?.Marker;
-  const GoogleProvider = mapModule?.PROVIDER_GOOGLE;
 
   const {
     data: venue,
@@ -233,39 +229,6 @@ export default function VenueProfileScreen({ route, navigation }: Props) {
 
   useEffect(() => {
     let isMounted = true;
-
-    const resolveLocation = async () => {
-      if (!mapQuery || mapQuery.trim() === ', ') {
-        setMapRegion(null);
-        return;
-      }
-
-      try {
-        const results = await Location.geocodeAsync(mapQuery);
-        if (!isMounted) return;
-        if (results.length > 0) {
-          const { latitude, longitude } = results[0];
-          setMapRegion({
-            latitude,
-            longitude,
-            latitudeDelta: 0.02,
-            longitudeDelta: 0.02,
-          });
-        }
-      } catch (error) {
-        if (!isMounted) return;
-        setMapError('Unable to load map location.');
-      }
-    };
-
-    resolveLocation();
-    return () => {
-      isMounted = false;
-    };
-  }, [mapQuery]);
-
-  useEffect(() => {
-    let isMounted = true;
     if (!user?.id) {
       setFavouriteIds({ vendorIds: [], venueIds: [] });
       return () => {
@@ -308,6 +271,14 @@ export default function VenueProfileScreen({ route, navigation }: Props) {
     ? `https://wa.me/${venue.whatsapp_number.replace(/[^0-9]/g, '')}`
     : null;
   const emailUrl = venue?.contact_email ? `mailto:${venue.contact_email}` : null;
+  const webMapEmbedUrl = mapQuery
+    ? `https://www.google.com/maps?q=${encodeURIComponent(mapQuery)}&output=embed`
+    : null;
+  
+  // Static map image for better mobile compatibility
+  const staticMapUrl = mapQuery
+    ? `https://maps.googleapis.com/maps/api/staticmap?center=${encodeURIComponent(mapQuery)}&zoom=14&size=640x480&scale=2&markers=color:red%7C${encodeURIComponent(mapQuery)}&key=AIzaSyBjd1KYtTaAzxzdw5ayGwwMu5Sex-gKQLI`
+    : null;
 
   const handleRequestQuote = () => {
     if (!venue) return;
@@ -365,10 +336,6 @@ export default function VenueProfileScreen({ route, navigation }: Props) {
       </View>
     );
   }
-
-  const webMapEmbedUrl = mapQuery
-    ? `https://www.google.com/maps?q=${encodeURIComponent(mapQuery)}&output=embed`
-    : null;
 
   const renderBulletSection = (title: string, items?: string[] | null) => {
     if (!items || items.length === 0) return null;
@@ -706,7 +673,7 @@ export default function VenueProfileScreen({ route, navigation }: Props) {
                 Highlights
               </Text>
               <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
-                {venue.amenities.map((tag) => (
+                {venue.amenities?.map((tag) => (
                   <View
                     key={tag}
                     style={{
@@ -800,11 +767,6 @@ export default function VenueProfileScreen({ route, navigation }: Props) {
                   {venue.location}
                 </Text>
               )}
-              {mapError && (
-                <Text style={{ ...typography.caption, color: '#EF4444', marginBottom: spacing.sm }}>
-                  {mapError}
-                </Text>
-              )}
               <View
                 style={{
                   height: 220,
@@ -818,25 +780,23 @@ export default function VenueProfileScreen({ route, navigation }: Props) {
               >
                 {Platform.OS === 'web' ? (
                   webMapEmbedUrl ? (
-                    <WebView source={{ uri: webMapEmbedUrl }} style={{ flex: 1 }} />
+                    <iframe
+                      title="Google Map"
+                      style={{ width: '100%', height: '100%', border: 'none' } as any}
+                      src={webMapEmbedUrl}
+                      allowFullScreen
+                    />
                   ) : (
                     <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
                       <Text style={{ ...typography.caption, color: colors.textMuted }}>Map unavailable</Text>
                     </View>
                   )
-                ) : mapRegion && MapViewComponent ? (
-                  <MapViewComponent
-                    style={{ flex: 1 }}
-                    region={mapRegion}
-                    provider={GoogleProvider}
-                  >
-                    {MarkerComponent && (
-                      <MarkerComponent
-                        coordinate={{ latitude: mapRegion.latitude, longitude: mapRegion.longitude }}
-                        title={venue.name}
-                      />
-                    )}
-                  </MapViewComponent>
+                ) : staticMapUrl ? (
+                  <Image
+                    source={{ uri: staticMapUrl }}
+                    style={{ width: '100%', height: '100%' }}
+                    resizeMode="cover"
+                  />
                 ) : (
                   <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
                     <Text style={{ ...typography.caption, color: colors.textMuted }}>Map unavailable</Text>
@@ -881,7 +841,7 @@ export default function VenueProfileScreen({ route, navigation }: Props) {
               <Text style={{ ...typography.titleMedium, color: colors.textPrimary, marginBottom: spacing.md }}>
                 Amenities
               </Text>
-              {venue.amenities.map((item) => (
+              {venue.amenities?.map((item) => (
                 <View key={item} style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
                    <View
                     style={{
@@ -1159,13 +1119,15 @@ export default function VenueProfileScreen({ route, navigation }: Props) {
             </View>
           </View>
           <TouchableOpacity
-            onPress={() =>
-              whatsappUrl
-                ? handleOpenUrl(whatsappUrl)
-                : emailUrl
-                  ? handleOpenUrl(emailUrl)
-                  : handleRequestQuote()
-            }
+            onPress={() => {
+              if (whatsappUrl) {
+                handleOpenUrl(whatsappUrl);
+              } else if (emailUrl) {
+                handleOpenUrl(emailUrl);
+              } else {
+                handleRequestQuote();
+              }
+            }}
             style={{
               marginTop: spacing.md,
               backgroundColor: colors.primaryTeal,

@@ -89,6 +89,8 @@ export default function SignUpScreen({ navigation }: Props) {
     const { error } = await signInWithProvider('google');
     if (error) {
       Alert.alert('Google sign up failed', error.message);
+    } else {
+      navigation.getParent()?.navigate('Main');
     }
   };
 
@@ -96,6 +98,8 @@ export default function SignUpScreen({ navigation }: Props) {
     const { error } = await signInWithProvider('facebook');
     if (error) {
       Alert.alert('Facebook sign up failed', error.message);
+    } else {
+      navigation.getParent()?.navigate('Main');
     }
   };
 
