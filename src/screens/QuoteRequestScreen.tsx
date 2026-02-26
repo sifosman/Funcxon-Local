@@ -10,6 +10,15 @@ import { useAuth } from '../auth/AuthContext';
 
 type Props = NativeStackScreenProps<AttendeeStackParamList, 'QuoteRequest'>;
 
+// Web-safe alert helper
+const showAlert = (title: string, message: string) => {
+  if (Platform.OS === 'web') {
+    window.alert(`${title}\n\n${message}`);
+  } else {
+    Alert.alert(title, message);
+  }
+};
+
 export default function QuoteRequestScreen({ route, navigation }: Props) {
   const { vendorId, vendorName, type = 'vendor' } = route.params;
   const { user } = useAuth();
@@ -21,7 +30,7 @@ export default function QuoteRequestScreen({ route, navigation }: Props) {
 
   async function handleSubmit() {
     if (!name.trim() || !email.trim()) {
-      Alert.alert('Missing details', 'Please provide your name and email.');
+      showAlert('Missing details', 'Please provide your name and email.');
       return;
     }
 
@@ -53,7 +62,28 @@ export default function QuoteRequestScreen({ route, navigation }: Props) {
           if (userError) {
             throw userError;
           }
-          userId = userRow?.id ?? null;
+
+          // If user doesn't exist in users table, create them
+          if (!userRow) {
+            const username = email.split('@')[0] || 'attendee';
+            const { data: createdUser, error: createError } = await supabase
+              .from('users')
+              .insert({
+                auth_user_id: user.id,
+                username,
+                password: 'demo',
+                email,
+                full_name: name || username,
+              })
+              .select('id')
+              .single();
+
+            if (!createError && createdUser) {
+              userId = createdUser.id;
+            }
+          } else {
+            userId = userRow.id;
+          }
         }
 
         const { error: insertError } = await supabase.from('quote_requests').insert({
@@ -76,10 +106,11 @@ export default function QuoteRequestScreen({ route, navigation }: Props) {
         await sendVendorNotification(vendorId, vendorName);
       }
 
-      Alert.alert('Quote requested', 'Your quote request has been sent.');
+      showAlert('Quote requested', 'Your quote request has been sent successfully.');
       navigation.goBack();
     } catch (err: any) {
-      Alert.alert('Error', err?.message ?? 'Failed to submit quote request.');
+      console.error('Submit error:', err);
+      showAlert('Error', err?.message ?? 'Failed to submit quote request.');
     } finally {
       setSubmitting(false);
     }

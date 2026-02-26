@@ -11,7 +11,9 @@ import type { QuotesStackParamList } from '../navigation/QuotesNavigator';
 import { useAuth } from '../auth/AuthContext';
 
 type QuoteRequest = {
-  id: number;
+  id: number | string;
+  original_id?: number;
+  is_venue?: boolean;
   vendor_id: number | null;
   name: string | null;
   email: string | null;
@@ -22,7 +24,7 @@ type QuoteRequest = {
   budget?: string | null;
   quote_amount?: number | null;
   created_at?: string | null;
-  message?: string | null;
+  requirements?: string | null;
 };
 
 type VendorSeed = {
@@ -41,12 +43,15 @@ export default function QuotesScreen() {
   const navigation = useNavigation<any>();
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState<'all' | 'pending' | 'finalised' | 'tours'>('all');
-  const [actionLoadingId, setActionLoadingId] = useState<number | null>(null);
+  const [actionLoadingId, setActionLoadingId] = useState<number | string | null>(null);
 
   const { data, isLoading, error, refetch } = useQuery<QuoteRequest[]>({
     queryKey: ['attendee-quotes', user?.id],
     queryFn: async () => {
+      console.log('[QuotesScreen] Starting fetch, user.id:', user?.id);
+      
       if (!user?.id) {
+        console.log('[QuotesScreen] No user.id, returning empty array');
         return [];
       }
 
@@ -55,6 +60,8 @@ export default function QuotesScreen() {
         .select('id, username, email')
         .eq('auth_user_id', user.id)
         .maybeSingle();
+
+      console.log('[QuotesScreen] User lookup result:', { userRows, userError });
 
       if (userError) {
         throw userError;
@@ -65,6 +72,8 @@ export default function QuotesScreen() {
       if (!internalUser) {
         const email = user.email ?? 'attendee@funcxon.com';
         const username = email.split('@')[0] || 'attendee';
+        console.log('[QuotesScreen] Creating new user:', { email, username });
+        
         const { data: createdUser, error: createError } = await supabase
           .from('users')
           .insert({
@@ -77,27 +86,87 @@ export default function QuotesScreen() {
           .select('id, username, email')
           .single();
 
+        console.log('[QuotesScreen] User creation result:', { createdUser, createError });
+
         if (!createError && createdUser) {
           internalUser = createdUser;
         }
       }
 
       if (!internalUser) {
+        console.log('[QuotesScreen] No internal user found/created, returning empty array');
         return [];
       }
 
-      const { data: quotes, error: quotesError } = await supabase
+      console.log('[QuotesScreen] Internal user:', internalUser);
+
+      const { data: vendorQuotes, error: vendorError } = await supabase
         .from('quote_requests')
-        .select('id, vendor_id, name, email, status, details, event_type, event_date, budget, quote_amount, created_at, message')
+        .select('id, vendor_id, name, email, status, details, event_type, event_date, budget, quote_amount, created_at, requirements')
         .eq('user_id', internalUser.id)
         .order('id', { ascending: false })
         .limit(50);
 
-      if (quotesError) {
-        throw quotesError;
+      console.log('[QuotesScreen] Vendor quotes result:', { count: vendorQuotes?.length, vendorError });
+
+      if (vendorError) {
+        throw vendorError;
       }
 
-      return (quotes as QuoteRequest[]) ?? [];
+      const { data: venueQuotes, error: venueError } = await supabase
+        .from('venue_quote_requests')
+        .select('id, listing_id, requester_name, requester_email, status, message, event_date, created_at')
+        .eq('requester_user_id', user.id) // venue requests use the auth.uid
+        .order('id', { ascending: false })
+        .limit(50);
+
+      console.log('[QuotesScreen] Venue quotes result:', { count: venueQuotes?.length, venueError });
+
+      if (venueError) {
+        console.error('Error fetching venue quotes:', venueError);
+      }
+
+      const formattedVendorQuotes: QuoteRequest[] = (vendorQuotes ?? []).map(q => ({
+        id: q.id,
+        vendor_id: q.vendor_id,
+        name: q.name,
+        email: q.email,
+        status: q.status,
+        details: q.details,
+        event_type: q.event_type,
+        event_date: q.event_date,
+        budget: q.budget,
+        quote_amount: q.quote_amount,
+        created_at: q.created_at,
+        requirements: q.requirements,
+      }));
+
+      const formattedVenueQuotes: QuoteRequest[] = (venueQuotes ?? []).map(q => ({
+        id: `venue-${q.id}`,
+        original_id: q.id,
+        is_venue: true,
+        vendor_id: q.listing_id,
+        name: q.requester_name,
+        email: q.requester_email,
+        status: q.status,
+        details: q.message,
+        event_type: 'Venues',
+        event_date: q.event_date,
+        budget: null,
+        quote_amount: null,
+        created_at: q.created_at,
+        requirements: q.message,
+      }));
+
+      const allQuotes = [...formattedVendorQuotes, ...formattedVenueQuotes].sort((a, b) => {
+        const dateA = new Date(a.created_at || 0).getTime();
+        const dateB = new Date(b.created_at || 0).getTime();
+        return dateB - dateA;
+      });
+
+      console.log('[QuotesScreen] Total quotes:', allQuotes.length, { vendor: formattedVendorQuotes.length, venue: formattedVenueQuotes.length });
+
+      return allQuotes;
     },
     refetchOnMount: 'always',
   });
@@ -517,7 +586,7 @@ export default function QuotesScreen() {
                 </Text>
               )}
 
-              {item.message && item.status === 'tour_requested' && (
+              {item.requirements && item.status === 'tour_requested' && (
                 <View style={{ 
                   marginTop: spacing.sm, 
                   padding: spacing.sm, 
@@ -530,7 +599,7 @@ export default function QuotesScreen() {
                     Tour Request
                   </Text>
                   <Text style={{ ...typography.caption, color: '#0C4A6E', marginTop: 2 }}>
-                    {item.message}
+                    {item.requirements}
                   </Text>
                 </View>
               )}
