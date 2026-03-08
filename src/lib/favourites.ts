@@ -14,7 +14,25 @@ async function resolveUserId(user?: AuthUserRef): Promise<number | null> {
     throw error;
   }
 
-  return data?.id ?? null;
+  if (data?.id) {
+    return data.id;
+  }
+
+  if (user.email) {
+    const { data: emailMatch, error: emailError } = await supabase
+      .from('users')
+      .select('id')
+      .eq('email', user.email)
+      .maybeSingle();
+
+    if (emailError) {
+      throw emailError;
+    }
+
+    return emailMatch?.id ?? null;
+  }
+
+  return null;
 }
 
 export async function getFavourites(user?: AuthUserRef): Promise<{ vendorIds: number[], venueIds: number[] }> {
@@ -81,14 +99,22 @@ export async function toggleFavourite(user: AuthUserRef, id: number, type: 'vend
   }
 
   if (existing?.id) {
-    await supabase
+    const { error: deleteError } = await supabase
       .from('shortlists')
       .delete()
       .eq('id', existing.id);
+
+    if (deleteError) {
+      throw deleteError;
+    }
   } else {
-    await supabase
+    const { error: insertError } = await supabase
       .from('shortlists')
       .insert({ user_id: internalUserId, [column]: id });
+
+    if (insertError) {
+      throw insertError;
+    }
   }
 
   return getFavourites(user);

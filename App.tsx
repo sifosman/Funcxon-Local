@@ -7,6 +7,7 @@ import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { AppNavigator } from './src/navigation/AppNavigator';
 import { AuthProvider } from './src/auth/AuthContext';
 import { ApplicationFormProvider } from './src/context/ApplicationFormContext';
+import { PendingSearchProvider } from './src/context/PendingSearchContext';
 import { colors } from './src/theme';
 import { useFonts } from '@expo-google-fonts/montserrat';
 import {
@@ -76,14 +77,16 @@ export default function App() {
         <QueryClientProvider client={queryClient}>
           <AuthProvider>
             <ApplicationFormProvider>
-              <NavigationContainer theme={navTheme}>
-                <AppContent helpVisible={helpVisible} setHelpVisible={setHelpVisible} />
-                <DataConsentModal
-                  visible={consentVisible}
-                  onAccept={() => setConsentVisible(false)}
-                />
-                <StatusBar style="dark" translucent backgroundColor="transparent" />
-              </NavigationContainer>
+              <PendingSearchProvider>
+                <NavigationContainer theme={navTheme}>
+                  <AppContent helpVisible={helpVisible} setHelpVisible={setHelpVisible} />
+                  <DataConsentModal
+                    visible={consentVisible}
+                    onAccept={() => setConsentVisible(false)}
+                  />
+                  <StatusBar style="dark" translucent backgroundColor="transparent" />
+                </NavigationContainer>
+              </PendingSearchProvider>
             </ApplicationFormProvider>
           </AuthProvider>
         </QueryClientProvider>

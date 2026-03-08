@@ -8,7 +8,7 @@ import { colors } from '../theme';
 
 export type QuotesStackParamList = {
   QuotesList: undefined;
-  QuoteDetail: { quoteId: number };
+  QuoteDetail: { quoteId: number | string };
   QuoteResponse: {
     revisionId: number;
     quoteRequestId: number;

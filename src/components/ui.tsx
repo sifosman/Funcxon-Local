@@ -13,7 +13,11 @@ export type PrimaryButtonProps = {
 export function PrimaryButton({ title, onPress, disabled, style }: PrimaryButtonProps) {
   return (
     <TouchableOpacity
+      accessible
       activeOpacity={0.9}
+      accessibilityRole="button"
+      accessibilityLabel={title}
+      accessibilityState={{ disabled: !!disabled }}
       onPress={onPress}
       disabled={disabled}
       style={{
@@ -49,7 +53,10 @@ export type OutlineButtonProps = {
 export function OutlineButton({ title, onPress, style }: OutlineButtonProps) {
   return (
     <TouchableOpacity
+      accessible
       activeOpacity={0.9}
+      accessibilityRole="button"
+      accessibilityLabel={title}
       onPress={onPress}
       style={{
         backgroundColor: colors.surface,

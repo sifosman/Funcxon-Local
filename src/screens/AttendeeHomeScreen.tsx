@@ -26,6 +26,7 @@ import { useAuth } from '../auth/AuthContext';
 import { provinces, getCitiesByProvince, getAllCities } from '../config/locations';
 import { amenitiesList } from '../config/venueTypes';
 import MapRadiusSelector from '../components/MapRadiusSelector';
+import { usePendingSearch } from '../context/PendingSearchContext';
 
 export type VendorListItem = {
   id: number;
@@ -302,6 +303,7 @@ export default function AttendeeHomeScreen() {
   const [mapRadius, setMapRadius] = useState<number>(20);
   const [visibleFeaturedCount, setVisibleFeaturedCount] = useState(6);
   const { user } = useAuth();
+  const { pendingSearch, shouldApplyPendingSearch, savePendingSearch, markPendingSearchConsumed } = usePendingSearch();
 
   const parseLocationParts = (location?: string | null) => {
     const value = (location ?? '').trim();
@@ -618,6 +620,43 @@ export default function AttendeeHomeScreen() {
     // Convert radius to string for display
     setDistanceKm(radius.toString());
   };
+
+  const handleClearLocationSelection = () => {
+    setMapCenter(null);
+    setMapRadius(20);
+    setDistanceKm('');
+  };
+
+  useEffect(() => {
+    if (!user?.id || !pendingSearch || !shouldApplyPendingSearch) {
+      return;
+    }
+
+    setSearch(pendingSearch.search);
+    setServiceType(pendingSearch.serviceType);
+    setSelectedCategoryIds(pendingSearch.selectedCategoryIds);
+    setSelectedVenueTypes(pendingSearch.selectedVenueTypes);
+    setSelectedSubcategories(pendingSearch.selectedSubcategories);
+    setSelectedVenueAmenities(pendingSearch.selectedVenueAmenities);
+    setSelectedProvinces(pendingSearch.selectedProvinces);
+    setSelectedCities(pendingSearch.selectedCities);
+    setCitySearchQuery(pendingSearch.citySearchQuery);
+    setDistanceKm(pendingSearch.distanceKm);
+    setSelectedCapacity(pendingSearch.selectedCapacity);
+    setDetectedProvinceLabel(pendingSearch.detectedProvinceLabel);
+    setLocationCity(pendingSearch.locationCity);
+    setLocationRegion(pendingSearch.locationRegion);
+    setSortBy(pendingSearch.sortBy);
+    setSortOrder(pendingSearch.sortOrder);
+    setMapCenter(pendingSearch.mapCenter);
+    setMapRadius(pendingSearch.mapRadius);
+    setHasSearched(true);
+    markPendingSearchConsumed();
+
+    setTimeout(() => {
+      scrollViewRef.current?.scrollTo({ y: 800, animated: true });
+    }, 100);
+  }, [markPendingSearchConsumed, pendingSearch, shouldApplyPendingSearch, user?.id]);
 
   const filteredVendors = useMemo(() => {
     if (!data) return [];
@@ -1338,6 +1377,26 @@ export default function AttendeeHomeScreen() {
                   title="Search" 
                   onPress={() => {
                     if (!user?.id) {
+                      savePendingSearch({
+                        search,
+                        serviceType,
+                        selectedCategoryIds,
+                        selectedVenueTypes,
+                        selectedSubcategories,
+                        selectedVenueAmenities,
+                        selectedProvinces,
+                        selectedCities,
+                        citySearchQuery,
+                        distanceKm,
+                        selectedCapacity,
+                        detectedProvinceLabel,
+                        locationCity,
+                        locationRegion,
+                        sortBy,
+                        sortOrder,
+                        mapCenter,
+                        mapRadius,
+                      });
                       navigation.getParent()?.navigate('Auth');
                       return;
                     }
@@ -1367,6 +1426,8 @@ export default function AttendeeHomeScreen() {
                     setDetectedProvinceLabel(null);
                     setLocationCity(null);
                     setLocationRegion(null);
+                    setMapCenter(null);
+                    setMapRadius(20);
                     setSortBy('name');
                     setSortOrder('asc');
                     setHasSearched(false); // Also reset search state
@@ -2037,6 +2098,24 @@ export default function AttendeeHomeScreen() {
                     new Set((amenitiesList ?? []).map((v) => String(v ?? '').trim()).filter(Boolean)),
                   ).sort();
 
+                  if (options.length === 0) {
+                    return (
+                      <View style={{ alignItems: 'center', paddingVertical: spacing.xl }}>
+                        <MaterialIcons name="info-outline" size={48} color={colors.textMuted} />
+                        <Text
+                          style={{
+                            ...typography.body,
+                            color: colors.textSecondary,
+                            marginTop: spacing.md,
+                            textAlign: 'center',
+                          }}
+                        >
+                          Venue amenities are currently unavailable.
+                        </Text>
+                      </View>
+                    );
+                  }
+
                   return options.map((amenity) => {
                     const isSelected = selectedVenueAmenities.includes(amenity);
                     return (
@@ -2504,6 +2583,8 @@ export default function AttendeeHomeScreen() {
         visible={showMapRadiusSelector}
         onClose={() => setShowMapRadiusSelector(false)}
         onLocationSelected={handleLocationSelected}
+        onClearSelection={handleClearLocationSelection}
+        initialLocation={mapCenter ?? undefined}
         initialRadius={mapRadius}
       />
     </ScrollView>

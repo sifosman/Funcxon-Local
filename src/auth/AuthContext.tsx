@@ -202,28 +202,45 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // --- NATIVE GOOGLE SIGN-IN ---
     if (provider === 'google' && Platform.OS !== 'web') {
       try {
+        console.log('Google Sign-In: Checking Play Services...');
         await GoogleSignin.hasPlayServices();
-        const userInfo = await GoogleSignin.signIn();
+        console.log('Google Sign-In: Play Services OK, starting sign in...');
         
-        if (userInfo.data?.idToken) {
+        const userInfo = await GoogleSignin.signIn();
+        console.log('Google Sign-In: Got userInfo:', JSON.stringify(userInfo, null, 2));
+        
+        // Try different locations for the idToken
+        const idToken = (userInfo.data as any)?.idToken || (userInfo as any).idToken || (userInfo as any).id_token;
+        
+        if (idToken) {
+          console.log('Google Sign-In: Got ID token, signing in with Supabase...');
           const { data, error } = await supabase.auth.signInWithIdToken({
             provider: 'google',
-            token: userInfo.data.idToken,
+            token: idToken,
           });
           
           if (error) {
+            console.error('Google Sign-In: Supabase error:', error);
             Alert.alert('Error', error.message);
             return { error };
           }
+          console.log('Google Sign-In: Supabase success');
           Alert.alert('Success', 'Signed in with Google successfully!');
           return { error: undefined };
         } else {
-          return { error: new Error('No ID token present!') };
+          console.error('Google Sign-In: No ID token found. userInfo:', JSON.stringify(userInfo, null, 2));
+          return { error: new Error('No ID token present in Google Sign-In response') };
         }
       } catch (error: any) {
         console.error('Google Sign-In Error:', error);
+        console.error('Google Sign-In Error code:', error.code);
+        console.error('Google Sign-In Error message:', error.message);
         if (error.code === 'SIGN_IN_CANCELLED') {
           return { error: new Error('Google sign-in was cancelled') };
+        }
+        if (error.code === 'DEVELOPER_ERROR') {
+          Alert.alert('Google Sign-In Error', 'Developer Error: Check your SHA-1 fingerprint and package name in Google Cloud Console. Make sure they match your Android build.');
+          return { error: new Error('Developer Error - Check Google Cloud Console configuration') };
         }
         Alert.alert('Google Sign-In Error', error.message);
         return { error };

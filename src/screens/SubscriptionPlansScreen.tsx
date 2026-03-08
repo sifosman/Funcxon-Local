@@ -1,11 +1,13 @@
 import { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, Alert, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView, Alert, Linking, StyleSheet } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { colors, spacing, radii, typography } from '../theme';
 import { getSubscriptionTiers } from '../lib/subscription';
 import type { ProfileStackParamList } from '../navigation/ProfileNavigator';
+
+const SUPPORT_EMAIL = process.env.EXPO_PUBLIC_SUPPORT_EMAIL || 'support@funcxon.com';
 
 type SubscriptionTier = {
   id: number;
@@ -56,6 +58,12 @@ export default function SubscriptionPlansScreen() {
       billing: selectedBilling,
       priceLabel,
       isFree,
+    });
+  };
+
+  const handleContactSupport = () => {
+    Linking.openURL(`mailto:${SUPPORT_EMAIL}?subject=Subscription%20plan%20support`).catch(() => {
+      Alert.alert('Support unavailable', 'Could not open your email app. Please try again later.');
     });
   };
 
@@ -239,7 +247,7 @@ export default function SubscriptionPlansScreen() {
           <Text style={styles.helpText}>
             Contact our support team for personalized recommendations based on your business needs.
           </Text>
-          <TouchableOpacity style={styles.helpButton}>
+          <TouchableOpacity style={styles.helpButton} onPress={handleContactSupport}>
             <MaterialIcons name="chat" size={16} color={colors.primaryForeground} />
             <Text style={styles.helpButtonText}>Chat with Support</Text>
           </TouchableOpacity>

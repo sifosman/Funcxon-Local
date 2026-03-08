@@ -11,8 +11,8 @@ import { colors, typography } from '../theme';
 
 export type AttendeeStackParamList = {
   VendorList: undefined;
-  VendorProfile: { vendorId: number; from?: 'Favourites' };
-  VenueProfile: { venueId: number; from?: 'Favourites' };
+  VendorProfile: { vendorId: number; from?: 'Favourites' | 'Quotes' };
+  VenueProfile: { venueId: number; from?: 'Favourites' | 'Quotes' };
   QuoteRequest: { vendorId: number; vendorName: string; type?: 'vendor' | 'venue' };
   BookTour: { venueId: number; venueName: string };
   CreateReview: { type: 'vendor' | 'venue'; targetId: number; targetName: string };

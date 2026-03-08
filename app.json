@@ -64,6 +64,12 @@
         {
           "googleMapsApiKey": "AIzaSyBjd1KYtTaAzxzdw5ayGwwMu5Sex-gKQLI"
         }
+      ],
+      [
+        "@react-native-google-signin/google-signin",
+        {
+          "iosUrlScheme": "com.googleusercontent.apps.686531626266-vp4hdm0nj6mkkvqsudbkm3pt00mcn15p"
+        }
       ]
     ],
     "extra": {

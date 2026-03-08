@@ -33,9 +33,18 @@ yarn-error.*
 # local env files
 .env
 .env*.local
+client_secret_*.json
 
 # typescript
 *.tsbuildinfo
+
+# Playwright artifacts
+playwright-report/
+test-results/
+test-screenshots/
+tests/e2e/.auth/
+diagnostic-*.png
+search-test-*.png
 
 # generated native folders
 /ios

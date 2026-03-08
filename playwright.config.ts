@@ -1,17 +1,17 @@
 import { defineConfig, devices } from '@playwright/test';
 
 export default defineConfig({
-  testDir: './tests/e2e',
-  globalSetup: require.resolve('./tests/e2e/global-setup'),
-  fullyParallel: true,
+  testDir: './tests/playwright',
+  fullyParallel: false,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
   workers: process.env.CI ? 1 : undefined,
   reporter: 'html',
+  timeout: 60 * 1000,
   use: {
-    baseURL: 'http://localhost:8082',
-    storageState: './tests/e2e/.auth/storageState.json',
+    baseURL: 'http://127.0.0.1:4100',
     trace: 'on-first-retry',
+    screenshot: 'only-on-failure',
   },
   projects: [
     {
@@ -20,9 +20,9 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: 'npx expo start --web --port 8082',
-    url: 'http://localhost:8082',
-    reuseExistingServer: !process.env.CI,
-    timeout: 120 * 1000,
+    command: 'set CI=1&& npx expo start --web --port 4100',
+    url: 'http://127.0.0.1:4100',
+    reuseExistingServer: true,
+    timeout: 180 * 1000,
   },
 });

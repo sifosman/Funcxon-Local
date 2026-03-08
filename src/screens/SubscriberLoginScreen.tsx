@@ -275,7 +275,7 @@ export default function SubscriberLoginScreen() {
                         </TouchableOpacity>
 
                         <TouchableOpacity
-                            onPress={() => navigation.navigate('ApplicationStep1')}
+                            onPress={() => handleRegisterPortfolio('vendors')}
                             style={{
                                 marginTop: spacing.sm,
                                 paddingVertical: spacing.md,

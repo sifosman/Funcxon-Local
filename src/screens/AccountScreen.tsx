@@ -8,6 +8,7 @@ import { useAuth } from '../auth/AuthContext';
 import { supabase } from '../lib/supabaseClient';
 import type { ProfileStackParamList } from '../navigation/ProfileNavigator';
 import { HelpCenterModal } from '../components/HelpCenterModal';
+import { useApplicationForm } from '../context/ApplicationFormContext';
 
 type MenuItem = {
     id: string;
@@ -22,6 +23,7 @@ type MenuItem = {
 export default function AccountScreen() {
     const navigation = useNavigation<NativeStackNavigationProp<ProfileStackParamList>>();
     const { signOut, user, userRole } = useAuth();
+    const { resetForm } = useApplicationForm();
     const [expandedMenus, setExpandedMenus] = useState<Set<string>>(new Set());
     const [helpVisible, setHelpVisible] = useState(false);
     const [currentPlan, setCurrentPlan] = useState<string | null>(null);
@@ -107,8 +109,8 @@ export default function AccountScreen() {
             // User doesn't have a subscription, take them to subscription offers
             navigation.navigate('SubscriptionPlans');
         } else {
-            // User has subscription, proceed to vendor application
-            navigation.navigate('ApplicationStep1');
+            resetForm();
+            navigation.navigate('PortfolioType');
         }
     };
 
@@ -129,6 +131,13 @@ export default function AccountScreen() {
 
     const handleHelpCentre = () => {
         setHelpVisible(true);
+    };
+
+    const handleUnavailableAccountFeature = (featureName: string) => {
+        Alert.alert(
+            'Coming Soon',
+            `${featureName} is not available yet. Use the Subscriber Suite options for portfolio management in the meantime.`
+        );
     };
 
     const handleDeleteAccount = async () => {
@@ -160,11 +169,11 @@ export default function AccountScreen() {
             label: 'My Profile',
             icon: 'person',
             submenu: [
-                { id: 'create-profile', label: 'Create Profile', icon: 'person-add' },
-                { id: 'edit-profile', label: 'Edit Profile', icon: 'edit' },
+                { id: 'create-profile', label: 'Create Profile', icon: 'person-add', action: handleBecomeVendor },
+                { id: 'edit-profile', label: 'Edit Profile', icon: 'edit', route: 'SubscriberProfile' },
                 { id: 'become-vendor', label: 'Become a Vendor', icon: 'store', action: handleBecomeVendor },
-                { id: 'change-password', label: 'Change Password', icon: 'lock' },
-                { id: 'marketing-permissions', label: 'Marketing Permissions', icon: 'notifications' },
+                { id: 'change-password', label: 'Change Password', icon: 'lock', action: () => handleUnavailableAccountFeature('Change Password') },
+                { id: 'marketing-permissions', label: 'Marketing Permissions', icon: 'notifications', action: () => handleUnavailableAccountFeature('Marketing Permissions') },
             ],
         },
         {
@@ -172,10 +181,10 @@ export default function AccountScreen() {
             label: 'Subscriber Suite',
             icon: 'credit-card',
             submenu: [
-                { id: 'portfolio-profile', label: 'Portfolio Profile', icon: 'business-center', route: 'SubscriberLogin' },
+                { id: 'portfolio-profile', label: 'Portfolio Profile', icon: 'business-center', route: 'SubscriberProfile' },
                 { id: 'billing', label: 'Billing & Payments', icon: 'receipt-long', route: 'Billing' },
-                { id: 'subscriber-legal-terms', label: 'Subscriber Legal Terms', icon: 'description', route: 'SubscriberLogin' },
-                { id: 'activity-dashboard', label: 'Activity Dashboard', icon: 'bar-chart', route: 'SubscriberLogin' },
+                { id: 'subscriber-legal-terms', label: 'Subscriber Legal Terms', icon: 'description', route: 'TermsAndPolicies' },
+                { id: 'activity-dashboard', label: 'Activity Dashboard', icon: 'bar-chart', route: 'SubscriberProfile' },
             ],
         },
         {

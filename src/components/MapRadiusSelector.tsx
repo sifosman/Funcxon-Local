@@ -38,6 +38,7 @@ interface MapRadiusSelectorProps {
   visible: boolean;
   onClose: () => void;
   onLocationSelected: (location: LatLng, radiusKm: number) => void;
+  onClearSelection?: () => void;
   initialLocation?: LatLng;
   initialRadius?: number;
 }
@@ -46,6 +47,7 @@ export default function MapRadiusSelector({
   visible,
   onClose,
   onLocationSelected,
+  onClearSelection,
   initialLocation = { latitude: -26.2041, longitude: 28.0473 }, // Default: Johannesburg
   initialRadius = 20
 }: MapRadiusSelectorProps) {
@@ -137,6 +139,16 @@ export default function MapRadiusSelector({
 
   const handleApply = () => {
     onLocationSelected(selectedLocation, radiusKm);
+    onClose();
+  };
+
+  const handleAnyRadius = () => {
+    onLocationSelected(selectedLocation, 100);
+    onClose();
+  };
+
+  const handleCancelSelection = () => {
+    onClearSelection?.();
     onClose();
   };
 
@@ -275,11 +287,33 @@ export default function MapRadiusSelector({
                 </Text>
               </TouchableOpacity>
             ))}
+            <TouchableOpacity
+              onPress={handleAnyRadius}
+              style={[
+                styles.radiusButton,
+                radiusKm === 100 && styles.radiusButtonActive,
+              ]}
+            >
+              <Text
+                style={[
+                  styles.radiusButtonText,
+                  radiusKm === 100 && styles.radiusButtonTextActive,
+                ]}
+              >
+                Any
+              </Text>
+            </TouchableOpacity>
           </View>
         </View>
 
         {/* Bottom Actions */}
         <View style={styles.bottomActions}>
+          <TouchableOpacity 
+            onPress={handleCancelSelection}
+            style={styles.clearButton}
+          >
+            <Text style={styles.clearButtonText}>Cancel Radius</Text>
+          </TouchableOpacity>
           <TouchableOpacity 
             onPress={handleApply}
             style={styles.applyButton}
@@ -401,6 +435,20 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     borderTopWidth: 1,
     borderTopColor: colors.borderSubtle,
+    gap: spacing.sm,
+  },
+  clearButton: {
+    backgroundColor: colors.surface,
+    paddingVertical: spacing.md,
+    borderRadius: radii.md,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: colors.borderSubtle,
+  },
+  clearButtonText: {
+    ...typography.body,
+    color: colors.textPrimary,
+    fontWeight: '600',
   },
   applyButton: {
     backgroundColor: colors.primary,

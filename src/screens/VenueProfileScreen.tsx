@@ -65,6 +65,15 @@ type VenueRecord = {
    status: string | null;
  };
 
+type AvailabilityRecord = {
+  id: number;
+  date: string;
+  is_available: boolean;
+  availability_type: string | null;
+  time_slots: string[] | null;
+  notes: string | null;
+};
+
 export default function VenueProfileScreen({ route, navigation }: Props) {
   const { venueId } = route.params;
   const [activeTab, setActiveTab] = useState<'about' | 'amenities' | 'reviews' | 'calendar'>('about');
@@ -75,6 +84,7 @@ export default function VenueProfileScreen({ route, navigation }: Props) {
   const { user } = useAuth();
 
   const cameFromFavourites = route.params?.from === 'Favourites';
+  const cameFromQuotes = route.params?.from === 'Quotes';
 
   const handleBackNavigation = useCallback(() => {
     if (cameFromFavourites) {
@@ -84,11 +94,18 @@ export default function VenueProfileScreen({ route, navigation }: Props) {
       return;
     }
 
+    if (cameFromQuotes) {
+      const tabNav = navigation.getParent();
+      navigation.popToTop();
+      tabNav?.navigate('Quotes' as never);
+      return;
+    }
+
     navigation.goBack();
-  }, [cameFromFavourites, navigation]);
+  }, [cameFromFavourites, cameFromQuotes, navigation]);
 
   useEffect(() => {
-    if (!cameFromFavourites) return;
+    if (!cameFromFavourites && !cameFromQuotes) return;
 
     navigation.setOptions({
       headerLeft: () => (
@@ -100,11 +117,11 @@ export default function VenueProfileScreen({ route, navigation }: Props) {
         </TouchableOpacity>
       ),
     });
-  }, [cameFromFavourites, handleBackNavigation, navigation]);
+  }, [cameFromFavourites, cameFromQuotes, handleBackNavigation, navigation]);
 
   useFocusEffect(
     useCallback(() => {
-      if (!cameFromFavourites) return;
+      if (!cameFromFavourites && !cameFromQuotes) return;
 
       const sub = BackHandler.addEventListener('hardwareBackPress', () => {
         handleBackNavigation();
@@ -112,7 +129,7 @@ export default function VenueProfileScreen({ route, navigation }: Props) {
       });
 
       return () => sub.remove();
-    }, [cameFromFavourites, handleBackNavigation]),
+    }, [cameFromFavourites, cameFromQuotes, handleBackNavigation]),
   );
 
   const {
@@ -191,9 +208,52 @@ export default function VenueProfileScreen({ route, navigation }: Props) {
     },
   });
 
+  const {
+    data: availability,
+    isLoading: availabilityLoading,
+  } = useQuery<AvailabilityRecord[]>({
+    queryKey: ['venue-availability', venueId],
+    enabled: typeof venueId === 'number',
+    queryFn: async () => {
+      const today = new Date().toISOString().slice(0, 10);
+      const { data, error } = await supabase
+        .from('venue_availability_calendar')
+        .select('id, date, is_available, availability_type, time_slots, notes')
+        .eq('venue_id', venueId)
+        .gte('date', today)
+        .order('date', { ascending: true })
+        .limit(12);
+
+      if (error) {
+        throw error;
+      }
+
+      return (data as AvailabilityRecord[]) ?? [];
+    },
+  });
+
   const mapQuery = useMemo(() => {
-    return venue?.location ?? `${venue?.city ?? ''}, ${venue?.province ?? ''}`;
+    if (venue?.location?.trim()) {
+      return venue.location.trim();
+    }
+    const city = venue?.city?.trim() ?? '';
+    const province = venue?.province?.trim() ?? '';
+    if (city || province) {
+      return `${city}${city && province ? ', ' : ''}${province}`;
+    }
+    return '';
   }, [venue?.location, venue?.city, venue?.province]);
+
+  const physicalAddress = useMemo(() => {
+    if (venue?.location?.trim()) {
+      return venue.location.trim();
+    }
+
+    const city = venue?.city?.trim() ?? '';
+    const province = venue?.province?.trim() ?? '';
+    const fallback = [city, province].filter(Boolean).join(', ');
+    return fallback || null;
+  }, [venue?.city, venue?.location, venue?.province]);
 
   const galleryImages = useMemo(
     () => [venue?.image_url, ...(venue?.additional_photos ?? [])].filter(Boolean) as string[],
@@ -250,15 +310,20 @@ export default function VenueProfileScreen({ route, navigation }: Props) {
       }
       return;
     }
-    const next = await toggleFavourite(user, venue.id, 'venue');
-    setFavouriteIds(next);
+    try {
+      const next = await toggleFavourite(user, venue.id, 'venue');
+      setFavouriteIds(next);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'We could not update favourites right now.';
+      Alert.alert('Favourite update failed', message);
+    }
   };
 
   const isFavourite = venue ? favouriteIds.venueIds.includes(venue.id) : false;
 
   const handleOpenMap = () => {
-    if (!mapQuery) return;
-    const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(mapQuery)}`;
+    if (!physicalAddress && !mapQuery) return;
+    const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(physicalAddress ?? mapQuery)}`;
     Linking.openURL(mapsUrl).catch(() => null);
   };
 
@@ -274,11 +339,59 @@ export default function VenueProfileScreen({ route, navigation }: Props) {
   const webMapEmbedUrl = mapQuery
     ? `https://www.google.com/maps?q=${encodeURIComponent(mapQuery)}&output=embed`
     : null;
-  
-  // Static map image for better mobile compatibility
-  const staticMapUrl = mapQuery
-    ? `https://maps.googleapis.com/maps/api/staticmap?center=${encodeURIComponent(mapQuery)}&zoom=14&size=640x480&scale=2&markers=color:red%7C${encodeURIComponent(mapQuery)}&key=AIzaSyBjd1KYtTaAzxzdw5ayGwwMu5Sex-gKQLI`
-    : null;
+  const nativeMapHtml = useMemo(() => {
+    if (!mapQuery) return null;
+    
+    // Sanitize values to prevent JSON stringification errors and JS injection
+    const safeQuery = String(mapQuery || 'South Africa').replace(/"/g, '\\"');
+    const safeTitle = String(venue?.name || 'Location').replace(/"/g, '\\"');
+    const encodedQuery = encodeURIComponent(mapQuery);
+
+    return `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+        <style>html,body,#map{margin:0;padding:0;width:100%;height:100%;}</style>
+      </head>
+      <body>
+        <div id="map" style="width:100%;height:100%;"></div>
+        <script>
+          function initMap() {
+            const geocoder = new google.maps.Geocoder();
+            geocoder.geocode({ address: "${safeQuery}" }, (results, status) => {
+              if (status === 'OK' && results && results.length > 0) {
+                const location = results[0].geometry.location;
+                const map = new google.maps.Map(document.getElementById('map'), {
+                  center: location,
+                  zoom: 14,
+                  disableDefaultUI: true,
+                  zoomControl: true,
+                  gestureHandling: 'greedy',
+                });
+
+                new google.maps.Marker({
+                  position: location,
+                  map,
+                  title: "${safeTitle}",
+                });
+              } else {
+                // Fallback to basic iframe embed if Geocoding API fails or is restricted
+                document.getElementById('map').innerHTML = '<iframe width="100%" height="100%" frameborder="0" style="border:0" src="https://maps.google.com/maps?q=${encodedQuery}&t=&z=14&ie=UTF8&iwloc=&output=embed" allowfullscreen></iframe>';
+              }
+            });
+          }
+          
+          // Fallback if the script fails to load entirely
+          function handleMapError() {
+            document.getElementById('map').innerHTML = '<iframe width="100%" height="100%" frameborder="0" style="border:0" src="https://maps.google.com/maps?q=${encodedQuery}&t=&z=14&ie=UTF8&iwloc=&output=embed" allowfullscreen></iframe>';
+          }
+        </script>
+        <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBjd1KYtTaAzxzdw5ayGwwMu5Sex-gKQLI&callback=initMap" onerror="handleMapError()" async defer></script>
+      </body>
+      </html>
+    `;
+  }, [mapQuery, venue?.name]);
 
   const handleRequestQuote = () => {
     if (!venue) return;
@@ -362,6 +475,20 @@ export default function VenueProfileScreen({ route, navigation }: Props) {
     );
   };
 
+  const formatAvailabilityDate = (value: string) => {
+    const parsed = new Date(value);
+    if (Number.isNaN(parsed.getTime())) {
+      return value;
+    }
+
+    return parsed.toLocaleDateString('en-ZA', {
+      weekday: 'short',
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric',
+    });
+  };
+
   return (
     <ScrollView
       style={{ flex: 1, backgroundColor: colors.background }}
@@ -421,7 +548,7 @@ export default function VenueProfileScreen({ route, navigation }: Props) {
         <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: spacing.sm }}>
           <MaterialIcons name="place" size={16} color={colors.textMuted} />
           <Text style={{ ...typography.body, color: colors.textSecondary, marginLeft: 6 }}>
-            {[venue.city, venue.province].filter(Boolean).join(', ') || 'Location not specified'}
+            {physicalAddress || 'Location not specified'}
           </Text>
         </View>
 
@@ -745,7 +872,7 @@ export default function VenueProfileScreen({ route, navigation }: Props) {
           )}
 
           {/* Location & Map */}
-          {(mapQuery || venue.location) && (
+          {(mapQuery || physicalAddress) && (
             <View
               style={{
                 marginBottom: spacing.lg,
@@ -762,9 +889,9 @@ export default function VenueProfileScreen({ route, navigation }: Props) {
                   Location
                 </Text>
               </View>
-              {venue.location && (
+              {physicalAddress && (
                 <Text style={{ ...typography.body, color: colors.textSecondary, marginBottom: spacing.sm }}>
-                  {venue.location}
+                  {physicalAddress}
                 </Text>
               )}
               <View
@@ -791,11 +918,16 @@ export default function VenueProfileScreen({ route, navigation }: Props) {
                       <Text style={{ ...typography.caption, color: colors.textMuted }}>Map unavailable</Text>
                     </View>
                   )
-                ) : staticMapUrl ? (
-                  <Image
-                    source={{ uri: staticMapUrl }}
+                ) : nativeMapHtml ? (
+                  <WebView
+                    source={{ html: nativeMapHtml }}
                     style={{ width: '100%', height: '100%' }}
-                    resizeMode="cover"
+                    originWhitelist={['*']}
+                    javaScriptEnabled
+                    domStorageEnabled
+                    setSupportMultipleWindows={false}
+                    startInLoadingState
+                    scrollEnabled={false}
                   />
                 ) : (
                   <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
@@ -1075,49 +1207,63 @@ export default function VenueProfileScreen({ route, navigation }: Props) {
               Availability Calendar
             </Text>
           </View>
-          <View style={{ alignItems: 'center', paddingVertical: spacing.lg }}>
-            <MaterialIcons name="event" size={48} color={colors.textMuted} />
-            <Text style={{ ...typography.body, color: colors.textPrimary, marginTop: spacing.md, fontWeight: '600' }}>
-              Check Availability
-            </Text>
-            <Text style={{ ...typography.caption, color: colors.textMuted, textAlign: 'center', marginTop: spacing.xs }}>
-              View real-time availability and book directly with {venue.name}
-            </Text>
-          </View>
-          <View style={{ gap: spacing.sm }}>
-            <View
-              style={{
-                backgroundColor: '#DCFCE7',
-                borderRadius: radii.md,
-                padding: spacing.md,
-                borderWidth: 1,
-                borderColor: '#BBF7D0',
-              }}
-            >
-              <Text style={{ ...typography.body, color: '#166534', fontWeight: '600', textAlign: 'center' }}>
-                Available Dates
+          {availabilityLoading ? (
+            <View style={{ alignItems: 'center', paddingVertical: spacing.lg }}>
+              <ActivityIndicator color={colors.primaryTeal} />
+            </View>
+          ) : availability && availability.length > 0 ? (
+            <View style={{ gap: spacing.sm }}>
+              {availability.map((entry) => {
+                const isAvailable = entry.is_available;
+                return (
+                  <View
+                    key={entry.id}
+                    style={{
+                      borderRadius: radii.md,
+                      padding: spacing.md,
+                      borderWidth: 1,
+                      borderColor: isAvailable ? '#BBF7D0' : '#FECACA',
+                      backgroundColor: isAvailable ? '#DCFCE7' : '#FEE2E2',
+                    }}
+                  >
+                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: spacing.md }}>
+                      <Text style={{ ...typography.body, color: colors.textPrimary, fontWeight: '600', flex: 1 }}>
+                        {formatAvailabilityDate(entry.date)}
+                      </Text>
+                      <Text style={{ ...typography.caption, color: isAvailable ? '#166534' : '#991B1B', fontWeight: '700' }}>
+                        {isAvailable ? 'Available' : 'Unavailable'}
+                      </Text>
+                    </View>
+                    {entry.availability_type ? (
+                      <Text style={{ ...typography.caption, color: colors.textSecondary, marginTop: spacing.xs }}>
+                        {entry.availability_type}
+                      </Text>
+                    ) : null}
+                    {Array.isArray(entry.time_slots) && entry.time_slots.length > 0 ? (
+                      <Text style={{ ...typography.caption, color: colors.textSecondary, marginTop: spacing.xs }}>
+                        {entry.time_slots.join(', ')}
+                      </Text>
+                    ) : null}
+                    {entry.notes ? (
+                      <Text style={{ ...typography.caption, color: colors.textSecondary, marginTop: spacing.xs }}>
+                        {entry.notes}
+                      </Text>
+                    ) : null}
+                  </View>
+                );
+              })}
+            </View>
+          ) : (
+            <View style={{ alignItems: 'center', paddingVertical: spacing.lg }}>
+              <MaterialIcons name="event-busy" size={48} color={colors.textMuted} />
+              <Text style={{ ...typography.body, color: colors.textPrimary, marginTop: spacing.md, fontWeight: '600' }}>
+                Availability will be updated soon
               </Text>
-              <Text style={{ ...typography.caption, color: '#166534', textAlign: 'center', marginTop: 4 }}>
-                Contact to confirm specific dates and pricing
+              <Text style={{ ...typography.caption, color: colors.textMuted, textAlign: 'center', marginTop: spacing.xs }}>
+                Contact {venue.name} directly while calendar slots are being updated.
               </Text>
             </View>
-            <View
-              style={{
-                backgroundColor: '#FEE2E2',
-                borderRadius: radii.md,
-                padding: spacing.md,
-                borderWidth: 1,
-                borderColor: '#FECACA',
-              }}
-            >
-              <Text style={{ ...typography.body, color: '#991B1B', fontWeight: '600', textAlign: 'center' }}>
-                Booking Notice
-              </Text>
-              <Text style={{ ...typography.caption, color: '#991B1B', textAlign: 'center', marginTop: 4 }}>
-                Popular dates require advance booking
-              </Text>
-            </View>
-          </View>
+          )}
           <TouchableOpacity
             onPress={() => {
               if (whatsappUrl) {

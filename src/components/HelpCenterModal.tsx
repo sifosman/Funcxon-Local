@@ -32,6 +32,10 @@ export function HelpCenterModal({ visible, onClose, onDeleteAccount }: HelpCente
     Linking.openURL(`mailto:${SUPPORT_EMAIL}?subject=Support%20request`).catch(() => null);
   };
 
+  const handleRequestManager = () => {
+    Linking.openURL(`mailto:${SUPPORT_EMAIL}?subject=Portfolio%20manager%20request`).catch(() => null);
+  };
+
   const handleDeleteAccount = () => {
     Alert.alert(
       'Delete Account',
@@ -104,7 +108,7 @@ export function HelpCenterModal({ visible, onClose, onDeleteAccount }: HelpCente
               <Text style={styles.cardBody}>
                 Get personalised guidance on portfolio setup, profile edits, ad placements, and troubleshooting.
               </Text>
-              <TouchableOpacity style={styles.secondaryBtn}>
+              <TouchableOpacity style={styles.secondaryBtn} onPress={handleRequestManager}>
                 <MaterialIcons name="arrow-forward" size={18} color={colors.textPrimary} />
                 <Text style={styles.secondaryBtnText}>Request a manager (coming soon)</Text>
               </TouchableOpacity>

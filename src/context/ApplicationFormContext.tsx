@@ -192,6 +192,7 @@ const STORAGE_KEY = '@funcxon_application_draft';
 
 export function ApplicationFormProvider({ children }: { children: React.ReactNode }) {
   const [state, dispatch] = useReducer(applicationFormReducer, initialState);
+  const [hasHydrated, setHasHydrated] = React.useState(false);
 
   const saveDraft = async () => {
     try {
@@ -209,6 +210,8 @@ export function ApplicationFormProvider({ children }: { children: React.ReactNod
       }
     } catch (error) {
       console.error('Failed to load draft:', error);
+    } finally {
+      setHasHydrated(true);
     }
   };
 
@@ -217,8 +220,16 @@ export function ApplicationFormProvider({ children }: { children: React.ReactNod
   }, []);
 
   useEffect(() => {
+    if (!hasHydrated) return;
     saveDraft();
-  }, [state]);
+  }, [hasHydrated, state]);
+
+  const resetForm = () => {
+    dispatch({ type: 'RESET_FORM' });
+    AsyncStorage.removeItem(STORAGE_KEY).catch((error) => {
+      console.error('Failed to clear draft:', error);
+    });
+  };
 
   const value: ApplicationFormContextValue = {
     state,
@@ -229,7 +240,7 @@ export function ApplicationFormProvider({ children }: { children: React.ReactNod
     updateStep4: (data) => dispatch({ type: 'UPDATE_STEP4', payload: data }),
     saveDraft,
     loadDraft,
-    resetForm: () => dispatch({ type: 'RESET_FORM' }),
+    resetForm,
   };
 
   return (

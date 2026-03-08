@@ -15,6 +15,8 @@ type QuoteRequest = {
   original_id?: number;
   is_venue?: boolean;
   vendor_id: number | null;
+  target_id?: number | null;
+  target_name?: string | null;
   name: string | null;
   email: string | null;
   status: string | null;
@@ -100,6 +102,27 @@ export default function QuotesScreen() {
 
       console.log('[QuotesScreen] Internal user:', internalUser);
 
+      const { data: vendorSeeds, error: vendorSeedError } = await supabase
+        .from('vendors')
+        .select('id, name')
+        .limit(200);
+
+      if (vendorSeedError) {
+        throw vendorSeedError;
+      }
+
+      const { data: venueSeeds, error: venueSeedError } = await supabase
+        .from('venue_listings')
+        .select('id, name')
+        .limit(200);
+
+      if (venueSeedError) {
+        throw venueSeedError;
+      }
+
+      const vendorNameMap = new Map((vendorSeeds ?? []).map((entry: any) => [entry.id, entry.name]));
+      const venueNameMap = new Map((venueSeeds ?? []).map((entry: any) => [entry.id, entry.name]));
+
       const { data: vendorQuotes, error: vendorError } = await supabase
         .from('quote_requests')
         .select('id, vendor_id, name, email, status, details, event_type, event_date, budget, quote_amount, created_at, requirements')
@@ -129,6 +152,8 @@ export default function QuotesScreen() {
       const formattedVendorQuotes: QuoteRequest[] = (vendorQuotes ?? []).map(q => ({
         id: q.id,
         vendor_id: q.vendor_id,
+        target_id: q.vendor_id,
+        target_name: q.vendor_id ? vendorNameMap.get(q.vendor_id) ?? q.name : q.name,
         name: q.name,
         email: q.email,
         status: q.status,
@@ -146,6 +171,8 @@ export default function QuotesScreen() {
         original_id: q.id,
         is_venue: true,
         vendor_id: q.listing_id,
+        target_id: q.listing_id,
+        target_name: q.listing_id ? venueNameMap.get(q.listing_id) ?? 'Venue' : 'Venue',
         name: q.requester_name,
         email: q.requester_email,
         status: q.status,
@@ -239,8 +266,10 @@ export default function QuotesScreen() {
   };
 
   const handleSecondaryAction = async (quote: QuoteRequest) => {
-    if (!quote.vendor_id) {
-      Alert.alert('Missing vendor', 'This quote is missing a vendor reference.');
+    const targetId = quote.target_id ?? quote.vendor_id;
+
+    if (!targetId) {
+      Alert.alert('Missing listing', 'This quote is missing a vendor or venue reference.');
       return;
     }
 
@@ -252,7 +281,7 @@ export default function QuotesScreen() {
         const { data: revisions, error: revError } = await supabase
           .from('quote_revisions')
           .select('id, quote_amount, description, status')
-          .eq('quote_request_id', quote.id)
+          .eq('quote_request_id', quote.original_id ?? quote.id)
           .eq('status', 'sent')
           .order('revision_number', { ascending: false })
           .limit(1);
@@ -282,18 +311,20 @@ export default function QuotesScreen() {
     }
 
     if (quote.status === 'finalised' || quote.status === 'accepted') {
-      navigation.navigate('Home', {
-        screen: 'VendorProfile',
-        params: { vendorId: quote.vendor_id },
-      });
+      navigation.navigate('Home', quote.is_venue
+        ? {
+            screen: 'VenueProfile',
+            params: { venueId: targetId, from: 'Quotes' },
+          }
+        : {
+            screen: 'VendorProfile',
+            params: { vendorId: targetId, from: 'Quotes' },
+          });
       return;
     }
 
     if (quote.status === 'pending') {
-      navigation.navigate('Home', {
-        screen: 'QuoteRequest',
-        params: { vendorId: quote.vendor_id, vendorName: quote.name ?? 'Vendor' },
-      });
+      navigation.navigate('QuoteDetail', { quoteId: quote.id });
       return;
     }
 
@@ -303,7 +334,7 @@ export default function QuotesScreen() {
         const { error: updateError } = await supabase
           .from('quote_requests')
           .update({ status: 'finalised' })
-          .eq('id', quote.id);
+          .eq('id', quote.original_id ?? quote.id);
 
         if (updateError) {
           throw updateError;
@@ -319,10 +350,15 @@ export default function QuotesScreen() {
     }
 
     if (quote.status === 'tour_requested') {
-      if (quote.vendor_id) {
+      if (quote.is_venue) {
+        navigation.navigate('Home', {
+          screen: 'VenueProfile',
+          params: { venueId: targetId, from: 'Quotes' },
+        });
+      } else if (targetId) {
         navigation.navigate('Home', {
           screen: 'VendorProfile',
-          params: { vendorId: quote.vendor_id },
+          params: { vendorId: targetId, from: 'Quotes' },
         });
       }
       return;
@@ -548,10 +584,10 @@ export default function QuotesScreen() {
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                 <View style={{ flex: 1, paddingRight: spacing.sm }}>
                   <Text style={{ ...typography.titleMedium, color: colors.textPrimary }}>
-                    {item.name ?? 'Vendor Quote'}
+                    {item.target_name ?? item.name ?? (item.is_venue ? 'Venue Quote' : 'Vendor Quote')}
                   </Text>
                   <Text style={{ ...typography.caption, color: colors.textSecondary, marginTop: spacing.xs }}>
-                    {item.event_type ?? 'Service package'}
+                    {item.is_venue ? 'Venue Quote Request' : (item.event_type ?? 'Service package')}
                   </Text>
                 </View>
                 <View
@@ -566,6 +602,13 @@ export default function QuotesScreen() {
                     {item.status ?? 'requested'}
                   </Text>
                 </View>
+              </View>
+
+              <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: spacing.sm }}>
+                <MaterialIcons name={item.is_venue ? 'storefront' : 'store'} size={14} color={colors.textMuted} style={{ marginRight: spacing.xs }} />
+                <Text style={{ ...typography.caption, color: colors.textMuted }}>
+                  Requested from {item.target_name ?? (item.is_venue ? 'Venue' : 'Vendor')}
+                </Text>
               </View>
 
               <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: spacing.sm }}>
@@ -608,7 +651,7 @@ export default function QuotesScreen() {
                 <View>
                   <Text style={{ ...typography.caption, color: colors.textMuted }}>Category:</Text>
                   <Text style={{ ...typography.body, color: colors.textPrimary }}>
-                    {item.event_type ?? 'General'}
+                    {item.is_venue ? 'Venue' : (item.event_type ?? 'General')}
                   </Text>
                 </View>
                 <View>

@@ -24,7 +24,7 @@ type ProfileStackParamList = {
 
 export default function ApplicationStep4Screen() {
   const navigation = useNavigation<NativeStackNavigationProp<ProfileStackParamList>>();
-  const { state, updateStep4 } = useApplicationForm();
+  const { state, updateStep4, resetForm } = useApplicationForm();
   const { user } = useAuth();
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -197,8 +197,7 @@ export default function ApplicationStep4Screen() {
             {
               text: 'OK',
               onPress: () => {
-                // Reset form and navigate to portfolio profile
-                updateStep4({ subscriptionPlan: '', termsAccepted: false, privacyAccepted: false, marketingConsent: false });
+                resetForm();
                 if (state.portfolioType === 'venues') {
                   navigation.navigate('UpdateVenuePortfolio');
                 } else {

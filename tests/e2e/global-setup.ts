@@ -15,7 +15,7 @@ export default async function globalSetup(config: FullConfig) {
   const browser = await chromium.launch();
   const page = await browser.newPage();
 
-  await page.goto(baseURL ?? 'http://localhost:8082');
+  await page.goto(baseURL ?? 'http://localhost:8081');
   await page.waitForTimeout(3000);
 
   // Try to find and click login button, but don't fail if not found
