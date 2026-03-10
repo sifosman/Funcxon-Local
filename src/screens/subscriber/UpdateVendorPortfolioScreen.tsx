@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Alert, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
@@ -6,6 +6,17 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { colors, spacing, radii, typography } from '../../theme';
 import { supabase } from '../../lib/supabaseClient';
 import { useAuth } from '../../auth/AuthContext';
+
+function buildLegacyLocation(parts: Array<string | null | undefined>) {
+    return parts.map((part) => part?.trim() ?? '').filter(Boolean).join(', ') || null;
+}
+
+function parseCoordinate(value: string) {
+    const trimmed = value.trim();
+    if (!trimmed) return null;
+    const parsed = Number(trimmed);
+    return Number.isFinite(parsed) ? parsed : null;
+}
 
 type ProfileStackParamList = {
     SubscriberProfile: undefined;
@@ -19,6 +30,15 @@ type VendorListing = {
     name: string;
     description: string | null;
     location: string | null;
+    address_line_1: string | null;
+    address_line_2: string | null;
+    suburb: string | null;
+    city: string | null;
+    province: string | null;
+    postal_code: string | null;
+    country: string | null;
+    latitude: number | null;
+    longitude: number | null;
     price_range: string | null;
     email: string | null;
     whatsapp_number: string | null;
@@ -42,6 +62,15 @@ export default function UpdateVendorPortfolioScreen() {
         name: '',
         description: '',
         location: '',
+        address_line_1: '',
+        address_line_2: '',
+        suburb: '',
+        city: '',
+        province: '',
+        postal_code: '',
+        country: 'South Africa',
+        latitude: '',
+        longitude: '',
         price_range: '',
         email: '',
         whatsapp_number: '',
@@ -49,13 +78,27 @@ export default function UpdateVendorPortfolioScreen() {
         instagram_url: '',
     });
 
+    const derivedLocationPreview = useMemo(
+        () =>
+            buildLegacyLocation([
+                form.address_line_1,
+                form.address_line_2,
+                form.suburb,
+                form.city,
+                form.province,
+                form.postal_code,
+                form.country,
+            ]) ?? form.location.trim() ?? null,
+        [form.address_line_1, form.address_line_2, form.city, form.country, form.location, form.postal_code, form.province, form.suburb],
+    );
+
     const loadVendor = useCallback(async () => {
         if (!user?.id) return;
         setLoading(true);
         try {
             const { data: vendorData, error } = await supabase
                 .from('vendors')
-                .select('id, name, description, location, price_range, email, whatsapp_number, website_url, instagram_url, subscription_tier, subscription_status, service_options, amenities, vendor_tags')
+                .select('id, name, description, location, address_line_1, address_line_2, suburb, city, province, postal_code, country, latitude, longitude, price_range, email, whatsapp_number, website_url, instagram_url, subscription_tier, subscription_status, service_options, amenities, vendor_tags')
                 .eq('user_id', user.id)
                 .maybeSingle();
 
@@ -73,6 +116,15 @@ export default function UpdateVendorPortfolioScreen() {
                     name: vendorData.name || '',
                     description: vendorData.description || '',
                     location: vendorData.location || '',
+                    address_line_1: (vendorData as VendorListing).address_line_1 || '',
+                    address_line_2: (vendorData as VendorListing).address_line_2 || '',
+                    suburb: (vendorData as VendorListing).suburb || '',
+                    city: (vendorData as VendorListing).city || '',
+                    province: (vendorData as VendorListing).province || '',
+                    postal_code: (vendorData as VendorListing).postal_code || '',
+                    country: (vendorData as VendorListing).country || 'South Africa',
+                    latitude: (vendorData as VendorListing).latitude != null ? String((vendorData as VendorListing).latitude) : '',
+                    longitude: (vendorData as VendorListing).longitude != null ? String((vendorData as VendorListing).longitude) : '',
                     price_range: vendorData.price_range || '',
                     email: vendorData.email || '',
                     whatsapp_number: vendorData.whatsapp_number || '',
@@ -114,6 +166,12 @@ export default function UpdateVendorPortfolioScreen() {
             Alert.alert('Required', 'Business name is required.');
             return;
         }
+        const latitude = parseCoordinate(form.latitude);
+        const longitude = parseCoordinate(form.longitude);
+        if ((form.latitude.trim() && latitude === null) || (form.longitude.trim() && longitude === null)) {
+            Alert.alert('Invalid coordinates', 'Latitude and longitude must be valid numbers.');
+            return;
+        }
         setSaving(true);
         try {
             const { error } = await supabase
@@ -121,7 +179,16 @@ export default function UpdateVendorPortfolioScreen() {
                 .update({
                     name: form.name.trim(),
                     description: form.description.trim() || null,
-                    location: form.location.trim() || null,
+                    location: derivedLocationPreview || (form.location.trim() || null),
+                    address_line_1: form.address_line_1.trim() || null,
+                    address_line_2: form.address_line_2.trim() || null,
+                    suburb: form.suburb.trim() || null,
+                    city: form.city.trim() || null,
+                    province: form.province.trim() || null,
+                    postal_code: form.postal_code.trim() || null,
+                    country: form.country.trim() || null,
+                    latitude,
+                    longitude,
                     price_range: form.price_range.trim() || null,
                     email: form.email.trim() || null,
                     whatsapp_number: form.whatsapp_number.trim() || null,
@@ -311,7 +378,32 @@ export default function UpdateVendorPortfolioScreen() {
                             </Text>
                             {renderField('Business Name', 'name')}
                             {renderField('Description', 'description', { multiline: true, placeholder: 'Describe your services...' })}
-                            {renderField('Location', 'location', { placeholder: 'e.g. Cape Town, Western Cape' })}
+                            {renderField('Address Line 1', 'address_line_1', { placeholder: 'Street address' })}
+                            {renderField('Address Line 2', 'address_line_2', { placeholder: 'Building, unit, suite (optional)' })}
+                            {renderField('Suburb', 'suburb', { placeholder: 'e.g. Gardens' })}
+                            {renderField('City', 'city', { placeholder: 'e.g. Cape Town' })}
+                            {renderField('Province', 'province', { placeholder: 'e.g. Western Cape' })}
+                            {renderField('Postal Code', 'postal_code', { placeholder: 'e.g. 8001', keyboardType: 'number-pad' })}
+                            {renderField('Country', 'country', { placeholder: 'e.g. South Africa' })}
+                            {renderField('Latitude', 'latitude', { placeholder: 'e.g. -33.9249', keyboardType: 'numeric' })}
+                            {renderField('Longitude', 'longitude', { placeholder: 'e.g. 18.4241', keyboardType: 'numeric' })}
+                            <View style={{ marginBottom: spacing.md }}>
+                                <Text style={{ ...typography.caption, color: colors.textMuted, marginBottom: spacing.xs }}>Location Preview</Text>
+                                <View
+                                    style={{
+                                        borderWidth: 1,
+                                        borderColor: colors.borderSubtle,
+                                        borderRadius: radii.md,
+                                        paddingHorizontal: spacing.md,
+                                        paddingVertical: spacing.sm,
+                                        backgroundColor: colors.surfaceMuted,
+                                    }}
+                                >
+                                    <Text style={{ ...typography.body, color: colors.textPrimary }}>
+                                        {derivedLocationPreview || 'Complete the address fields to build the display location.'}
+                                    </Text>
+                                </View>
+                            </View>
                             {renderField('Price Range', 'price_range', { placeholder: 'e.g. R500 - R5,000' })}
                         </View>
 

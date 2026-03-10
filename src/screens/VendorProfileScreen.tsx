@@ -15,6 +15,8 @@ import { useAuth } from '../auth/AuthContext';
 
 type Props = NativeStackScreenProps<AttendeeStackParamList, 'VendorProfile'>;
 
+const GOOGLE_MAPS_API_KEY = 'AIzaSyBjd1KYtTaAzxzdw5ayGwwMu5Sex-gKQLI';
+
 type Region = {
   latitude: number;
   longitude: number;
@@ -45,8 +47,15 @@ type VendorRecord = {
   additional_photos: string[] | null;
   vendor_tags: string[] | null;
   venue_capacity: number | null;
+  address_line_1: string | null;
+  address_line_2: string | null;
+  suburb: string | null;
   city: string | null;
   province: string | null;
+  postal_code: string | null;
+  country: string | null;
+  latitude: number | null;
+  longitude: number | null;
 };
 
 type Review = {
@@ -67,6 +76,7 @@ type AvailabilityRecord = {
 export default function VendorProfileScreen({ route, navigation }: Props) {
   const { vendorId } = route.params;
   const [activeTab, setActiveTab] = useState<'about' | 'catalog' | 'reviews' | 'calendar'>('about');
+  const [mapImageFailed, setMapImageFailed] = useState(false);
   const [favouriteIds, setFavouriteIds] = useState<{ vendorIds: number[]; venueIds: number[] }>({
     vendorIds: [],
     venueIds: [],
@@ -238,6 +248,23 @@ export default function VendorProfileScreen({ route, navigation }: Props) {
   }, [vendor?.location, vendor?.city, vendor?.province]);
 
   const physicalAddress = useMemo(() => {
+    const structured = [
+      vendor?.address_line_1,
+      vendor?.address_line_2,
+      vendor?.suburb,
+      vendor?.city,
+      vendor?.province,
+      vendor?.postal_code,
+      vendor?.country,
+    ]
+      .map((part) => part?.trim() ?? '')
+      .filter(Boolean)
+      .join(', ');
+
+    if (structured) {
+      return structured;
+    }
+
     if (vendor?.location?.trim()) {
       return vendor.location.trim();
     }
@@ -246,15 +273,32 @@ export default function VendorProfileScreen({ route, navigation }: Props) {
     const province = vendor?.province?.trim() ?? '';
     const fallback = [city, province].filter(Boolean).join(', ');
     return fallback || null;
-  }, [vendor?.city, vendor?.location, vendor?.province]);
+  }, [vendor?.address_line_1, vendor?.address_line_2, vendor?.city, vendor?.country, vendor?.location, vendor?.postal_code, vendor?.province, vendor?.suburb]);
+
+  const mapCoordinates = useMemo(() => {
+    const latitude = typeof vendor?.latitude === 'number' ? vendor.latitude : null;
+    const longitude = typeof vendor?.longitude === 'number' ? vendor.longitude : null;
+
+    if (latitude == null || longitude == null) {
+      return null;
+    }
+
+    return { latitude, longitude };
+  }, [vendor?.latitude, vendor?.longitude]);
+
+  const mapSearchTarget = physicalAddress ?? mapQuery;
+
+  useEffect(() => {
+    setMapImageFailed(false);
+  }, [mapCoordinates?.latitude, mapCoordinates?.longitude, mapQuery]);
 
   const nativeMapHtml = useMemo(() => {
-    if (!mapQuery) return null;
+    if (!mapCoordinates && !mapSearchTarget) return null;
     
-    // Sanitize values to prevent JSON stringification errors and JS injection
-    const safeQuery = String(mapQuery || 'South Africa').replace(/"/g, '\\"');
+    const safeQuery = String(mapSearchTarget || 'South Africa').replace(/"/g, '\\"');
     const safeTitle = String(vendor?.name || 'Location').replace(/"/g, '\\"');
-    const encodedQuery = encodeURIComponent(mapQuery);
+    const encodedQuery = encodeURIComponent(mapSearchTarget || 'South Africa');
+    const coordinateSource = mapCoordinates ? `{ lat: ${mapCoordinates.latitude}, lng: ${mapCoordinates.longitude} }` : null;
 
     return `
       <!DOCTYPE html>
@@ -267,13 +311,36 @@ export default function VendorProfileScreen({ route, navigation }: Props) {
         <div id="map" style="width:100%;height:100%;"></div>
         <script>
           function initMap() {
+            const fallbackEmbed = 'https://maps.google.com/maps?q=${encodedQuery}&t=&z=14&ie=UTF8&iwloc=&output=embed';
+            const mountFallback = () => {
+              document.getElementById('map').innerHTML = '<iframe width="100%" height="100%" frameborder="0" style="border:0" src="' + fallbackEmbed + '" allowfullscreen></iframe>';
+            };
+
+            if (${coordinateSource ?? 'null'}) {
+              const location = ${coordinateSource ?? 'null'};
+              const map = new google.maps.Map(document.getElementById('map'), {
+                center: location,
+                zoom: 16,
+                disableDefaultUI: true,
+                zoomControl: true,
+                gestureHandling: 'greedy',
+              });
+
+              new google.maps.Marker({
+                position: location,
+                map,
+                title: "${safeTitle}",
+              });
+              return;
+            }
+
             const geocoder = new google.maps.Geocoder();
             geocoder.geocode({ address: "${safeQuery}" }, (results, status) => {
               if (status === 'OK' && results && results.length > 0) {
                 const location = results[0].geometry.location;
                 const map = new google.maps.Map(document.getElementById('map'), {
                   center: location,
-                  zoom: 14,
+                  zoom: 16,
                   disableDefaultUI: true,
                   zoomControl: true,
                   gestureHandling: 'greedy',
@@ -285,22 +352,20 @@ export default function VendorProfileScreen({ route, navigation }: Props) {
                   title: "${safeTitle}",
                 });
               } else {
-                // Fallback to basic iframe embed if Geocoding API fails or is restricted
-                document.getElementById('map').innerHTML = '<iframe width="100%" height="100%" frameborder="0" style="border:0" src="https://maps.google.com/maps?q=${encodedQuery}&t=&z=14&ie=UTF8&iwloc=&output=embed" allowfullscreen></iframe>';
+                mountFallback();
               }
             });
           }
           
-          // Fallback if the script fails to load entirely
           function handleMapError() {
-            document.getElementById('map').innerHTML = '<iframe width="100%" height="100%" frameborder="0" style="border:0" src="https://maps.google.com/maps?q=${encodedQuery}&t=&z=14&ie=UTF8&iwloc=&output=embed" allowfullscreen></iframe>';
+            document.getElementById('map').innerHTML = '<iframe width="100%" height="100%" frameborder="0" style="border:0" src="https://maps.google.com/maps?q=${encodedQuery}&t=&z=16&ie=UTF8&iwloc=&output=embed" allowfullscreen></iframe>';
           }
         </script>
-        <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBjd1KYtTaAzxzdw5ayGwwMu5Sex-gKQLI&callback=initMap" onerror="handleMapError()" async defer></script>
+        <script src="https://maps.googleapis.com/maps/api/js?key=${GOOGLE_MAPS_API_KEY}&callback=initMap" onerror="handleMapError()" async defer></script>
       </body>
       </html>
     `;
-  }, [mapQuery, vendor?.name]);
+  }, [mapCoordinates, mapSearchTarget, vendor?.name]);
 
   const galleryImages = useMemo(
     () => [vendor?.image_url, ...(Array.isArray(vendor?.additional_photos) ? vendor.additional_photos : [])].filter(Boolean) as string[],
@@ -382,10 +447,12 @@ export default function VendorProfileScreen({ route, navigation }: Props) {
   };
 
   const handleOpenMap = () => {
-    if (!physicalAddress && !vendor?.google_maps_link) return;
+    if (!mapCoordinates && !physicalAddress && !vendor?.google_maps_link) return;
     const mapsUrl = vendor?.google_maps_link
       ? vendor.google_maps_link
-      : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(physicalAddress ?? mapQuery)}`;
+      : mapCoordinates
+        ? `https://www.google.com/maps/search/?api=1&query=${mapCoordinates.latitude},${mapCoordinates.longitude}`
+        : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(mapSearchTarget)}`;
     Linking.openURL(mapsUrl).catch(() => null);
   };
 
@@ -398,8 +465,15 @@ export default function VendorProfileScreen({ route, navigation }: Props) {
     ? `https://wa.me/${String(vendor.whatsapp_number).replace(/[^0-9]/g, '')}`
     : null;
   const emailUrl = vendor?.email ? `mailto:${vendor.email}` : null;
-  const webMapEmbedUrl = mapQuery
-    ? `https://www.google.com/maps?q=${encodeURIComponent(mapQuery)}&output=embed`
+  const webMapEmbedUrl = mapCoordinates
+    ? `https://www.google.com/maps?q=${mapCoordinates.latitude},${mapCoordinates.longitude}&z=16&output=embed`
+    : mapSearchTarget
+    ? `https://www.google.com/maps?q=${encodeURIComponent(mapSearchTarget)}&z=16&output=embed`
+    : null;
+  const staticMapUrl = mapCoordinates
+    ? `https://maps.googleapis.com/maps/api/staticmap?center=${mapCoordinates.latitude},${mapCoordinates.longitude}&zoom=16&size=1200x600&scale=2&markers=color:red%7C${mapCoordinates.latitude},${mapCoordinates.longitude}&key=${GOOGLE_MAPS_API_KEY}`
+    : mapSearchTarget
+    ? `https://maps.googleapis.com/maps/api/staticmap?center=${encodeURIComponent(mapSearchTarget)}&zoom=16&size=1200x600&scale=2&markers=color:red%7C${encodeURIComponent(mapSearchTarget)}&key=${GOOGLE_MAPS_API_KEY}`
     : null;
 
   const renderBulletSection = (title: string, items?: string[] | null) => {
@@ -873,16 +947,25 @@ export default function VendorProfileScreen({ route, navigation }: Props) {
                     </View>
                   )
                 ) : nativeMapHtml ? (
-                  <WebView
-                    source={{ html: nativeMapHtml }}
-                    style={{ width: '100%', height: '100%' }}
-                    originWhitelist={['*']}
-                    javaScriptEnabled
-                    domStorageEnabled
-                    setSupportMultipleWindows={false}
-                    startInLoadingState
-                    scrollEnabled={false}
-                  />
+                  !mapImageFailed && staticMapUrl ? (
+                    <Image
+                      source={{ uri: staticMapUrl }}
+                      style={{ width: '100%', height: '100%' }}
+                      resizeMode="cover"
+                      onError={() => setMapImageFailed(true)}
+                    />
+                  ) : (
+                    <WebView
+                      source={{ html: nativeMapHtml }}
+                      style={{ width: '100%', height: '100%' }}
+                      originWhitelist={['*']}
+                      javaScriptEnabled
+                      domStorageEnabled
+                      setSupportMultipleWindows={false}
+                      startInLoadingState
+                      scrollEnabled={false}
+                    />
+                  )
                 ) : (
                   <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
                     <Text style={{ ...typography.caption, color: colors.textMuted }}>Map unavailable</Text>

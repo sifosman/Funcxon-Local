@@ -280,6 +280,7 @@ export default function AttendeeHomeScreen() {
   const [selectedProvinces, setSelectedProvinces] = useState<string[]>([]);
   const [selectedCities, setSelectedCities] = useState<string[]>([]);
   const [citySearchQuery, setCitySearchQuery] = useState('');
+  const [venueAmenitiesQuery, setVenueAmenitiesQuery] = useState('');
   const [distanceKm, setDistanceKm] = useState<string>('');
   const [selectedCapacity, setSelectedCapacity] = useState<DropdownOption | null>(null);
   const [openPicker, setOpenPicker] = useState<OpenPickerType>(null);
@@ -1190,7 +1191,10 @@ export default function AttendeeHomeScreen() {
                 <Text style={{ ...typography.caption, color: colors.textSecondary, marginBottom: spacing.xs }}>
                   Venue Amenities
                 </Text>
-                <TouchableOpacity activeOpacity={0.9} onPress={() => setOpenPicker('venue_amenities')}>
+                <TouchableOpacity activeOpacity={0.9} onPress={() => {
+                      setVenueAmenitiesQuery('');
+                      setOpenPicker('venue_amenities');
+                    }}>
                   <View
                     style={{
                       borderRadius: radii.md,
@@ -2097,6 +2101,10 @@ export default function AttendeeHomeScreen() {
                   const options = Array.from(
                     new Set((amenitiesList ?? []).map((v) => String(v ?? '').trim()).filter(Boolean)),
                   ).sort();
+                  const normalizedVenueAmenitiesQuery = venueAmenitiesQuery.trim().toLowerCase();
+                  const filteredOptions = normalizedVenueAmenitiesQuery
+                    ? options.filter((amenity) => amenity.toLowerCase().includes(normalizedVenueAmenitiesQuery))
+                    : options;
 
                   if (options.length === 0) {
                     return (
@@ -2116,38 +2124,73 @@ export default function AttendeeHomeScreen() {
                     );
                   }
 
-                  return options.map((amenity) => {
-                    const isSelected = selectedVenueAmenities.includes(amenity);
-                    return (
-                      <TouchableOpacity
-                        key={amenity}
-                        onPress={() => {
-                          const next = isSelected
-                            ? selectedVenueAmenities.filter((a) => a !== amenity)
-                            : [...selectedVenueAmenities, amenity];
-                          setSelectedVenueAmenities(next);
+                  return [
+                    <View key="venue-amenities-search" style={{ marginBottom: spacing.md }}>
+                      <TextInput
+                        value={venueAmenitiesQuery}
+                        onChangeText={setVenueAmenitiesQuery}
+                        placeholder="Search amenities"
+                        placeholderTextColor={colors.textMuted}
+                        style={{
+                          borderWidth: 1,
+                          borderColor: colors.borderSubtle,
+                          borderRadius: radii.md,
+                          paddingHorizontal: spacing.md,
+                          paddingVertical: spacing.sm,
+                          color: colors.textPrimary,
+                          backgroundColor: '#FFFFFF',
                         }}
-                        style={{ paddingVertical: spacing.sm, flexDirection: 'row', alignItems: 'center' }}
-                      >
-                        <View
-                          style={{
-                            width: 24,
-                            height: 24,
-                            borderRadius: 4,
-                            borderWidth: 2,
-                            borderColor: isSelected ? colors.primary : '#D1D5DB',
-                            backgroundColor: isSelected ? colors.primary : '#FFFFFF',
-                            marginRight: spacing.sm,
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                          }}
-                        >
-                          {isSelected && <MaterialIcons name="check" size={16} color="#FFFFFF" />}
-                        </View>
-                        <Text style={{ ...typography.body, color: colors.textPrimary }}>{amenity}</Text>
-                      </TouchableOpacity>
-                    );
-                  });
+                      />
+                    </View>,
+                    ...(filteredOptions.length === 0
+                      ? [
+                          <View key="venue-amenities-empty" style={{ alignItems: 'center', paddingVertical: spacing.xl }}>
+                            <MaterialIcons name="search-off" size={40} color={colors.textMuted} />
+                            <Text
+                              style={{
+                                ...typography.body,
+                                color: colors.textSecondary,
+                                marginTop: spacing.md,
+                                textAlign: 'center',
+                              }}
+                            >
+                              No amenities match your search.
+                            </Text>
+                          </View>,
+                        ]
+                      : filteredOptions.map((amenity) => {
+                          const isSelected = selectedVenueAmenities.includes(amenity);
+                          return (
+                            <TouchableOpacity
+                              key={amenity}
+                              onPress={() => {
+                                const next = isSelected
+                                  ? selectedVenueAmenities.filter((a) => a !== amenity)
+                                  : [...selectedVenueAmenities, amenity];
+                                setSelectedVenueAmenities(next);
+                              }}
+                              style={{ paddingVertical: spacing.sm, flexDirection: 'row', alignItems: 'center' }}
+                            >
+                              <View
+                                style={{
+                                  width: 24,
+                                  height: 24,
+                                  borderRadius: 4,
+                                  borderWidth: 2,
+                                  borderColor: isSelected ? colors.primary : '#D1D5DB',
+                                  backgroundColor: isSelected ? colors.primary : '#FFFFFF',
+                                  marginRight: spacing.sm,
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                }}
+                              >
+                                {isSelected && <MaterialIcons name="check" size={16} color="#FFFFFF" />}
+                              </View>
+                              <Text style={{ ...typography.body, color: colors.textPrimary }}>{amenity}</Text>
+                            </TouchableOpacity>
+                          );
+                        })),
+                  ];
                 })()
               ) : openPicker === 'province' ? (
                 provinces.map((province) => {

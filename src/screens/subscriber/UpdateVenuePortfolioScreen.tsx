@@ -8,6 +8,17 @@ import { supabase } from '../../lib/supabaseClient';
 import { useAuth } from '../../auth/AuthContext';
 import { getMyVenueEntitlement, isVenueFeatureEnabled } from '../../lib/venueSubscription';
 
+function buildLegacyLocation(parts: Array<string | null | undefined>) {
+  return parts.map((part) => part?.trim() ?? '').filter(Boolean).join(', ') || null;
+}
+
+function parseCoordinate(value: string) {
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+  const parsed = Number(trimmed);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
 type ProfileStackParamList = {
   SubscriberProfile: undefined;
   UpdateVenuePortfolio: undefined;
@@ -24,6 +35,15 @@ type VenueListing = {
   name: string;
   description: string | null;
   location: string | null;
+  address_line_1: string | null;
+  address_line_2: string | null;
+  suburb: string | null;
+  city: string | null;
+  province: string | null;
+  postal_code: string | null;
+  country: string | null;
+  latitude: number | null;
+  longitude: number | null;
   contact_email: string | null;
   whatsapp_number: string | null;
   website_url: string | null;
@@ -51,6 +71,15 @@ export default function UpdateVenuePortfolioScreen() {
     name: '',
     description: '',
     location: '',
+    address_line_1: '',
+    address_line_2: '',
+    suburb: '',
+    city: '',
+    province: '',
+    postal_code: '',
+    country: 'South Africa',
+    latitude: '',
+    longitude: '',
     contact_email: '',
     whatsapp_number: '',
     website_url: '',
@@ -61,6 +90,20 @@ export default function UpdateVenuePortfolioScreen() {
     venue_type: '',
     venue_capacity: '',
   });
+
+  const derivedLocationPreview = useMemo(
+    () =>
+      buildLegacyLocation([
+        form.address_line_1,
+        form.address_line_2,
+        form.suburb,
+        form.city,
+        form.province,
+        form.postal_code,
+        form.country,
+      ]) ?? form.location.trim() ?? null,
+    [form.address_line_1, form.address_line_2, form.city, form.country, form.location, form.postal_code, form.province, form.suburb],
+  );
 
   const linksLocked = useMemo(() => !canEditVenueLinks, [canEditVenueLinks]);
 
@@ -81,7 +124,7 @@ export default function UpdateVenuePortfolioScreen() {
       const { data, error } = await supabase
         .from('venue_listings')
         .select(
-          'id, user_id, name, description, location, contact_email, whatsapp_number, website_url, instagram_url, facebook_url, tiktok_url, linkedin_url, venue_type, venue_capacity',
+          'id, user_id, name, description, location, address_line_1, address_line_2, suburb, city, province, postal_code, country, latitude, longitude, contact_email, whatsapp_number, website_url, instagram_url, facebook_url, tiktok_url, linkedin_url, venue_type, venue_capacity',
         )
         .eq('user_id', user.id)
         .maybeSingle();
@@ -96,6 +139,15 @@ export default function UpdateVenuePortfolioScreen() {
           name: data.name || '',
           description: data.description || '',
           location: data.location || '',
+          address_line_1: (data as VenueListing).address_line_1 || '',
+          address_line_2: (data as VenueListing).address_line_2 || '',
+          suburb: (data as VenueListing).suburb || '',
+          city: (data as VenueListing).city || '',
+          province: (data as VenueListing).province || '',
+          postal_code: (data as VenueListing).postal_code || '',
+          country: (data as VenueListing).country || 'South Africa',
+          latitude: (data as VenueListing).latitude != null ? String((data as VenueListing).latitude) : '',
+          longitude: (data as VenueListing).longitude != null ? String((data as VenueListing).longitude) : '',
           contact_email: data.contact_email || '',
           whatsapp_number: data.whatsapp_number || '',
           website_url: data.website_url || '',
@@ -151,13 +203,29 @@ export default function UpdateVenuePortfolioScreen() {
       return;
     }
 
+    const latitude = parseCoordinate(form.latitude);
+    const longitude = parseCoordinate(form.longitude);
+    if ((form.latitude.trim() && latitude === null) || (form.longitude.trim() && longitude === null)) {
+      Alert.alert('Invalid coordinates', 'Latitude and longitude must be valid numbers.');
+      return;
+    }
+
     setSaving(true);
     try {
       const payload = {
         user_id: user.id,
         name: form.name.trim(),
         description: form.description.trim() || null,
-        location: form.location.trim() || null,
+        location: derivedLocationPreview || (form.location.trim() || null),
+        address_line_1: form.address_line_1.trim() || null,
+        address_line_2: form.address_line_2.trim() || null,
+        suburb: form.suburb.trim() || null,
+        city: form.city.trim() || null,
+        province: form.province.trim() || null,
+        postal_code: form.postal_code.trim() || null,
+        country: form.country.trim() || null,
+        latitude,
+        longitude,
         contact_email: form.contact_email.trim() || null,
         whatsapp_number: form.whatsapp_number.trim() || null,
         website_url: linksLocked ? null : (form.website_url.trim() || null),
@@ -173,7 +241,7 @@ export default function UpdateVenuePortfolioScreen() {
         .from('venue_listings')
         .upsert(payload, { onConflict: 'user_id' })
         .select(
-          'id, user_id, name, description, location, contact_email, whatsapp_number, website_url, instagram_url, facebook_url, tiktok_url, linkedin_url, venue_type, venue_capacity',
+          'id, user_id, name, description, location, address_line_1, address_line_2, suburb, city, province, postal_code, country, latitude, longitude, contact_email, whatsapp_number, website_url, instagram_url, facebook_url, tiktok_url, linkedin_url, venue_type, venue_capacity',
         )
         .single();
 
@@ -263,7 +331,32 @@ export default function UpdateVenuePortfolioScreen() {
             </Text>
             {renderField('Venue Name', 'name', { placeholder: 'Your venue name' })}
             {renderField('Description', 'description', { multiline: true, placeholder: 'Describe your venue...' })}
-            {renderField('Location', 'location', { placeholder: 'e.g. Cape Town, Western Cape' })}
+            {renderField('Address Line 1', 'address_line_1', { placeholder: 'Street address' })}
+            {renderField('Address Line 2', 'address_line_2', { placeholder: 'Building, unit, suite (optional)' })}
+            {renderField('Suburb', 'suburb', { placeholder: 'e.g. Stellenbosch Central' })}
+            {renderField('City', 'city', { placeholder: 'e.g. Stellenbosch' })}
+            {renderField('Province', 'province', { placeholder: 'e.g. Western Cape' })}
+            {renderField('Postal Code', 'postal_code', { placeholder: 'e.g. 7600', keyboardType: 'number-pad' })}
+            {renderField('Country', 'country', { placeholder: 'e.g. South Africa' })}
+            {renderField('Latitude', 'latitude', { placeholder: 'e.g. -33.9321', keyboardType: 'numeric' })}
+            {renderField('Longitude', 'longitude', { placeholder: 'e.g. 18.8602', keyboardType: 'numeric' })}
+            <View style={{ marginBottom: spacing.md }}>
+              <Text style={{ ...typography.caption, color: colors.textMuted, marginBottom: spacing.xs }}>Location Preview</Text>
+              <View
+                style={{
+                  borderWidth: 1,
+                  borderColor: colors.borderSubtle,
+                  borderRadius: radii.md,
+                  paddingHorizontal: spacing.md,
+                  paddingVertical: spacing.sm,
+                  backgroundColor: colors.surfaceMuted,
+                }}
+              >
+                <Text style={{ ...typography.body, color: colors.textPrimary }}>
+                  {derivedLocationPreview || 'Complete the address fields to build the display location.'}
+                </Text>
+              </View>
+            </View>
             {renderField('Venue Type', 'venue_type', { placeholder: 'e.g. Wedding venue' })}
             {renderField('Venue Capacity', 'venue_capacity', { placeholder: 'e.g. 50 - 100' })}
           </View>
