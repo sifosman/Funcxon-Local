@@ -2,7 +2,7 @@
   "cookies": [],
   "origins": [
     {
-      "origin": "http://localhost:8082",
+      "origin": "http://localhost:8081",
       "localStorage": [
         {
           "name": "@funcxon_application_draft",

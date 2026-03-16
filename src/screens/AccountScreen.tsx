@@ -27,6 +27,7 @@ export default function AccountScreen() {
     const [expandedMenus, setExpandedMenus] = useState<Set<string>>(new Set());
     const [helpVisible, setHelpVisible] = useState(false);
     const [currentPlan, setCurrentPlan] = useState<string | null>(null);
+    const hasSubscriberAccess = userRole === 'vendor';
 
     const fetchCurrentPlan = useCallback(async () => {
         if (!user?.id) return;
@@ -86,32 +87,43 @@ export default function AccountScreen() {
     };
 
     const handleBecomeVendor = async () => {
-        // Check if user has an active subscription
-        const { data: userData, error: userError } = await supabase
-            .from('users')
-            .select('id, account_type, subscription_status')
-            .eq('auth_user_id', user?.id)
-            .maybeSingle();
-
-        if (userError || !userData) {
-            // If can't determine status, navigate to subscription plans to be safe
+        if (!user?.id) {
             navigation.navigate('SubscriptionPlans');
             return;
         }
 
-        // Check if user has an active subscription
-        const hasActiveSubscription = userData.subscription_status === 'active' || 
-                                      userData.subscription_status === 'trial' ||
-                                      userData.account_type === 'vendor' ||
-                                      userData.account_type === 'subscriber';
+        const { data: vendorData, error: vendorError } = await supabase
+            .from('vendors')
+            .select('id, subscription_status, subscription_tier')
+            .eq('user_id', user.id)
+            .maybeSingle();
+
+        if (vendorError) {
+            navigation.navigate('SubscriptionPlans');
+            return;
+        }
+
+        const status = String(vendorData?.subscription_status ?? '').toLowerCase();
+        const tier = String(vendorData?.subscription_tier ?? '').toLowerCase();
+        const hasActiveSubscription = !!vendorData && (status === 'active' || status === 'trial' || tier === 'basic' || tier === 'premium' || tier === 'enterprise');
 
         if (!hasActiveSubscription) {
-            // User doesn't have a subscription, take them to subscription offers
             navigation.navigate('SubscriptionPlans');
-        } else {
-            resetForm();
-            navigation.navigate('PortfolioType');
+            return;
         }
+
+        resetForm();
+        navigation.navigate('PortfolioType');
+    };
+
+    const handleSubscriberAccess = () => {
+        if (!hasSubscriberAccess) {
+            Alert.alert('Subscriber access only', 'This area is only available to vendors and venues with subscriber access. You can view plans to upgrade your account.');
+            navigation.navigate('SubscriptionPlans');
+            return;
+        }
+
+        navigation.navigate('SubscriberProfile');
     };
 
     const handleGoToListings = () => {
@@ -131,13 +143,6 @@ export default function AccountScreen() {
 
     const handleHelpCentre = () => {
         setHelpVisible(true);
-    };
-
-    const handleUnavailableAccountFeature = (featureName: string) => {
-        Alert.alert(
-            'Coming Soon',
-            `${featureName} is not available yet. Use the Subscriber Suite options for portfolio management in the meantime.`
-        );
     };
 
     const handleDeleteAccount = async () => {
@@ -170,10 +175,9 @@ export default function AccountScreen() {
             icon: 'person',
             submenu: [
                 { id: 'create-profile', label: 'Create Profile', icon: 'person-add', action: handleBecomeVendor },
-                { id: 'edit-profile', label: 'Edit Profile', icon: 'edit', route: 'SubscriberProfile' },
-                { id: 'become-vendor', label: 'Become a Vendor', icon: 'store', action: handleBecomeVendor },
-                { id: 'change-password', label: 'Change Password', icon: 'lock', action: () => handleUnavailableAccountFeature('Change Password') },
-                { id: 'marketing-permissions', label: 'Marketing Permissions', icon: 'notifications', action: () => handleUnavailableAccountFeature('Marketing Permissions') },
+                { id: 'edit-profile', label: 'Edit Profile', icon: 'edit', action: handleSubscriberAccess },
+                { id: 'change-password', label: 'Change Password', icon: 'lock', route: 'ChangePassword' },
+                { id: 'marketing-permissions', label: 'Marketing Permissions', icon: 'notifications', route: 'MarketingPermissions' },
             ],
         },
         {
@@ -181,10 +185,10 @@ export default function AccountScreen() {
             label: 'Subscriber Suite',
             icon: 'credit-card',
             submenu: [
-                { id: 'portfolio-profile', label: 'Portfolio Profile', icon: 'business-center', route: 'SubscriberProfile' },
-                { id: 'billing', label: 'Billing & Payments', icon: 'receipt-long', route: 'Billing' },
+                { id: 'portfolio-profile', label: 'Portfolio Profile', icon: 'business-center', action: handleSubscriberAccess },
+                { id: 'billing', label: 'Billing & Payments', icon: 'receipt-long', action: hasSubscriberAccess ? () => navigation.navigate('Billing') : handleSubscriberAccess },
                 { id: 'subscriber-legal-terms', label: 'Subscriber Legal Terms', icon: 'description', route: 'TermsAndPolicies' },
-                { id: 'activity-dashboard', label: 'Activity Dashboard', icon: 'bar-chart', route: 'SubscriberProfile' },
+                { id: 'activity-dashboard', label: 'Activity Dashboard', icon: 'bar-chart', action: handleSubscriberAccess },
             ],
         },
         {
@@ -375,7 +379,9 @@ export default function AccountScreen() {
                         elevation: 2,
                     }}
                 >
-                    {menuItems.map((item) => renderMenuItem(item))}
+                    {menuItems
+                        .filter((item) => hasSubscriberAccess || item.id !== 'subscriber-suite')
+                        .map((item) => renderMenuItem(item))}
                 </View>
             </ScrollView>
             <HelpCenterModal 

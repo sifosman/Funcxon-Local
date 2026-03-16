@@ -29,6 +29,8 @@ import VendorQuoteHistoryScreen from '../screens/subscriber/VendorQuoteHistorySc
 import ActionItemsScreen from '../screens/subscriber/ActionItemsScreen';
 import CalendarUpdatesScreen from '../screens/subscriber/CalendarUpdatesScreen';
 import BillingScreen from '../screens/BillingScreen';
+import ChangePasswordScreen from '../screens/ChangePasswordScreen';
+import MarketingPermissionsScreen from '../screens/MarketingPermissionsScreen';
 import { colors, typography } from '../theme';
 
 export type ProfileStackParamList = {
@@ -72,6 +74,8 @@ export type ProfileStackParamList = {
     ActionItems: undefined;
     CalendarUpdates: undefined;
     Billing: undefined;
+    ChangePassword: undefined;
+    MarketingPermissions: undefined;
     TermsAndPolicies: undefined;
     LegalDocument: { documentId: string };
 };
@@ -230,6 +234,16 @@ export function ProfileNavigator() {
             <Stack.Screen
                 name="Billing"
                 component={BillingScreen}
+                options={{ headerShown: false }}
+            />
+            <Stack.Screen
+                name="ChangePassword"
+                component={ChangePasswordScreen}
+                options={{ headerShown: false }}
+            />
+            <Stack.Screen
+                name="MarketingPermissions"
+                component={MarketingPermissionsScreen}
                 options={{ headerShown: false }}
             />
             <Stack.Screen
