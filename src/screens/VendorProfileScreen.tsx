@@ -437,10 +437,23 @@ export default function VendorProfileScreen({ route, navigation }: Props) {
       Alert.alert('Sign in required', 'Please sign in to save favourites.');
       return;
     }
+
+    const previous = favouriteIds;
+    const isCurrentlyFavourite = previous.vendorIds.includes(vendor.id);
+    const optimisticNext = {
+      ...previous,
+      vendorIds: isCurrentlyFavourite
+        ? previous.vendorIds.filter((vendorId) => vendorId !== vendor.id)
+        : [...previous.vendorIds, vendor.id],
+    };
+
+    setFavouriteIds(optimisticNext);
+
     try {
       const next = await toggleFavourite(user, vendor.id, 'vendor');
       setFavouriteIds(next);
     } catch (error) {
+      setFavouriteIds(previous);
       const message = error instanceof Error ? error.message : 'We could not update favourites right now.';
       Alert.alert('Favourite update failed', message);
     }
@@ -464,6 +477,7 @@ export default function VendorProfileScreen({ route, navigation }: Props) {
   const whatsappUrl = vendor?.whatsapp_number
     ? `https://wa.me/${String(vendor.whatsapp_number).replace(/[^0-9]/g, '')}`
     : null;
+  const contactNumber = vendor?.whatsapp_number?.trim() || null;
   const emailUrl = vendor?.email ? `mailto:${vendor.email}` : null;
   const webMapEmbedUrl = mapCoordinates
     ? `https://www.google.com/maps?q=${mapCoordinates.latitude},${mapCoordinates.longitude}&z=16&output=embed`
@@ -921,6 +935,14 @@ export default function VendorProfileScreen({ route, navigation }: Props) {
                 <Text style={{ ...typography.body, color: colors.textSecondary, marginBottom: spacing.sm }}>
                   {physicalAddress}
                 </Text>
+              )}
+              {contactNumber && (
+                <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.sm }}>
+                  <MaterialIcons name="phone" size={16} color={colors.primaryTeal} />
+                  <Text style={{ ...typography.body, color: colors.textSecondary, marginLeft: spacing.sm }}>
+                    {contactNumber}
+                  </Text>
+                </View>
               )}
               <View
                 style={{

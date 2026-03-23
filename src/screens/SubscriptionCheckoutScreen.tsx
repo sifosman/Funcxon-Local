@@ -10,6 +10,8 @@ import { useApplicationForm } from '../context/ApplicationFormContext';
 import { buildPayFastPaymentData, getPayFastCheckoutUrl } from '../config/payfast';
 import { supabase } from '../lib/supabaseClient';
 
+const payfastLogo = require('../../assets/payfast.webp');
+
 const SOUTH_AFRICAN_PROVINCES = [
   'Eastern Cape',
   'Free State',
@@ -21,6 +23,36 @@ const SOUTH_AFRICAN_PROVINCES = [
   'Northern Cape',
   'Western Cape',
 ];
+
+const normalizePayFastPhone = (value: string) => {
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return { normalized: '', error: 'Phone number is required' };
+  }
+
+  const digits = trimmed.replace(/\D/g, '');
+  let normalized = digits;
+
+  if (normalized.startsWith('27') && normalized.length === 11) {
+    normalized = `0${normalized.slice(2)}`;
+  }
+
+  if (normalized.length !== 10 || !normalized.startsWith('0')) {
+    return {
+      normalized: '',
+      error: 'Enter a valid South African mobile number like 0821234567 or +27821234567',
+    };
+  }
+
+  if (!/^0[6-8][0-9]{8}$/.test(normalized)) {
+    return {
+      normalized: '',
+      error: 'PayFast requires a valid South African mobile number',
+    };
+  }
+
+  return { normalized, error: '' };
+};
 
 const ProvinceDropdown = ({
   value,
@@ -241,8 +273,7 @@ export default function SubscriptionCheckoutScreen() {
         if (!emailRegex.test(value.trim())) return 'Please enter a valid email address';
         break;
       case 'phone':
-        if (!value.trim()) return 'Phone number is required';
-        if (value.trim().length < 10) return 'Phone number must be at least 10 digits';
+        return normalizePayFastPhone(value).error;
         break;
       case 'province':
         if (!value) return 'Please select a province';
@@ -278,6 +309,12 @@ export default function SubscriptionCheckoutScreen() {
       return;
     }
 
+    const normalizedPhone = normalizePayFastPhone(phone).normalized;
+    if (!normalizedPhone) {
+      setErrors((prev) => ({ ...prev, phone: validateField('phone', phone) }));
+      return;
+    }
+
     console.log('Validation passed, updating step 4');
     const normalizedVendorTier = normalizeVendorTierKey(tierName);
     updateStep4({ subscriptionPlan: normalizedVendorTier });
@@ -297,7 +334,7 @@ export default function SubscriptionCheckoutScreen() {
               billing_period: 'monthly',
               billing_email: email.trim(),
               billing_name: fullName.trim(),
-              billing_phone: phone.trim(),
+              billing_phone: normalizedPhone,
               subscription_started_at: new Date().toISOString(),
             },
             { onConflict: 'user_id' },
@@ -319,7 +356,7 @@ export default function SubscriptionCheckoutScreen() {
               billing_period: 'monthly',
               billing_email: email.trim(),
               billing_name: fullName.trim(),
-              billing_phone: phone.trim(),
+              billing_phone: normalizedPhone,
               subscription_started_at: new Date().toISOString(),
             },
             { onConflict: 'user_id' },
@@ -359,7 +396,7 @@ export default function SubscriptionCheckoutScreen() {
       firstName,
       lastName,
       email: email.trim(),
-      phone: phone.trim(),
+      phone: normalizedPhone,
       subscriptionType: billing === '6_month' || billing === '12_month' ? '2' : '1',
       frequency: billing === 'yearly' ? '6' : '3',
       recurringAmount: billing === '6_month' || billing === '12_month' ? undefined : priceNum,
@@ -382,7 +419,7 @@ export default function SubscriptionCheckoutScreen() {
             pending_payment_id: payfastPaymentId,
             billing_email: email.trim(),
             billing_name: fullName.trim(),
-            billing_phone: phone.trim(),
+            billing_phone: normalizedPhone,
           },
           { onConflict: 'user_id' },
         );
@@ -405,7 +442,7 @@ export default function SubscriptionCheckoutScreen() {
             pending_payment_id: payfastPaymentId,
             billing_email: email.trim(),
             billing_name: fullName.trim(),
-            billing_phone: phone.trim(),
+            billing_phone: normalizedPhone,
           },
           { onConflict: 'user_id' },
         );
@@ -624,35 +661,44 @@ export default function SubscriptionCheckoutScreen() {
               style={{
                 borderWidth: 1,
                 borderColor: colors.borderSubtle,
-                borderRadius: radii.md,
+                borderRadius: radii.lg,
                 padding: spacing.md,
                 flexDirection: 'row',
                 alignItems: 'center',
                 justifyContent: 'space-between',
+                backgroundColor: colors.backgroundAlt,
               }}
             >
-              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+              <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center' }}>
                 <View
                   style={{
-                    width: 40,
-                    height: 40,
-                    borderRadius: 10,
+                    width: 132,
+                    height: 60,
+                    borderRadius: radii.md,
                     backgroundColor: '#FFFFFF',
                     borderWidth: 1,
                     borderColor: colors.borderSubtle,
                     alignItems: 'center',
                     justifyContent: 'center',
                     marginRight: spacing.md,
+                    paddingHorizontal: spacing.md,
+                    shadowColor: '#000',
+                    shadowOpacity: 0.04,
+                    shadowRadius: 6,
+                    shadowOffset: { width: 0, height: 2 },
+                    elevation: 1,
                   }}
                 >
                   <Image
-                    source={{ uri: 'https://www.payfast.co.za/wp-content/uploads/2020/05/payfast-logo.png' }}
-                    style={{ width: 28, height: 28, resizeMode: 'contain' }}
+                    source={payfastLogo}
+                    style={{ width: '100%', height: '100%', resizeMode: 'contain' }}
                   />
                 </View>
-                <View>
+                <View style={{ flex: 1 }}>
                   <Text style={{ ...typography.body, color: colors.textPrimary, fontWeight: '600' }}>PayFast</Text>
-                  <Text style={{ ...typography.caption, color: colors.textMuted }}>Payment integration will be enabled soon</Text>
+                  <Text style={{ ...typography.caption, color: colors.textMuted }}>
+                    Secure checkout powered by PayFast
+                  </Text>
                 </View>
               </View>
               <MaterialIcons name="radio-button-checked" size={20} color={colors.primary} />

@@ -250,6 +250,51 @@ export default function ApplicationStep3Screen() {
     }
   };
 
+  const handlePickCompanyLogo = async () => {
+    try {
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert(
+          'Permission Required',
+          'Please grant access to your photo library to upload your company logo.',
+          [{ text: 'OK' }],
+        );
+        return;
+      }
+
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ['images'],
+        allowsMultipleSelection: false,
+        allowsEditing: true,
+        quality: 1,
+      });
+
+      if (!result.canceled && result.assets?.[0]) {
+        const asset = result.assets[0];
+        const fileSize = asset.fileSize || 0;
+        if (fileSize > MAX_IMAGE_SIZE) {
+          Alert.alert('File Too Large', `${asset.fileName || 'Logo'} exceeds 10MB limit.`);
+          return;
+        }
+
+        const originalName = asset.fileName || 'company-logo.png';
+        const sanitizedBaseName = originalName.replace(/\.[^.]+$/, '') || 'company-logo';
+        const logoDoc = {
+          uri: asset.uri,
+          name: `company_logo__${sanitizedBaseName}.png`,
+          type: 'image/png',
+          size: fileSize,
+        };
+
+        upsertBusinessDoc('company_logo', logoDoc);
+        Alert.alert('Success', 'Company logo uploaded successfully.');
+      }
+    } catch (error) {
+      console.error('Company logo picker error:', error);
+      Alert.alert('Error', 'Failed to pick the company logo. Please try again.');
+    }
+  };
+
   const handleRemoveBusinessDoc = (key: DocKey) => {
     const prefix = `${key}__`;
     const updated = state.step3.documents.filter((d) => !(typeof d.name === 'string' && d.name.startsWith(prefix)));
@@ -436,10 +481,13 @@ export default function ApplicationStep3Screen() {
             </Text>
           </TouchableOpacity>
 
-          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing.lg }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md }}>
+          <View style={{ marginBottom: spacing.lg }}>
+            <View style={{ marginBottom: spacing.md, alignSelf: 'flex-start' }}>
+              <ApplicationProgress currentStep={3} />
+            </View>
+            <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: spacing.md }}>
               <MaterialIcons name="cloud-upload" size={32} color={colors.primaryTeal} />
-              <View>
+              <View style={{ flex: 1 }}>
                 <Text style={{ ...typography.titleMedium, color: colors.textPrimary }}>
                   Documents & Media
                 </Text>
@@ -448,7 +496,6 @@ export default function ApplicationStep3Screen() {
                 </Text>
               </View>
             </View>
-            <ApplicationProgress currentStep={3} />
           </View>
 
           {/* Photo Upload Counter — only shown if user already has a vendor record */}
@@ -719,7 +766,13 @@ export default function ApplicationStep3Screen() {
 
                       <View style={{ flexDirection: 'row', gap: spacing.sm, marginTop: spacing.md }}>
                         <TouchableOpacity
-                          onPress={() => handlePickDocumentFor(d.key)}
+                          onPress={() => {
+                            if (d.key === 'company_logo') {
+                              handlePickCompanyLogo();
+                              return;
+                            }
+                            handlePickDocumentFor(d.key);
+                          }}
                           style={{
                             flex: 1,
                             borderWidth: 1,
@@ -764,7 +817,7 @@ export default function ApplicationStep3Screen() {
                       </View>
 
                       <Text style={{ ...typography.caption, color: colors.textMuted, marginTop: spacing.sm }}>
-                        PDF, DOC, DOCX (Max 10MB)
+                        {d.key === 'company_logo' ? 'PNG logo (Max 10MB)' : 'PDF, DOC, DOCX (Max 10MB)'}
                       </Text>
                     </View>
 

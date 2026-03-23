@@ -243,14 +243,16 @@ export default function SubscriptionPlansScreen() {
         {/* Help Section */}
         <View style={styles.helpSection}>
           <MaterialIcons name="help-outline" size={24} color={colors.primary} />
-          <Text style={styles.helpTitle}>Need help choosing?</Text>
-          <Text style={styles.helpText}>
-            Contact our support team for personalized recommendations based on your business needs.
-          </Text>
-          <TouchableOpacity style={styles.helpButton} onPress={handleContactSupport}>
-            <MaterialIcons name="chat" size={16} color={colors.primaryForeground} />
-            <Text style={styles.helpButtonText}>Chat with Support</Text>
-          </TouchableOpacity>
+          <View style={styles.helpContent}>
+            <Text style={styles.helpTitle}>Need help choosing?</Text>
+            <Text style={styles.helpText}>
+              Contact our support team for personalized recommendations based on your business needs.
+            </Text>
+            <TouchableOpacity style={styles.helpButton} onPress={handleContactSupport}>
+              <MaterialIcons name="chat" size={16} color={colors.primaryForeground} />
+              <Text style={styles.helpButtonText}>Chat with Support</Text>
+            </TouchableOpacity>
+          </View>
         </View>
       </ScrollView>
     </View>
@@ -263,7 +265,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background,
   },
   scrollContent: {
-    paddingBottom: spacing.xl,
+    paddingBottom: spacing.lg,
   },
   loadingContainer: {
     flex: 1,
@@ -459,6 +461,9 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.borderSubtle,
   },
+  helpContent: {
+    flex: 1,
+  },
   helpTitle: {
     ...typography.titleMedium,
     color: colors.textPrimary,
@@ -467,7 +472,6 @@ const styles = StyleSheet.create({
   helpText: {
     ...typography.caption,
     color: colors.textSecondary,
-    flex: 1,
     lineHeight: 18,
   },
   helpButton: {
@@ -479,6 +483,7 @@ const styles = StyleSheet.create({
     borderRadius: radii.md,
     gap: spacing.xs,
     marginTop: spacing.sm,
+    alignSelf: 'flex-start',
   },
   helpButtonText: {
     ...typography.caption,

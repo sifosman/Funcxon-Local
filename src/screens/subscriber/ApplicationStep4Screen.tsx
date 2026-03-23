@@ -15,6 +15,7 @@ import { supabase } from '../../lib/supabaseClient';
 type ProfileStackParamList = {
   ApplicationStep3: undefined;
   ApplicationStep4: undefined;
+  ApplicationStatus: undefined;
   Payment: undefined;
   PortfolioProfile: undefined;
   UpdateVenuePortfolio: undefined;
@@ -38,7 +39,6 @@ export default function ApplicationStep4Screen() {
     is_active: boolean;
   }>>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedBilling, setSelectedBilling] = useState<'monthly' | 'yearly'>('monthly');
 
   const normalizeVendorTierKey = (rawTierName: string): string => {
     const t = (rawTierName ?? '').trim().toLowerCase();
@@ -51,6 +51,10 @@ export default function ApplicationStep4Screen() {
   useEffect(() => {
     loadTiers();
   }, []);
+
+  const selectedTier = tiers.find((tier) => normalizeVendorTierKey(tier.tier_name) === state.step4.subscriptionPlan);
+  const selectedTierPrice = selectedTier?.price_monthly ?? selectedTier?.price_yearly ?? null;
+  const selectedTierPriceLabel = selectedTierPrice ? `R${Number(selectedTierPrice).toLocaleString()}` : 'Free';
 
   const loadTiers = async () => {
     try {
@@ -192,17 +196,16 @@ export default function ApplicationStep4Screen() {
         
         Alert.alert(
           'Application Submitted!',
-          'Your application has been submitted successfully. We will review it and get back to you within 3-5 business days.',
+          'Your application has been submitted successfully. We will review it and get back to you within 12 to 24 hours.',
           [
             {
               text: 'OK',
               onPress: () => {
                 resetForm();
-                if (state.portfolioType === 'venues') {
-                  navigation.navigate('UpdateVenuePortfolio');
-                } else {
-                  navigation.navigate('UpdateVendorPortfolio');
-                }
+                navigation.reset({
+                  index: 0,
+                  routes: [{ name: 'ApplicationStatus' }],
+                });
               },
             },
           ]
@@ -237,13 +240,13 @@ export default function ApplicationStep4Screen() {
       const businessName = submission.company_details?.tradingName || submission.company_details?.registeredBusinessName || vendor?.name || '';
 
       // Call the Supabase Edge Function to send confirmation email
-      const { data, error } = await supabase.functions.invoke('send-vendor-welcome-email', {
+      const { data, error } = await supabase.functions.invoke('send-application-status-email', {
         body: {
           email: user.email,
           fullName: fullName,
           businessName: businessName || undefined,
           tierName: submission.subscription_tier || 'Vendor',
-          applicationUrl: 'https://funcxon.com/vendor-dashboard',
+          applicationUrl: 'vibeventz://application-status',
         },
       });
 
@@ -300,10 +303,13 @@ export default function ApplicationStep4Screen() {
             </Text>
           </TouchableOpacity>
 
-          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing.lg }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md }}>
+          <View style={{ marginBottom: spacing.lg }}>
+            <View style={{ marginBottom: spacing.md, alignSelf: 'flex-start' }}>
+              <ApplicationProgress currentStep={4} />
+            </View>
+            <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: spacing.md }}>
               <MaterialIcons name="card-membership" size={32} color={colors.primaryTeal} />
-              <View>
+              <View style={{ flex: 1 }}>
                 <Text style={{ ...typography.titleMedium, color: colors.textPrimary }}>
                   Subscription & Legal
                 </Text>
@@ -312,10 +318,9 @@ export default function ApplicationStep4Screen() {
                 </Text>
               </View>
             </View>
-            <ApplicationProgress currentStep={4} />
           </View>
 
-          {/* Subscription Plans */}
+          {/* Selected Package */}
           <View
             style={{
               backgroundColor: colors.surface,
@@ -332,93 +337,72 @@ export default function ApplicationStep4Screen() {
             }}
           >
             <Text style={{ ...typography.titleMedium, color: colors.textPrimary, marginBottom: spacing.xs }}>
-              Select Subscription Plan *
+              Selected Package
             </Text>
             <Text style={{ ...typography.caption, color: colors.textMuted, marginBottom: spacing.lg }}>
-              Choose the plan that best suits your needs
+              This package was already selected during checkout and will be submitted with your application.
             </Text>
-
-          {/* Billing Toggle */}
-          <View style={{ flexDirection: 'row', backgroundColor: colors.surface, borderRadius: radii.full, padding: 4, marginBottom: spacing.md, borderWidth: 1, borderColor: colors.borderSubtle }}>
-            <TouchableOpacity
-              style={{ flex: 1, paddingVertical: spacing.sm, borderRadius: radii.full, alignItems: 'center', backgroundColor: selectedBilling === 'monthly' ? colors.primary : 'transparent' }}
-              onPress={() => setSelectedBilling('monthly')}
-            >
-              <Text style={{ ...typography.caption, color: selectedBilling === 'monthly' ? colors.primaryForeground : colors.textMuted, fontWeight: '500' }}>
-                Monthly
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={{ flex: 1, paddingVertical: spacing.sm, borderRadius: radii.full, alignItems: 'center', backgroundColor: selectedBilling === 'yearly' ? colors.primary : 'transparent' }}
-              onPress={() => setSelectedBilling('yearly')}
-            >
-              <Text style={{ ...typography.caption, color: selectedBilling === 'yearly' ? colors.primaryForeground : colors.textMuted, fontWeight: '500' }}>
-                Yearly (Save 20%)
-              </Text>
-            </TouchableOpacity>
-          </View>
 
           {loading ? (
             <View style={{ padding: spacing.xl, alignItems: 'center' }}>
               <ActivityIndicator size="small" color={colors.primary} />
               <Text style={{ ...typography.caption, color: colors.textMuted, marginTop: spacing.sm }}>Loading plans...</Text>
             </View>
+          ) : !selectedTier ? (
+            <View
+              style={{
+                padding: spacing.lg,
+                borderRadius: radii.md,
+                borderWidth: 1,
+                borderColor: '#F59E0B',
+                backgroundColor: '#FFFBEB',
+              }}
+            >
+              <Text style={{ ...typography.body, color: colors.textPrimary, fontWeight: '600' }}>
+                Package not found
+              </Text>
+              <Text style={{ ...typography.caption, color: colors.textMuted, marginTop: spacing.xs }}>
+                We could not match your paid package details. Please go back to checkout and try again.
+              </Text>
+            </View>
           ) : (
-            tiers.map((tier) => {
-              const tierKey = normalizeVendorTierKey(tier.tier_name);
-              const isSelected = state.step4.subscriptionPlan === tierKey;
-              const price = selectedBilling === 'monthly' ? tier.price_monthly : tier.price_yearly;
-              const isFree = !price || price === 0;
-              const priceLabel = isFree ? 'Free' : `R${Number(price).toLocaleString()}`;
-              const isPopular = tier.tier_name.toLowerCase() === 'premium';
-              return (
-                <TouchableOpacity
-                  key={tier.id}
-                  onPress={() => updateStep4({ subscriptionPlan: tierKey })}
-                  style={{
-                    padding: spacing.lg,
-                    marginBottom: spacing.md,
-                    borderRadius: radii.lg,
-                    borderWidth: 2,
-                    borderColor: isSelected ? colors.primaryTeal : isPopular ? '#8B5CF6' : colors.borderSubtle,
-                    backgroundColor: isSelected ? '#E0F2F7' : colors.surface,
-                  }}
-                >
-                  <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing.sm }}>
-                    <View>
-                      <Text style={{ ...typography.titleMedium, color: colors.textPrimary }}>
-                        {tier.tier_name.charAt(0).toUpperCase() + tier.tier_name.slice(1)}
-                      </Text>
-                      <Text style={{ ...typography.body, color: colors.textMuted, marginTop: 2 }}>
-                        {priceLabel}/{selectedBilling.slice(0, -2)}ly
-                      </Text>
-                    </View>
-                    {isSelected && <MaterialIcons name="check-circle" size={28} color={colors.primaryTeal} />}
-                    {isPopular && !isSelected && (
-                      <View style={{ backgroundColor: '#8B5CF6', paddingHorizontal: spacing.sm, paddingVertical: 4, borderRadius: radii.sm }}>
-                        <Text style={{ color: '#FFFFFF', fontSize: 10, fontWeight: '700' }}>POPULAR</Text>
-                      </View>
-                    )}
+            <View
+              style={{
+                padding: spacing.lg,
+                borderRadius: radii.lg,
+                borderWidth: 2,
+                borderColor: colors.primaryTeal,
+                backgroundColor: '#E0F2F7',
+              }}
+            >
+              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing.sm }}>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ ...typography.titleMedium, color: colors.textPrimary }}>
+                    {selectedTier.tier_name.charAt(0).toUpperCase() + selectedTier.tier_name.slice(1)}
+                  </Text>
+                  <Text style={{ ...typography.body, color: colors.textMuted, marginTop: 2 }}>
+                    {selectedTierPriceLabel}
+                  </Text>
+                </View>
+                <MaterialIcons name="check-circle" size={28} color={colors.primaryTeal} />
+              </View>
+              <View style={{ gap: spacing.xs }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                  <MaterialIcons name="photo-library" size={16} color={colors.primaryTeal} style={{ marginRight: spacing.xs }} />
+                  <Text style={{ ...typography.caption, color: colors.textPrimary }}>
+                    {selectedTier.photo_limit} photos
+                  </Text>
+                </View>
+                {selectedTier.features && Object.entries(selectedTier.features).map(([key, value]) => (
+                  <View key={key} style={{ flexDirection: 'row', alignItems: 'center' }}>
+                    <MaterialIcons name={value ? 'check' : 'cancel'} size={16} color={value ? colors.primaryTeal : colors.textMuted} style={{ marginRight: spacing.xs }} />
+                    <Text style={{ ...typography.caption, color: value ? colors.textPrimary : colors.textMuted }}>
+                      {key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                    </Text>
                   </View>
-                  <View style={{ gap: spacing.xs }}>
-                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                      <MaterialIcons name="photo-library" size={16} color={colors.primaryTeal} style={{ marginRight: spacing.xs }} />
-                      <Text style={{ ...typography.caption, color: colors.textPrimary }}>
-                        {tier.photo_limit} photos
-                      </Text>
-                    </View>
-                    {tier.features && Object.entries(tier.features).map(([key, value]) => (
-                      <View key={key} style={{ flexDirection: 'row', alignItems: 'center' }}>
-                        <MaterialIcons name={value ? 'check' : 'cancel'} size={16} color={value ? colors.primaryTeal : colors.textMuted} style={{ marginRight: spacing.xs }} />
-                        <Text style={{ ...typography.caption, color: value ? colors.textPrimary : colors.textMuted }}>
-                          {key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
-                        </Text>
-                      </View>
-                    ))}
-                  </View>
-                </TouchableOpacity>
-              );
-            })
+                ))}
+              </View>
+            </View>
           )}
             {errors.subscriptionPlan && (
               <Text style={{ fontSize: 12, color: '#EF4444', marginTop: spacing.xs }}>
@@ -583,7 +567,7 @@ export default function ApplicationStep4Screen() {
             <MaterialIcons name="info" size={20} color={colors.primaryTeal} style={{ marginRight: spacing.sm }} />
             <View style={{ flex: 1 }}>
               <Text style={{ ...typography.caption, color: colors.textPrimary }}>
-                By submitting this application, you agree to all terms and will be directed to complete the payment process.
+                By submitting this application, you confirm the package already selected during checkout and agree to the terms below.
               </Text>
             </View>
           </View>

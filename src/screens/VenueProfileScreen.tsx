@@ -427,10 +427,23 @@ export default function VenueProfileScreen({ route, navigation }: Props) {
       }
       return;
     }
+
+    const previous = favouriteIds;
+    const isCurrentlyFavourite = previous.venueIds.includes(venue.id);
+    const optimisticNext = {
+      ...previous,
+      venueIds: isCurrentlyFavourite
+        ? previous.venueIds.filter((venueId) => venueId !== venue.id)
+        : [...previous.venueIds, venue.id],
+    };
+
+    setFavouriteIds(optimisticNext);
+
     try {
       const next = await toggleFavourite(user, venue.id, 'venue');
       setFavouriteIds(next);
     } catch (error) {
+      setFavouriteIds(previous);
       const message = error instanceof Error ? error.message : 'We could not update favourites right now.';
       Alert.alert('Favourite update failed', message);
     }
@@ -454,6 +467,7 @@ export default function VenueProfileScreen({ route, navigation }: Props) {
   const whatsappUrl = venue?.whatsapp_number
     ? `https://wa.me/${venue.whatsapp_number.replace(/[^0-9]/g, '')}`
     : null;
+  const contactNumber = venue?.whatsapp_number?.trim() || null;
   const emailUrl = venue?.contact_email ? `mailto:${venue.contact_email}` : null;
   const webMapEmbedUrl = mapCoordinates
     ? `https://www.google.com/maps?q=${mapCoordinates.latitude},${mapCoordinates.longitude}&z=16&output=embed`
@@ -966,6 +980,14 @@ export default function VenueProfileScreen({ route, navigation }: Props) {
                 <Text style={{ ...typography.body, color: colors.textSecondary, marginBottom: spacing.sm }}>
                   {physicalAddress}
                 </Text>
+              )}
+              {contactNumber && (
+                <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.sm }}>
+                  <MaterialIcons name="phone" size={16} color={colors.primaryTeal} />
+                  <Text style={{ ...typography.body, color: colors.textSecondary, marginLeft: spacing.sm }}>
+                    {contactNumber}
+                  </Text>
+                </View>
               )}
               <View
                 style={{

@@ -6,6 +6,7 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { colors, spacing, radii, typography } from '../theme';
 import { useAuth } from '../auth/AuthContext';
 import { supabase } from '../lib/supabaseClient';
+import { getLatestUserApplication } from '../lib/applicationService';
 import type { ProfileStackParamList } from '../navigation/ProfileNavigator';
 import { HelpCenterModal } from '../components/HelpCenterModal';
 import { useApplicationForm } from '../context/ApplicationFormContext';
@@ -71,7 +72,23 @@ export default function AccountScreen() {
         const { error } = await signOut();
         if (error) {
             Alert.alert('Sign out failed', error.message);
+            return;
         }
+
+        Alert.alert('Logged out', 'You have been logged out successfully.', [
+            {
+                text: 'OK',
+                onPress: () => {
+                    const parentNav = navigation.getParent() as any;
+                    parentNav?.navigate?.('Home');
+                },
+            },
+        ]);
+    };
+
+    const handleLogin = () => {
+        const rootNav = navigation.getParent()?.getParent() as any;
+        rootNav?.navigate?.('Auth', { screen: 'SignIn' });
     };
 
     const handleGoToPlanner = () => {
@@ -120,6 +137,15 @@ export default function AccountScreen() {
         if (!hasActiveSubscription) {
             navigation.navigate('SubscriptionPlans');
             return;
+        }
+
+        const latestApplication = await getLatestUserApplication();
+        if (latestApplication.success && latestApplication.data) {
+            const applicationStatus = String(latestApplication.data.status ?? 'pending').toLowerCase();
+            if (applicationStatus === 'pending') {
+                navigation.navigate('ApplicationStatus');
+                return;
+            }
         }
 
         resetForm();
@@ -224,11 +250,11 @@ export default function AccountScreen() {
             icon: 'help',
         },
         {
-            id: 'logout',
-            label: 'Logout',
-            icon: 'logout',
-            color: colors.destructive,
-            action: handleLogout,
+            id: user ? 'logout' : 'login',
+            label: user ? 'Logout' : 'Login',
+            icon: user ? 'logout' : 'login',
+            color: user ? colors.destructive : colors.primaryTeal,
+            action: user ? handleLogout : handleLogin,
         },
     ];
 
@@ -236,6 +262,10 @@ export default function AccountScreen() {
         const isExpanded = expandedMenus.has(item.id);
         const hasSubmenu = item.submenu && item.submenu.length > 0;
         const textColor = item.color || colors.textPrimary;
+        const hideChevron = item.id === 'change-password'
+            || item.id === 'marketing-permissions'
+            || item.id === 'terms-policies'
+            || item.id === 'help-centre';
 
         const handlePress = () => {
             if (item.action) {
@@ -297,7 +327,7 @@ export default function AccountScreen() {
                             color={colors.textMuted}
                         />
                     )}
-                    {!hasSubmenu && !item.action && (
+                    {!hasSubmenu && !item.action && !hideChevron && (
                         <MaterialIcons name="chevron-right" size={20} color={colors.textMuted} />
                     )}
                 </TouchableOpacity>

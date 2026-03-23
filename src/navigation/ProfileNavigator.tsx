@@ -9,6 +9,7 @@ import ApplicationStep1Screen from '../screens/subscriber/ApplicationStep1Screen
 import ApplicationStep2Screen from '../screens/subscriber/ApplicationStep2Screen';
 import ApplicationStep3Screen from '../screens/subscriber/ApplicationStep3Screen';
 import ApplicationStep4Screen from '../screens/subscriber/ApplicationStep4Screen';
+import ApplicationStatusScreen from '../screens/subscriber/ApplicationStatusScreen';
 import SubscriptionPlansScreen from '../screens/SubscriptionPlansScreen';
 import SubscriptionCheckoutScreen from '../screens/SubscriptionCheckoutScreen';
 import PortfolioAssistanceScreen from '../screens/PortfolioAssistanceScreen';
@@ -45,6 +46,7 @@ export type ProfileStackParamList = {
     ApplicationStep2: undefined;
     ApplicationStep3: undefined;
     ApplicationStep4: undefined;
+    ApplicationStatus: undefined;
     SubscriptionPlans: undefined;
     VenueListingPlans: undefined;
     SubscriptionCheckout: {
@@ -146,6 +148,11 @@ export function ProfileNavigator() {
             <Stack.Screen
                 name="ApplicationStep4"
                 component={ApplicationStep4Screen}
+                options={{ headerShown: false }}
+            />
+            <Stack.Screen
+                name="ApplicationStatus"
+                component={ApplicationStatusScreen}
                 options={{ headerShown: false }}
             />
             <Stack.Screen

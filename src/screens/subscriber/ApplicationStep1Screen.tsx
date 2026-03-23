@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, TextInput, Alert } from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView, TextInput, Alert, KeyboardAvoidingView, Platform } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -9,12 +9,14 @@ import { validateStep1 } from '../../utils/formValidation';
 import { ApplicationProgress } from '../../components/ApplicationProgress';
 import { AddressAutocompleteInput } from '../../components/AddressAutocompleteInput';
 import { useAuth } from '../../auth/AuthContext';
+import { getLatestUserApplication } from '../../lib/applicationService';
 import { getMyVenueEntitlement, isVenueFeatureEnabled } from '../../lib/venueSubscription';
 
 type ProfileStackParamList = {
   PortfolioType: undefined;
   ApplicationStep1: undefined;
   ApplicationStep2: undefined;
+  ApplicationStatus: undefined;
 };
 
 export default function ApplicationStep1Screen() {
@@ -38,6 +40,26 @@ export default function ApplicationStep1Screen() {
 
     loadVenueLinkEntitlement();
   }, [state.portfolioType, user]);
+
+  useEffect(() => {
+    let isActive = true;
+
+    async function redirectPendingApplication() {
+      const result = await getLatestUserApplication();
+      if (!isActive || !result.success || !result.data) return;
+
+      const status = String(result.data.status ?? 'pending').toLowerCase();
+      if (status === 'pending') {
+        navigation.replace('ApplicationStatus');
+      }
+    }
+
+    redirectPendingApplication();
+
+    return () => {
+      isActive = false;
+    };
+  }, [navigation]);
 
   const handleChange = (field: string, value: string) => {
     const isVenueLinksField =
@@ -79,8 +101,16 @@ export default function ApplicationStep1Screen() {
   };
 
   return (
-    <View style={{ flex: 1, backgroundColor: colors.background }}>
-      <ScrollView contentContainerStyle={{ paddingBottom: spacing.xl }}>
+    <KeyboardAvoidingView
+      style={{ flex: 1, backgroundColor: colors.background }}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? spacing.lg : 0}
+    >
+      <ScrollView
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
+        contentContainerStyle={{ paddingBottom: spacing.xxl * 4 }}
+      >
         <View style={{ paddingHorizontal: spacing.lg, paddingTop: spacing.xl }}>
           <TouchableOpacity
             onPress={() => navigation.goBack()}
@@ -92,10 +122,13 @@ export default function ApplicationStep1Screen() {
             </Text>
           </TouchableOpacity>
 
-          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing.lg }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md }}>
+          <View style={{ marginBottom: spacing.lg }}>
+            <View style={{ marginBottom: spacing.md, alignSelf: 'flex-start' }}>
+              <ApplicationProgress currentStep={1} />
+            </View>
+            <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: spacing.md }}>
               <MaterialIcons name="business" size={32} color={colors.primaryTeal} />
-              <View>
+              <View style={{ flex: 1 }}>
                 <Text style={{ ...typography.titleMedium, color: colors.textPrimary }}>
                   Company Details
                 </Text>
@@ -104,7 +137,6 @@ export default function ApplicationStep1Screen() {
                 </Text>
               </View>
             </View>
-            <ApplicationProgress currentStep={1} />
           </View>
 
           {/* Business Information Card */}
@@ -830,6 +862,6 @@ export default function ApplicationStep1Screen() {
           </View>
         </View>
       </ScrollView>
-    </View>
+    </KeyboardAvoidingView>
   );
 }

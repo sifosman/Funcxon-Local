@@ -177,10 +177,13 @@ export default function ApplicationStep2Screen() {
             </Text>
           </TouchableOpacity>
 
-          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing.lg }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md }}>
+          <View style={{ marginBottom: spacing.lg }}>
+            <View style={{ marginBottom: spacing.md, alignSelf: 'flex-start' }}>
+              <ApplicationProgress currentStep={2} />
+            </View>
+            <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: spacing.md }}>
               <MaterialIcons name="category" size={32} color={colors.primaryTeal} />
-              <View>
+              <View style={{ flex: 1 }}>
                 <Text style={{ ...typography.titleMedium, color: colors.textPrimary }}>
                   {isVenues ? 'Venue Details' : 'Service Category & Coverage'}
                 </Text>
@@ -189,7 +192,6 @@ export default function ApplicationStep2Screen() {
                 </Text>
               </View>
             </View>
-            <ApplicationProgress currentStep={2} />
           </View>
 
           {/* Venue-specific sections */}

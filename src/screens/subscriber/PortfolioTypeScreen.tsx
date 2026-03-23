@@ -1,9 +1,11 @@
+import { useEffect } from 'react';
 import { View, Text, TouchableOpacity, ScrollView } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { colors, spacing, radii, typography } from '../../theme';
 import { useApplicationForm } from '../../context/ApplicationFormContext';
+import { getLatestUserApplication } from '../../lib/applicationService';
 
 type ProfileStackParamList = {
   AccountMain: undefined;
@@ -12,6 +14,7 @@ type ProfileStackParamList = {
   SubscriberProfile: undefined;
   PortfolioType: undefined;
   ApplicationStep1: undefined;
+  ApplicationStatus: undefined;
 };
 
 interface PortfolioOption {
@@ -26,6 +29,26 @@ interface PortfolioOption {
 export default function PortfolioTypeScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<ProfileStackParamList>>();
   const { setPortfolioType } = useApplicationForm();
+
+  useEffect(() => {
+    let isActive = true;
+
+    async function redirectPendingApplication() {
+      const result = await getLatestUserApplication();
+      if (!isActive || !result.success || !result.data) return;
+
+      const status = String(result.data.status ?? 'pending').toLowerCase();
+      if (status === 'pending') {
+        navigation.replace('ApplicationStatus');
+      }
+    }
+
+    redirectPendingApplication();
+
+    return () => {
+      isActive = false;
+    };
+  }, [navigation]);
 
   const portfolioOptions: PortfolioOption[] = [
     {

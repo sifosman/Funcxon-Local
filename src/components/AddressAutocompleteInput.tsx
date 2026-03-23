@@ -11,6 +11,8 @@ import {
 import { MaterialIcons } from '@expo/vector-icons';
 import { colors, radii, spacing, typography } from '../theme';
 
+const GOOGLE_MAPS_API_KEY = 'AIzaSyBjd1KYtTaAzxzdw5ayGwwMu5Sex-gKQLI';
+
 type Prediction = {
   description: string;
   place_id: string;
@@ -35,16 +37,25 @@ export function AddressAutocompleteInput({
   required,
   error,
 }: Props) {
-  const apiKey = process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY;
+  const apiKey = process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY || GOOGLE_MAPS_API_KEY;
   const [query, setQuery] = useState(value);
   const [predictions, setPredictions] = useState<Prediction[]>([]);
   const [loading, setLoading] = useState(false);
   const [open, setOpen] = useState(false);
   const requestSeq = useRef(0);
+  const blurTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     setQuery(value);
   }, [value]);
+
+  useEffect(() => {
+    return () => {
+      if (blurTimeoutRef.current) {
+        clearTimeout(blurTimeoutRef.current);
+      }
+    };
+  }, []);
 
   const canSearch = useMemo(() => {
     return Boolean(apiKey) && query.trim().length >= 3;
@@ -102,6 +113,10 @@ export function AddressAutocompleteInput({
   }, [apiKey, open, query]);
 
   const handleSelect = (prediction: Prediction) => {
+    if (blurTimeoutRef.current) {
+      clearTimeout(blurTimeoutRef.current);
+      blurTimeoutRef.current = null;
+    }
     onChangeValue(prediction.description);
     setOpen(false);
     setPredictions([]);
@@ -117,6 +132,8 @@ export function AddressAutocompleteInput({
 
       <View
         style={{
+          position: 'relative',
+          zIndex: 20,
           borderWidth: 1,
           borderColor: error ? '#EF4444' : colors.borderSubtle,
           borderRadius: radii.md,
@@ -132,13 +149,24 @@ export function AddressAutocompleteInput({
           <TextInput
             placeholder={placeholder}
             value={query}
-            onFocus={() => setOpen(true)}
+            onFocus={() => {
+              if (blurTimeoutRef.current) {
+                clearTimeout(blurTimeoutRef.current);
+                blurTimeoutRef.current = null;
+              }
+              setOpen(true);
+            }}
             onBlur={() => {
-              setOpen(false);
+              blurTimeoutRef.current = setTimeout(() => {
+                setOpen(false);
+              }, 180);
             }}
             onChangeText={(text) => {
               setQuery(text);
               onChangeValue(text);
+              if (!open) {
+                setOpen(true);
+              }
             }}
             multiline
             numberOfLines={numberOfLines}
@@ -170,12 +198,15 @@ export function AddressAutocompleteInput({
       {open && (
         <View
           style={{
+            position: 'relative',
+            zIndex: 30,
             marginTop: spacing.xs,
             borderWidth: 1,
             borderColor: colors.borderSubtle,
             borderRadius: radii.md,
             backgroundColor: colors.surface,
             overflow: 'hidden',
+            maxHeight: 220,
           }}
         >
           {!apiKey && (
@@ -211,6 +242,7 @@ export function AddressAutocompleteInput({
                 keyboardShouldPersistTaps="handled"
                 data={predictions}
                 keyExtractor={(item) => item.place_id}
+                nestedScrollEnabled
                 renderItem={({ item }) => (
                   <TouchableOpacity
                     onPress={() => handleSelect(item)}

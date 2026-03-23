@@ -266,6 +266,14 @@ const VENUE_TYPES: string[] = [
   'Wine estates',
 ];
 
+type CategoryPickerOption = {
+  key: string;
+  label: string;
+  selected: boolean;
+  onPress: () => void;
+  section?: string;
+};
+
 export default function AttendeeHomeScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<AttendeeStackParamList>>();
   const scrollViewRef = useRef<ScrollView>(null);
@@ -279,6 +287,7 @@ export default function AttendeeHomeScreen() {
   const [selectedVenueAmenities, setSelectedVenueAmenities] = useState<string[]>([]);
   const [selectedProvinces, setSelectedProvinces] = useState<string[]>([]);
   const [selectedCities, setSelectedCities] = useState<string[]>([]);
+  const [categorySearchQuery, setCategorySearchQuery] = useState('');
   const [citySearchQuery, setCitySearchQuery] = useState('');
   const [venueAmenitiesQuery, setVenueAmenitiesQuery] = useState('');
   const [distanceKm, setDistanceKm] = useState<string>('');
@@ -381,6 +390,83 @@ export default function AttendeeHomeScreen() {
 
     return Array.from(new Set(subcats.map((v) => String(v ?? '').trim()).filter(Boolean))).sort();
   }, [selectedCategoryIds, serviceType]);
+
+  const normalizedCategorySearchQuery = categorySearchQuery.trim().toLowerCase();
+  const normalizedCitySearchQuery = citySearchQuery.trim().toLowerCase();
+  const normalizedVenueAmenitiesQuery = venueAmenitiesQuery.trim().toLowerCase();
+
+  const categoryPickerOptions = useMemo<CategoryPickerOption[]>(
+    () => {
+      const venueOptions = VENUE_TYPES.map((venueType) => ({
+        key: `venue-type-${venueType}`,
+        label: venueType,
+        selected: selectedVenueTypes.includes(venueType),
+        onPress: () => {
+          const next = selectedVenueTypes.includes(venueType)
+            ? selectedVenueTypes.filter((v) => v !== venueType)
+            : [...selectedVenueTypes, venueType];
+          setSelectedVenueTypes(next);
+        },
+      }));
+
+      const vendorOptions = VENDOR_CATEGORIES.map((cat) => ({
+        key: `vendor-cat-${cat.id}`,
+        label: cat.label,
+        selected: selectedCategoryIds.includes(cat.id),
+        onPress: () => {
+          const next = selectedCategoryIds.includes(cat.id)
+            ? selectedCategoryIds.filter((id) => id !== cat.id)
+            : [...selectedCategoryIds, cat.id];
+          setSelectedCategoryIds(next);
+          setSelectedSubcategories([]);
+        },
+      }));
+
+      if (serviceType === 'Venues') {
+        return venueOptions.filter((option) => option.label.toLowerCase().includes(normalizedCategorySearchQuery));
+      }
+
+      if (serviceType === 'Vendors' || serviceType === 'Service Providers') {
+        return vendorOptions.filter((option) => option.label.toLowerCase().includes(normalizedCategorySearchQuery));
+      }
+
+      return [
+        ...venueOptions.map((option) => ({ ...option, section: 'Venues' })),
+        ...vendorOptions.map((option) => ({ ...option, section: 'Vendor & Service Professionals' })),
+      ].filter((option) => option.label.toLowerCase().includes(normalizedCategorySearchQuery));
+    },
+    [normalizedCategorySearchQuery, selectedCategoryIds, selectedVenueTypes, serviceType],
+  );
+
+  const availableCities = useMemo(
+    () => {
+      const cities = selectedProvinces.length > 0
+        ? selectedProvinces.flatMap((province) => getCitiesByProvince(province))
+        : getAllCities();
+
+      return Array.from(new Set(cities.map((city) => String(city ?? '').trim()).filter(Boolean))).sort();
+    },
+    [selectedProvinces],
+  );
+
+  const filteredCities = useMemo(
+    () => (normalizedCitySearchQuery
+      ? availableCities.filter((city) => city.toLowerCase().includes(normalizedCitySearchQuery))
+      : availableCities),
+    [availableCities, normalizedCitySearchQuery],
+  );
+
+  const venueAmenityOptions = useMemo(
+    () => Array.from(new Set((amenitiesList ?? []).map((v) => String(v ?? '').trim()).filter(Boolean))).sort(),
+    [],
+  );
+
+  const filteredVenueAmenityOptions = useMemo(
+    () => (normalizedVenueAmenitiesQuery
+      ? venueAmenityOptions.filter((amenity) => amenity.toLowerCase().includes(normalizedVenueAmenitiesQuery))
+      : venueAmenityOptions),
+    [normalizedVenueAmenitiesQuery, venueAmenityOptions],
+  );
 
   useEffect(() => {
     if (serviceType === 'Venues') {
@@ -889,8 +975,67 @@ export default function AttendeeHomeScreen() {
     });
   }, [orderedVendors, locationCity, locationRegion]);
 
+  const sortedFeaturedData = useMemo(() => {
+    if (!featuredData?.length) return [];
+    
+    let vendors = [...featuredData];
+    
+    vendors.sort((a, b) => {
+      let comparison = 0;
+      
+      switch (sortBy) {
+        case 'name':
+          const nameA = (a.name ?? '').toLowerCase();
+          const nameB = (b.name ?? '').toLowerCase();
+          comparison = nameA.localeCompare(nameB);
+          break;
+          
+        case 'rating':
+          const ratingA = a.rating ?? 0;
+          const ratingB = b.rating ?? 0;
+          comparison = ratingA - ratingB;
+          break;
+          
+        case 'price':
+          const extractPrice = (priceRange: string | null) => {
+            if (!priceRange) return 0;
+            const numbers = priceRange.match(/[\d,]+/g);
+            if (!numbers || numbers.length === 0) return 0;
+            return parseInt(numbers[numbers.length - 1].replace(/,/g, ''), 10);
+          };
+          const priceA = extractPrice(a.price_range);
+          const priceB = extractPrice(b.price_range);
+          comparison = priceA - priceB;
+          break;
+          
+        case 'distance':
+          const cityFilter = (locationCity ?? '').toLowerCase();
+          const regionFilter = (locationRegion ?? '').toLowerCase();
+          
+          const getDistanceScore = (vendor: VendorListItem) => {
+            const city = (vendor.city ?? '').toLowerCase();
+            const province = (vendor.province ?? '').toLowerCase();
+            
+            if (cityFilter && city.includes(cityFilter)) return 0;
+            if (regionFilter && province.includes(regionFilter)) return 1;
+            return 2;
+          };
+          
+          comparison = getDistanceScore(a) - getDistanceScore(b);
+          break;
+          
+        default:
+          comparison = 0;
+      }
+      
+      return sortOrder === 'asc' ? comparison : -comparison;
+    });
+    
+    return vendors;
+  }, [featuredData, sortBy, sortOrder, locationCity, locationRegion]);
+
   const featuredListings = orderedVendors.length ? orderedVendors : filteredVendors;
-  const initialFeaturedListings = featuredData ?? [];
+
   const infiniteScrollEnabled = hasSearched && search.trim().length === 0;
 
   useEffect(() => {
@@ -901,7 +1046,7 @@ export default function AttendeeHomeScreen() {
     ? featuredListings.slice(0, visibleFeaturedCount)
     : featuredListings;
 
-  const displayedListings = hasSearched ? visibleListings : initialFeaturedListings;
+  const displayedListings = hasSearched ? visibleListings : sortedFeaturedData;
 
   useEffect(() => {
     let isMounted = true;
@@ -924,8 +1069,36 @@ export default function AttendeeHomeScreen() {
       Alert.alert('Sign in required', 'Please sign in to save favourites.');
       return;
     }
-    const next = await toggleFavourite(user, id, type);
-    setFavouriteIds(next); 
+
+    const previous = favouriteIds;
+    const isCurrentlyFavourite = type === 'venue'
+      ? previous.venueIds.includes(id)
+      : previous.vendorIds.includes(id);
+
+    const optimisticNext = type === 'venue'
+      ? {
+          ...previous,
+          venueIds: isCurrentlyFavourite
+            ? previous.venueIds.filter((venueId) => venueId !== id)
+            : [...previous.venueIds, id],
+        }
+      : {
+          ...previous,
+          vendorIds: isCurrentlyFavourite
+            ? previous.vendorIds.filter((vendorId) => vendorId !== id)
+            : [...previous.vendorIds, id],
+        };
+
+    setFavouriteIds(optimisticNext);
+
+    try {
+      const next = await toggleFavourite(user, id, type);
+      setFavouriteIds(next);
+    } catch (error) {
+      setFavouriteIds(previous);
+      const message = error instanceof Error ? error.message : 'We could not update favourites right now.';
+      Alert.alert('Favourite update failed', message);
+    }
   };
 
   async function handleUseMyLocation() {
@@ -1118,7 +1291,10 @@ export default function AttendeeHomeScreen() {
               <Text style={{ ...typography.caption, color: colors.textSecondary, marginBottom: spacing.xs }}>
                 Search by category
               </Text>
-              <TouchableOpacity activeOpacity={0.9} onPress={() => setOpenPicker('category')}>
+              <TouchableOpacity activeOpacity={0.9} onPress={() => {
+                    setCategorySearchQuery('');
+                    setOpenPicker('category');
+                  }}>
                 <View
                   style={{
                     borderRadius: radii.md,
@@ -1894,7 +2070,7 @@ export default function AttendeeHomeScreen() {
               paddingVertical: spacing.lg,
               borderTopLeftRadius: radii.xl,
               borderTopRightRadius: radii.xl,
-              maxHeight: '70%',
+              maxHeight: '82%',
             }}
           >
             <Text
@@ -1920,21 +2096,55 @@ export default function AttendeeHomeScreen() {
                 ? 'Select Distance'
                 : ''}
             </Text>
-            <ScrollView>
+            {(openPicker === 'category' || openPicker === 'city' || openPicker === 'venue_amenities') && (
+              <TextInput
+                value={openPicker === 'category' ? categorySearchQuery : openPicker === 'city' ? citySearchQuery : venueAmenitiesQuery}
+                onChangeText={openPicker === 'category' ? setCategorySearchQuery : openPicker === 'city' ? setCitySearchQuery : setVenueAmenitiesQuery}
+                placeholder={openPicker === 'category' ? 'Search categories...' : openPicker === 'city' ? 'Search cities...' : 'Search amenities...'}
+                placeholderTextColor={colors.textMuted}
+                style={{
+                  borderWidth: 1,
+                  borderColor: colors.borderSubtle,
+                  borderRadius: radii.md,
+                  paddingHorizontal: spacing.md,
+                  paddingVertical: spacing.sm,
+                  color: colors.textPrimary,
+                  backgroundColor: '#FFFFFF',
+                  marginBottom: spacing.md,
+                }}
+              />
+            )}
+            <ScrollView style={{ maxHeight: 420 }} contentContainerStyle={{ paddingBottom: spacing.sm }}>
               {openPicker === 'category' ? (
                 (() => {
-                  const renderVenueTypes = () =>
-                    VENUE_TYPES.map((venueType) => {
-                      const isSelected = selectedVenueTypes.includes(venueType);
-                      return (
+                  if (categoryPickerOptions.length === 0) {
+                    return (
+                      <View style={{ alignItems: 'center', paddingVertical: spacing.xl }}>
+                        <MaterialIcons name="search-off" size={40} color={colors.textMuted} />
+                        <Text style={{ ...typography.body, color: colors.textSecondary, marginTop: spacing.md, textAlign: 'center' }}>
+                          No categories match your search.
+                        </Text>
+                      </View>
+                    );
+                  }
+
+                  let previousSection: string | undefined;
+
+                  return categoryPickerOptions.map((option) => {
+                    const showSectionHeader = option.section && option.section !== previousSection;
+                    previousSection = option.section;
+
+                    return (
+                      <View key={option.key}>
+                        {showSectionHeader && (
+                          <Text
+                            style={{ ...typography.caption, color: colors.textMuted, fontWeight: '700', marginTop: spacing.xs, marginBottom: spacing.sm }}
+                          >
+                            {option.section}
+                          </Text>
+                        )}
                         <TouchableOpacity
-                          key={`venue-type-${venueType}`}
-                          onPress={() => {
-                            const next = isSelected
-                              ? selectedVenueTypes.filter((v) => v !== venueType)
-                              : [...selectedVenueTypes, venueType];
-                            setSelectedVenueTypes(next);
-                          }}
+                          onPress={option.onPress}
                           style={{ paddingVertical: spacing.sm, flexDirection: 'row', alignItems: 'center' }}
                         >
                           <View
@@ -1943,78 +2153,20 @@ export default function AttendeeHomeScreen() {
                               height: 24,
                               borderRadius: 4,
                               borderWidth: 2,
-                              borderColor: isSelected ? colors.primary : '#D1D5DB',
-                              backgroundColor: isSelected ? colors.primary : '#FFFFFF',
+                              borderColor: option.selected ? colors.primary : '#D1D5DB',
+                              backgroundColor: option.selected ? colors.primary : '#FFFFFF',
                               marginRight: spacing.sm,
                               alignItems: 'center',
                               justifyContent: 'center',
                             }}
                           >
-                            {isSelected && <MaterialIcons name="check" size={16} color="#FFFFFF" />}
+                            {option.selected && <MaterialIcons name="check" size={16} color="#FFFFFF" />}
                           </View>
-                          <Text style={{ ...typography.body, color: colors.textPrimary }}>{venueType}</Text>
+                          <Text style={{ ...typography.body, color: colors.textPrimary, flex: 1 }}>{option.label}</Text>
                         </TouchableOpacity>
-                      );
-                    });
-
-                  const renderVendorCategories = () =>
-                    VENDOR_CATEGORIES.map((cat) => {
-                      const isSelected = selectedCategoryIds.includes(cat.id);
-                      return (
-                        <TouchableOpacity
-                          key={`vendor-cat-${cat.id}`}
-                          onPress={() => {
-                            const next = isSelected
-                              ? selectedCategoryIds.filter((id) => id !== cat.id)
-                              : [...selectedCategoryIds, cat.id];
-                            setSelectedCategoryIds(next);
-                            setSelectedSubcategories([]);
-                          }}
-                          style={{ paddingVertical: spacing.sm, flexDirection: 'row', alignItems: 'center' }}
-                        >
-                          <View
-                            style={{
-                              width: 24,
-                              height: 24,
-                              borderRadius: 4,
-                              borderWidth: 2,
-                              borderColor: isSelected ? colors.primary : '#D1D5DB',
-                              backgroundColor: isSelected ? colors.primary : '#FFFFFF',
-                              marginRight: spacing.sm,
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                            }}
-                          >
-                            {isSelected && <MaterialIcons name="check" size={16} color="#FFFFFF" />}
-                          </View>
-                          <Text style={{ ...typography.body, color: colors.textPrimary }}>{cat.label}</Text>
-                        </TouchableOpacity>
-                      );
-                    });
-
-                  if (serviceType === 'Venues') {
-                    return renderVenueTypes();
-                  }
-                  if (serviceType === 'Vendors' || serviceType === 'Service Providers') {
-                    return renderVendorCategories();
-                  }
-
-                  return [
-                    <Text
-                      key="category-header-venues"
-                      style={{ ...typography.caption, color: colors.textMuted, fontWeight: '700', marginTop: spacing.xs }}
-                    >
-                      Venues
-                    </Text>,
-                    ...renderVenueTypes(),
-                    <Text
-                      key="category-header-vendors"
-                      style={{ ...typography.caption, color: colors.textMuted, fontWeight: '700', marginTop: spacing.md }}
-                    >
-                      Vendor & Service Professionals
-                    </Text>,
-                    ...renderVendorCategories(),
-                  ];
+                      </View>
+                    );
+                  });
                 })()
               ) : openPicker === 'subcategory' ? (
                 (() => {
@@ -2098,15 +2250,7 @@ export default function AttendeeHomeScreen() {
                 })()
               ) : openPicker === 'venue_amenities' ? (
                 (() => {
-                  const options = Array.from(
-                    new Set((amenitiesList ?? []).map((v) => String(v ?? '').trim()).filter(Boolean)),
-                  ).sort();
-                  const normalizedVenueAmenitiesQuery = venueAmenitiesQuery.trim().toLowerCase();
-                  const filteredOptions = normalizedVenueAmenitiesQuery
-                    ? options.filter((amenity) => amenity.toLowerCase().includes(normalizedVenueAmenitiesQuery))
-                    : options;
-
-                  if (options.length === 0) {
+                  if (venueAmenityOptions.length === 0) {
                     return (
                       <View style={{ alignItems: 'center', paddingVertical: spacing.xl }}>
                         <MaterialIcons name="info-outline" size={48} color={colors.textMuted} />
@@ -2124,73 +2268,56 @@ export default function AttendeeHomeScreen() {
                     );
                   }
 
-                  return [
-                    <View key="venue-amenities-search" style={{ marginBottom: spacing.md }}>
-                      <TextInput
-                        value={venueAmenitiesQuery}
-                        onChangeText={setVenueAmenitiesQuery}
-                        placeholder="Search amenities"
-                        placeholderTextColor={colors.textMuted}
-                        style={{
-                          borderWidth: 1,
-                          borderColor: colors.borderSubtle,
-                          borderRadius: radii.md,
-                          paddingHorizontal: spacing.md,
-                          paddingVertical: spacing.sm,
-                          color: colors.textPrimary,
-                          backgroundColor: '#FFFFFF',
+                  if (filteredVenueAmenityOptions.length === 0) {
+                    return (
+                      <View style={{ alignItems: 'center', paddingVertical: spacing.xl }}>
+                        <MaterialIcons name="search-off" size={40} color={colors.textMuted} />
+                        <Text
+                          style={{
+                            ...typography.body,
+                            color: colors.textSecondary,
+                            marginTop: spacing.md,
+                            textAlign: 'center',
+                          }}
+                        >
+                          No amenities match your search.
+                        </Text>
+                      </View>
+                    );
+                  }
+
+                  return filteredVenueAmenityOptions.map((amenity) => {
+                    const isSelected = selectedVenueAmenities.includes(amenity);
+                    return (
+                      <TouchableOpacity
+                        key={amenity}
+                        onPress={() => {
+                          const next = isSelected
+                            ? selectedVenueAmenities.filter((a) => a !== amenity)
+                            : [...selectedVenueAmenities, amenity];
+                          setSelectedVenueAmenities(next);
                         }}
-                      />
-                    </View>,
-                    ...(filteredOptions.length === 0
-                      ? [
-                          <View key="venue-amenities-empty" style={{ alignItems: 'center', paddingVertical: spacing.xl }}>
-                            <MaterialIcons name="search-off" size={40} color={colors.textMuted} />
-                            <Text
-                              style={{
-                                ...typography.body,
-                                color: colors.textSecondary,
-                                marginTop: spacing.md,
-                                textAlign: 'center',
-                              }}
-                            >
-                              No amenities match your search.
-                            </Text>
-                          </View>,
-                        ]
-                      : filteredOptions.map((amenity) => {
-                          const isSelected = selectedVenueAmenities.includes(amenity);
-                          return (
-                            <TouchableOpacity
-                              key={amenity}
-                              onPress={() => {
-                                const next = isSelected
-                                  ? selectedVenueAmenities.filter((a) => a !== amenity)
-                                  : [...selectedVenueAmenities, amenity];
-                                setSelectedVenueAmenities(next);
-                              }}
-                              style={{ paddingVertical: spacing.sm, flexDirection: 'row', alignItems: 'center' }}
-                            >
-                              <View
-                                style={{
-                                  width: 24,
-                                  height: 24,
-                                  borderRadius: 4,
-                                  borderWidth: 2,
-                                  borderColor: isSelected ? colors.primary : '#D1D5DB',
-                                  backgroundColor: isSelected ? colors.primary : '#FFFFFF',
-                                  marginRight: spacing.sm,
-                                  alignItems: 'center',
-                                  justifyContent: 'center',
-                                }}
-                              >
-                                {isSelected && <MaterialIcons name="check" size={16} color="#FFFFFF" />}
-                              </View>
-                              <Text style={{ ...typography.body, color: colors.textPrimary }}>{amenity}</Text>
-                            </TouchableOpacity>
-                          );
-                        })),
-                  ];
+                        style={{ paddingVertical: spacing.sm, flexDirection: 'row', alignItems: 'center' }}
+                      >
+                        <View
+                          style={{
+                            width: 24,
+                            height: 24,
+                            borderRadius: 4,
+                            borderWidth: 2,
+                            borderColor: isSelected ? colors.primary : '#D1D5DB',
+                            backgroundColor: isSelected ? colors.primary : '#FFFFFF',
+                            marginRight: spacing.sm,
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                          }}
+                        >
+                          {isSelected && <MaterialIcons name="check" size={16} color="#FFFFFF" />}
+                        </View>
+                        <Text style={{ ...typography.body, color: colors.textPrimary, flex: 1 }}>{amenity}</Text>
+                      </TouchableOpacity>
+                    );
+                  });
                 })()
               ) : openPicker === 'province' ? (
                 provinces.map((province) => {
@@ -2241,85 +2368,6 @@ export default function AttendeeHomeScreen() {
                 })
               ) : openPicker === 'city' ? (
                 (() => {
-                  const availableCities = selectedProvinces.length > 0
-                    ? selectedProvinces.flatMap(p => getCitiesByProvince(p))
-                    : getAllCities();
-                  
-                  // Filter cities based on search query
-                  const filteredCities = citySearchQuery.trim()
-                    ? availableCities.filter(city => 
-                        city.toLowerCase().includes(citySearchQuery.toLowerCase())
-                      )
-                    : availableCities;
-                  
-                  if (selectedProvinces.length === 0) {
-                    // Show all cities with search when no province selected
-                    return (
-                      <View style={{ flex: 1 }}>
-                        <View style={{ paddingHorizontal: spacing.lg, paddingBottom: spacing.md }}>
-                          <ThemedInput
-                            placeholder="Search cities..."
-                            value={citySearchQuery}
-                            onChangeText={setCitySearchQuery}
-                            style={{ marginBottom: spacing.md }}
-                          />
-                        </View>
-                        
-                        {filteredCities.length === 0 ? (
-                          <View style={{ alignItems: 'center', paddingVertical: spacing.xl }}>
-                            <MaterialIcons name="search-off" size={48} color={colors.textMuted} />
-                            <Text style={{ ...typography.body, color: colors.textSecondary, marginTop: spacing.md, textAlign: 'center' }}>
-                              No cities found matching "{citySearchQuery}"
-                            </Text>
-                          </View>
-                        ) : (
-                          <ScrollView style={{ maxHeight: 300 }}>
-                            {filteredCities.sort().map((city) => {
-                              const isSelected = selectedCities.includes(city);
-                              return (
-                                <TouchableOpacity
-                                  key={city}
-                                  onPress={() => {
-                                    if (isSelected) {
-                                      setSelectedCities(selectedCities.filter(c => c !== city));
-                                    } else {
-                                      setSelectedCities([...selectedCities, city]);
-                                    }
-                                  }}
-                                  style={{
-                                    paddingVertical: spacing.sm,
-                                    flexDirection: 'row',
-                                    alignItems: 'center',
-                                    paddingHorizontal: spacing.lg,
-                                  }}
-                                >
-                                  <View
-                                    style={{
-                                      width: 24,
-                                      height: 24,
-                                      borderRadius: 12,
-                                      borderWidth: 2,
-                                      borderColor: isSelected ? colors.primary : '#D1D5DB',
-                                      backgroundColor: isSelected ? colors.primary : '#FFFFFF',
-                                      marginRight: spacing.sm,
-                                    }}
-                                  >
-                                    {isSelected && (
-                                      <MaterialIcons name="check" size={16} color="#FFFFFF" style={{ alignSelf: 'center' }} />
-                                    )}
-                                  </View>
-                                  <Text style={{ ...typography.body, color: colors.textPrimary, flex: 1 }}>
-                                    {city}
-                                  </Text>
-                                </TouchableOpacity>
-                              );
-                            })}
-                          </ScrollView>
-                        )}
-                      </View>
-                    );
-                  }
-                  
                   if (availableCities.length === 0) {
                     return (
                       <View style={{ alignItems: 'center', paddingVertical: spacing.xl }}>
@@ -2330,8 +2378,19 @@ export default function AttendeeHomeScreen() {
                       </View>
                     );
                   }
+
+                  if (filteredCities.length === 0) {
+                    return (
+                      <View style={{ alignItems: 'center', paddingVertical: spacing.xl }}>
+                        <MaterialIcons name="search-off" size={48} color={colors.textMuted} />
+                        <Text style={{ ...typography.body, color: colors.textSecondary, marginTop: spacing.md, textAlign: 'center' }}>
+                          No cities found matching "{citySearchQuery}"
+                        </Text>
+                      </View>
+                    );
+                  }
                   
-                  return availableCities.sort().map((city) => {
+                  return filteredCities.map((city) => {
                     const isSelected = selectedCities.includes(city);
                     return (
                       <TouchableOpacity
@@ -2347,6 +2406,7 @@ export default function AttendeeHomeScreen() {
                           paddingVertical: spacing.sm,
                           flexDirection: 'row',
                           alignItems: 'center',
+                          paddingHorizontal: spacing.xs,
                         }}
                       >
                         <View

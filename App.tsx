@@ -38,6 +38,24 @@ const navTheme = {
   },
 };
 
+const linking: any = {
+  prefixes: ['vibeventz://'],
+  config: {
+    screens: {
+      Main: {
+        screens: {
+          Account: {
+            screens: {
+              ApplicationStatus: 'application-status',
+            },
+          },
+        },
+      },
+      Auth: 'auth',
+    },
+  },
+};
+
 export default function App() {
   const [helpVisible, setHelpVisible] = useState(false);
   const [consentVisible, setConsentVisible] = useState(false);
@@ -78,7 +96,7 @@ export default function App() {
           <AuthProvider>
             <ApplicationFormProvider>
               <PendingSearchProvider>
-                <NavigationContainer theme={navTheme}>
+                <NavigationContainer theme={navTheme} linking={linking as any}>
                   <AppContent helpVisible={helpVisible} setHelpVisible={setHelpVisible} />
                   <DataConsentModal
                     visible={consentVisible}

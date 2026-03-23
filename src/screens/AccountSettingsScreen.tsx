@@ -21,6 +21,7 @@ export default function AccountSettingsScreen({ navigation }: Props) {
   const [username, setUsername] = useState('');
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState(user?.email ?? '');
+  const [profileRowExists, setProfileRowExists] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
@@ -49,8 +50,12 @@ export default function AccountSettingsScreen({ navigation }: Props) {
         : typeof user.user_metadata?.full_name === 'string'
           ? user.user_metadata.full_name
           : '';
+      const fallbackUsername = typeof user.user_metadata?.username === 'string'
+        ? user.user_metadata.username
+        : '';
 
-      setUsername(data?.username ?? '');
+      setProfileRowExists(!!data);
+      setUsername(data?.username ?? fallbackUsername);
       setFullName(data?.full_name ?? fallbackName);
       setEmail(data?.email ?? user.email ?? '');
       setLoading(false);
@@ -76,27 +81,34 @@ export default function AccountSettingsScreen({ navigation }: Props) {
     setSaving(true);
 
     const payload = {
-      auth_user_id: user.id,
       username: trimmedUsername,
       full_name: trimmedFullName || null,
       email: user.email ?? email,
     };
 
-    const { error: profileError } = await supabase
-      .from('users')
-      .upsert(payload, { onConflict: 'auth_user_id' });
+    if (profileRowExists) {
+      const { error: profileError } = await supabase
+        .from('users')
+        .update(payload)
+        .eq('auth_user_id', user.id);
 
-    if (profileError) {
-      setSaving(false);
-      Alert.alert('Unable to save profile', profileError.message);
-      return;
+      if (profileError) {
+        setSaving(false);
+        Alert.alert('Unable to save profile', profileError.message);
+        return;
+      }
     }
 
-    const metadataUpdates: Record<string, string> = {};
+    const metadataUpdates: Record<string, string> = {
+      username: trimmedUsername,
+    };
 
     if (trimmedFullName) {
       metadataUpdates.name = trimmedFullName;
       metadataUpdates.full_name = trimmedFullName;
+    } else {
+      metadataUpdates.name = '';
+      metadataUpdates.full_name = '';
     }
 
     const { error: authError } = await supabase.auth.updateUser({ data: metadataUpdates });
@@ -104,6 +116,11 @@ export default function AccountSettingsScreen({ navigation }: Props) {
 
     if (authError) {
       Alert.alert('Profile saved with warnings', 'Your profile details were saved, but your auth profile could not be fully updated.');
+      return;
+    }
+
+    if (!profileRowExists) {
+      Alert.alert('Profile updated', 'Your account details have been saved. Some app profile fields will sync fully once your user profile row is created.');
       return;
     }
 

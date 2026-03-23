@@ -17,6 +17,27 @@ export type ApplicationSubmission = {
   marketing_consent: boolean;
 };
 
+export type SubscriberApplication = {
+  id: string;
+  user_id: string;
+  portfolio_type: 'venue' | 'vendor';
+  subscription_tier: string | null;
+  status?: string | null;
+  created_at?: string | null;
+  updated_at?: string | null;
+  company_details?: ApplicationFormState['step1'] | null;
+  service_categories?: ApplicationFormState['step2'] | null;
+  coverage_provinces?: string[] | null;
+  coverage_cities?: string[] | null;
+  business_description?: string | null;
+  portfolio_images?: string[] | null;
+  portfolio_videos?: string[] | null;
+  business_documents?: string[] | null;
+  terms_accepted?: boolean | null;
+  privacy_accepted?: boolean | null;
+  marketing_consent?: boolean | null;
+};
+
 export async function submitApplication(data: ApplicationSubmission) {
   try {
     const { data: { user }, error: authError } = await supabase.auth.getUser();
@@ -178,6 +199,37 @@ export async function getUserApplications() {
     return { 
       success: false, 
       error: error instanceof Error ? error.message : 'Failed to get applications' 
+    };
+  }
+}
+
+export async function getLatestUserApplication() {
+  try {
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+
+    if (authError || !user) {
+      throw new Error('User not authenticated');
+    }
+
+    const { data, error } = await supabase
+      .from('subscriber_applications')
+      .select('*')
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle<SubscriberApplication>();
+
+    if (error) {
+      console.error('Get latest application error:', error);
+      throw new Error(error.message);
+    }
+
+    return { success: true, data: data ?? null };
+  } catch (error) {
+    console.error('Get latest application error:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to get latest application',
     };
   }
 }
