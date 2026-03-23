@@ -86,6 +86,16 @@ export default function AccountScreen() {
         parentNav?.navigate?.('Quotes');
     };
 
+    const handleEditAccount = () => {
+        if (!user?.id) {
+            const rootNav = navigation.getParent()?.getParent() as any;
+            rootNav?.navigate?.('Auth', { screen: 'SignIn' });
+            return;
+        }
+
+        navigation.navigate('AccountSettings');
+    };
+
     const handleBecomeVendor = async () => {
         if (!user?.id) {
             navigation.navigate('SubscriptionPlans');
@@ -174,8 +184,7 @@ export default function AccountScreen() {
             label: 'My Profile',
             icon: 'person',
             submenu: [
-                { id: 'create-profile', label: 'Create Profile', icon: 'person-add', action: handleBecomeVendor },
-                { id: 'edit-profile', label: 'Edit Profile', icon: 'edit', action: handleSubscriberAccess },
+                { id: 'edit-profile', label: 'Edit Profile', icon: 'edit', action: handleEditAccount },
                 { id: 'change-password', label: 'Change Password', icon: 'lock', route: 'ChangePassword' },
                 { id: 'marketing-permissions', label: 'Marketing Permissions', icon: 'notifications', route: 'MarketingPermissions' },
             ],
