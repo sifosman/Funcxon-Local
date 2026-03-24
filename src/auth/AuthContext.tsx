@@ -40,7 +40,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       const { data: userRow, error: userError } = await supabase
         .from('users')
-        .select('role')
+        .select('id, role')
         .eq('auth_user_id', userId)
         .maybeSingle();
 
@@ -51,15 +51,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return;
       }
 
+      const internalUserId = userRow?.id ?? null;
+
       const { data: vendorRow, error: vendorError } = await supabase
         .from('vendors')
         .select('id, subscription_status, subscription_tier')
-        .eq('user_id', userId)
+        .eq('user_id', internalUserId)
         .maybeSingle();
 
       if (!vendorError && vendorRow) {
         const status = String(vendorRow.subscription_status ?? '').toLowerCase();
         const tier = String(vendorRow.subscription_tier ?? '').toLowerCase();
+        const isVendor = status === 'active' || status === 'trial' || tier !== '';
+        setUserRole(isVendor ? 'vendor' : 'attendee');
+        return;
+      }
+
+      const { data: fallbackVendorRow, error: fallbackVendorError } = await supabase
+        .from('vendors')
+        .select('id, subscription_status, subscription_tier')
+        .eq('user_id', userId)
+        .maybeSingle();
+
+      if (!fallbackVendorError && fallbackVendorRow) {
+        const status = String(fallbackVendorRow.subscription_status ?? '').toLowerCase();
+        const tier = String(fallbackVendorRow.subscription_tier ?? '').toLowerCase();
         const isVendor = status === 'active' || status === 'trial' || tier !== '';
         setUserRole(isVendor ? 'vendor' : 'attendee');
         return;

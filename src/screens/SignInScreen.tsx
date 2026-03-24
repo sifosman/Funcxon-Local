@@ -4,6 +4,7 @@ import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { AuthStackParamList } from '../navigation/AuthNavigator';
 import { useAuth } from '../auth/AuthContext';
 import { supabase } from '../lib/supabaseClient';
+import { clearPendingSubscriptionCheckout, getPendingSubscriptionCheckout } from '../lib/pendingSubscriptionCheckout';
 import { colors, spacing, radii, typography } from '../theme';
 import { PrimaryButton, OutlineButton } from '../components/ui';
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
@@ -18,6 +19,23 @@ export default function SignInScreen({ navigation }: Props) {
   const [loading, setLoading] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [formSuccess, setFormSuccess] = useState<string | null>(null);
+
+  const redirectAfterSignIn = async () => {
+    const pendingCheckout = await getPendingSubscriptionCheckout();
+    if (pendingCheckout) {
+      await clearPendingSubscriptionCheckout();
+      (navigation.getParent() as any)?.navigate('Main', {
+        screen: 'Account',
+        params: {
+          screen: 'SubscriptionCheckout',
+          params: pendingCheckout,
+        },
+      });
+      return;
+    }
+
+    navigation.getParent()?.navigate('Main');
+  };
 
   const handleSignIn = async () => {
     setFormError(null);
@@ -55,7 +73,7 @@ export default function SignInScreen({ navigation }: Props) {
 
     setFormSuccess('Signed in successfully. Redirecting...');
     setTimeout(() => {
-      navigation.getParent()?.navigate('Main');
+      redirectAfterSignIn();
     }, 500);
   };
 
@@ -84,7 +102,7 @@ export default function SignInScreen({ navigation }: Props) {
     if (error) {
       Alert.alert('Google sign in failed', error.message);
     } else {
-      navigation.getParent()?.navigate('Main');
+      redirectAfterSignIn();
     }
   };
 
@@ -93,7 +111,7 @@ export default function SignInScreen({ navigation }: Props) {
     if (error) {
       Alert.alert('Facebook sign in failed', error.message);
     } else {
-      navigation.getParent()?.navigate('Main');
+      redirectAfterSignIn();
     }
   };
 

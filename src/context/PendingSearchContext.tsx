@@ -10,7 +10,9 @@ export type PendingSearchSnapshot = {
   selectedVenueAmenities: string[];
   selectedProvinces: string[];
   selectedCities: string[];
+  categorySearchQuery: string;
   citySearchQuery: string;
+  venueAmenitiesQuery: string;
   distanceKm: string;
   selectedCapacity: {
     id: number;
@@ -19,6 +21,9 @@ export type PendingSearchSnapshot = {
     label: string;
     sort_order: number | null;
   } | null;
+  singleDayEvent: boolean;
+  fromDate: string | null;
+  toDate: string | null;
   detectedProvinceLabel: string | null;
   locationCity: string | null;
   locationRegion: string | null;

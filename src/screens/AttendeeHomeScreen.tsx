@@ -27,6 +27,7 @@ import { provinces, getCitiesByProvince, getAllCities } from '../config/location
 import { amenitiesList } from '../config/venueTypes';
 import MapRadiusSelector from '../components/MapRadiusSelector';
 import { usePendingSearch } from '../context/PendingSearchContext';
+import type { PendingSearchSnapshot } from '../context/PendingSearchContext';
 
 export type VendorListItem = {
   id: number;
@@ -715,7 +716,7 @@ export default function AttendeeHomeScreen() {
   };
 
   useEffect(() => {
-    if (!user?.id || !pendingSearch || !shouldApplyPendingSearch) {
+    if (!pendingSearch || !shouldApplyPendingSearch) {
       return;
     }
 
@@ -727,9 +728,14 @@ export default function AttendeeHomeScreen() {
     setSelectedVenueAmenities(pendingSearch.selectedVenueAmenities);
     setSelectedProvinces(pendingSearch.selectedProvinces);
     setSelectedCities(pendingSearch.selectedCities);
+    setCategorySearchQuery(pendingSearch.categorySearchQuery);
     setCitySearchQuery(pendingSearch.citySearchQuery);
+    setVenueAmenitiesQuery(pendingSearch.venueAmenitiesQuery);
     setDistanceKm(pendingSearch.distanceKm);
     setSelectedCapacity(pendingSearch.selectedCapacity);
+    setSingleDayEvent(pendingSearch.singleDayEvent);
+    setFromDate(pendingSearch.fromDate ? new Date(pendingSearch.fromDate) : null);
+    setToDate(pendingSearch.toDate ? new Date(pendingSearch.toDate) : null);
     setDetectedProvinceLabel(pendingSearch.detectedProvinceLabel);
     setLocationCity(pendingSearch.locationCity);
     setLocationRegion(pendingSearch.locationRegion);
@@ -743,7 +749,7 @@ export default function AttendeeHomeScreen() {
     setTimeout(() => {
       scrollViewRef.current?.scrollTo({ y: 800, animated: true });
     }, 100);
-  }, [markPendingSearchConsumed, pendingSearch, shouldApplyPendingSearch, user?.id]);
+  }, [markPendingSearchConsumed, pendingSearch, shouldApplyPendingSearch]);
 
   const filteredVendors = useMemo(() => {
     if (!data) return [];
@@ -1557,7 +1563,7 @@ export default function AttendeeHomeScreen() {
                   title="Search" 
                   onPress={() => {
                     if (!user?.id) {
-                      savePendingSearch({
+                      const pendingSearchSnapshot: PendingSearchSnapshot = {
                         search,
                         serviceType,
                         selectedCategoryIds,
@@ -1566,9 +1572,14 @@ export default function AttendeeHomeScreen() {
                         selectedVenueAmenities,
                         selectedProvinces,
                         selectedCities,
+                        categorySearchQuery,
                         citySearchQuery,
+                        venueAmenitiesQuery,
                         distanceKm,
                         selectedCapacity,
+                        singleDayEvent,
+                        fromDate: fromDate ? fromDate.toISOString() : null,
+                        toDate: toDate ? toDate.toISOString() : null,
                         detectedProvinceLabel,
                         locationCity,
                         locationRegion,
@@ -1576,7 +1587,8 @@ export default function AttendeeHomeScreen() {
                         sortOrder,
                         mapCenter,
                         mapRadius,
-                      });
+                      };
+                      savePendingSearch(pendingSearchSnapshot);
                       navigation.getParent()?.navigate('Auth');
                       return;
                     }

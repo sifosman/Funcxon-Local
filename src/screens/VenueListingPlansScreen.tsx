@@ -1,8 +1,10 @@
 import { useMemo, useState } from 'react';
-import { ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import { Alert, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { useAuth } from '../auth/AuthContext';
+import { savePendingSubscriptionCheckout } from '../lib/pendingSubscriptionCheckout';
 import { colors, spacing, radii, typography } from '../theme';
 import type { ProfileStackParamList } from '../navigation/ProfileNavigator';
 
@@ -28,6 +30,7 @@ type VenueFeature = {
 
 export default function VenueListingPlansScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<ProfileStackParamList>>();
+  const { user } = useAuth();
   const [selectedPlan, setSelectedPlan] = useState<PlanKey>('monthly');
 
   const plans: VenuePlan[] = useMemo(
@@ -145,13 +148,29 @@ export default function VenueListingPlansScreen() {
       ? 'Free'
       : `R${Number((selected.priceNow || '0').replace(/[^0-9.]/g, '')).toLocaleString()}`;
 
-    navigation.navigate('SubscriptionCheckout', {
+    const checkoutParams: ProfileStackParamList['SubscriptionCheckout'] = {
       tierName: selected.title,
       billing: selectedPlan === 'monthly' ? 'monthly' : selectedPlan === 'get_started' ? 'monthly' : selectedPlan,
       priceLabel,
       isFree,
       productType: 'venue',
       planKey: selectedPlan,
+    };
+
+    if (!user) {
+      savePendingSubscriptionCheckout(checkoutParams)
+        .then(() => {
+          const rootNav = navigation.getParent()?.getParent() as any;
+          rootNav?.navigate?.('Auth', { screen: 'SignIn' });
+        })
+        .catch(() => {
+          Alert.alert('Login required', 'Please log in to continue with this subscription plan.');
+        });
+      return;
+    }
+
+    navigation.navigate('SubscriptionCheckout', {
+      ...checkoutParams,
     });
   };
 

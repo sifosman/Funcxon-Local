@@ -119,20 +119,42 @@ export default function AccountScreen() {
             return;
         }
 
+        const { data: userData, error: userError } = await supabase
+            .from('users')
+            .select('id')
+            .eq('auth_user_id', user.id)
+            .maybeSingle();
+
+        const internalUserId = userData?.id ?? null;
+
         const { data: vendorData, error: vendorError } = await supabase
             .from('vendors')
             .select('id, subscription_status, subscription_tier')
-            .eq('user_id', user.id)
+            .eq('user_id', internalUserId)
             .maybeSingle();
 
-        if (vendorError) {
+        let resolvedVendorData = vendorData;
+        let resolvedVendorError = vendorError;
+
+        if ((!resolvedVendorData && !resolvedVendorError) || userError) {
+            const fallbackResult = await supabase
+                .from('vendors')
+                .select('id, subscription_status, subscription_tier')
+                .eq('user_id', user.id)
+                .maybeSingle();
+
+            resolvedVendorData = fallbackResult.data;
+            resolvedVendorError = fallbackResult.error;
+        }
+
+        if (resolvedVendorError) {
             navigation.navigate('SubscriptionPlans');
             return;
         }
 
-        const status = String(vendorData?.subscription_status ?? '').toLowerCase();
-        const tier = String(vendorData?.subscription_tier ?? '').toLowerCase();
-        const hasActiveSubscription = !!vendorData && (status === 'active' || status === 'trial' || tier === 'basic' || tier === 'premium' || tier === 'enterprise');
+        const status = String(resolvedVendorData?.subscription_status ?? '').toLowerCase();
+        const tier = String(resolvedVendorData?.subscription_tier ?? '').toLowerCase();
+        const hasActiveSubscription = !!resolvedVendorData && (status === 'active' || status === 'trial' || tier === 'basic' || tier === 'premium' || tier === 'enterprise');
 
         if (!hasActiveSubscription) {
             navigation.navigate('SubscriptionPlans');
@@ -167,10 +189,6 @@ export default function AccountScreen() {
         // This screen lives in the root tab navigator, so we need to navigate via the parent navigator.
         const parentNav = navigation.getParent() as any;
         parentNav?.navigate?.('Home', { screen: 'VendorList' });
-    };
-
-    const handleGoToSubscriptionPlans = () => {
-        navigation.navigate('SubscriptionPlans');
     };
 
     const handleGoToVenueListingPlans = () => {
@@ -233,8 +251,7 @@ export default function AccountScreen() {
                 : 'Listings Subscription Offers',
             icon: 'local-offer',
             submenu: [
-                { id: 'subscription-plans', label: 'View Subscription Plans', icon: 'credit-card' },
-                { id: 'subscription-vendors', label: 'Vendors / Service Professionals', icon: 'store', action: handleGoToSubscriptionPlans },
+                { id: 'subscription-vendors', label: 'Vendors / Service Professionals', icon: 'store', action: handleBecomeVendor },
                 { id: 'subscription-venues', label: 'Venues', icon: 'location-city', action: handleGoToVenueListingPlans },
             ],
         },
@@ -275,8 +292,6 @@ export default function AccountScreen() {
             } else if (item.route) {
                 // Use type assertion to fix TypeScript issue with dynamic route
                 (navigation as any).navigate(item.route);
-            } else if (item.id === 'subscription-plans') {
-                navigation.navigate('SubscriptionPlans');
             } else if (item.id === 'my-planner') {
                 handleGoToPlanner();
             } else if (item.id === 'my-quotes') {

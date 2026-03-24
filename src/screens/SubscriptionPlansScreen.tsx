@@ -5,6 +5,8 @@ import { useNavigation, useRoute } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { colors, spacing, radii, typography } from '../theme';
 import { getSubscriptionTiers } from '../lib/subscription';
+import { useAuth } from '../auth/AuthContext';
+import { savePendingSubscriptionCheckout } from '../lib/pendingSubscriptionCheckout';
 import type { ProfileStackParamList } from '../navigation/ProfileNavigator';
 
 const SUPPORT_EMAIL = process.env.EXPO_PUBLIC_SUPPORT_EMAIL || 'support@funcxon.com';
@@ -27,6 +29,7 @@ type RouteParams = {
 export default function SubscriptionPlansScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<ProfileStackParamList>>();
   const route = useRoute();
+  const { user } = useAuth();
   const { currentTier } = route.params as RouteParams || {};
   
   const [tiers, setTiers] = useState<SubscriptionTier[]>([]);
@@ -53,11 +56,28 @@ export default function SubscriptionPlansScreen() {
     const isFree = !price || price === 0;
     const priceLabel = isFree ? 'Free' : `R${Number(price).toLocaleString()}/${selectedBilling.slice(0, -2)}ly`;
 
-    navigation.navigate('SubscriptionCheckout', {
+    const checkoutParams: ProfileStackParamList['SubscriptionCheckout'] = {
       tierName: tier.tier_name,
       billing: selectedBilling,
       priceLabel,
       isFree,
+      productType: 'vendor',
+    };
+
+    if (!user) {
+      savePendingSubscriptionCheckout(checkoutParams)
+        .then(() => {
+          const rootNav = navigation.getParent()?.getParent() as any;
+          rootNav?.navigate?.('Auth', { screen: 'SignIn' });
+        })
+        .catch(() => {
+          Alert.alert('Login required', 'Please log in to continue with this subscription plan.');
+        });
+      return;
+    }
+
+    navigation.navigate('SubscriptionCheckout', {
+      ...checkoutParams,
     });
   };
 
