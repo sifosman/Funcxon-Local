@@ -4,6 +4,7 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useAuth } from '../auth/AuthContext';
+import { getLatestUserApplication, isBlockingApplicationStatus } from '../lib/applicationService';
 import { savePendingSubscriptionCheckout } from '../lib/pendingSubscriptionCheckout';
 import { colors, spacing, radii, typography } from '../theme';
 import type { ProfileStackParamList } from '../navigation/ProfileNavigator';
@@ -141,7 +142,13 @@ export default function VenueListingPlansScreen() {
     return <Text style={{ ...typography.caption, color: colors.textPrimary, fontWeight: '600' }}>{value}</Text>;
   };
 
-  const handleContinueToCheckout = () => {
+  const handleContinueToCheckout = async () => {
+    const latestApplication = await getLatestUserApplication();
+    if (latestApplication.success && latestApplication.data && isBlockingApplicationStatus(latestApplication.data.status)) {
+      navigation.navigate('ApplicationStatus');
+      return;
+    }
+
     const isFree = selectedPlan === 'get_started';
 
     const priceLabel = isFree

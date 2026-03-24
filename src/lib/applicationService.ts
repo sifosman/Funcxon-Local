@@ -1,7 +1,11 @@
 import { supabase } from './supabaseClient';
 import type { ApplicationFormState } from '../context/ApplicationFormContext';
 
+const BLOCKING_APPLICATION_STATUSES = ['pending', 'under_review'] as const;
+const EDITABLE_APPLICATION_STATUSES = ['needs_changes'] as const;
+
 export type ApplicationSubmission = {
+  existing_application_id?: string | null;
   portfolio_type: 'venue' | 'vendor';
   company_details: ApplicationFormState['step1'];
   service_categories: ApplicationFormState['step2'];
@@ -46,24 +50,43 @@ export async function submitApplication(data: ApplicationSubmission) {
       throw new Error('User not authenticated');
     }
 
-    const { data: result, error } = await supabase
-      .from('subscriber_applications')
-      .insert({
-        user_id: user.id,
-        portfolio_type: data.portfolio_type,
-        company_details: data.company_details,
-        service_categories: data.service_categories,
-        coverage_provinces: data.coverage_provinces,
-        coverage_cities: data.coverage_cities,
-        business_description: data.business_description,
-        portfolio_images: data.portfolio_images,
-        portfolio_videos: data.portfolio_videos,
-        business_documents: data.business_documents,
-        subscription_tier: data.subscription_tier,
-        terms_accepted: data.terms_accepted,
-        privacy_accepted: data.privacy_accepted,
-        marketing_consent: data.marketing_consent,
-      })
+    const payload = {
+      user_id: user.id,
+      portfolio_type: data.portfolio_type,
+      company_details: data.company_details,
+      service_categories: data.service_categories,
+      coverage_provinces: data.coverage_provinces,
+      coverage_cities: data.coverage_cities,
+      business_description: data.business_description,
+      portfolio_images: data.portfolio_images,
+      portfolio_videos: data.portfolio_videos,
+      business_documents: data.business_documents,
+      subscription_tier: data.subscription_tier,
+      terms_accepted: data.terms_accepted,
+      privacy_accepted: data.privacy_accepted,
+      marketing_consent: data.marketing_consent,
+    };
+
+    const existingApplicationId = data.existing_application_id ?? null;
+
+    const query = existingApplicationId
+      ? supabase
+          .from('subscriber_applications')
+          .update({
+            ...payload,
+            status: 'pending',
+            admin_notes: null,
+            reviewed_at: null,
+            reviewed_by: null,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', existingApplicationId)
+          .eq('user_id', user.id)
+      : supabase
+          .from('subscriber_applications')
+          .insert(payload);
+
+    const { data: result, error } = await query
       .select()
       .single();
 
@@ -230,6 +253,45 @@ export async function getLatestUserApplication() {
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Failed to get latest application',
+    };
+  }
+}
+
+export function isBlockingApplicationStatus(status?: string | null) {
+  const normalized = String(status ?? '').toLowerCase();
+  return BLOCKING_APPLICATION_STATUSES.includes(normalized as (typeof BLOCKING_APPLICATION_STATUSES)[number]);
+}
+
+export async function cancelApplication(applicationId: string) {
+  try {
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+
+    if (authError || !user) {
+      throw new Error('User not authenticated');
+    }
+
+    const { data, error } = await supabase
+      .from('subscriber_applications')
+      .update({
+        status: 'cancelled',
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', applicationId)
+      .eq('user_id', user.id)
+      .select('*')
+      .maybeSingle<SubscriberApplication>();
+
+    if (error) {
+      console.error('Cancel application error:', error);
+      throw new Error(error.message);
+    }
+
+    return { success: true, data: data ?? null };
+  } catch (error) {
+    console.error('Cancel application error:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to cancel application',
     };
   }
 }

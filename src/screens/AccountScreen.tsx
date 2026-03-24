@@ -6,7 +6,7 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { colors, spacing, radii, typography } from '../theme';
 import { useAuth } from '../auth/AuthContext';
 import { supabase } from '../lib/supabaseClient';
-import { getLatestUserApplication } from '../lib/applicationService';
+import { getLatestUserApplication, isBlockingApplicationStatus } from '../lib/applicationService';
 import type { ProfileStackParamList } from '../navigation/ProfileNavigator';
 import { HelpCenterModal } from '../components/HelpCenterModal';
 import { useApplicationForm } from '../context/ApplicationFormContext';
@@ -113,6 +113,20 @@ export default function AccountScreen() {
         navigation.navigate('AccountSettings');
     };
 
+    const navigateToExistingApplicationIfBlocked = async () => {
+        const latestApplication = await getLatestUserApplication();
+        if (!latestApplication.success || !latestApplication.data) {
+            return false;
+        }
+
+        if (isBlockingApplicationStatus(latestApplication.data.status)) {
+            navigation.navigate('ApplicationStatus');
+            return true;
+        }
+
+        return false;
+    };
+
     const handleBecomeVendor = async () => {
         if (!user?.id) {
             navigation.navigate('SubscriptionPlans');
@@ -161,17 +175,20 @@ export default function AccountScreen() {
             return;
         }
 
-        const latestApplication = await getLatestUserApplication();
-        if (latestApplication.success && latestApplication.data) {
-            const applicationStatus = String(latestApplication.data.status ?? 'pending').toLowerCase();
-            if (applicationStatus === 'pending') {
-                navigation.navigate('ApplicationStatus');
-                return;
-            }
+        if (await navigateToExistingApplicationIfBlocked()) {
+            return;
         }
 
         resetForm();
         navigation.navigate('PortfolioType');
+    };
+
+    const handleGoToVenueListingPlans = async () => {
+        if (await navigateToExistingApplicationIfBlocked()) {
+            return;
+        }
+
+        navigation.navigate('VenueListingPlans');
     };
 
     const handleSubscriberAccess = () => {
@@ -189,10 +206,6 @@ export default function AccountScreen() {
         // This screen lives in the root tab navigator, so we need to navigate via the parent navigator.
         const parentNav = navigation.getParent() as any;
         parentNav?.navigate?.('Home', { screen: 'VendorList' });
-    };
-
-    const handleGoToVenueListingPlans = () => {
-        navigation.navigate('VenueListingPlans');
     };
 
     const handleHelpCentre = () => {

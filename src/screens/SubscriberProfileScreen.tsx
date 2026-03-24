@@ -3,7 +3,7 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { colors, spacing, radii, typography } from '../theme';
-import { getLatestUserApplication } from '../lib/applicationService';
+import { getLatestUserApplication, isBlockingApplicationStatus } from '../lib/applicationService';
 
 type ProfileStackParamList = {
     AccountMain: undefined;
@@ -33,8 +33,7 @@ export default function SubscriberProfileScreen() {
     const handleCreatePortfolio = async () => {
         const latestApplication = await getLatestUserApplication();
         if (latestApplication.success && latestApplication.data) {
-            const applicationStatus = String(latestApplication.data.status ?? 'pending').toLowerCase();
-            if (applicationStatus === 'pending') {
+            if (isBlockingApplicationStatus(latestApplication.data.status)) {
                 navigation.navigate('ApplicationStatus');
                 return;
             }

@@ -44,9 +44,20 @@ const linking: any = {
     screens: {
       Main: {
         screens: {
+          Quotes: {
+            path: 'quotes',
+            screens: {
+              QuotesList: '',
+              QuoteDetail: 'detail/:quoteId',
+              QuoteResponse: 'response/:revisionId',
+              QuoteHistory: 'history/:quoteRequestId',
+            },
+          },
           Account: {
             screens: {
               ApplicationStatus: 'application-status',
+              VenueQuoteRequests: 'vendor/quotes',
+              VendorQuoteCreate: 'vendor/quote/:quoteRequestId',
             },
           },
         },

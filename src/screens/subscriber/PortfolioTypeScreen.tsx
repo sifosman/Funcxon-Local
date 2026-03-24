@@ -5,7 +5,7 @@ import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { colors, spacing, radii, typography } from '../../theme';
 import { useApplicationForm } from '../../context/ApplicationFormContext';
-import { getLatestUserApplication } from '../../lib/applicationService';
+import { getLatestUserApplication, isBlockingApplicationStatus } from '../../lib/applicationService';
 
 type ProfileStackParamList = {
   AccountMain: undefined;
@@ -37,8 +37,7 @@ export default function PortfolioTypeScreen() {
       const result = await getLatestUserApplication();
       if (!isActive || !result.success || !result.data) return;
 
-      const status = String(result.data.status ?? 'pending').toLowerCase();
-      if (status === 'pending') {
+      if (isBlockingApplicationStatus(result.data.status)) {
         navigation.replace('ApplicationStatus');
       }
     }

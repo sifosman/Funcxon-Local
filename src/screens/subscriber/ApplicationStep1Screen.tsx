@@ -9,7 +9,7 @@ import { validateStep1 } from '../../utils/formValidation';
 import { ApplicationProgress } from '../../components/ApplicationProgress';
 import { AddressAutocompleteInput } from '../../components/AddressAutocompleteInput';
 import { useAuth } from '../../auth/AuthContext';
-import { getLatestUserApplication } from '../../lib/applicationService';
+import { getLatestUserApplication, isBlockingApplicationStatus } from '../../lib/applicationService';
 import { getMyVenueEntitlement, isVenueFeatureEnabled } from '../../lib/venueSubscription';
 
 type ProfileStackParamList = {
@@ -48,8 +48,7 @@ export default function ApplicationStep1Screen() {
       const result = await getLatestUserApplication();
       if (!isActive || !result.success || !result.data) return;
 
-      const status = String(result.data.status ?? 'pending').toLowerCase();
-      if (status === 'pending') {
+      if (isBlockingApplicationStatus(result.data.status)) {
         navigation.replace('ApplicationStatus');
       }
     }

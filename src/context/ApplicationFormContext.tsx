@@ -78,6 +78,7 @@ export interface Step4Data {
 }
 
 export interface ApplicationFormState {
+  editingApplicationId: string | null;
   portfolioType: PortfolioType;
   step1: Step1Data;
   step2: Step2Data;
@@ -86,6 +87,7 @@ export interface ApplicationFormState {
 }
 
 type ApplicationFormAction =
+  | { type: 'SET_EDITING_APPLICATION_ID'; payload: string | null }
   | { type: 'SET_PORTFOLIO_TYPE'; payload: PortfolioType }
   | { type: 'UPDATE_STEP1'; payload: Partial<Step1Data> }
   | { type: 'UPDATE_STEP2'; payload: Partial<Step2Data> }
@@ -95,6 +97,7 @@ type ApplicationFormAction =
   | { type: 'RESET_FORM' };
 
 const initialState: ApplicationFormState = {
+  editingApplicationId: null,
   portfolioType: null,
   step1: {
     registeredBusinessName: '',
@@ -155,6 +158,8 @@ function applicationFormReducer(
   action: ApplicationFormAction
 ): ApplicationFormState {
   switch (action.type) {
+    case 'SET_EDITING_APPLICATION_ID':
+      return { ...state, editingApplicationId: action.payload };
     case 'SET_PORTFOLIO_TYPE':
       return { ...state, portfolioType: action.payload };
     case 'UPDATE_STEP1':
@@ -176,6 +181,7 @@ function applicationFormReducer(
 
 interface ApplicationFormContextValue {
   state: ApplicationFormState;
+  setEditingApplicationId: (applicationId: string | null) => void;
   setPortfolioType: (type: PortfolioType) => void;
   updateStep1: (data: Partial<Step1Data>) => void;
   updateStep2: (data: Partial<Step2Data>) => void;
@@ -184,6 +190,7 @@ interface ApplicationFormContextValue {
   saveDraft: () => Promise<void>;
   loadDraft: () => Promise<void>;
   resetForm: () => void;
+  hydrateForm: (nextState: ApplicationFormState) => void;
 }
 
 const ApplicationFormContext = createContext<ApplicationFormContextValue | undefined>(undefined);
@@ -233,6 +240,7 @@ export function ApplicationFormProvider({ children }: { children: React.ReactNod
 
   const value: ApplicationFormContextValue = {
     state,
+    setEditingApplicationId: (applicationId) => dispatch({ type: 'SET_EDITING_APPLICATION_ID', payload: applicationId }),
     setPortfolioType: (type) => dispatch({ type: 'SET_PORTFOLIO_TYPE', payload: type }),
     updateStep1: (data) => dispatch({ type: 'UPDATE_STEP1', payload: data }),
     updateStep2: (data) => dispatch({ type: 'UPDATE_STEP2', payload: data }),
@@ -241,6 +249,7 @@ export function ApplicationFormProvider({ children }: { children: React.ReactNod
     saveDraft,
     loadDraft,
     resetForm,
+    hydrateForm: (nextState) => dispatch({ type: 'LOAD_DRAFT', payload: nextState }),
   };
 
   return (

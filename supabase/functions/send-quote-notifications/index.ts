@@ -194,14 +194,14 @@ function generateQuoteRequestedToVendorEmail(payload: NotificationPayload) {
         ` : ''}
         
         <div style="text-align: center; margin: 30px 0;">
-          <a href="https://funcxon.com/vendor/quotes" 
+          <a href="vibeventz://vendor/quotes" 
              style="background: #2B9EB3; color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; font-weight: bold; display: inline-block;">
             View & Respond to Quote
           </a>
         </div>
         
         <p style="font-size: 14px; color: #5A7A85; margin-top: 20px;">
-          Log in to your vendor dashboard to create and send a quote to this client.
+          Tap the button above to open the Funcxon app and respond to this quote request.
         </p>
       </div>
     </body>
@@ -219,7 +219,7 @@ ${eventDetails ? `Event Details:\n${eventDetails}\n\n` : ''}
 ${eventDate ? `Event Date: ${eventDate}\n\n` : ''}
 
 Log in to your vendor dashboard to view and respond:
-https://funcxon.com/vendor/quotes
+vibeventz://vendor/quotes
 
 - Funcxon Team
   `;
@@ -258,14 +258,14 @@ function generateQuoteCreatedToClientEmail(payload: NotificationPayload) {
         </div>
         
         <div style="text-align: center; margin: 30px 0;">
-          <a href="https://funcxon.com/quotes" 
+          <a href="vibeventz://quotes" 
              style="background: #2B9EB3; color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; font-weight: bold; display: inline-block; margin-right: 10px;">
             View Quote
           </a>
         </div>
         
         <p style="font-size: 14px; color: #5A7A85; margin-top: 20px;">
-          You can accept or reject this quote from your quotes page.
+          Tap the button above to open the Funcxon app and accept or reject this quote.
         </p>
       </div>
     </body>
@@ -284,7 +284,7 @@ ${quoteAmount ? `Amount: R${quoteAmount.toLocaleString()}\n` : ''}
 ${quoteDescription ? `Description: ${quoteDescription}\n` : ''}
 
 View and respond to your quote:
-https://funcxon.com/quotes
+vibeventz://quotes
 
 - Funcxon Team
   `;
@@ -321,7 +321,7 @@ function generateQuoteAcceptedToVendorEmail(payload: NotificationPayload) {
         </p>
         
         <div style="text-align: center; margin: 30px 0;">
-          <a href="https://funcxon.com/vendor/quotes" 
+          <a href="vibeventz://vendor/quotes" 
              style="background: #16A34A; color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; font-weight: bold; display: inline-block;">
             View Finalized Quote
           </a>
@@ -340,7 +340,7 @@ ${clientName || 'A client'} has accepted your quote${quoteAmount ? ` for R${quot
 
 The quote is now finalized. You should contact the client to confirm next steps.
 
-View finalized quote: https://funcxon.com/vendor/quotes
+View finalized quote: vibeventz://vendor/quotes
 
 - Funcxon Team
   `;
@@ -384,7 +384,7 @@ function generateQuoteRejectedToVendorEmail(payload: NotificationPayload) {
         </p>
         
         <div style="text-align: center; margin: 30px 0;">
-          <a href="https://funcxon.com/vendor/quotes" 
+          <a href="vibeventz://vendor/quotes" 
              style="background: #2B9EB3; color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; font-weight: bold; display: inline-block;">
             Submit Revised Quote
           </a>
@@ -404,7 +404,7 @@ ${clientName || 'The client'} has decided not to proceed with your quote${quoteA
 ${clientNotes ? `Client Feedback:\n${clientNotes}\n\n` : ''}
 Don't be discouraged! You can submit a revised quote if you'd like to adjust your offer.
 
-View quotes: https://funcxon.com/vendor/quotes
+View quotes: vibeventz://vendor/quotes
 
 - Funcxon Team
   `;
@@ -444,7 +444,7 @@ function generateQuoteRevisedToClientEmail(payload: NotificationPayload) {
         </div>
         
         <div style="text-align: center; margin: 30px 0;">
-          <a href="https://funcxon.com/quotes" 
+          <a href="vibeventz://quotes" 
              style="background: #2B9EB3; color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; font-weight: bold; display: inline-block;">
             Review Revised Quote
           </a>
@@ -466,7 +466,7 @@ ${quoteAmount ? `Amount: R${quoteAmount.toLocaleString()}\n` : ''}
 ${quoteDescription ? `Description: ${quoteDescription}\n` : ''}
 
 Review and respond:
-https://funcxon.com/quotes
+vibeventz://quotes
 
 - Funcxon Team
   `;
@@ -489,7 +489,7 @@ function generateGenericEmail(payload: NotificationPayload) {
         <h2 style="color: #2B9EB3;">Quote Update</h2>
         <p style="color: #2B3840;">There has been an update to your quote request.</p>
         <div style="text-align: center; margin: 30px 0;">
-          <a href="https://funcxon.com/quotes" 
+          <a href="vibeventz://quotes" 
              style="background: #2B9EB3; color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; font-weight: bold; display: inline-block;">
             View Quote
           </a>
@@ -504,7 +504,7 @@ Quote Update
 
 There has been an update to your quote request.
 
-View quote: https://funcxon.com/quotes
+View quote: vibeventz://quotes
 
 - Funcxon Team
   `;

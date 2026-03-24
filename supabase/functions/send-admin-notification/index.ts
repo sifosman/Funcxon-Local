@@ -243,7 +243,7 @@ function generateApplicationSubmittedEmail(payload: NotificationPayload) {
         </div>
         
         <div style="text-align: center; margin: 30px 0;">
-          <a href="https://funcxon.com/admin/applications" 
+          <a href="https://funcxonsadmin.vercel.app/dashboard/applications" 
              style="background: #2B9EB3; color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; font-weight: bold; display: inline-block;">
             Review Application
           </a>
@@ -266,7 +266,7 @@ Application Details:
 - Categories: ${serviceCategories?.join(', ') || 'N/A'}
 - Coverage: ${provinces?.join(', ') || 'N/A'}
 
-Review in admin panel: https://funcxon.com/admin/applications
+Review in admin panel: https://funcxonsadmin.vercel.app/dashboard/applications
   `;
 
   return { subject, htmlContent, textContent };

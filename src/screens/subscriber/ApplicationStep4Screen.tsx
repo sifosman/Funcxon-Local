@@ -117,6 +117,7 @@ export default function ApplicationStep4Screen() {
       const portfolioType = state.portfolioType === 'venues' ? 'venue' as const : 'vendor' as const;
       
       const submission = {
+        existing_application_id: state.editingApplicationId,
         portfolio_type: portfolioType,
         company_details: state.step1,
         service_categories: state.step2,
