@@ -102,7 +102,7 @@ export function validateStep2(data: Step2Data, portfolioType: 'vendors' | 'venue
   }
 
   if (!data.description.trim()) {
-    errors.description = 'Venue bio is required';
+    errors.description = portfolioType === 'venues' ? 'Venue bio is required' : 'Business description is required';
   } else if (data.description.trim().length < 50) {
     errors.description = 'Description must be at least 50 characters';
   }

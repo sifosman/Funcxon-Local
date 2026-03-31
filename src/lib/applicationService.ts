@@ -1,5 +1,36 @@
 import { supabase } from './supabaseClient';
 import type { ApplicationFormState } from '../context/ApplicationFormContext';
+import * as FileSystem from 'expo-file-system';
+import { decode } from 'base64-arraybuffer';
+
+// Helper function to convert blob URL to base64
+export async function convertBlobToBase64(blobUrl: string, mimeType: string): Promise<string> {
+  try {
+    const response = await fetch(blobUrl);
+    const blob = await response.blob();
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onloadend = () => resolve(reader.result as string);
+      reader.onerror = reject;
+      reader.readAsDataURL(blob);
+    });
+  } catch (error) {
+    console.error('Failed to convert blob to base64:', error);
+    throw new Error('Failed to process file');
+  }
+}
+
+// Helper function to convert base64 to blob
+function base64ToBlob(base64: string, mimeType: string): Blob {
+  const base64Data = base64.split(',')[1]; // Remove data URL prefix
+  const byteCharacters = atob(base64Data);
+  const byteNumbers = new Array(byteCharacters.length);
+  for (let i = 0; i < byteCharacters.length; i++) {
+    byteNumbers[i] = byteCharacters.charCodeAt(i);
+  }
+  const byteArray = new Uint8Array(byteNumbers);
+  return new Blob([byteArray], { type: mimeType });
+}
 
 const BLOCKING_APPLICATION_STATUSES = ['pending', 'under_review'] as const;
 const EDITABLE_APPLICATION_STATUSES = ['needs_changes'] as const;
@@ -111,57 +142,70 @@ export async function uploadFileToStorage(
   userId: string
 ) {
   try {
+    console.log(`Starting upload to bucket ${bucket} for user ${userId}:`, { fileName: file.name, fileType: file.type, uri: file.uri });
+    
     const fileName = `${userId}/${Date.now()}-${file.name}`;
     
-    let blob: Blob;
+    let fileBody: Blob | ArrayBuffer;
+    let fileSize: number;
     
-    // Handle web vs native file URIs
-    if (typeof window !== 'undefined' && window.document) {
-      // Web environment - fetch may fail with local file URIs
-      // Try fetch first, fallback to direct URI usage
+    // Handle different URI types
+    if (file.uri.startsWith('data:')) {
+      // Base64 data URI - convert to blob
+      fileBody = base64ToBlob(file.uri, file.type);
+      fileSize = fileBody.size;
+    } else if (file.uri.startsWith('blob:')) {
+      // Blob URL - convert to base64 first, then to blob
       try {
-        const response = await fetch(file.uri);
-        blob = await response.blob();
-      } catch (fetchError) {
-        // If fetch fails (common with blob: URLs or file: URLs on web),
-        // the file may need to be handled differently
-        console.warn('Fetch failed for file URI, attempting alternative:', fetchError);
-        
-        // For web, if the uri is a blob URL, we can try to use XMLHttpRequest
-        // or create a blob from the uri directly
-        if (file.uri.startsWith('blob:')) {
-          const response = await fetch(file.uri, { mode: 'no-cors' });
-          blob = await response.blob();
-        } else {
-          // Create a minimal blob with the file info if we can't fetch
-          // This is a fallback that may not contain actual file data
-          // but prevents the upload from crashing
-          blob = new Blob([], { type: file.type });
-        }
+        const base64 = await convertBlobToBase64(file.uri, file.type);
+        fileBody = base64ToBlob(base64, file.type);
+        fileSize = fileBody.size;
+      } catch (blobError) {
+        console.error('Blob URL conversion failed:', blobError);
+        throw new Error(`Failed to read blob URL: ${file.uri}`);
       }
     } else {
-      // Native environment - fetch works with file:// URIs
-      const response = await fetch(file.uri);
-      blob = await response.blob();
+      // Native file URI - read using expo-file-system as base64
+      try {
+        const base64 = await FileSystem.readAsStringAsync(file.uri, { encoding: 'base64' });
+        fileBody = decode(base64);
+        fileSize = fileBody.byteLength;
+      } catch (nativeFetchError) {
+        console.error('Native file read failed for file URI:', file.uri, nativeFetchError);
+        throw new Error(`Failed to read native file: ${nativeFetchError instanceof Error ? nativeFetchError.message : String(nativeFetchError)}`);
+      }
     }
-    
+
+    console.log(`Created fileBody of size ${fileSize} bytes for file ${file.name} from URI: ${file.uri}`);
+
+    // Check if fileBody is empty (which would cause upload to fail)
+    if (fileSize === 0) {
+      console.error('File body is empty, upload will fail:', { fileName: file.name, uri: file.uri, fileType: file.type });
+      throw new Error(`File appears to be empty or could not be read: ${file.name}`);
+    }
+
     const { data, error } = await supabase.storage
       .from(bucket)
-      .upload(fileName, blob, {
+      .upload(fileName, fileBody, {
         contentType: file.type,
         cacheControl: '3600',
         upsert: false,
       });
 
     if (error) {
-      console.error('File upload error:', error);
-      throw new Error(error.message);
+      console.error('Supabase storage upload error:', error);
+      console.error('Upload details:', { bucket, fileName, fileSize: fileSize, fileType: file.type });
+      throw new Error(`Storage upload failed: ${error.message}`);
     }
+
+    console.log(`Successfully uploaded file to path: ${data.path}`);
 
     // Get public URL
     const { data: { publicUrl } } = supabase.storage
       .from(bucket)
       .getPublicUrl(fileName);
+
+    console.log(`Generated public URL: ${publicUrl}`);
 
     return { success: true, url: publicUrl, path: data.path };
   } catch (error) {

@@ -40,26 +40,50 @@ export default function ApplicationStep4Screen() {
   }>>([]);
   const [loading, setLoading] = useState(true);
 
-  const normalizeVendorTierKey = (rawTierName: string): string => {
+  const normalizeTierKey = (rawTierName: string): string => {
     const t = (rawTierName ?? '').trim().toLowerCase();
+    // Vendor tier names
     if (t === 'get started' || t === 'get_started' || t === 'free') return 'free';
     if (t === 'premium plus' || t === 'premium_plus' || t === 'premiumplus') return 'premium_plus';
     if (t === 'premium') return 'premium';
+    // Venue plan keys (already normalised in DB, e.g. 'get_started', 'monthly', '6_month', '12_month')
     return t.replace(/\s+/g, '_');
   };
 
   useEffect(() => {
     loadTiers();
-  }, []);
+  }, [state.portfolioType]);
 
-  const selectedTier = tiers.find((tier) => normalizeVendorTierKey(tier.tier_name) === state.step4.subscriptionPlan);
+  const selectedTier = tiers.find((tier) => normalizeTierKey(tier.tier_name) === state.step4.subscriptionPlan);
   const selectedTierPrice = selectedTier?.price_monthly ?? selectedTier?.price_yearly ?? null;
   const selectedTierPriceLabel = selectedTierPrice ? `R${Number(selectedTierPrice).toLocaleString()}` : 'Free';
 
   const loadTiers = async () => {
     try {
-      const data = await getSubscriptionTiers();
-      setTiers(data);
+      if (state.portfolioType === 'venues') {
+        // Load venue subscription plans
+        const { data, error } = await supabase
+          .from('venue_subscription_plans')
+          .select('id, plan_key, plan_name, price_monthly, price_yearly, photo_upload_limit, video_upload_limit, features, is_active')
+          .eq('is_active', true)
+          .order('price_monthly', { ascending: true, nullsFirst: true });
+        if (error) throw error;
+        // Map venue plan shape to the shared tier shape used in this screen
+        const mapped = (data || []).map((p: any) => ({
+          id: p.id,
+          tier_name: p.plan_key as string,    // use plan_key so normalizeTierKey matches
+          photo_limit: p.photo_upload_limit ?? 10,
+          price_monthly: p.price_monthly ?? null,
+          price_yearly: p.price_yearly ?? null,
+          features: p.features ?? null,
+          is_active: p.is_active,
+        }));
+        setTiers(mapped);
+      } else {
+        // Load vendor subscription tiers
+        const data = await getSubscriptionTiers();
+        setTiers(data);
+      }
     } catch (error) {
       console.error('Failed to load tiers:', error);
     } finally {
@@ -88,12 +112,15 @@ export default function ApplicationStep4Screen() {
       const uploadedImages = [];
       const uploadedVideos = [];
       const uploadedDocuments = [];
+      const uploadErrors = [];
 
       // Upload images
       for (const image of state.step3.images) {
         const result = await uploadFileToStorage('portfolio-images', image, user.id);
         if (result.success && result.url) {
           uploadedImages.push(result.url);
+        } else {
+          uploadErrors.push(`Image "${image.name}": ${result.error || 'Upload failed'}`);
         }
       }
 
@@ -102,16 +129,35 @@ export default function ApplicationStep4Screen() {
         const result = await uploadFileToStorage('portfolio-videos', video, user.id);
         if (result.success && result.url) {
           uploadedVideos.push(result.url);
+        } else {
+          uploadErrors.push(`Video "${video.name}": ${result.error || 'Upload failed'}`);
         }
       }
 
       // Upload documents
       for (const document of state.step3.documents) {
-        const result = await uploadFileToStorage('business-documents', document, user.id);
+        // Route company logo to portfolio-images bucket, other documents to business-documents
+        const bucket = document.name.startsWith('company_logo__') ? 'portfolio-images' : 'business-documents';
+        const result = await uploadFileToStorage(bucket, document, user.id);
         if (result.success && result.url) {
           uploadedDocuments.push(result.url);
+        } else {
+          uploadErrors.push(`Document "${document.name}": ${result.error || 'Upload failed'}`);
         }
       }
+
+      // If any uploads failed, show error and prevent submission
+      if (uploadErrors.length > 0) {
+        console.error('Upload errors:', uploadErrors);
+        Alert.alert(
+          'Upload Failed',
+          `Some files could not be uploaded:\n\n${uploadErrors.join('\n')}\n\nPlease try again or contact support.`,
+          [{ text: 'OK' }]
+        );
+        return;
+      }
+
+      console.log(`Successfully uploaded ${uploadedImages.length} images, ${uploadedVideos.length} videos, ${uploadedDocuments.length} documents`);
 
       // Submit application to database
       const portfolioType = state.portfolioType === 'venues' ? 'venue' as const : 'vendor' as const;
@@ -230,15 +276,26 @@ export default function ApplicationStep4Screen() {
         return;
       }
 
-      // Get user details from vendors table or user metadata
-      const { data: vendor } = await supabase
-        .from('vendors')
-        .select('name, email')
-        .eq('user_id', user.id)
-        .maybeSingle();
+      // Get user details from the appropriate table based on portfolio type
+      let profileRecord: { name?: string; email?: string } | null = null;
+      if (state.portfolioType === 'venues') {
+        const { data } = await supabase
+          .from('venue_listings')
+          .select('name')
+          .eq('user_id', user.id)
+          .maybeSingle();
+        profileRecord = data ? { name: (data as any).name } : null;
+      } else {
+        const { data } = await supabase
+          .from('vendors')
+          .select('name, email')
+          .eq('user_id', user.id)
+          .maybeSingle();
+        profileRecord = data;
+      }
 
-      const fullName = vendor?.name || user.user_metadata?.full_name || 'Valued Applicant';
-      const businessName = submission.company_details?.tradingName || submission.company_details?.registeredBusinessName || vendor?.name || '';
+      const fullName = profileRecord?.name || user.user_metadata?.full_name || 'Valued Applicant';
+      const businessName = submission.company_details?.tradingName || submission.company_details?.registeredBusinessName || profileRecord?.name || '';
 
       // Call the Supabase Edge Function to send confirmation email
       const { data, error } = await supabase.functions.invoke('send-application-status-email', {
@@ -246,7 +303,7 @@ export default function ApplicationStep4Screen() {
           email: user.email,
           fullName: fullName,
           businessName: businessName || undefined,
-          tierName: submission.subscription_tier || 'Vendor',
+          tierName: submission.subscription_tier || (state.portfolioType === 'venues' ? 'Venue' : 'Vendor'),
           applicationUrl: 'vibeventz://application-status',
         },
       });
@@ -269,7 +326,7 @@ export default function ApplicationStep4Screen() {
     try {
       const { data, error } = await supabase.functions.invoke('send-admin-notification', {
         body: {
-          type: 'vendor-application-submitted',
+          type: state.portfolioType === 'venues' ? 'venue-application-submitted' : 'vendor-application-submitted',
           vendorName: fullName,
           vendorEmail: vendorEmail,
           businessName: businessName || submission.company_details?.businessName,

@@ -10,8 +10,7 @@ import {
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { colors, radii, spacing, typography } from '../theme';
-
-const GOOGLE_MAPS_API_KEY = 'AIzaSyBjd1KYtTaAzxzdw5ayGwwMu5Sex-gKQLI';
+import { supabase } from '../lib/supabaseClient';
 
 type Prediction = {
   description: string;
@@ -37,7 +36,6 @@ export function AddressAutocompleteInput({
   required,
   error,
 }: Props) {
-  const apiKey = process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY || GOOGLE_MAPS_API_KEY;
   const [query, setQuery] = useState(value);
   const [predictions, setPredictions] = useState<Prediction[]>([]);
   const [loading, setLoading] = useState(false);
@@ -58,18 +56,13 @@ export function AddressAutocompleteInput({
   }, []);
 
   const canSearch = useMemo(() => {
-    return Boolean(apiKey) && query.trim().length >= 3;
-  }, [apiKey, query]);
+    return query.trim().length >= 3;
+  }, [query]);
 
   useEffect(() => {
     const trimmed = query.trim();
 
     if (!open) return;
-
-    if (!apiKey) {
-      setPredictions([]);
-      return;
-    }
 
     if (trimmed.length < 3) {
       setPredictions([]);
@@ -80,25 +73,27 @@ export function AddressAutocompleteInput({
     const handle = setTimeout(async () => {
       setLoading(true);
       try {
-        const url =
-          `https://maps.googleapis.com/maps/api/place/autocomplete/json` +
-          `?input=${encodeURIComponent(trimmed)}` +
-          `&key=${encodeURIComponent(apiKey)}` +
-          `&types=address`;
-
-        const res = await fetch(url);
-        const json = await res.json();
+        const { data, error } = await supabase.functions.invoke('places-autocomplete', {
+          body: { input: trimmed },
+        });
 
         if (seq !== requestSeq.current) return;
 
-        const next: Prediction[] = Array.isArray(json?.predictions)
-          ? json.predictions
+        if (error) {
+          console.error('Places autocomplete error:', error);
+          setPredictions([]);
+          return;
+        }
+
+        const next: Prediction[] = Array.isArray(data?.predictions)
+          ? data.predictions
               .filter((p: any) => typeof p?.description === 'string' && typeof p?.place_id === 'string')
               .map((p: any) => ({ description: p.description, place_id: p.place_id }))
           : [];
 
         setPredictions(next);
-      } catch {
+      } catch (err) {
+        console.error('Places autocomplete exception:', err);
         if (seq === requestSeq.current) {
           setPredictions([]);
         }
@@ -110,7 +105,7 @@ export function AddressAutocompleteInput({
     }, 300);
 
     return () => clearTimeout(handle);
-  }, [apiKey, open, query]);
+  }, [open, query]);
 
   const handleSelect = (prediction: Prediction) => {
     if (blurTimeoutRef.current) {
@@ -181,15 +176,11 @@ export function AddressAutocompleteInput({
         </View>
 
         <TouchableOpacity
-          onPress={() => {
-            if (!apiKey) return;
-            setOpen(true);
-          }}
+          onPress={() => setOpen(true)}
           style={{ paddingTop: 2 }}
           activeOpacity={0.7}
-          disabled={!apiKey}
         >
-          <MaterialIcons name="search" size={20} color={apiKey ? colors.primaryTeal : colors.textMuted} />
+          <MaterialIcons name="search" size={20} color={colors.primaryTeal} />
         </TouchableOpacity>
       </View>
 
@@ -209,59 +200,47 @@ export function AddressAutocompleteInput({
             maxHeight: 220,
           }}
         >
-          {!apiKey && (
+          {loading && (
+            <View style={{ padding: spacing.md, flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
+              <ActivityIndicator size="small" color={colors.primaryTeal} />
+              <Text style={{ ...typography.caption, color: colors.textMuted }}>Searching…</Text>
+            </View>
+          )}
+
+          {!loading && canSearch && predictions.length === 0 && (
             <View style={{ padding: spacing.md }}>
-              <Text style={{ ...typography.caption, color: colors.textMuted }}>
-                Address search is unavailable.
-              </Text>
+              <Text style={{ ...typography.caption, color: colors.textMuted }}>No results</Text>
             </View>
           )}
 
-          {apiKey && (
-            <View>
-              {loading && (
-                <View style={{ padding: spacing.md, flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
-                  <ActivityIndicator size="small" color={colors.primaryTeal} />
-                  <Text style={{ ...typography.caption, color: colors.textMuted }}>Searching…</Text>
-                </View>
-              )}
-
-              {!loading && canSearch && predictions.length === 0 && (
-                <View style={{ padding: spacing.md }}>
-                  <Text style={{ ...typography.caption, color: colors.textMuted }}>No results</Text>
-                </View>
-              )}
-
-              {!loading && query.trim().length < 3 && (
-                <View style={{ padding: spacing.md }}>
-                  <Text style={{ ...typography.caption, color: colors.textMuted }}>Type at least 3 characters</Text>
-                </View>
-              )}
-
-              <FlatList
-                keyboardShouldPersistTaps="handled"
-                data={predictions}
-                keyExtractor={(item) => item.place_id}
-                nestedScrollEnabled
-                renderItem={({ item }) => (
-                  <TouchableOpacity
-                    onPress={() => handleSelect(item)}
-                    style={{
-                      paddingHorizontal: spacing.md,
-                      paddingVertical: spacing.sm,
-                      borderTopWidth: 1,
-                      borderTopColor: colors.borderSubtle,
-                    }}
-                    activeOpacity={0.7}
-                  >
-                    <Text style={{ ...typography.body, color: colors.textPrimary, fontSize: 13 }}>
-                      {item.description}
-                    </Text>
-                  </TouchableOpacity>
-                )}
-              />
+          {!loading && query.trim().length < 3 && (
+            <View style={{ padding: spacing.md }}>
+              <Text style={{ ...typography.caption, color: colors.textMuted }}>Type at least 3 characters</Text>
             </View>
           )}
+
+          <FlatList
+            keyboardShouldPersistTaps="handled"
+            data={predictions}
+            keyExtractor={(item) => item.place_id}
+            nestedScrollEnabled
+            renderItem={({ item }) => (
+              <TouchableOpacity
+                onPress={() => handleSelect(item)}
+                style={{
+                  paddingHorizontal: spacing.md,
+                  paddingVertical: spacing.sm,
+                  borderTopWidth: 1,
+                  borderTopColor: colors.borderSubtle,
+                }}
+                activeOpacity={0.7}
+              >
+                <Text style={{ ...typography.body, color: colors.textPrimary, fontSize: 13 }}>
+                  {item.description}
+                </Text>
+              </TouchableOpacity>
+            )}
+          />
         </View>
       )}
     </View>

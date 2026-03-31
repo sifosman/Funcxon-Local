@@ -131,7 +131,7 @@ const initialState: ApplicationFormState = {
     eventTypes: [],
     awardsAndNominations: '',
     browserTags: '',
-    halls: Array.from({ length: 5 }, () => ({ name: '', capacity: '' })),
+    halls: [],
     paymentTermsAndConditions: '',
     serviceCategories: [],
     serviceSubcategories: [],

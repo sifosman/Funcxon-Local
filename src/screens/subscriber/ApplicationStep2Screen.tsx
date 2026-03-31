@@ -24,6 +24,11 @@ export default function ApplicationStep2Screen() {
   const isVenues = state.portfolioType === 'venues';
   const isVendors = state.portfolioType === 'vendors';
 
+  // Debug logging
+  console.log('ApplicationStep2Screen - portfolioType:', state.portfolioType);
+  console.log('ApplicationStep2Screen - isVenues:', isVenues);
+  console.log('ApplicationStep2Screen - isVendors:', isVendors);
+
   const renderCheckboxCardRow = (opts: {
     key: string;
     label: string;
@@ -840,13 +845,13 @@ export default function ApplicationStep2Screen() {
             }}
           >
             <Text style={{ ...typography.titleMedium, color: colors.textPrimary, marginBottom: spacing.xs }}>
-              Venue Bio *
+              {isVenues ? 'Venue Bio *' : 'Business Description *'}
             </Text>
             <Text style={{ ...typography.caption, color: colors.textMuted, marginBottom: spacing.md }}>
               Minimum 50 characters
             </Text>
             <TextInput
-              placeholder="Describe your business, services, or venue..."
+              placeholder={isVenues ? 'Describe your venue, its features, and what makes it special...' : 'Describe your business, services, and what sets you apart...'}
               value={state.step2.description}
               onChangeText={(value) => updateStep2({ description: value })}
               multiline

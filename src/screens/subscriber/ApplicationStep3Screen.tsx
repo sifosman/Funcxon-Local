@@ -1,14 +1,17 @@
 import { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, Image, Alert, Platform, Linking } from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView, Image, Alert, Platform, Linking, Dimensions, StyleSheet } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import * as ImagePicker from 'expo-image-picker';
 import * as DocumentPicker from 'expo-document-picker';
 import * as FileSystem from 'expo-file-system/legacy';
-import { colors, spacing, radii, typography } from '../../theme';
+import { useFocusEffect } from '@react-navigation/native';
+import { useCallback } from 'react';
 import { useApplicationForm } from '../../context/ApplicationFormContext';
 import { validateStep3 } from '../../utils/formValidation';
+import { colors, spacing, radii, typography } from '../../theme';
+import { convertBlobToBase64 } from '../../lib/applicationService';
 import { ApplicationProgress } from '../../components/ApplicationProgress';
 import { PhotoUploadCounter } from '../../components/PhotoUploadCounter';
 import { canUploadMorePhotos, incrementVendorPhotoCount, decrementVendorPhotoCount } from '../../lib/subscription';
@@ -162,13 +165,29 @@ export default function ApplicationStep3Screen() {
           return true;
         });
 
-        // Add valid images to state
-        const newImages = validImages.map((asset) => ({
-          uri: asset.uri,
-          name: asset.fileName || `image_${Date.now()}.jpg`,
-          type: asset.mimeType || 'image/jpeg',
-          size: asset.fileSize || 0,
-        }));
+        // Convert valid images to base64 and add to state
+        const newImages = await Promise.all(
+          validImages.map(async (asset) => {
+            let uri = asset.uri;
+            
+            // Convert blob URL to base64 for web
+            if (asset.uri.startsWith('blob:')) {
+              try {
+                uri = await convertBlobToBase64(asset.uri, asset.mimeType || 'image/jpeg');
+              } catch (error) {
+                console.error('Failed to convert image to base64:', error);
+                // Fallback to original URI if conversion fails
+              }
+            }
+            
+            return {
+              uri,
+              name: asset.fileName || `image_${Date.now()}.jpg`,
+              type: asset.mimeType || 'image/jpeg',
+              size: asset.fileSize || 0,
+            };
+          })
+        );
 
         // Update state with new images
         const updatedImages = [...state.step3.images, ...newImages];
@@ -233,8 +252,20 @@ export default function ApplicationStep3Screen() {
           return;
         }
 
+        let uri = asset.uri;
+        
+        // Convert blob URL to base64 for web
+        if (asset.uri.startsWith('blob:')) {
+          try {
+            uri = await convertBlobToBase64(asset.uri, asset.mimeType || 'application/pdf');
+          } catch (error) {
+            console.error('Failed to convert document to base64:', error);
+            // Fallback to original URI if conversion fails
+          }
+        }
+
         const newDoc = {
-          uri: asset.uri,
+          uri,
           name: `${key}__${asset.name}`,
           type: asset.mimeType || 'application/pdf',
           size: asset.size || 0,
@@ -277,10 +308,22 @@ export default function ApplicationStep3Screen() {
           return;
         }
 
+        let uri = asset.uri;
+        
+        // Convert blob URL to base64 for web
+        if (asset.uri.startsWith('blob:')) {
+          try {
+            uri = await convertBlobToBase64(asset.uri, asset.mimeType || 'image/png');
+          } catch (error) {
+            console.error('Failed to convert logo to base64:', error);
+            // Fallback to original URI if conversion fails
+          }
+        }
+
         const originalName = asset.fileName || 'company-logo.png';
         const sanitizedBaseName = originalName.replace(/\.[^.]+$/, '') || 'company-logo';
         const logoDoc = {
-          uri: asset.uri,
+          uri,
           name: `company_logo__${sanitizedBaseName}.png`,
           type: 'image/png',
           size: fileSize,
@@ -400,13 +443,29 @@ export default function ApplicationStep3Screen() {
           return true;
         });
 
-        // Add valid videos to state
-        const newVideos = validVideos.map((asset) => ({
-          uri: asset.uri,
-          name: asset.fileName || `video_${Date.now()}.mp4`,
-          type: asset.mimeType || 'video/mp4',
-          size: asset.fileSize || 0,
-        }));
+        // Convert valid videos to base64 and add to state
+        const newVideos = await Promise.all(
+          validVideos.map(async (asset) => {
+            let uri = asset.uri;
+            
+            // Convert blob URL to base64 for web
+            if (asset.uri.startsWith('blob:')) {
+              try {
+                uri = await convertBlobToBase64(asset.uri, asset.mimeType || 'video/mp4');
+              } catch (error) {
+                console.error('Failed to convert video to base64:', error);
+                // Fallback to original URI if conversion fails
+              }
+            }
+            
+            return {
+              uri,
+              name: asset.fileName || `video_${Date.now()}.mp4`,
+              type: asset.mimeType || 'video/mp4',
+              size: asset.fileSize || 0,
+            };
+          })
+        );
 
         const updatedVideos = [...state.step3.videos, ...newVideos];
 
@@ -498,14 +557,90 @@ export default function ApplicationStep3Screen() {
             </View>
           </View>
 
-          {/* Photo Upload Counter — only shown if user already has a vendor record */}
-          {vendorId && (
-            <PhotoUploadCounter 
+          {/* Photo Upload Counter — vendors with an existing record use the full counter;
+              venues use an inline summary built from the already-loaded venueLimits */}
+          {state.portfolioType !== 'venues' && vendorId && (
+            <PhotoUploadCounter
               vendorId={vendorId}
               onUpgradePress={() => {
                 navigation.navigate('ApplicationStep4' as any);
               }}
             />
+          )}
+
+          {state.portfolioType === 'venues' && venueLimits && (
+            <View
+              style={{
+                backgroundColor: colors.surface,
+                borderRadius: radii.lg,
+                padding: spacing.md,
+                borderWidth: 1,
+                borderColor: colors.borderSubtle,
+                marginBottom: spacing.md,
+              }}
+            >
+              <Text style={{ ...typography.caption, color: colors.textPrimary, fontWeight: '600', marginBottom: spacing.sm }}>
+                Upload Limits — Venue Plan
+              </Text>
+              {/* Photos */}
+              <View style={{ marginBottom: spacing.sm }}>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                    <MaterialIcons name="photo-library" size={14} color={colors.primaryTeal} />
+                    <Text style={{ ...typography.caption, color: colors.textPrimary }}>
+                      Photos: {state.step3.images.length} / {venueLimits.photoLimit}
+                    </Text>
+                  </View>
+                  <Text style={{ ...typography.caption, color: colors.textMuted }}>
+                    {Math.max(0, venueLimits.photoLimit - state.step3.images.length)} remaining
+                  </Text>
+                </View>
+                <View style={{ height: 4, backgroundColor: colors.borderSubtle, borderRadius: 2, overflow: 'hidden' }}>
+                  <View
+                    style={{
+                      height: '100%',
+                      borderRadius: 2,
+                      backgroundColor:
+                        state.step3.images.length >= venueLimits.photoLimit
+                          ? '#EF4444'
+                          : state.step3.images.length / venueLimits.photoLimit >= 0.8
+                          ? '#F59E0B'
+                          : colors.primaryTeal,
+                      width: `${Math.min(100, (state.step3.images.length / venueLimits.photoLimit) * 100)}%`,
+                    }}
+                  />
+                </View>
+              </View>
+              {/* Videos */}
+              <View>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                    <MaterialIcons name="videocam" size={14} color={colors.primaryTeal} />
+                    <Text style={{ ...typography.caption, color: colors.textPrimary }}>
+                      Videos: {state.step3.videos.length} / {venueLimits.videoLimit}
+                    </Text>
+                  </View>
+                  <Text style={{ ...typography.caption, color: colors.textMuted }}>
+                    {Math.max(0, venueLimits.videoLimit - state.step3.videos.length)} remaining
+                  </Text>
+                </View>
+                <View style={{ height: 4, backgroundColor: colors.borderSubtle, borderRadius: 2, overflow: 'hidden' }}>
+                  <View
+                    style={{
+                      height: '100%',
+                      borderRadius: 2,
+                      backgroundColor:
+                        state.step3.videos.length >= venueLimits.videoLimit
+                          ? '#EF4444'
+                          : state.step3.videos.length / Math.max(1, venueLimits.videoLimit) >= 0.8
+                          ? '#F59E0B'
+                          : colors.primaryTeal,
+                      width: `${Math.min(100, (state.step3.videos.length / Math.max(1, venueLimits.videoLimit)) * 100)}%`,
+                    }}
+                  />
+                </View>
+              </View>
+            </View>
           )}
 
           {/* Portfolio Images */}
