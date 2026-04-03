@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, useRef } from 'react';
+import { useEffect, useMemo, useState, useRef, useCallback } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -12,7 +12,7 @@ import {
 } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { MaterialIcons } from '@expo/vector-icons';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useQuery } from '@tanstack/react-query';
 
@@ -1054,21 +1054,20 @@ export default function AttendeeHomeScreen() {
 
   const displayedListings = hasSearched ? visibleListings : sortedFeaturedData;
 
-  useEffect(() => {
-    let isMounted = true;
+  const loadFavourites = useCallback(async () => {
     if (!user?.id) {
       setFavouriteIds({ vendorIds: [], venueIds: [] });
-      return () => {
-        isMounted = false;
-      };
+      return;
     }
-    getFavourites(user).then((result) => {
-      if (isMounted) setFavouriteIds(result);
-    });
-    return () => {
-      isMounted = false;
-    };
+    const result = await getFavourites(user);
+    setFavouriteIds(result);
   }, [user?.id]);
+
+  useFocusEffect(
+    useCallback(() => {
+      loadFavourites();
+    }, [loadFavourites])
+  );
 
   const handleToggleFavourite = async (id: number, type: 'vendor' | 'venue' = 'vendor') => {
     if (!user?.id) {
