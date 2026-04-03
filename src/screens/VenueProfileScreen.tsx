@@ -282,10 +282,13 @@ export default function VenueProfileScreen({ route, navigation }: Props) {
   }, [venue?.address_line_1, venue?.address_line_2, venue?.city, venue?.country, venue?.location, venue?.postal_code, venue?.province, venue?.suburb]);
 
   const mapCoordinates = useMemo(() => {
-    const latitude = typeof venue?.latitude === 'number' ? venue.latitude : null;
-    const longitude = typeof venue?.longitude === 'number' ? venue.longitude : null;
+    const lat = venue?.latitude;
+    const lng = venue?.longitude;
+    
+    const latitude = typeof lat === 'number' ? lat : typeof lat === 'string' ? parseFloat(lat) : null;
+    const longitude = typeof lng === 'number' ? lng : typeof lng === 'string' ? parseFloat(lng) : null;
 
-    if (latitude == null || longitude == null) {
+    if (latitude == null || longitude == null || isNaN(latitude) || isNaN(longitude)) {
       return null;
     }
 

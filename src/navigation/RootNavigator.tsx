@@ -111,7 +111,7 @@ export function RootNavigator() {
       <Tab.Screen
         name="Favourites"
         component={FavouritesScreen}
-        options={{ headerTitle: 'Favourites', tabBarLabel: 'Favourites' }}
+        options={{ headerShown: false, tabBarLabel: 'Favourites' }}
       />
       <Tab.Screen
         name="Quotes"
@@ -121,7 +121,7 @@ export function RootNavigator() {
       <Tab.Screen
         name="Planner"
         component={PlannerScreen}
-        options={{ headerTitle: 'My planner', tabBarLabel: 'Planner' }}
+        options={{ headerShown: false, tabBarLabel: 'Planner' }}
       />
       <Tab.Screen
         name="Account"

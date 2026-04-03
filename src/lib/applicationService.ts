@@ -1,6 +1,6 @@
 import { supabase } from './supabaseClient';
 import type { ApplicationFormState } from '../context/ApplicationFormContext';
-import * as FileSystem from 'expo-file-system';
+import * as FileSystem from 'expo-file-system/legacy';
 import { decode } from 'base64-arraybuffer';
 
 // Helper function to convert blob URL to base64

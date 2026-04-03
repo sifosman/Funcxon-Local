@@ -276,10 +276,13 @@ export default function VendorProfileScreen({ route, navigation }: Props) {
   }, [vendor?.address_line_1, vendor?.address_line_2, vendor?.city, vendor?.country, vendor?.location, vendor?.postal_code, vendor?.province, vendor?.suburb]);
 
   const mapCoordinates = useMemo(() => {
-    const latitude = typeof vendor?.latitude === 'number' ? vendor.latitude : null;
-    const longitude = typeof vendor?.longitude === 'number' ? vendor.longitude : null;
+    const lat = vendor?.latitude;
+    const lng = vendor?.longitude;
+    
+    const latitude = typeof lat === 'number' ? lat : typeof lat === 'string' ? parseFloat(lat) : null;
+    const longitude = typeof lng === 'number' ? lng : typeof lng === 'string' ? parseFloat(lng) : null;
 
-    if (latitude == null || longitude == null) {
+    if (latitude == null || longitude == null || isNaN(latitude) || isNaN(longitude)) {
       return null;
     }
 

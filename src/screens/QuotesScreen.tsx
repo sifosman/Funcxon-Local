@@ -442,16 +442,6 @@ export default function QuotesScreen() {
         contentContainerStyle={{ paddingBottom: spacing.xl }}
         ListHeaderComponent={
           <View>
-            <TouchableOpacity
-              onPress={() => navigation.goBack()}
-              style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.sm }}
-            >
-              <MaterialIcons name="arrow-back" size={18} color={colors.textPrimary} />
-              <Text style={{ ...typography.caption, color: colors.textPrimary, marginLeft: spacing.xs }}>
-                Back to My Planner
-              </Text>
-            </TouchableOpacity>
-
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
               <View style={{ flex: 1, paddingRight: spacing.md }}>
                 <Text style={{ ...typography.displayMedium, color: colors.textPrimary }}>My Quotes</Text>

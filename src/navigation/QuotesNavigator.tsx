@@ -38,7 +38,7 @@ export function QuotesNavigator() {
       <Stack.Screen
         name="QuotesList"
         component={QuotesScreen}
-        options={{ title: 'My quotes' }}
+        options={{ headerShown: false }}
       />
       <Stack.Screen
         name="QuoteDetail"
