@@ -4,7 +4,7 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useAuth } from '../auth/AuthContext';
-import { getLatestUserApplication, isBlockingApplicationStatus } from '../lib/applicationService';
+import { getLatestUserApplicationByType, isBlockingApplicationStatus } from '../lib/applicationService';
 import { savePendingSubscriptionCheckout } from '../lib/pendingSubscriptionCheckout';
 import { colors, spacing, radii, typography } from '../theme';
 import type { ProfileStackParamList } from '../navigation/ProfileNavigator';
@@ -143,8 +143,8 @@ export default function VenueListingPlansScreen() {
   };
 
   const handleContinueToCheckout = async () => {
-    const latestApplication = await getLatestUserApplication();
-    if (latestApplication.success && latestApplication.data && isBlockingApplicationStatus(latestApplication.data.status)) {
+    const latestVenueApplication = await getLatestUserApplicationByType('venue');
+    if (latestVenueApplication.success && latestVenueApplication.data && isBlockingApplicationStatus(latestVenueApplication.data.status)) {
       navigation.navigate('ApplicationStatus');
       return;
     }

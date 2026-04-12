@@ -9,7 +9,7 @@ import { validateStep1 } from '../../utils/formValidation';
 import { ApplicationProgress } from '../../components/ApplicationProgress';
 import { AddressAutocompleteInput } from '../../components/AddressAutocompleteInput';
 import { useAuth } from '../../auth/AuthContext';
-import { getLatestUserApplication, isBlockingApplicationStatus } from '../../lib/applicationService';
+import { getLatestUserApplicationByType, isBlockingApplicationStatus } from '../../lib/applicationService';
 import { getMyVenueEntitlement, isVenueFeatureEnabled } from '../../lib/venueSubscription';
 
 type ProfileStackParamList = {
@@ -45,7 +45,10 @@ export default function ApplicationStep1Screen() {
     let isActive = true;
 
     async function redirectPendingApplication() {
-      const result = await getLatestUserApplication();
+      if (!state.portfolioType) return;
+      
+      const portfolioType = state.portfolioType === 'vendors' ? 'vendor' : 'venue';
+      const result = await getLatestUserApplicationByType(portfolioType);
       if (!isActive || !result.success || !result.data) return;
 
       if (isBlockingApplicationStatus(result.data.status)) {
@@ -58,7 +61,7 @@ export default function ApplicationStep1Screen() {
     return () => {
       isActive = false;
     };
-  }, [navigation]);
+  }, [navigation, state.portfolioType]);
 
   const handleChange = (field: string, value: string) => {
     const isVenueLinksField =

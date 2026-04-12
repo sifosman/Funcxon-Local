@@ -6,7 +6,7 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { colors, spacing, radii, typography } from '../theme';
 import { useAuth } from '../auth/AuthContext';
 import { supabase } from '../lib/supabaseClient';
-import { getLatestUserApplication, isBlockingApplicationStatus } from '../lib/applicationService';
+import { getLatestUserApplication, getLatestUserApplicationByType, isBlockingApplicationStatus } from '../lib/applicationService';
 import type { ProfileStackParamList } from '../navigation/ProfileNavigator';
 import { HelpCenterModal } from '../components/HelpCenterModal';
 import { useApplicationForm } from '../context/ApplicationFormContext';
@@ -175,7 +175,9 @@ export default function AccountScreen() {
             return;
         }
 
-        if (await navigateToExistingApplicationIfBlocked()) {
+        const latestVendorApplication = await getLatestUserApplicationByType('vendor');
+        if (latestVendorApplication.success && latestVendorApplication.data && isBlockingApplicationStatus(latestVendorApplication.data.status)) {
+            navigation.navigate('ApplicationStatus');
             return;
         }
 
@@ -184,7 +186,9 @@ export default function AccountScreen() {
     };
 
     const handleGoToVenueListingPlans = async () => {
-        if (await navigateToExistingApplicationIfBlocked()) {
+        const latestVenueApplication = await getLatestUserApplicationByType('venue');
+        if (latestVenueApplication.success && latestVenueApplication.data && isBlockingApplicationStatus(latestVenueApplication.data.status)) {
+            navigation.navigate('ApplicationStatus');
             return;
         }
 

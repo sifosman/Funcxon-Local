@@ -1,11 +1,10 @@
-import { useEffect } from 'react';
 import { View, Text, TouchableOpacity, ScrollView } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { colors, spacing, radii, typography } from '../../theme';
 import { useApplicationForm } from '../../context/ApplicationFormContext';
-import { getLatestUserApplication, isBlockingApplicationStatus } from '../../lib/applicationService';
+import { getLatestUserApplicationByType, isBlockingApplicationStatus } from '../../lib/applicationService';
 
 type ProfileStackParamList = {
   AccountMain: undefined;
@@ -30,24 +29,6 @@ export default function PortfolioTypeScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<ProfileStackParamList>>();
   const { setPortfolioType } = useApplicationForm();
 
-  useEffect(() => {
-    let isActive = true;
-
-    async function redirectPendingApplication() {
-      const result = await getLatestUserApplication();
-      if (!isActive || !result.success || !result.data) return;
-
-      if (isBlockingApplicationStatus(result.data.status)) {
-        navigation.replace('ApplicationStatus');
-      }
-    }
-
-    redirectPendingApplication();
-
-    return () => {
-      isActive = false;
-    };
-  }, [navigation]);
 
   const portfolioOptions: PortfolioOption[] = [
     {
@@ -68,7 +49,15 @@ export default function PortfolioTypeScreen() {
     },
   ];
 
-  const handleSelectType = (type: 'vendors' | 'venues') => {
+  const handleSelectType = async (type: 'vendors' | 'venues') => {
+    const portfolioType = type === 'vendors' ? 'vendor' : 'venue';
+    const latestApplication = await getLatestUserApplicationByType(portfolioType);
+    
+    if (latestApplication.success && latestApplication.data && isBlockingApplicationStatus(latestApplication.data.status)) {
+      navigation.replace('ApplicationStatus');
+      return;
+    }
+    
     setPortfolioType(type);
     navigation.navigate('ApplicationStep1');
   };

@@ -301,6 +301,38 @@ export async function getLatestUserApplication() {
   }
 }
 
+export async function getLatestUserApplicationByType(portfolioType: 'venue' | 'vendor') {
+  try {
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+
+    if (authError || !user) {
+      throw new Error('User not authenticated');
+    }
+
+    const { data, error } = await supabase
+      .from('subscriber_applications')
+      .select('*')
+      .eq('user_id', user.id)
+      .eq('portfolio_type', portfolioType)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle<SubscriberApplication>();
+
+    if (error) {
+      console.error('Get latest application by type error:', error);
+      throw new Error(error.message);
+    }
+
+    return { success: true, data: data ?? null };
+  } catch (error) {
+    console.error('Get latest application by type error:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to get latest application',
+    };
+  }
+}
+
 export function isBlockingApplicationStatus(status?: string | null) {
   const normalized = String(status ?? '').toLowerCase();
   return BLOCKING_APPLICATION_STATUSES.includes(normalized as (typeof BLOCKING_APPLICATION_STATUSES)[number]);

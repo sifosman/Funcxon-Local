@@ -3,7 +3,6 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { colors, spacing, radii, typography } from '../theme';
-import { getLatestUserApplication, isBlockingApplicationStatus } from '../lib/applicationService';
 
 type ProfileStackParamList = {
     AccountMain: undefined;
@@ -30,15 +29,7 @@ type MenuItem = {
 export default function SubscriberProfileScreen() {
     const navigation = useNavigation<NativeStackNavigationProp<ProfileStackParamList>>();
 
-    const handleCreatePortfolio = async () => {
-        const latestApplication = await getLatestUserApplication();
-        if (latestApplication.success && latestApplication.data) {
-            if (isBlockingApplicationStatus(latestApplication.data.status)) {
-                navigation.navigate('ApplicationStatus');
-                return;
-            }
-        }
-
+    const handleCreatePortfolio = () => {
         navigation.navigate('PortfolioType');
     };
 
