@@ -7,19 +7,22 @@ import { colors, radii, spacing, typography } from '../theme';
 import type { ProfileStackParamList } from '../navigation/ProfileNavigator';
 import { supabase } from '../lib/supabaseClient';
 import { useAuth } from '../auth/AuthContext';
+import { useApplicationForm } from '../context/ApplicationFormContext';
 
 type RouteParams = {
   email: string;
   fullName: string;
   tierName: string;
+  productType?: 'vendor' | 'venue';
 };
 
 export default function VendorSignupSuccessScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<ProfileStackParamList>>();
   const route = useRoute();
   const { user } = useAuth();
+  const { setPortfolioType } = useApplicationForm();
 
-  const { email, fullName, tierName } = (route.params ?? {}) as RouteParams;
+  const { email, fullName, tierName, productType } = (route.params ?? {}) as RouteParams;
 
   useEffect(() => {
     // Send welcome email and admin notification when screen loads
@@ -85,7 +88,12 @@ export default function VendorSignupSuccessScreen() {
     }
   };
 
-  const handleContinueApplication = () => {
+  const handleContinueApplication = async () => {
+    // Determine portfolio type based on productType (defaults to vendors if not specified)
+    const portfolioType = productType === 'venue' ? 'venues' : 'vendors';
+    console.log('VendorSignupSuccessScreen - Setting portfolio type to:', portfolioType);
+    await setPortfolioType(portfolioType);
+    console.log('VendorSignupSuccessScreen - Navigating to ApplicationStep1');
     navigation.navigate('ApplicationStep1');
   };
 

@@ -57,7 +57,7 @@ export type ProfileStackParamList = {
         productType?: 'vendor' | 'venue';
         planKey?: string;
     };
-    VendorSignupSuccess: { email: string; fullName: string; tierName: string };
+    VendorSignupSuccess: { email: string; fullName: string; tierName: string; productType?: 'vendor' | 'venue' };
     PortfolioAssistance: undefined;
     UpdatePortfolio: undefined;
     UpdateVendorPortfolio: undefined;

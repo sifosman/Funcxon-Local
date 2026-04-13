@@ -218,7 +218,7 @@ type RouteParams = {
 export default function SubscriptionCheckoutScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<ProfileStackParamList>>();
   const route = useRoute();
-  const { updateStep4 } = useApplicationForm();
+  const { updateStep4, setPortfolioType } = useApplicationForm();
 
   const { tierName, billing, priceLabel, isFree, productType, planKey } = (route.params ?? {}) as RouteParams;
 
@@ -372,6 +372,7 @@ export default function SubscriptionCheckoutScreen() {
         email: email.trim(),
         fullName: fullName.trim(),
         tierName: tierName,
+        productType: productType || 'vendor',
       });
       return;
     }
@@ -458,6 +459,13 @@ export default function SubscriptionCheckoutScreen() {
       await WebBrowser.openBrowserAsync(checkoutUrl);
       // After returning from PayFast, send welcome email and proceed to application
       await sendWelcomeEmail();
+      
+      // Set portfolio type based on productType before navigating
+      const portfolioType = productType === 'venue' ? 'venues' : 'vendors';
+      console.log('SubscriptionCheckoutScreen - Setting portfolio type to:', portfolioType);
+      await setPortfolioType(portfolioType);
+      console.log('SubscriptionCheckoutScreen - Navigating to ApplicationStep1');
+      
       navigation.navigate('ApplicationStep1');
     } catch (err) {
       Alert.alert('Payment Error', 'Could not open PayFast checkout. Please try again.');

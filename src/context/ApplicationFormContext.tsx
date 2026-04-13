@@ -161,6 +161,21 @@ function applicationFormReducer(
     case 'SET_EDITING_APPLICATION_ID':
       return { ...state, editingApplicationId: action.payload };
     case 'SET_PORTFOLIO_TYPE':
+      // If portfolio type is changing (and not being set for the first time), 
+      // reset form data except step1 (company details)
+      const isChangingType = state.portfolioType !== null && state.portfolioType !== action.payload;
+      if (isChangingType) {
+        console.log('Portfolio type changing from', state.portfolioType, 'to', action.payload, '- resetting form');
+        return {
+          portfolioType: action.payload,
+          editingApplicationId: null,
+          step1: state.step1, // Keep company details
+          step2: initialState.step2,
+          step3: initialState.step3,
+          step4: initialState.step4,
+        };
+      }
+      console.log('Setting portfolio type to', action.payload);
       return { ...state, portfolioType: action.payload };
     case 'UPDATE_STEP1':
       return { ...state, step1: { ...state.step1, ...action.payload } };
@@ -182,7 +197,7 @@ function applicationFormReducer(
 interface ApplicationFormContextValue {
   state: ApplicationFormState;
   setEditingApplicationId: (applicationId: string | null) => void;
-  setPortfolioType: (type: PortfolioType) => void;
+  setPortfolioType: (type: PortfolioType) => Promise<void>;
   updateStep1: (data: Partial<Step1Data>) => void;
   updateStep2: (data: Partial<Step2Data>) => void;
   updateStep3: (data: Partial<Step3Data>) => void;
@@ -195,7 +210,14 @@ interface ApplicationFormContextValue {
 
 const ApplicationFormContext = createContext<ApplicationFormContextValue | undefined>(undefined);
 
-const STORAGE_KEY = '@funcxon_application_draft';
+const getStorageKey = (portfolioType: PortfolioType) => {
+  if (portfolioType === 'venues') {
+    return '@funcxon_application_draft_venue';
+  } else if (portfolioType === 'vendors') {
+    return '@funcxon_application_draft_vendor';
+  }
+  return '@funcxon_application_draft';
+};
 
 export function ApplicationFormProvider({ children }: { children: React.ReactNode }) {
   const [state, dispatch] = useReducer(applicationFormReducer, initialState);
@@ -203,7 +225,8 @@ export function ApplicationFormProvider({ children }: { children: React.ReactNod
 
   const saveDraft = async () => {
     try {
-      await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+      const storageKey = getStorageKey(state.portfolioType);
+      await AsyncStorage.setItem(storageKey, JSON.stringify(state));
     } catch (error) {
       console.error('Failed to save draft:', error);
     }
@@ -211,7 +234,8 @@ export function ApplicationFormProvider({ children }: { children: React.ReactNod
 
   const loadDraft = async () => {
     try {
-      const draft = await AsyncStorage.getItem(STORAGE_KEY);
+      const storageKey = getStorageKey(state.portfolioType);
+      const draft = await AsyncStorage.getItem(storageKey);
       if (draft) {
         dispatch({ type: 'LOAD_DRAFT', payload: JSON.parse(draft) });
       }
@@ -222,8 +246,20 @@ export function ApplicationFormProvider({ children }: { children: React.ReactNod
     }
   };
 
+  // Clean up old generic draft storage on mount to prevent conflicts
   useEffect(() => {
-    loadDraft();
+    const cleanup = async () => {
+      try {
+        // Remove old generic draft that might conflict
+        await AsyncStorage.removeItem('@funcxon_application_draft');
+        console.log('Cleaned up old draft storage');
+      } catch (error) {
+        console.error('Failed to cleanup old drafts:', error);
+      } finally {
+        setHasHydrated(true);
+      }
+    };
+    cleanup();
   }, []);
 
   useEffect(() => {
@@ -232,16 +268,50 @@ export function ApplicationFormProvider({ children }: { children: React.ReactNod
   }, [hasHydrated, state]);
 
   const resetForm = () => {
+    const storageKey = getStorageKey(state.portfolioType);
     dispatch({ type: 'RESET_FORM' });
-    AsyncStorage.removeItem(STORAGE_KEY).catch((error) => {
+    AsyncStorage.removeItem(storageKey).catch((error) => {
       console.error('Failed to clear draft:', error);
     });
+  };
+
+  const setPortfolioTypeAndLoadDraft = async (type: PortfolioType) => {
+    console.log('=== setPortfolioTypeAndLoadDraft called with type:', type);
+    
+    try {
+      const storageKey = getStorageKey(type);
+      console.log('Checking for draft at storage key:', storageKey);
+      const draft = await AsyncStorage.getItem(storageKey);
+      
+      if (draft) {
+        const parsedDraft = JSON.parse(draft);
+        console.log('Found saved draft with portfolioType:', parsedDraft.portfolioType);
+        
+        // Only load if the draft matches the selected portfolio type
+        if (parsedDraft.portfolioType === type) {
+          console.log('✓ Draft matches selected type, loading it');
+          dispatch({ type: 'LOAD_DRAFT', payload: { ...parsedDraft, portfolioType: type } });
+        } else {
+          console.log('✗ Draft type mismatch! Ignoring it and starting fresh');
+          dispatch({ type: 'SET_PORTFOLIO_TYPE', payload: type });
+        }
+      } else {
+        console.log('No saved draft found, starting fresh with type:', type);
+        dispatch({ type: 'SET_PORTFOLIO_TYPE', payload: type });
+      }
+    } catch (error) {
+      console.error('Error in setPortfolioTypeAndLoadDraft:', error);
+      // On error, just set the portfolio type
+      dispatch({ type: 'SET_PORTFOLIO_TYPE', payload: type });
+    }
+    
+    console.log('=== setPortfolioTypeAndLoadDraft completed');
   };
 
   const value: ApplicationFormContextValue = {
     state,
     setEditingApplicationId: (applicationId) => dispatch({ type: 'SET_EDITING_APPLICATION_ID', payload: applicationId }),
-    setPortfolioType: (type) => dispatch({ type: 'SET_PORTFOLIO_TYPE', payload: type }),
+    setPortfolioType: setPortfolioTypeAndLoadDraft,
     updateStep1: (data) => dispatch({ type: 'UPDATE_STEP1', payload: data }),
     updateStep2: (data) => dispatch({ type: 'UPDATE_STEP2', payload: data }),
     updateStep3: (data) => dispatch({ type: 'UPDATE_STEP3', payload: data }),
