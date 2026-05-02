@@ -81,7 +81,19 @@ export default function VendorProfileScreen({ route, navigation }: Props) {
     vendorIds: [],
     venueIds: [],
   });
-  const { user } = useAuth();
+  const { user, session } = useAuth();
+
+  const goToQuoteRequest = () => {
+    if (!vendor) return;
+    if (!session) {
+      (navigation as any).getParent()?.getParent()?.navigate('Auth', { screen: 'SignIn' });
+      return;
+    }
+    navigation.navigate('QuoteRequest', {
+      vendorId: vendor.id,
+      vendorName: name,
+    });
+  };
 
   const cameFromFavourites = route.params?.from === 'Favourites';
   const cameFromQuotes = route.params?.from === 'Quotes';
@@ -1068,12 +1080,7 @@ export default function VendorProfileScreen({ route, navigation }: Props) {
               Quote Options
             </Text>
             <TouchableOpacity
-              onPress={() =>
-                navigation.navigate('QuoteRequest', {
-                  vendorId: vendor.id,
-                  vendorName: name,
-                })
-              }
+              onPress={goToQuoteRequest}
               style={{
                 backgroundColor: colors.primaryTeal,
                 paddingVertical: spacing.md,
@@ -1329,10 +1336,7 @@ export default function VendorProfileScreen({ route, navigation }: Props) {
                 ? handleOpenUrl(whatsappUrl)
                 : emailUrl
                   ? handleOpenUrl(emailUrl)
-                  : navigation.navigate('QuoteRequest', {
-                    vendorId: vendor.id,
-                    vendorName: name,
-                  })
+                  : goToQuoteRequest()
             }
             style={{
               marginTop: spacing.md,
@@ -1375,12 +1379,7 @@ export default function VendorProfileScreen({ route, navigation }: Props) {
         </Text>
         <PrimaryButton
           title="Request a quote"
-          onPress={() =>
-            navigation.navigate('QuoteRequest', {
-              vendorId: vendor.id,
-              vendorName: name,
-            })
-          }
+          onPress={goToQuoteRequest}
         />
       </View>
     </ScrollView>

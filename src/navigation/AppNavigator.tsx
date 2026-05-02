@@ -30,11 +30,9 @@ export function AppNavigator() {
     );
   }
 
-  // Show Auth (Welcome screen) if not logged in, Main (Home screen) if logged in
-  const initialRouteName = session ? 'Main' : 'Auth';
-
+  // Always show Main stack; Auth screens are accessible via navigation for login prompts
   return (
-    <Stack.Navigator initialRouteName={initialRouteName} screenOptions={{ headerShown: false }}>
+    <Stack.Navigator initialRouteName="Main" screenOptions={{ headerShown: false }}>
       <Stack.Screen name="Main" component={RootNavigator} />
       <Stack.Screen name="Auth" component={AuthNavigator} />
     </Stack.Navigator>

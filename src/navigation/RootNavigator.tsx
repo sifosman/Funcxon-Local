@@ -6,9 +6,11 @@ import { QuotesNavigator } from './QuotesNavigator';
 import { ProfileNavigator } from './ProfileNavigator';
 import PlannerScreen from '../screens/PlannerScreen';
 import FavouritesScreen from '../screens/FavouritesScreen';
+import GuestPromptScreen from '../screens/GuestPromptScreen';
 import PortfolioProfileScreen from '../screens/subscriber/PortfolioProfileScreen';
 import { colors, typography } from '../theme';
 import { useAuth } from '../auth/AuthContext';
+import GuardedScreen from '../components/GuardedScreen';
 
 export type RootTabParamList = {
   Home: undefined;
@@ -21,7 +23,7 @@ export type RootTabParamList = {
 const Tab = createBottomTabNavigator<RootTabParamList>();
 
 export function RootNavigator() {
-  const { userRole, isLoading } = useAuth();
+  const { userRole, isLoading, session } = useAuth();
 
   // Show loading indicator while determining user role
   if (isLoading) {
@@ -32,8 +34,8 @@ export function RootNavigator() {
     );
   }
 
-  // Determine initial route based on user role
-  const initialRouteName = userRole === 'vendor' ? 'Account' : 'Home';
+  // Determine initial route based on user role (guests always land on Home)
+  const initialRouteName = session && userRole === 'vendor' ? 'Account' : 'Home';
 
   return (
     <Tab.Navigator
@@ -110,24 +112,28 @@ export function RootNavigator() {
       />
       <Tab.Screen
         name="Favourites"
-        component={FavouritesScreen}
         options={{ headerShown: false, tabBarLabel: 'Favourites' }}
-      />
+      >
+        {() => <GuardedScreen component={FavouritesScreen} label="Favourites" />}
+      </Tab.Screen>
       <Tab.Screen
         name="Quotes"
-        component={QuotesNavigator}
         options={{ headerShown: false, tabBarLabel: 'Quotes' }}
-      />
+      >
+        {() => <GuardedScreen component={QuotesNavigator} label="Quotes" />}
+      </Tab.Screen>
       <Tab.Screen
         name="Planner"
-        component={PlannerScreen}
         options={{ headerShown: false, tabBarLabel: 'Planner' }}
-      />
+      >
+        {() => <GuardedScreen component={PlannerScreen} label="Planner" />}
+      </Tab.Screen>
       <Tab.Screen
         name="Account"
-        component={ProfileNavigator}
         options={{ headerShown: false, tabBarLabel: 'Account' }}
-      />
+      >
+        {() => <GuardedScreen component={ProfileNavigator} label="Account" />}
+      </Tab.Screen>
     </Tab.Navigator>
   );
 }

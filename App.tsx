@@ -5,7 +5,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Platform, View } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { AppNavigator } from './src/navigation/AppNavigator';
-import { AuthProvider } from './src/auth/AuthContext';
+import { AuthProvider, useAuth } from './src/auth/AuthContext';
 import { ApplicationFormProvider } from './src/context/ApplicationFormContext';
 import { PendingSearchProvider } from './src/context/PendingSearchContext';
 import { colors } from './src/theme';
@@ -23,6 +23,7 @@ import FloatingHelpButton from './src/components/FloatingHelpButton';
 import { HelpCenterModal } from './src/components/HelpCenterModal';
 import DataConsentModal, { hasAcceptedDataConsent } from './src/components/DataConsentModal';
 import { useVendorStatus } from './src/hooks/useVendorStatus';
+import AppHeader from './src/components/AppHeader';
 
 const queryClient = new QueryClient();
 
@@ -129,6 +130,7 @@ function AppContent({ helpVisible, setHelpVisible }: { helpVisible: boolean; set
   
   return (
     <View style={{ flex: 1 }}>
+      <AppHeader />
       <AppNavigator />
       {isVendor && <FloatingHelpButton onPress={() => setHelpVisible(true)} />}
       {isVendor && <HelpCenterModal visible={helpVisible} onClose={() => setHelpVisible(false)} />}

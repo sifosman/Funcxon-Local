@@ -13,17 +13,7 @@ import { getFavourites, toggleFavourite } from '../lib/favourites';
 import { useAuth } from '../auth/AuthContext';
 import { PrimaryButton } from '../components/ui';
 
-let RNMaps: any = null;
-let mapsAvailable = false;
 const GOOGLE_MAPS_API_KEY = 'AIzaSyBjd1KYtTaAzxzdw5ayGwwMu5Sex-gKQLI';
-if (Platform.OS !== 'web') {
-  try {
-    RNMaps = require('react-native-maps');
-    mapsAvailable = !!RNMaps?.default;
-  } catch (e) {
-    console.warn('react-native-maps not available:', e);
-  }
-}
 
 type Props = NativeStackScreenProps<AttendeeStackParamList, 'VenueProfile'>;
 
@@ -483,12 +473,18 @@ export default function VenueProfileScreen({ route, navigation }: Props) {
     ? `https://maps.googleapis.com/maps/api/staticmap?center=${encodeURIComponent(mapSearchTarget)}&zoom=16&size=1200x600&scale=2&markers=color:red%7C${encodeURIComponent(mapSearchTarget)}&key=${GOOGLE_MAPS_API_KEY}`
     : null;
 
+  const { session } = useAuth();
+
   const handleRequestQuote = () => {
     if (!venue) return;
-    navigation.navigate('QuoteRequest', { 
-      vendorId: venue.id, 
+    if (!session) {
+      (navigation as any).getParent()?.getParent()?.navigate('Auth', { screen: 'SignIn' });
+      return;
+    }
+    navigation.navigate('QuoteRequest', {
+      vendorId: venue.id,
       vendorName: venue.name,
-      type: 'venue' // Pass type to differentiate
+      type: 'venue'
     });
   };
 

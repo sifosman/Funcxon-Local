@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState, useRef, useCallback } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  Dimensions,
   Image,
   Modal,
   ScrollView,
@@ -9,6 +10,7 @@ import {
   TextInput,
   TouchableOpacity,
   View,
+  Platform,
 } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { MaterialIcons } from '@expo/vector-icons';
@@ -26,6 +28,7 @@ import { useAuth } from '../auth/AuthContext';
 import { provinces, getCitiesByProvince, getAllCities } from '../config/locations';
 import { amenitiesList } from '../config/venueTypes';
 import MapRadiusSelector from '../components/MapRadiusSelector';
+import { AppFooter } from '../components/AppFooter';
 import { usePendingSearch } from '../context/PendingSearchContext';
 import type { PendingSearchSnapshot } from '../context/PendingSearchContext';
 
@@ -278,10 +281,20 @@ type CategoryPickerOption = {
 export default function AttendeeHomeScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<AttendeeStackParamList>>();
   const scrollViewRef = useRef<ScrollView>(null);
-  const featuredVendorsRef = useRef<View>(null);
   const [search, setSearch] = useState('');
-  const [hasSearched, setHasSearched] = useState(false);
   const [serviceType, setServiceType] = useState<ServiceType>('All');
+
+  // Responsive card width - aim for ~3.5 cards visible to show a half card at the edge
+  const [screenWidth, setScreenWidth] = useState(Dimensions.get('window').width);
+  const cardWidth = screenWidth / 3.5;
+
+  useEffect(() => {
+    const subscription = Dimensions.addEventListener('change', ({ window }) => {
+      setScreenWidth(window.width);
+    });
+    return () => subscription?.remove();
+  }, []);
+
   const [selectedCategoryIds, setSelectedCategoryIds] = useState<number[]>([]);
   const [selectedVenueTypes, setSelectedVenueTypes] = useState<string[]>([]);
   const [selectedSubcategories, setSelectedSubcategories] = useState<string[]>([]);
@@ -312,9 +325,138 @@ export default function AttendeeHomeScreen() {
   const [showMapRadiusSelector, setShowMapRadiusSelector] = useState(false);
   const [mapCenter, setMapCenter] = useState<{ latitude: number; longitude: number } | null>(null);
   const [mapRadius, setMapRadius] = useState<number>(20);
-  const [visibleFeaturedCount, setVisibleFeaturedCount] = useState(6);
   const { user } = useAuth();
   const { pendingSearch, shouldApplyPendingSearch, savePendingSearch, markPendingSearchConsumed } = usePendingSearch();
+
+  const exploreOptions = [
+    {
+      key: 'location' as const,
+      title: 'By Location',
+      subtitle: 'Find venues and services near you',
+      image: require('../../assets/slider_1.jpeg'),
+    },
+    {
+      key: 'categories' as const,
+      title: 'By Categories',
+      subtitle: 'Browse popular event categories',
+      image: require('../../assets/slider_1.jpeg'),
+    },
+    {
+      key: 'amenities' as const,
+      title: 'By Venue Amenities',
+      subtitle: 'Search venues by key features',
+      image: require('../../assets/slider_1.jpeg'),
+    },
+    {
+      key: 'services' as const,
+      title: 'By Services',
+      subtitle: 'Explore service professionals',
+      image: require('../../assets/slider_1.jpeg'),
+    },
+  ];
+
+  const openDiscoverPreset = (preset: typeof exploreOptions[number]['key']) => {
+    if (preset === 'location') {
+      navigation.navigate('Discover', {
+        presetFilter: 'location',
+        searchTitle: 'Search by Location',
+        showFilters: true,
+        category: 'all',
+      });
+      return;
+    }
+
+    if (preset === 'categories') {
+      navigation.navigate('Discover', {
+        presetFilter: 'categories',
+        searchTitle: 'Search by Categories',
+        showFilters: true,
+        category: 'all',
+      });
+      return;
+    }
+
+    if (preset === 'amenities') {
+      navigation.navigate('Discover', {
+        presetFilter: 'amenities',
+        searchTitle: 'Search by Venue Amenities',
+        showFilters: true,
+        category: 'venues',
+      });
+      return;
+    }
+
+    navigation.navigate('Discover', {
+      presetFilter: 'services',
+      searchTitle: 'Search by Services',
+      showFilters: true,
+      category: 'services',
+    });
+  };
+
+  const renderFeaturedCard = (
+    item: VendorListItem,
+    onPress: () => void,
+  ) => {
+    return (
+      <TouchableOpacity
+        key={item.id}
+        activeOpacity={0.9}
+        onPress={onPress}
+        style={{ width: cardWidth, marginRight: spacing.md }}
+      >
+        <View
+          style={{
+            backgroundColor: colors.surface,
+            borderRadius: radii.lg,
+            overflow: 'hidden',
+            borderWidth: 1,
+            borderColor: colors.borderSubtle,
+            height: cardWidth * 1.3,
+          }}
+        >
+          <Image
+            source={item.image_url ? { uri: item.image_url } : require('../../assets/adaptive-icon.jpg')}
+            style={{ width: '100%', height: cardWidth * 0.67 }}
+            resizeMode="cover"
+          />
+          <View style={{ flex: 1, padding: spacing.sm, justifyContent: 'space-between' }}>
+            <View>
+              <Text
+                style={{
+                  ...typography.titleMedium,
+                  color: colors.textPrimary,
+                  marginBottom: spacing.xs,
+                  fontSize: 12,
+                }}
+                numberOfLines={1}
+              >
+                {item.name || 'Unknown'}
+              </Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.xs }}>
+                <MaterialIcons name="star" size={12} color={colors.primaryTeal} />
+                <Text style={{ ...typography.caption, color: colors.textPrimary, marginLeft: spacing.xs, fontSize: 10 }}>
+                  {typeof item.rating === 'number' ? item.rating.toFixed(1) : '—'}
+                </Text>
+              </View>
+            </View>
+            <View
+              style={{
+                backgroundColor: colors.surfaceMuted,
+                paddingHorizontal: spacing.sm,
+                paddingVertical: 3,
+                borderRadius: radii.full,
+              }}
+            >
+              <Text style={{ ...typography.caption, color: colors.textPrimary, fontWeight: '600', fontSize: 10 }} numberOfLines={1}>
+                {[item.city, item.province].filter(Boolean).join(', ') || item.location || 'Location'}
+              </Text>
+            </View>
+          </View>
+        </View>
+      </TouchableOpacity>
+    );
+  };
 
   const parseLocationParts = (location?: string | null) => {
     const value = (location ?? '').trim();
@@ -638,6 +780,25 @@ export default function AttendeeHomeScreen() {
     },
   });
 
+  const { data: blogPosts, isLoading: blogLoading } = useQuery({
+    queryKey: ['blog-posts-home'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('blog_posts')
+        .select('id, title, slug, excerpt, cover_image_url, author_name, category, published_at, read_time_minutes')
+        .eq('is_published', true)
+        .order('published_at', { ascending: false })
+        .limit(6);
+
+      if (error) {
+        console.error('Error fetching blog posts:', error);
+        return [];
+      }
+
+      return data || [];
+    },
+  });
+
   const provinceOptions = useMemo(
     () => (dropdownData ?? []).filter((option) => option.type === 'province'),
     [dropdownData],
@@ -743,7 +904,6 @@ export default function AttendeeHomeScreen() {
     setSortOrder(pendingSearch.sortOrder);
     setMapCenter(pendingSearch.mapCenter);
     setMapRadius(pendingSearch.mapRadius);
-    setHasSearched(true);
     markPendingSearchConsumed();
 
     setTimeout(() => {
@@ -904,83 +1064,6 @@ export default function AttendeeHomeScreen() {
     selectedCapacity,
   ]);
 
-  const orderedVendors = useMemo(() => {
-    if (!filteredVendors.length) return [];
-    
-    let vendors = [...filteredVendors];
-    
-    // Apply sorting
-    vendors.sort((a, b) => {
-      let comparison = 0;
-      
-      switch (sortBy) {
-        case 'name':
-          const nameA = (a.name ?? '').toLowerCase();
-          const nameB = (b.name ?? '').toLowerCase();
-          comparison = nameA.localeCompare(nameB);
-          break;
-          
-        case 'rating':
-          const ratingA = a.rating ?? 0;
-          const ratingB = b.rating ?? 0;
-          comparison = ratingA - ratingB;
-          break;
-          
-        case 'price':
-          // Extract numeric values from price range for comparison
-          const extractPrice = (priceRange: string | null) => {
-            if (!priceRange) return 0;
-            const numbers = priceRange.match(/[\d,]+/g);
-            if (!numbers || numbers.length === 0) return 0;
-            // Use the highest number in the range for comparison
-            return parseInt(numbers[numbers.length - 1].replace(/,/g, ''), 10);
-          };
-          const priceA = extractPrice(a.price_range);
-          const priceB = extractPrice(b.price_range);
-          comparison = priceA - priceB;
-          break;
-          
-        case 'distance':
-          // Priority: same city, then same province, then others
-          const cityFilter = (locationCity ?? '').toLowerCase();
-          const regionFilter = (locationRegion ?? '').toLowerCase();
-          
-          const getDistanceScore = (vendor: VendorListItem) => {
-            const city = (vendor.city ?? '').toLowerCase();
-            const province = (vendor.province ?? '').toLowerCase();
-            
-            if (cityFilter && city.includes(cityFilter)) return 0;
-            if (regionFilter && province.includes(regionFilter)) return 1;
-            return 2;
-          };
-          
-          comparison = getDistanceScore(a) - getDistanceScore(b);
-          break;
-          
-        default:
-          comparison = 0;
-      }
-      
-      return sortOrder === 'asc' ? comparison : -comparison;
-    });
-    
-    return vendors;
-  }, [filteredVendors, sortBy, sortOrder, locationCity, locationRegion]);
-
-  const nearbyVendors = useMemo(() => {
-    if (!orderedVendors.length || (!locationCity && !locationRegion)) return [];
-    const cityFilter = (locationCity ?? '').toLowerCase();
-    const regionFilter = (locationRegion ?? '').toLowerCase();
-
-    return orderedVendors.filter((vendor) => {
-      const city = (vendor.city ?? '').toLowerCase();
-      const province = (vendor.province ?? '').toLowerCase();
-      const matchesCity = cityFilter && city.includes(cityFilter);
-      const matchesRegion = regionFilter && province.includes(regionFilter);
-      return matchesCity || matchesRegion;
-    });
-  }, [orderedVendors, locationCity, locationRegion]);
-
   const sortedFeaturedData = useMemo(() => {
     if (!featuredData?.length) return [];
     
@@ -1039,20 +1122,6 @@ export default function AttendeeHomeScreen() {
     
     return vendors;
   }, [featuredData, sortBy, sortOrder, locationCity, locationRegion]);
-
-  const featuredListings = orderedVendors.length ? orderedVendors : filteredVendors;
-
-  const infiniteScrollEnabled = hasSearched && search.trim().length === 0;
-
-  useEffect(() => {
-    setVisibleFeaturedCount(6);
-  }, [search, serviceType, selectedCategoryIds, selectedVenueTypes, selectedSubcategories, selectedProvinces, selectedCities, selectedCapacity, sortBy, sortOrder]);
-
-  const visibleListings = infiniteScrollEnabled
-    ? featuredListings.slice(0, visibleFeaturedCount)
-    : featuredListings;
-
-  const displayedListings = hasSearched ? visibleListings : sortedFeaturedData;
 
   const loadFavourites = useCallback(async () => {
     if (!user?.id) {
@@ -1204,863 +1273,389 @@ export default function AttendeeHomeScreen() {
       ref={scrollViewRef}
       style={{ flex: 1, backgroundColor: colors.background }}
       contentContainerStyle={{ paddingBottom: spacing.xl }}
-      scrollEventThrottle={16}
-      onScroll={(event) => {
-        if (!infiniteScrollEnabled) return;
-        if (visibleFeaturedCount >= featuredListings.length) return;
-
-        const { layoutMeasurement, contentOffset, contentSize } = event.nativeEvent;
-        const paddingToBottom = 240;
-        const isNearBottom = layoutMeasurement.height + contentOffset.y >= contentSize.height - paddingToBottom;
-        if (isNearBottom) {
-          setVisibleFeaturedCount((prev) => Math.min(featuredListings.length, prev + 6));
-        }
-      }}
     >
-      <View style={{ backgroundColor: colors.primary, paddingBottom: spacing.xl }}>
-        <View style={{ paddingHorizontal: spacing.lg, paddingTop: spacing.xl }}>
-          <Text
-            style={{
-              ...typography.displayMedium,
-              color: '#FFFFFF',
-              textAlign: 'center',
-            }}
-          >
-            Connect, Collaborate, Celebrate
-          </Text>
-          <Text
-            style={{
-              ...typography.body,
-              color: 'rgba(255,255,255,0.9)',
-              textAlign: 'center',
-              marginTop: spacing.sm,
-            }}
-          >
-            Welcome to Funcxon! Your all in one Event Coordinator. Plan, browse, compare, get quotes, and
-            book venues and service professionals in one place.
-          </Text>
-
+      {/* Hero Image with Text Overlay */}
+      <View style={{ paddingHorizontal: spacing.lg, paddingTop: spacing.lg }}>
+        <View style={{ position: 'relative' }}>
+          <Image
+            source={require('../../assets/slider_1.jpeg')}
+            style={{ width: '100%', height: 180, borderRadius: radii.lg }}
+            resizeMode="cover"
+          />
           <View
             style={{
-              marginTop: spacing.lg,
-              backgroundColor: colors.surface,
-              borderRadius: radii.lg,
-              padding: spacing.lg,
-              borderWidth: 1,
-              borderColor: '#D1D5DB',
-              shadowColor: '#000',
-              shadowOpacity: 0.12,
-              shadowRadius: 10,
-              shadowOffset: { width: 0, height: 4 },
+              position: 'absolute',
+              right: 0,
+              top: 0,
+              bottom: 0,
+              justifyContent: 'center',
+              paddingRight: spacing.md,
+              paddingLeft: spacing.xl,
+              backgroundColor: 'transparent',
             }}
           >
-            <Text style={{ ...typography.caption, color: colors.textSecondary, marginBottom: spacing.xs }}>
-              Service type
+            <Text style={{ ...typography.displayLarge, color: '#FFFFFF', fontWeight: '700', textShadowColor: 'rgba(0,0,0,0.5)', textShadowOffset: { width: 2, height: 2 }, textShadowRadius: 4, fontSize: screenWidth < 375 ? 22 : screenWidth < 400 ? 25 : 28 }}>
+              Connect
             </Text>
-            <View style={{ flexDirection: 'row', columnGap: spacing.sm }}>
-              {(['Venues', 'Vendors', 'All'] as ServiceType[]).map((type) => {
-                const selected = serviceType === type;
-                const label =
-                  type === 'Vendors' ? 'Vendors' : type === 'Venues' ? 'Venue\nPortfolios' : 'All';
-                return (
-                  <TouchableOpacity
-                    key={type}
-                    onPress={() => setServiceType(type)}
-                    style={{
-                      flex: 1,
-                      paddingVertical: spacing.sm,
-                      borderRadius: radii.md,
-                      borderWidth: 1,
-                      borderColor: selected ? colors.primary : '#D1D5DB',
-                      backgroundColor: selected ? colors.primary : '#FFFFFF',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                    }}
-                  >
-                    <Text
-                      style={{
-                        ...typography.caption,
-                        fontWeight: '600',
-                        textAlign: 'center',
-                        color: selected ? '#FFFFFF' : colors.textPrimary,
-                      }}
-                    >
-                      {label}
-                    </Text>
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
-
-            <View style={{ marginTop: spacing.md }}>
-              <Text style={{ ...typography.caption, color: colors.textSecondary, marginBottom: spacing.xs }}>
-                Search by category
-              </Text>
-              <TouchableOpacity activeOpacity={0.9} onPress={() => {
-                    setCategorySearchQuery('');
-                    setOpenPicker('category');
-                  }}>
-                <View
-                  style={{
-                    borderRadius: radii.md,
-                    borderWidth: 1,
-                    borderColor: '#D1D5DB',
-                    paddingHorizontal: spacing.md,
-                    paddingVertical: spacing.sm,
-                    backgroundColor: '#FFFFFF',
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                  }}
-                >
-                  <Text style={{ ...typography.body, color: colors.textPrimary }}>
-                    {(() => {
-                      if (serviceType === 'Venues') {
-                        return selectedVenueTypes.length ? selectedVenueTypes.join(', ') : 'Search by Category';
-                      }
-                      if (serviceType === 'Vendors') {
-                        const vendorLabels = selectedCategoryIds
-                          .map((id) => VENDOR_CATEGORIES.find((c) => c.id === id)?.label)
-                          .filter(Boolean)
-                          .join(', ');
-                        return vendorLabels || 'Search by Category';
-                      }
-                      const venuePart = selectedVenueTypes.length ? selectedVenueTypes.join(', ') : '';
-                      const vendorPart = selectedCategoryIds
-                        .map((id) => VENDOR_CATEGORIES.find((c) => c.id === id)?.label)
-                        .filter(Boolean)
-                        .join(', ');
-                      const combined = [venuePart, vendorPart].filter(Boolean).join(' | ');
-                      return combined || 'Search by Category';
-                    })()}
-                  </Text>
-                  <Text style={{ ...typography.caption, color: colors.textMuted }}>▼</Text>
-                </View>
-              </TouchableOpacity>
-            </View>
-
-            {(serviceType === 'Vendors' || serviceType === 'All') && (
-              <View style={{ marginTop: spacing.md }}>
-                <Text style={{ ...typography.caption, color: colors.textSecondary, marginBottom: spacing.xs }}>
-                  What are you looking for?
-                </Text>
-                <TouchableOpacity activeOpacity={0.9} onPress={() => setOpenPicker('subcategory')}>
-                  <View
-                    style={{
-                      borderRadius: radii.md,
-                      borderWidth: 1,
-                      borderColor: '#D1D5DB',
-                      paddingHorizontal: spacing.md,
-                      paddingVertical: spacing.sm,
-                      backgroundColor: '#FFFFFF',
-                      flexDirection: 'row',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                    }}
-                  >
-                    <Text style={{ ...typography.body, color: colors.textPrimary }}>
-                      {selectedSubcategories.length ? selectedSubcategories.join(', ') : 'What are you looking for?'}
-                    </Text>
-                    <Text style={{ ...typography.caption, color: colors.textMuted }}>▼</Text>
-                  </View>
-                </TouchableOpacity>
-              </View>
-            )}
-
-            {(serviceType === 'Venues' || serviceType === 'All') && (
-              <View style={{ marginTop: spacing.md }}>
-                <Text style={{ ...typography.caption, color: colors.textSecondary, marginBottom: spacing.xs }}>
-                  Venue Amenities
-                </Text>
-                <TouchableOpacity activeOpacity={0.9} onPress={() => {
-                      setVenueAmenitiesQuery('');
-                      setOpenPicker('venue_amenities');
-                    }}>
-                  <View
-                    style={{
-                      borderRadius: radii.md,
-                      borderWidth: 1,
-                      borderColor: '#D1D5DB',
-                      paddingHorizontal: spacing.md,
-                      paddingVertical: spacing.sm,
-                      backgroundColor: '#FFFFFF',
-                      flexDirection: 'row',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                    }}
-                  >
-                    <Text style={{ ...typography.body, color: colors.textPrimary }}>
-                      {selectedVenueAmenities.length ? selectedVenueAmenities.join(', ') : 'Venue Amenities'}
-                    </Text>
-                    <Text style={{ ...typography.caption, color: colors.textMuted }}>▼</Text>
-                  </View>
-                </TouchableOpacity>
-              </View>
-            )}
-
-            <View style={{ marginTop: spacing.md }}>
-              <Text style={{ ...typography.caption, color: colors.textSecondary, marginBottom: spacing.xs }}>
-                Event Capacity
-              </Text>
-              <TouchableOpacity activeOpacity={0.9} onPress={() => setOpenPicker('capacity_band')}>
-                <View
-                  style={{
-                    borderRadius: radii.md,
-                    borderWidth: 1,
-                    borderColor: '#D1D5DB',
-                    paddingHorizontal: spacing.md,
-                    paddingVertical: spacing.sm,
-                    backgroundColor: '#FFFFFF',
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                  }}
-                >
-                  <Text style={{ ...typography.body, color: colors.textPrimary }}>
-                    {selectedCapacity?.label || 'Event Capacity'}
-                  </Text>
-                  <Text style={{ ...typography.caption, color: colors.textMuted }}>▼</Text>
-                </View>
-              </TouchableOpacity>
-            </View>
-
-            <View style={{ marginTop: spacing.md }}>
-              <Text style={{ ...typography.caption, color: colors.textSecondary, marginBottom: spacing.xs }}>
-                Search Area
-              </Text>
-              <TouchableOpacity 
-                activeOpacity={0.9} 
-                onPress={() => setShowMapRadiusSelector(true)}
-                style={{
-                  borderRadius: radii.md,
-                  borderWidth: 1,
-                  borderColor: '#D1D5DB',
-                  paddingHorizontal: spacing.md,
-                  paddingVertical: spacing.sm,
-                  backgroundColor: '#FFFFFF',
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                }}
-              >
-                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                  <MaterialIcons name="map" size={16} color={colors.primary} />
-                  <Text style={{ ...typography.body, color: colors.textPrimary, marginLeft: spacing.sm }}>
-                    {mapCenter ? `${mapRadius}km radius` : 'Select search area'}
-                  </Text>
-                </View>
-                <MaterialIcons name="chevron-right" size={16} color={colors.textMuted} />
-              </TouchableOpacity>
-            </View>
-
-            <View style={{ marginTop: spacing.md }}>
-              <Text style={{ ...typography.caption, color: colors.textSecondary, marginBottom: spacing.xs }}>
-                Provinces
-              </Text>
-              <TouchableOpacity activeOpacity={0.9} onPress={() => setOpenPicker('province')}>
-                <View
-                  style={{
-                    borderRadius: radii.md,
-                    borderWidth: 1,
-                    borderColor: '#D1D5DB',
-                    paddingHorizontal: spacing.md,
-                    paddingVertical: spacing.sm,
-                    backgroundColor: '#FFFFFF',
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                  }}
-                >
-                  <Text style={{ ...typography.body, color: colors.textPrimary, flex: 1 }} numberOfLines={1}>
-                    {selectedProvinces.length > 0 ? selectedProvinces.join(', ') : 'Select Provinces'}
-                  </Text>
-                  <Text style={{ ...typography.caption, color: colors.textMuted }}>▼</Text>
-                </View>
-              </TouchableOpacity>
-            </View>
-
-            <View style={{ marginTop: spacing.md }}>
-              <Text style={{ ...typography.caption, color: colors.textSecondary, marginBottom: spacing.xs }}>
-                Cities
-              </Text>
-              <TouchableOpacity activeOpacity={0.9} onPress={() => {
-                    setCitySearchQuery(''); // Reset search when opening
-                    setOpenPicker('city');
-                  }}>
-                <View
-                  style={{
-                    borderRadius: radii.md,
-                    borderWidth: 1,
-                    borderColor: '#D1D5DB',
-                    paddingHorizontal: spacing.md,
-                    paddingVertical: spacing.sm,
-                    backgroundColor: '#FFFFFF',
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                  }}
-                >
-                  <Text style={{ ...typography.body, color: colors.textPrimary, flex: 1 }} numberOfLines={1}>
-                    {selectedCities.length > 0 ? selectedCities.join(', ') : 'Select Cities'}
-                  </Text>
-                  <Text style={{ ...typography.caption, color: colors.textMuted }}>▼</Text>
-                </View>
-              </TouchableOpacity>
-              {provinceOptions.length > 0 && (
-                <View style={{ flexDirection: 'row', marginTop: spacing.xs, gap: spacing.sm }}>
-                  <TouchableOpacity
-                    activeOpacity={0.9}
-                    onPress={handleUseMyLocation}
-                    style={{
-                      alignSelf: 'flex-start',
-                      paddingHorizontal: spacing.md,
-                      paddingVertical: spacing.xs,
-                      borderRadius: radii.full,
-                      backgroundColor: colors.accent,
-                    }}
-                  >
-                    <Text style={{ ...typography.caption, color: colors.textPrimary }}>
-                      {detectingLocation
-                        ? 'Detecting location...'
-                        : detectedProvinceLabel
-                        ? `Using ${detectedProvinceLabel}`
-                        : 'Use my location'}
-                    </Text>
-                  </TouchableOpacity>
-                  {(selectedProvinces.length > 0 || selectedCities.length > 0) && (
-                    <TouchableOpacity
-                      activeOpacity={0.9}
-                      onPress={() => {
-                        setSelectedProvinces([]);
-                        setSelectedCities([]);
-                        setDetectedProvinceLabel(null);
-                        setLocationCity(null);
-                        setLocationRegion(null);
-                      }}
-                      style={{
-                        alignSelf: 'flex-start',
-                        paddingHorizontal: spacing.md,
-                        paddingVertical: spacing.xs,
-                        borderRadius: radii.full,
-                        backgroundColor: colors.surfaceMuted,
-                        borderWidth: 1,
-                        borderColor: colors.borderSubtle,
-                      }}
-                    >
-                      <Text style={{ ...typography.caption, color: colors.textSecondary }}>
-                        Remove Location
-                      </Text>
-                    </TouchableOpacity>
-                  )}
-                </View>
-              )}
-            </View>
-
-            <View style={{ flexDirection: 'row', columnGap: spacing.md, justifyContent: 'center' }}>
-              <View style={{ flex: 1 }}>
-                <PrimaryButton 
-                  title="Search" 
-                  onPress={() => {
-                    if (!user?.id) {
-                      const pendingSearchSnapshot: PendingSearchSnapshot = {
-                        search,
-                        serviceType,
-                        selectedCategoryIds,
-                        selectedVenueTypes,
-                        selectedSubcategories,
-                        selectedVenueAmenities,
-                        selectedProvinces,
-                        selectedCities,
-                        categorySearchQuery,
-                        citySearchQuery,
-                        venueAmenitiesQuery,
-                        distanceKm,
-                        selectedCapacity,
-                        singleDayEvent,
-                        fromDate: fromDate ? fromDate.toISOString() : null,
-                        toDate: toDate ? toDate.toISOString() : null,
-                        detectedProvinceLabel,
-                        locationCity,
-                        locationRegion,
-                        sortBy,
-                        sortOrder,
-                        mapCenter,
-                        mapRadius,
-                      };
-                      savePendingSearch(pendingSearchSnapshot);
-                      navigation.getParent()?.navigate('Auth');
-                      return;
-                    }
-                    setHasSearched(true);
-                    // Scroll to featured vendors section
-                    setTimeout(() => {
-                      scrollViewRef.current?.scrollTo({ y: 800, animated: true });
-                    }, 100);
-                  }} 
-                />
-              </View>
-              <View style={{ width: 120 }}>
-                <OutlineButton
-                  title="Clear All"
-                  onPress={() => {
-                    setSearch('');
-                    setServiceType('All');
-                    setSelectedCategoryIds([]);
-                    setSelectedVenueTypes([]);
-                    setSelectedSubcategories([]);
-                    setSelectedVenueAmenities([]);
-                    setSelectedProvinces([]);
-                    setSelectedCities([]);
-                    setCitySearchQuery('');
-                    setDistanceKm('');
-                    setSelectedCapacity(null);
-                    setDetectedProvinceLabel(null);
-                    setLocationCity(null);
-                    setLocationRegion(null);
-                    setMapCenter(null);
-                    setMapRadius(20);
-                    setSortBy('name');
-                    setSortOrder('asc');
-                    setHasSearched(false); // Also reset search state
-                  }}
-                />
-              </View>
-            </View>
-
-            <View style={{ flexDirection: 'row', columnGap: spacing.sm, marginTop: spacing.md }}>
-              <TouchableOpacity
-                style={{
-                  flex: 1,
-                  borderWidth: 1,
-                  borderColor: '#D1D5DB',
-                  borderRadius: radii.md,
-                  paddingVertical: spacing.xs,
-                  alignItems: 'center',
-                  flexDirection: 'row',
-                  justifyContent: 'center',
-                }}
-                onPress={() => setShowSortModal(true)}
-              >
-                <MaterialIcons name="sort" size={16} color={colors.textSecondary} />
-                <Text style={{ ...typography.caption, color: colors.textSecondary, marginLeft: spacing.xs }}>
-                  Sort: {sortBy === 'name' ? 'Name' : sortBy === 'rating' ? 'Rating' : sortBy === 'price' ? 'Price' : 'Distance'} ({sortOrder === 'asc' ? '↑' : '↓'})
-                </Text>
-              </TouchableOpacity>
-            </View>
+            <Text style={{ ...typography.displayLarge, color: '#FFFFFF', fontWeight: '700', textShadowColor: 'rgba(0,0,0,0.5)', textShadowOffset: { width: 2, height: 2 }, textShadowRadius: 4, fontSize: screenWidth < 375 ? 22 : screenWidth < 400 ? 25 : 28 }}>
+              Collaborate
+            </Text>
+            <Text style={{ ...typography.displayLarge, color: '#FFFFFF', fontWeight: '700', textShadowColor: 'rgba(0,0,0,0.5)', textShadowOffset: { width: 2, height: 2 }, textShadowRadius: 4, fontSize: screenWidth < 375 ? 22 : screenWidth < 400 ? 25 : 28 }}>
+              Celebrate
+            </Text>
           </View>
         </View>
       </View>
 
-      {nearbyVendors.length > 0 && (
-        <View style={{ paddingHorizontal: spacing.lg, paddingTop: spacing.lg }}>
+      {/* Message from app owners */}
+      <View style={{ paddingHorizontal: spacing.lg, marginTop: spacing.lg }}>
+        <View
+          style={{
+            backgroundColor: colors.background,
+            paddingVertical: screenWidth < 375 ? spacing.md : spacing.lg,
+            paddingHorizontal: spacing.lg,
+            alignItems: 'center',
+          }}
+        >
           <Text
+            numberOfLines={1}
             style={{
-              ...typography.displayMedium,
+              ...typography.titleLarge,
               color: colors.textPrimary,
-              marginBottom: spacing.sm,
+              textAlign: 'center',
+              fontWeight: '800',
+              fontSize: screenWidth < 375 ? 16 : screenWidth < 400 ? 18 : 20,
             }}
           >
-            Near you
+            Let's get this party started!!
           </Text>
-          {nearbyVendors?.map((item) => (
-            <TouchableOpacity
-              key={`${item.type}-${item.id}`}
-              activeOpacity={0.9}
-              onPress={() => {
-                if (item.type === 'venue') {
-                  navigation.navigate('VenueProfile', { venueId: item.id });
-                } else {
-                  navigation.navigate('VendorProfile', { vendorId: item.id });
-                }
-              }}
-              style={{
-                paddingVertical: spacing.sm,
-                borderBottomWidth: 1,
-                borderBottomColor: colors.borderSubtle,
-              }}
-            >
-              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-                <View style={{ flex: 1, paddingRight: spacing.md }}>
-                  <Text style={{ ...typography.body, color: colors.textPrimary, fontWeight: '600' }}>
-                    {item.name ?? 'Untitled'}
-                  </Text>
-                  <Text style={{ ...typography.caption, color: colors.textSecondary, marginTop: spacing.xs }}>
-                    {[item.city, item.province].filter(Boolean).join(', ') || 'Location not specified'}
-                  </Text>
-                  {item.type === 'venue' && (
-                     <Text style={{ ...typography.caption, color: colors.primaryTeal, marginTop: 4 }}>Venue</Text>
-                  )}
-                </View>
-                <TouchableOpacity
-                  onPress={(event) => {
-                    event.stopPropagation();
-                    handleToggleFavourite(item.id, item.type);
-                  }}
-                  style={{
-                    width: 32,
-                    height: 32,
-                    borderRadius: 16,
-                    borderWidth: 1,
-                    borderColor: colors.borderSubtle,
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                  }}
-                >
-                  <MaterialIcons
-                    name={
-                      (item.type === 'vendor' && favouriteIds.vendorIds.includes(item.id)) ||
-                      (item.type === 'venue' && favouriteIds.venueIds.includes(item.id))
-                        ? 'favorite'
-                        : 'favorite-border'
-                    }
-                    size={18}
-                    color={
-                      (item.type === 'vendor' && favouriteIds.vendorIds.includes(item.id)) ||
-                      (item.type === 'venue' && favouriteIds.venueIds.includes(item.id))
-                        ? colors.primaryTeal
-                        : colors.textMuted
-                    }
-                  />
-                </TouchableOpacity>
-              </View>
-            </TouchableOpacity>
-          ))}
         </View>
-      )}
+      </View>
 
-      {/* Featured Vendors */}
-      <View ref={featuredVendorsRef} style={{ paddingTop: spacing.xl, backgroundColor: colors.surface, marginTop: spacing.xl }}>
-        {(selectedCategoryIds.length > 0 || selectedVenueTypes.length > 0 || selectedSubcategories.length > 0) && (
-          <View style={{ paddingHorizontal: spacing.lg, paddingBottom: spacing.md }}>
-            <View
-              style={{
-                flexDirection: 'row',
-                alignItems: 'center',
-                flexWrap: 'wrap',
-                gap: spacing.sm,
-              }}
-            >
-              <View
-                style={{
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  backgroundColor: '#E0F2F7',
-                  paddingHorizontal: spacing.md,
-                  paddingVertical: spacing.sm,
-                  borderRadius: radii.full,
-                }}
-              >
-                <MaterialIcons name="filter-list" size={16} color={colors.primary} />
-                <Text
-                  style={{
-                    ...typography.caption,
-                    color: colors.primary,
-                    marginLeft: spacing.xs,
-                    fontWeight: '600',
-                  }}
-                >
-                  Filters applied
-                </Text>
-              </View>
+      {/* Featured Venues - Horizontal Scroll */}
+      <View style={{ marginTop: spacing.xl }}>
+        <View style={{ paddingHorizontal: spacing.lg, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.md }}>
+          <Text style={{ ...typography.titleLarge, color: colors.textPrimary, fontWeight: '700' }}>Featured Venues</Text>
+          <TouchableOpacity onPress={() => navigation.navigate('Discover', { category: 'venues', searchTitle: 'Featured Venues' })}>
+            <Text style={{ ...typography.body, color: colors.primary, fontWeight: '600' }}>Find more →</Text>
+          </TouchableOpacity>
+        </View>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: spacing.lg }}>
+          {sortedFeaturedData
+            .filter((item) => item.type === 'venue')
+            .slice(0, 6)
+            .map((item) =>
+              renderFeaturedCard(item, () => navigation.navigate('VenueProfile', { venueId: item.id })),
+            )}
+        </ScrollView>
+      </View>
 
-              {serviceType !== 'Venues' &&
-                selectedCategoryIds?.map((id) => {
-                  const label = VENDOR_CATEGORIES.find((c) => c.id === id)?.label;
-                  if (!label) return null;
-                  return (
-                    <View
-                      key={`cat-${id}`}
-                      style={{
-                        backgroundColor: colors.surfaceMuted,
-                        paddingHorizontal: spacing.md,
-                        paddingVertical: 6,
-                        borderRadius: radii.full,
-                      }}
-                    >
-                      <Text style={{ ...typography.caption, color: colors.textPrimary, fontWeight: '600' }}>{label}</Text>
-                    </View>
-                  );
-                })}
+      {/* Featured Vendors & Services - Horizontal Scroll */}
+      <View style={{ marginTop: spacing.xl }}>
+        <View style={{ paddingHorizontal: spacing.lg, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.md }}>
+          <Text style={{ ...typography.titleLarge, color: colors.textPrimary, fontWeight: '700' }}>Featured Vendors & Services</Text>
+          <TouchableOpacity onPress={() => navigation.navigate('Discover', { category: 'vendors', searchTitle: 'Featured Vendors & Services' })}>
+            <Text style={{ ...typography.body, color: colors.primary, fontWeight: '600' }}>Find more →</Text>
+          </TouchableOpacity>
+        </View>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: spacing.lg }}>
+          {sortedFeaturedData
+            .filter((item) => item.type === 'vendor')
+            .slice(0, 6)
+            .map((item) =>
+              renderFeaturedCard(item, () => navigation.navigate('VendorProfile', { vendorId: item.id })),
+            )}
+        </ScrollView>
+      </View>
 
-              {serviceType === 'Venues' &&
-                selectedVenueTypes?.map((vt) => (
-                  <View
-                    key={`venue-type-${vt}`}
-                    style={{
-                      backgroundColor: colors.surfaceMuted,
-                      paddingHorizontal: spacing.md,
-                      paddingVertical: 6,
-                      borderRadius: radii.full,
-                    }}
-                  >
-                    <Text style={{ ...typography.caption, color: colors.textPrimary, fontWeight: '600' }}>{vt}</Text>
-                  </View>
-                ))}
-
-              {selectedSubcategories?.map((sub) => (
-                <View
-                  key={`sub-${sub}`}
-                  style={{
-                    backgroundColor: colors.surfaceMuted,
-                    paddingHorizontal: spacing.md,
-                    paddingVertical: 6,
-                    borderRadius: radii.full,
-                  }}
-                >
-                  <Text style={{ ...typography.caption, color: colors.textPrimary, fontWeight: '600' }}>{sub}</Text>
-                </View>
-              ))}
-
-              {selectedVenueAmenities?.map((amenity) => (
-                <View
-                  key={`amenity-${amenity}`}
-                  style={{
-                    backgroundColor: colors.surfaceMuted,
-                    paddingHorizontal: spacing.md,
-                    paddingVertical: 6,
-                    borderRadius: radii.full,
-                  }}
-                >
-                  <Text style={{ ...typography.caption, color: colors.textPrimary, fontWeight: '600' }}>{amenity}</Text>
-                </View>
-              ))}
-            </View>
-          </View>
-        )}
+      {/* Explore By - Horizontal Discovery Section */}
+      <View style={{ marginTop: spacing.xl }}>
         <View
           style={{
             paddingHorizontal: spacing.lg,
-            marginBottom: spacing.sm,
-            flexDirection: 'row',
-            alignItems: 'center',
-            justifyContent: 'space-between',
+            marginBottom: spacing.md,
           }}
         >
           <Text
             style={{
-              ...typography.displayMedium,
+              ...typography.titleLarge,
               color: colors.textPrimary,
+              fontWeight: '700',
             }}
           >
-            {hasSearched ? 'Search' : 'Featured'}
-            {'\n'}
-            {hasSearched ? 'Results' : 'Vendors'}
+            Explore by
+          </Text>
+          <Text
+            style={{
+              ...typography.body,
+              color: colors.textSecondary,
+              marginTop: spacing.xs,
+            }}
+          >
+            Quickly browse venues and services using popular filters.
           </Text>
         </View>
 
-        {displayedListings.length === 0 ? (
-          <View style={{ paddingHorizontal: spacing.lg, paddingBottom: spacing.lg }}>
-            {selectedCategoryIds.length > 0 || selectedVenueTypes.length > 0 || selectedSubcategories.length > 0 ? (
-              <View style={{ alignItems: 'center', paddingVertical: spacing.xl }}>
-                <MaterialIcons name="search-off" size={48} color={colors.textMuted} />
-                <Text style={{ ...typography.titleMedium, color: colors.textPrimary, marginTop: spacing.md, textAlign: 'center' }}>
-                  No listings found for your selected filters
-                </Text>
-                <Text style={{ ...typography.body, color: colors.textMuted, marginTop: spacing.sm, textAlign: 'center' }}>
-                  Try selecting a different category or adjust your filters
-                </Text>
-              </View>
-            ) : (
-              <Text style={{ ...typography.body, color: colors.textMuted }}>
-                No featured services yet. Add vendors or venues in Supabase to see them here.
-              </Text>
-            )}
-          </View>
-        ) : (
-          <View style={{ paddingHorizontal: spacing.lg, paddingBottom: spacing.lg }}>
-            {displayedListings?.map((item) => (
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={{ paddingHorizontal: spacing.lg }}
+        >
+          {exploreOptions.map((option) => (
+            <TouchableOpacity
+              key={option.key}
+              activeOpacity={0.9}
+              style={{ width: cardWidth, marginRight: spacing.md }}
+              onPress={() => openDiscoverPreset(option.key)}
+            >
               <View
-                key={`${item.type}-${item.id}`}
                 style={{
-                  marginBottom: spacing.md,
+                  backgroundColor: colors.surface,
+                  borderRadius: radii.lg,
+                  overflow: 'hidden',
+                  borderWidth: 1,
+                  borderColor: colors.borderSubtle,
+                  height: cardWidth * 1.3,
                 }}
               >
-                <View
-                  style={{
-                    borderRadius: radii.xl,
-                    backgroundColor: colors.surface,
-                    borderWidth: 1,
-                    borderColor: colors.borderSubtle,
-                    overflow: 'hidden',
-                    shadowColor: '#000',
-                    shadowOpacity: 0.08,
-                    shadowRadius: 8,
-                    shadowOffset: { width: 0, height: 4 },
-                  }}
-                >
-                  <TouchableOpacity
-                    activeOpacity={0.9}
-                    onPress={() => {
-                      if (item.type === 'venue') {
-                        navigation.navigate('VenueProfile', { venueId: item.id });
-                      } else {
-                        navigation.navigate('VendorProfile', { vendorId: item.id });
-                      }
-                    }}
-                    style={{ flexDirection: 'row' }}
-                  >
-                    <View style={{ width: 150, height: 180 }}>
-                      {item.image_url ? (
-                        <Image
-                          source={{ uri: item.image_url }}
-                          style={{ width: '100%', height: '100%' }}
-                          resizeMode="cover"
-                        />
-                      ) : (
-                        <View
-                          style={{
-                            width: '100%',
-                            height: '100%',
-                            backgroundColor: colors.surfaceMuted,
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                          }}
-                        >
-                          <Text style={{ ...typography.caption, color: colors.textMuted }}>No image</Text>
-                        </View>
-                      )}
-
-                      <View
-                        style={{
-                          position: 'absolute',
-                          top: 10,
-                          left: 10,
-                          backgroundColor: colors.primaryTeal,
-                          paddingHorizontal: spacing.md,
-                          paddingVertical: 6,
-                          borderRadius: radii.full,
-                        }}
-                      >
-                        <Text style={{ ...typography.caption, color: '#FFFFFF', fontWeight: '700' }}>
-                          {hasSearched ? 'Result' : 'Featured'}
-                        </Text>
-                      </View>
-                    </View>
-
-                    <View style={{ flex: 1, padding: spacing.md }}>
-                      <View style={{ flexDirection: 'row', alignItems: 'flex-start' }}>
-                        <Text
-                          numberOfLines={1}
-                          style={{
-                            ...typography.titleMedium,
-                            color: colors.textPrimary,
-                            flex: 1,
-                            paddingRight: spacing.sm,
-                          }}
-                        >
-                          {item.name ?? 'Untitled'}
-                        </Text>
-                        <TouchableOpacity
-                          onPress={(event) => {
-                            event.stopPropagation();
-                            handleToggleFavourite(item.id, item.type);
-                          }}
-                          style={{
-                            width: 34,
-                            height: 34,
-                            borderRadius: 17,
-                            borderWidth: 1,
-                            borderColor: colors.borderSubtle,
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            backgroundColor: colors.surface,
-                          }}
-                        >
-                          <MaterialIcons
-                            name={
-                              (item.type === 'vendor' && favouriteIds.vendorIds.includes(item.id)) ||
-                              (item.type === 'venue' && favouriteIds.venueIds.includes(item.id))
-                                ? 'favorite'
-                                : 'favorite-border'
-                            }
-                            size={18}
-                            color={
-                              (item.type === 'vendor' && favouriteIds.vendorIds.includes(item.id)) ||
-                              (item.type === 'venue' && favouriteIds.venueIds.includes(item.id))
-                                ? colors.primaryTeal
-                                : colors.textMuted
-                            }
-                          />
-                        </TouchableOpacity>
-                      </View>
-
-                      <View
-                        style={{
-                          flexDirection: 'row',
-                          alignItems: 'center',
-                          alignSelf: 'flex-start',
-                          backgroundColor: colors.primaryTeal + '15',
-                          paddingHorizontal: spacing.sm,
-                          paddingVertical: 6,
-                          borderRadius: radii.md,
-                          marginTop: spacing.sm,
-                        }}
-                      >
-                        <MaterialIcons name="star-outline" size={16} color={colors.primaryTeal} />
-                        <Text style={{ ...typography.caption, color: colors.textPrimary, marginLeft: spacing.xs }}>
-                          {typeof item.rating === 'number' ? item.rating.toFixed(1) : '—'}
-                          {typeof item.review_count === 'number' && item.review_count > 0 ? ` (${item.review_count})` : ''}
-                        </Text>
-                      </View>
-
-                      {item.description ? (
-                        <Text
-                          numberOfLines={3}
-                          style={{
-                            ...typography.caption,
-                            color: colors.textSecondary,
-                            marginTop: spacing.sm,
-                            lineHeight: 16,
-                          }}
-                        >
-                          {item.description}
-                        </Text>
-                      ) : null}
-
-                      <View
-                        style={{
-                          alignSelf: 'flex-start',
-                          backgroundColor: colors.surfaceMuted,
-                          paddingHorizontal: spacing.md,
-                          paddingVertical: 6,
-                          borderRadius: radii.full,
-                          marginTop: spacing.sm,
-                        }}
-                      >
-                        <Text style={{ ...typography.caption, color: colors.textPrimary, fontWeight: '600' }}>
-                          {[item.city, item.province].filter(Boolean).join(', ') || item.location || 'Location not specified'}
-                        </Text>
-                      </View>
-                    </View>
-                  </TouchableOpacity>
-
-                  <View style={{ padding: spacing.md, paddingTop: 0 }}>
-                    <TouchableOpacity
-                      onPress={() => {
-                        if (item.type === 'venue') {
-                          navigation.navigate('VenueProfile', { venueId: item.id });
-                        } else {
-                          navigation.navigate('VendorProfile', { vendorId: item.id });
-                        }
-                      }}
+                <Image
+                  source={option.image}
+                  style={{ width: '100%', height: cardWidth * 0.67 }}
+                  resizeMode="cover"
+                />
+                <View style={{ flex: 1, padding: spacing.sm, justifyContent: 'space-between' }}>
+                  <View>
+                    <Text
                       style={{
-                        width: '100%',
-                        height: 44,
-                        borderRadius: radii.md,
-                        backgroundColor: colors.primaryTeal,
-                        alignItems: 'center',
-                        justifyContent: 'center',
+                        ...typography.titleMedium,
+                        color: colors.textPrimary,
+                        marginBottom: spacing.xs,
+                        fontSize: 12,
                       }}
+                      numberOfLines={2}
                     >
-                      <Text style={{ ...typography.body, color: '#FFFFFF', fontWeight: '700' }}>View Details</Text>
-                    </TouchableOpacity>
+                      {option.title}
+                    </Text>
+                    <Text
+                      style={{
+                        ...typography.caption,
+                        color: colors.textSecondary,
+                        fontSize: 10,
+                      }}
+                      numberOfLines={2}
+                    >
+                      {option.subtitle}
+                    </Text>
                   </View>
                 </View>
               </View>
-            ))}
-          </View>
-        )}
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
       </View>
+
+      {/* Blog Section */}
+      <View style={{ marginTop: spacing.xl }}>
+        <View
+          style={{
+            paddingHorizontal: spacing.lg,
+            marginBottom: spacing.md,
+            flexDirection: 'row',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+          }}
+        >
+          <View>
+            <Text
+              style={{
+                ...typography.titleLarge,
+                color: colors.textPrimary,
+                fontWeight: '700',
+              }}
+            >
+              From the Blog
+            </Text>
+            <Text
+              style={{
+                ...typography.body,
+                color: colors.textSecondary,
+                marginTop: spacing.xs,
+              }}
+            >
+              Tips, guides, and event inspiration
+            </Text>
+          </View>
+          <TouchableOpacity
+            onPress={() => navigation.navigate('BlogList')}
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+            }}
+          >
+            <Text style={{ ...typography.body, color: colors.primary, fontWeight: '600' }}>View all</Text>
+            <MaterialIcons name="arrow-forward" size={18} color={colors.primary} />
+          </TouchableOpacity>
+        </View>
+
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={{ paddingHorizontal: spacing.lg }}
+        >
+          {(blogPosts || []).slice(0, 6).map((post) => (
+            <TouchableOpacity
+              key={post.id}
+              activeOpacity={0.9}
+              style={{ width: cardWidth * 1.2, marginRight: spacing.md }}
+              onPress={() => navigation.navigate('BlogDetail', { slug: post.slug })}
+            >
+              <View
+                style={{
+                  backgroundColor: colors.surface,
+                  borderRadius: radii.lg,
+                  overflow: 'hidden',
+                  borderWidth: 1,
+                  borderColor: colors.borderSubtle,
+                  height: cardWidth * 1.5,
+                }}
+              >
+                {post.cover_image_url ? (
+                  <Image
+                    source={{ uri: post.cover_image_url }}
+                    style={{ width: '100%', height: cardWidth * 0.7 }}
+                    resizeMode="cover"
+                  />
+                ) : (
+                  <View
+                    style={{
+                      width: '100%',
+                      height: cardWidth * 0.7,
+                      backgroundColor: colors.accent,
+                      justifyContent: 'center',
+                      alignItems: 'center',
+                    }}
+                  >
+                    <MaterialIcons name="article" size={40} color={colors.primary} />
+                  </View>
+                )}
+                <View style={{ flex: 1, padding: spacing.md, justifyContent: 'space-between' }}>
+                  <View>
+                    <View
+                      style={{
+                        backgroundColor: colors.accent,
+                        paddingHorizontal: spacing.sm,
+                        paddingVertical: spacing.xs,
+                        borderRadius: radii.sm,
+                        alignSelf: 'flex-start',
+                        marginBottom: spacing.sm,
+                      }}
+                    >
+                      <Text
+                        style={{
+                          color: colors.primary,
+                          fontSize: 10,
+                          fontWeight: '600',
+                          fontFamily: 'Montserrat_600SemiBold',
+                        }}
+                      >
+                        {post.category}
+                      </Text>
+                    </View>
+                    <Text
+                      style={{
+                        ...typography.titleMedium,
+                        color: colors.textPrimary,
+                        marginBottom: spacing.xs,
+                        fontSize: 13,
+                      }}
+                      numberOfLines={2}
+                    >
+                      {post.title}
+                    </Text>
+                    <Text
+                      style={{
+                        ...typography.caption,
+                        color: colors.textSecondary,
+                        fontSize: 10,
+                      }}
+                      numberOfLines={2}
+                    >
+                      {post.excerpt}
+                    </Text>
+                  </View>
+                  <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                    <MaterialIcons name="schedule" size={12} color={colors.textMuted} />
+                    <Text
+                      style={{
+                        ...typography.caption,
+                        color: colors.textMuted,
+                        marginLeft: spacing.xs,
+                        fontSize: 10,
+                      }}
+                    >
+                      {post.read_time_minutes} min read
+                    </Text>
+                  </View>
+                </View>
+              </View>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+      </View>
+
+      {/* Get Listed CTA Section */}
+      <View style={{ marginTop: spacing.xl, paddingHorizontal: spacing.lg }}>
+        <View style={{ alignItems: 'center', marginBottom: spacing.lg }}>
+          <Text style={{ ...typography.displayLarge, color: colors.textPrimary, fontWeight: '800', textAlign: 'center' }}>
+            Get Listed!
+          </Text>
+        </View>
+
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', flexWrap: 'wrap' }}>
+          {/* Create Venue Portfolio */}
+          <View style={{ width: '31%', alignItems: 'center' }}>
+            <View style={{ width: '100%', aspectRatio: 1, borderRadius: radii.lg, overflow: 'hidden', backgroundColor: colors.surfaceMuted, marginBottom: spacing.sm, borderWidth: 1, borderColor: colors.borderSubtle }}>
+              <Image 
+                source={require('../../assets/slider_1.jpeg')} 
+                style={{ width: '100%', height: '100%' }}
+                resizeMode="cover"
+              />
+            </View>
+            <Text style={{ ...typography.caption, color: colors.textPrimary, fontWeight: '700', textAlign: 'center', fontSize: 10, textTransform: 'uppercase' }}>
+              Create your venue portfolio here
+            </Text>
+          </View>
+
+          {/* Create Vendor Portfolio */}
+          <View style={{ width: '31%', alignItems: 'center' }}>
+            <View style={{ width: '100%', aspectRatio: 1, borderRadius: radii.lg, overflow: 'hidden', backgroundColor: colors.surfaceMuted, marginBottom: spacing.sm, borderWidth: 1, borderColor: colors.borderSubtle }}>
+              <Image 
+                source={require('../../assets/slider_1.jpeg')} 
+                style={{ width: '100%', height: '100%' }}
+                resizeMode="cover"
+              />
+            </View>
+            <Text style={{ ...typography.caption, color: colors.textPrimary, fontWeight: '700', textAlign: 'center', fontSize: 10, textTransform: 'uppercase' }}>
+              Create your vendor & professional services portfolio here
+            </Text>
+          </View>
+
+          {/* Listers Portal Login */}
+          <View style={{ width: '31%', alignItems: 'center' }}>
+            <View style={{ width: '100%', aspectRatio: 1, borderRadius: radii.lg, overflow: 'hidden', backgroundColor: colors.surfaceMuted, marginBottom: spacing.sm, borderWidth: 1, borderColor: colors.borderSubtle }}>
+              <Image 
+                source={require('../../assets/adaptive-icon.jpg')} 
+                style={{ width: '100%', height: '100%' }}
+                resizeMode="cover"
+              />
+            </View>
+            <Text style={{ ...typography.caption, color: colors.textPrimary, fontWeight: '700', textAlign: 'center', fontSize: 10, textTransform: 'uppercase' }}>
+              Listers portal login here
+            </Text>
+          </View>
+        </View>
+      </View>
+
       <Modal
         visible={openPicker !== null}
         transparent
@@ -2700,6 +2295,13 @@ export default function AttendeeHomeScreen() {
         onClearSelection={handleClearLocationSelection}
         initialLocation={mapCenter ?? undefined}
         initialRadius={mapRadius}
+      />
+
+      {/* Footer */}
+      <AppFooter
+        onNavigateToFAQs={() => Alert.alert('FAQs', 'FAQs page coming soon!')}
+        onNavigateToHelpDesk={() => Alert.alert('Help Desk', 'Help desk coming soon!')}
+        onNavigateToTerms={() => navigation.navigate('TermsAndPolicies' as never)}
       />
     </ScrollView>
   );

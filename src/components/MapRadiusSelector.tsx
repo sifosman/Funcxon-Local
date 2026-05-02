@@ -1,11 +1,10 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { 
-  View, 
-  Text, 
-  StyleSheet, 
-  Modal, 
-  TouchableOpacity, 
-  Dimensions,
+import {
+  View,
+  Text,
+  StyleSheet,
+  Modal,
+  TouchableOpacity,
   Alert,
   ActivityIndicator,
   Platform
@@ -14,20 +13,6 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { colors, spacing, radii, typography } from '../theme';
 import * as ExpoLocation from 'expo-location';
 import { WebView } from 'react-native-webview';
-
-// Safely load react-native-maps at module level for native platforms
-let RNMaps: any = null;
-let mapsAvailable = false;
-if (Platform.OS !== 'web') {
-  try {
-    RNMaps = require('react-native-maps');
-    mapsAvailable = !!RNMaps?.default;
-  } catch (e) {
-    console.warn('react-native-maps not available:', e);
-  }
-}
-
-const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
 interface LatLng {
   latitude: number;
@@ -54,7 +39,6 @@ export default function MapRadiusSelector({
   const [selectedLocation, setSelectedLocation] = useState<LatLng>(initialLocation);
   const [radiusKm, setRadiusKm] = useState(initialRadius);
   const [isLoading, setIsLoading] = useState(false);
-  const mapRef = useRef<any>(null);
   const webViewRef = useRef<any>(null);
   const hasAutoDetected = useRef(false);
 
@@ -70,14 +54,7 @@ export default function MapRadiusSelector({
           const loc = await ExpoLocation.getCurrentPositionAsync({ accuracy: ExpoLocation.Accuracy.Balanced });
           const currentLocation = { latitude: loc.coords.latitude, longitude: loc.coords.longitude };
           setSelectedLocation(currentLocation);
-          if (mapsAvailable && mapRef.current) {
-            mapRef.current.animateToRegion({
-              ...currentLocation,
-              latitudeDelta: 0.1,
-              longitudeDelta: 0.1,
-            }, 1000);
-          }
-        } catch {
+            } catch {
           // Silently fall back to default location
         } finally {
           setIsLoading(false);
@@ -91,20 +68,6 @@ export default function MapRadiusSelector({
 
   // Radius options (in km)
   const radiusOptions = [5, 10, 20, 50, 100, 200];
-
-  // Use module-level loaded maps components
-  const MapView = RNMaps?.default;
-  const Circle = RNMaps?.Circle;
-  const Marker = RNMaps?.Marker;
-  const PROVIDER_GOOGLE = RNMaps?.PROVIDER_GOOGLE;
-
-  const handleMapPress = (event: any) => {
-    const { coordinate } = event.nativeEvent;
-    setSelectedLocation({
-      latitude: coordinate.latitude,
-      longitude: coordinate.longitude,
-    });
-  };
 
   const handleRadiusChange = (newRadius: number) => {
     setRadiusKm(newRadius);
@@ -122,14 +85,6 @@ export default function MapRadiusSelector({
       const currentLocation = { latitude: loc.coords.latitude, longitude: loc.coords.longitude };
       setSelectedLocation(currentLocation);
       
-      // Center map on current location (native)
-      if (mapsAvailable && mapRef.current) {
-        mapRef.current.animateToRegion({
-          ...currentLocation,
-          latitudeDelta: 0.1,
-          longitudeDelta: 0.1,
-        }, 1000);
-      }
     } catch (error) {
       Alert.alert('Error', 'Unable to get your current location. Please try again.');
     } finally {

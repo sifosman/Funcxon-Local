@@ -60,7 +60,7 @@
     "plugins": [
       "expo-web-browser",
       [
-        "react-native-maps",
+        "./plugins/withMaps.js",
         {
           "googleMapsApiKey": "AIzaSyBjd1KYtTaAzxzdw5ayGwwMu5Sex-gKQLI"
         }

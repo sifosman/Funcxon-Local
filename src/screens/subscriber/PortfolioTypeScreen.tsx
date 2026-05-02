@@ -50,6 +50,7 @@ export default function PortfolioTypeScreen() {
   ];
 
   const handleSelectType = async (type: 'vendors' | 'venues') => {
+    console.log('PortfolioTypeScreen - User selected:', type);
     const portfolioType = type === 'vendors' ? 'vendor' : 'venue';
     const latestApplication = await getLatestUserApplicationByType(portfolioType);
     
@@ -58,7 +59,9 @@ export default function PortfolioTypeScreen() {
       return;
     }
     
-    setPortfolioType(type);
+    console.log('PortfolioTypeScreen - Setting portfolio type to:', type);
+    await setPortfolioType(type);
+    console.log('PortfolioTypeScreen - Portfolio type set, navigating to ApplicationStep1');
     navigation.navigate('ApplicationStep1');
   };
 
