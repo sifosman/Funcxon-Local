@@ -11,6 +11,8 @@ import PlannerScreen from '../screens/PlannerScreen';
 import BlogListScreen from '../screens/BlogListScreen';
 import BlogDetailScreen from '../screens/BlogDetailScreen';
 import ListersPortalScreen from '../screens/ListersPortalScreen';
+import SubscriptionPlansScreen from '../screens/SubscriptionPlansScreen';
+import VenueListingPlansScreen from '../screens/VenueListingPlansScreen';
 import { colors, typography } from '../theme';
 
 export type AttendeeStackParamList = {
@@ -33,6 +35,8 @@ export type AttendeeStackParamList = {
   BlogList: undefined;
   BlogDetail: { slug: string };
   ListersPortal: undefined;
+  SubscriptionPlans: undefined;
+  VenueListingPlans: undefined;
 };
 
 const Stack = createNativeStackNavigator<AttendeeStackParamList>();
@@ -104,6 +108,16 @@ export function AttendeeNavigator() {
       <Stack.Screen
         name="ListersPortal"
         component={ListersPortalScreen}
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name="SubscriptionPlans"
+        component={SubscriptionPlansScreen}
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name="VenueListingPlans"
+        component={VenueListingPlansScreen}
         options={{ headerShown: false }}
       />
     </Stack.Navigator>

@@ -29,6 +29,7 @@ import VendorQuoteCreateScreen from '../screens/subscriber/VendorQuoteCreateScre
 import VendorQuoteHistoryScreen from '../screens/subscriber/VendorQuoteHistoryScreen';
 import ActionItemsScreen from '../screens/subscriber/ActionItemsScreen';
 import CalendarUpdatesScreen from '../screens/subscriber/CalendarUpdatesScreen';
+import ListerPortfolioScreen from '../screens/subscriber/ListerPortfolioScreen';
 import BillingScreen from '../screens/BillingScreen';
 import AccountSettingsScreen from '../screens/AccountSettingsScreen';
 import ChangePasswordScreen from '../screens/ChangePasswordScreen';
@@ -74,6 +75,7 @@ export type ProfileStackParamList = {
         eventDetails?: string;
     };
     VendorQuoteHistory: { quoteRequestId: number };
+    ListerPortfolio: undefined;
     ActionItems: undefined;
     CalendarUpdates: undefined;
     Billing: undefined;
@@ -218,6 +220,11 @@ export function ProfileNavigator() {
             <Stack.Screen
                 name="VendorQuoteHistory"
                 component={VendorQuoteHistoryScreen}
+                options={{ headerShown: false }}
+            />
+            <Stack.Screen
+                name="ListerPortfolio"
+                component={ListerPortfolioScreen}
                 options={{ headerShown: false }}
             />
             <Stack.Screen

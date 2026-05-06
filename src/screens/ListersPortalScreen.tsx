@@ -88,19 +88,15 @@ export default function ListersPortalScreen() {
   };
 
   const handleLogin = () => {
-    navigation.navigate('Auth' as never, { screen: 'SignIn' } as never);
+    (navigation as any).navigate('Auth', { screen: 'SignIn' });
   };
 
   const handleRegisterVenue = () => {
-    // Navigate directly to Venue Listing Plans, bypassing Account tab guard
-    const rootNav = navigation.getParent()?.getParent() as any;
-    rootNav?.navigate('Main', { screen: 'Account', params: { screen: 'VenueListingPlans' } } as never);
+    navigation.navigate('VenueListingPlans' as never);
   };
 
   const handleRegisterVendor = () => {
-    // Navigate directly to Vendor & Services Subscription Plans, bypassing Account tab guard
-    const rootNav = navigation.getParent()?.getParent() as any;
-    rootNav?.navigate('Main', { screen: 'Account', params: { screen: 'SubscriptionPlans' } } as never);
+    navigation.navigate('SubscriptionPlans' as never);
   };
 
   // Fetch listers-specific blog posts from Supabase

@@ -5,8 +5,9 @@ import { useAuth } from '../auth/AuthContext';
 import { colors, spacing, radii, typography } from '../theme';
 
 export default function AppHeader() {
-  const { user, session } = useAuth();
+  const { user, session, userRole } = useAuth();
   const navigation = useNavigation<any>();
+  const isLister = userRole === 'vendor';
 
   const openDiscover = (params?: {
     category?: 'all' | 'venues' | 'vendors' | 'services';

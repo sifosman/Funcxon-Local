@@ -241,6 +241,12 @@ export default function AccountScreen() {
 
     const menuItems: MenuItem[] = [
         {
+            id: 'lister-portfolio',
+            label: 'Lister Portfolio Dashboard',
+            icon: 'dashboard',
+            route: 'ListerPortfolio',
+        },
+        {
             id: 'my-profile',
             label: 'My Profile',
             icon: 'person',

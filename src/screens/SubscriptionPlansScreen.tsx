@@ -1,4 +1,4 @@
-import { useMemo, useState, useRef } from 'react';
+import { useMemo, useState, useRef, useEffect } from 'react';
 import {
   Alert,
   ScrollView,
@@ -17,15 +17,12 @@ import { savePendingSubscriptionCheckout } from '../lib/pendingSubscriptionCheck
 import { colors, spacing, radii, typography } from '../theme';
 import type { ProfileStackParamList } from '../navigation/ProfileNavigator';
 
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const CARD_MARGIN = 4;
-const CARD_WIDTH = SCREEN_WIDTH * 0.29;
-const SNAP_INTERVAL = CARD_WIDTH + CARD_MARGIN * 2;
 const ACTIVE_SCALE = 1.08;
-const SIDE_SCALE = 0.78;
+const SIDE_SCALE = 0.88;
 const FAR_SCALE = 0.65;
 const ACTIVE_OPACITY = 1;
-const SIDE_OPACITY = 0.45;
+const SIDE_OPACITY = 0.65;
 const FAR_OPACITY = 0.25;
 
 type BillingPeriod = 'monthly' | 'yearly';
@@ -33,6 +30,7 @@ type PlanKey = 'get_started' | 'premium' | 'premium_plus';
 
 type VendorPlan = {
   key: PlanKey;
+  _key?: string;
   title: string;
   subtitle: string;
   badge?: string;
@@ -70,10 +68,25 @@ export default function SubscriptionPlansScreen() {
   const { user } = useAuth();
   const { currentTier } = (route.params as RouteParams) || {};
 
+  const [containerWidth, setContainerWidth] = useState(0);
+
+  const { width: SCREEN_WIDTH, CARD_WIDTH, SNAP_INTERVAL } = useMemo(() => {
+    const width = containerWidth || Dimensions.get('window').width;
+    const CARD_WIDTH = width * 0.33;
+    const SNAP_INTERVAL = CARD_WIDTH + CARD_MARGIN * 2;
+    return { width, CARD_WIDTH, SNAP_INTERVAL };
+  }, [containerWidth]);
+
   const [selectedBilling, setSelectedBilling] = useState<BillingPeriod>('monthly');
   const [selectedPlan, setSelectedPlan] = useState<PlanKey>('premium');
   const [activeIndex, setActiveIndex] = useState(1);
   const scrollRef = useRef<ScrollView>(null);
+
+  useEffect(() => {
+    if (containerWidth > 0 && scrollRef.current) {
+      scrollRef.current.scrollTo({ x: (activeIndex + 1) * SNAP_INTERVAL, animated: false });
+    }
+  }, [containerWidth, activeIndex, SNAP_INTERVAL]);
 
   const plans: VendorPlan[] = useMemo(
     () => [
@@ -143,6 +156,15 @@ export default function SubscriptionPlansScreen() {
     [],
   );
 
+  const circularPlans = useMemo(() => {
+    if (plans.length < 2) return plans;
+    return [
+      { ...plans[plans.length - 1], _key: `${plans[plans.length - 1].key}-clone-start` },
+      ...plans.map((p) => ({ ...p, _key: p.key })),
+      { ...plans[0], _key: `${plans[0].key}-clone-end` },
+    ];
+  }, [plans]);
+
   const features: VendorFeature[] = useMemo(
     () => [
       { label: 'Photo Uploads', get_started: '10', premium: '40', premium_plus: '60' },
@@ -167,17 +189,35 @@ export default function SubscriptionPlansScreen() {
 
   const handleScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
     const offsetX = event.nativeEvent.contentOffset.x;
-    const index = Math.round(offsetX / SNAP_INTERVAL);
-    if (index >= 0 && index < plans.length) {
-      setActiveIndex(index);
-      setSelectedPlan(plans[index].key);
+    const circularIndex = Math.round(offsetX / SNAP_INTERVAL);
+
+    let realIndex: number;
+
+    if (circularIndex === 0) {
+      realIndex = plans.length - 1;
+      setTimeout(() => {
+        scrollRef.current?.scrollTo({ x: plans.length * SNAP_INTERVAL, animated: false });
+      }, 50);
+    } else if (circularIndex === circularPlans.length - 1) {
+      realIndex = 0;
+      setTimeout(() => {
+        scrollRef.current?.scrollTo({ x: 1 * SNAP_INTERVAL, animated: false });
+      }, 50);
+    } else {
+      realIndex = circularIndex - 1;
+    }
+
+    if (realIndex >= 0 && realIndex < plans.length) {
+      setActiveIndex(realIndex);
+      setSelectedPlan(plans[realIndex].key);
     }
   };
 
-  const scrollToIndex = (index: number) => {
-    scrollRef.current?.scrollTo({ x: index * SNAP_INTERVAL, animated: true });
-    setActiveIndex(index);
-    setSelectedPlan(plans[index].key);
+  const scrollToIndex = (realIndex: number) => {
+    const circularIndex = realIndex + 1;
+    scrollRef.current?.scrollTo({ x: circularIndex * SNAP_INTERVAL, animated: true });
+    setActiveIndex(realIndex);
+    setSelectedPlan(plans[realIndex].key);
   };
 
   const handleContinueToCheckout = async () => {
@@ -290,24 +330,30 @@ export default function SubscriptionPlansScreen() {
         </View>
 
         {/* Horizontal Swipeable Cards */}
-        <ScrollView
-          ref={scrollRef}
-          horizontal
-          pagingEnabled={false}
-          showsHorizontalScrollIndicator={false}
-          snapToInterval={SNAP_INTERVAL}
-          snapToAlignment="center"
-          decelerationRate="fast"
-          onMomentumScrollEnd={handleScroll}
-          contentContainerStyle={{
-            paddingHorizontal: (SCREEN_WIDTH - CARD_WIDTH) / 2 - CARD_MARGIN,
-            paddingVertical: spacing.xl,
-            alignItems: 'center',
-          }}
-        >
-          {plans.map((plan, index) => {
-            const isActive = index === activeIndex;
-            const distance = Math.abs(index - activeIndex);
+        <View onLayout={(event) => setContainerWidth(event.nativeEvent.layout.width)}>
+          <ScrollView
+            ref={scrollRef}
+            horizontal
+            pagingEnabled={false}
+            showsHorizontalScrollIndicator={false}
+            snapToInterval={SNAP_INTERVAL}
+            snapToAlignment="center"
+            decelerationRate="fast"
+            onMomentumScrollEnd={handleScroll}
+            contentContainerStyle={{
+              paddingHorizontal: (SCREEN_WIDTH - CARD_WIDTH) / 2 - CARD_MARGIN,
+              paddingVertical: spacing.xl,
+              alignItems: 'center',
+            }}
+          >
+          {circularPlans.map((plan, circularIndex) => {
+            const realIndex = circularIndex === 0
+              ? plans.length - 1
+              : circularIndex === circularPlans.length - 1
+                ? 0
+                : circularIndex - 1;
+            const isActive = realIndex === activeIndex;
+            const distance = Math.abs(realIndex - activeIndex);
             const scale = isActive
               ? ACTIVE_SCALE
               : distance === 1
@@ -322,9 +368,9 @@ export default function SubscriptionPlansScreen() {
             const isCurrentPlan = currentTier?.toLowerCase() === plan.key.replace('_', '');
             return (
               <TouchableOpacity
-                key={plan.key}
+                key={plan._key || plan.key}
                 activeOpacity={0.9}
-                onPress={() => scrollToIndex(index)}
+                onPress={() => scrollToIndex(realIndex)}
                 style={{
                   width: CARD_WIDTH,
                   marginHorizontal: CARD_MARGIN,
@@ -421,7 +467,7 @@ export default function SubscriptionPlansScreen() {
                     style={{
                       ...typography.displayLarge,
                       color: plan.theme.text,
-                      fontSize: isActive ? 28 : 20,
+                      fontSize: isActive ? 22 : 16,
                     }}
                   >
                     {selectedBilling === 'monthly' ? plan.priceMonthly : plan.priceYearly}
@@ -503,7 +549,7 @@ export default function SubscriptionPlansScreen() {
                 {/* CTA Button */}
                 <TouchableOpacity
                   onPress={() => {
-                    scrollToIndex(index);
+                    scrollToIndex(realIndex);
                     setTimeout(handleContinueToCheckout, 300);
                   }}
                   activeOpacity={0.85}
@@ -530,7 +576,8 @@ export default function SubscriptionPlansScreen() {
               </TouchableOpacity>
             );
           })}
-        </ScrollView>
+          </ScrollView>
+        </View>
 
         {/* Pagination Dots */}
         <View
