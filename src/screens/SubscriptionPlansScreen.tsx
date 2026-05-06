@@ -1,25 +1,63 @@
-import { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, Alert, Linking, StyleSheet } from 'react-native';
+import { useMemo, useState, useRef } from 'react';
+import {
+  Alert,
+  ScrollView,
+  Text,
+  TouchableOpacity,
+  View,
+  Dimensions,
+  NativeScrollEvent,
+  NativeSyntheticEvent,
+} from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { colors, spacing, radii, typography } from '../theme';
-import { getSubscriptionTiers } from '../lib/subscription';
 import { useAuth } from '../auth/AuthContext';
 import { savePendingSubscriptionCheckout } from '../lib/pendingSubscriptionCheckout';
+import { colors, spacing, radii, typography } from '../theme';
 import type { ProfileStackParamList } from '../navigation/ProfileNavigator';
 
-const SUPPORT_EMAIL = process.env.EXPO_PUBLIC_SUPPORT_EMAIL || 'support@funcxon.com';
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
+const CARD_MARGIN = 4;
+const CARD_WIDTH = SCREEN_WIDTH * 0.29;
+const SNAP_INTERVAL = CARD_WIDTH + CARD_MARGIN * 2;
+const ACTIVE_SCALE = 1.08;
+const SIDE_SCALE = 0.78;
+const FAR_SCALE = 0.65;
+const ACTIVE_OPACITY = 1;
+const SIDE_OPACITY = 0.45;
+const FAR_OPACITY = 0.25;
 
-type SubscriptionTier = {
-  id: number;
-  tier_name: string;
-  photo_limit: number;
-  price_monthly: number | null;
-  price_yearly: number | null;
-  features: Record<string, any> | null;
-  is_active: boolean;
-  created_at: string;
+type BillingPeriod = 'monthly' | 'yearly';
+type PlanKey = 'get_started' | 'premium' | 'premium_plus';
+
+type VendorPlan = {
+  key: PlanKey;
+  title: string;
+  subtitle: string;
+  badge?: string;
+  priceMonthly: string;
+  priceYearly: string;
+  saveLabel?: string;
+  outcomes: string;
+  theme: {
+    background: string;
+    backgroundLight: string;
+    text: string;
+    textMuted: string;
+    accent: string;
+    buttonBg: string;
+    buttonText: string;
+    checkColor: string;
+    borderColor: string;
+  };
+};
+
+type VendorFeature = {
+  label: string;
+  get_started: string | boolean;
+  premium: string | boolean;
+  premium_plus: string | boolean;
 };
 
 type RouteParams = {
@@ -30,38 +68,132 @@ export default function SubscriptionPlansScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<ProfileStackParamList>>();
   const route = useRoute();
   const { user } = useAuth();
-  const { currentTier } = route.params as RouteParams || {};
-  
-  const [tiers, setTiers] = useState<SubscriptionTier[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [selectedBilling, setSelectedBilling] = useState<'monthly' | 'yearly'>('monthly');
+  const { currentTier } = (route.params as RouteParams) || {};
 
-  useEffect(() => {
-    loadSubscriptionTiers();
-  }, []);
+  const [selectedBilling, setSelectedBilling] = useState<BillingPeriod>('monthly');
+  const [selectedPlan, setSelectedPlan] = useState<PlanKey>('premium');
+  const [activeIndex, setActiveIndex] = useState(1);
+  const scrollRef = useRef<ScrollView>(null);
 
-  const loadSubscriptionTiers = async () => {
-    try {
-      const data = await getSubscriptionTiers();
-      setTiers(data);
-    } catch (error) {
-      Alert.alert('Error', 'Failed to load subscription plans. Please try again.');
-    } finally {
-      setLoading(false);
+  const plans: VendorPlan[] = useMemo(
+    () => [
+      {
+        key: 'get_started',
+        title: 'Get Started',
+        subtitle: 'Perfect for trying us out',
+        badge: 'Free',
+        priceMonthly: 'R0',
+        priceYearly: 'R0',
+        outcomes: 'Get Noticed',
+        theme: {
+          background: '#F5F1E8',
+          backgroundLight: '#FAF8F2',
+          text: colors.textPrimary,
+          textMuted: colors.textMuted,
+          accent: colors.primary,
+          buttonBg: colors.primary,
+          buttonText: colors.primaryForeground,
+          checkColor: colors.primary,
+          borderColor: colors.borderSubtle,
+        },
+      },
+      {
+        key: 'premium',
+        title: 'Premium',
+        subtitle: 'Secure Bookings Online',
+        badge: 'Most Popular',
+        priceMonthly: 'R299',
+        priceYearly: 'R3,289',
+        saveLabel: '1 Month Free',
+        outcomes: 'Secure Bookings Online',
+        theme: {
+          background: '#477372',
+          backgroundLight: '#5A8A89',
+          text: '#FFFFFF',
+          textMuted: 'rgba(255,255,255,0.75)',
+          accent: '#9DCFDB',
+          buttonBg: '#FFFFFF',
+          buttonText: '#477372',
+          checkColor: '#9DCFDB',
+          borderColor: 'rgba(255,255,255,0.2)',
+        },
+      },
+      {
+        key: 'premium_plus',
+        title: 'Premium Plus',
+        subtitle: 'Maximum Exposure',
+        badge: 'Best Value',
+        priceMonthly: 'R399',
+        priceYearly: 'R4,389',
+        saveLabel: '1 Month Free',
+        outcomes: 'Maximum Exposure',
+        theme: {
+          background: '#2B3840',
+          backgroundLight: '#3D4F58',
+          text: '#FFFFFF',
+          textMuted: 'rgba(255,255,255,0.75)',
+          accent: '#FFD700',
+          buttonBg: '#FFD700',
+          buttonText: '#2B3840',
+          checkColor: '#FFD700',
+          borderColor: 'rgba(255,255,255,0.2)',
+        },
+      },
+    ],
+    [],
+  );
+
+  const features: VendorFeature[] = useMemo(
+    () => [
+      { label: 'Photo Uploads', get_started: '10', premium: '40', premium_plus: '60' },
+      { label: 'Video uploads', get_started: false, premium: '5', premium_plus: '10' },
+      { label: 'Catalogue / Pricelist', get_started: 'Up to 10', premium: 'Full', premium_plus: 'Full' },
+      { label: 'Portfolio build assistance', get_started: true, premium: true, premium_plus: true },
+      { label: 'Calendar availability', get_started: true, premium: true, premium_plus: true },
+      { label: 'Online quote requests', get_started: true, premium: true, premium_plus: true },
+      { label: 'Full-time helpdesk support', get_started: true, premium: true, premium_plus: true },
+      { label: 'Ratings & reviews', get_started: false, premium: true, premium_plus: true },
+      { label: 'Analytics & stats', get_started: false, premium: true, premium_plus: true },
+      { label: 'WhatsApp chat', get_started: false, premium: true, premium_plus: true },
+      { label: 'Website & social links', get_started: false, premium: true, premium_plus: true },
+      { label: 'Edit portfolio anytime', get_started: true, premium: true, premium_plus: true },
+      { label: 'Dedicated Portfolio Manager', get_started: false, premium: false, premium_plus: true },
+    ],
+    [],
+  );
+
+  const selected = plans.find((p) => p.key === selectedPlan) ?? plans[0];
+  const currentPrice = selectedBilling === 'monthly' ? selected.priceMonthly : selected.priceYearly;
+
+  const handleScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
+    const offsetX = event.nativeEvent.contentOffset.x;
+    const index = Math.round(offsetX / SNAP_INTERVAL);
+    if (index >= 0 && index < plans.length) {
+      setActiveIndex(index);
+      setSelectedPlan(plans[index].key);
     }
   };
 
-  const handleUpgrade = (tier: SubscriptionTier) => {
-    const price = selectedBilling === 'monthly' ? tier.price_monthly : tier.price_yearly;
-    const isFree = !price || price === 0;
-    const priceLabel = isFree ? 'Free' : `R${Number(price).toLocaleString()}/${selectedBilling.slice(0, -2)}ly`;
+  const scrollToIndex = (index: number) => {
+    scrollRef.current?.scrollTo({ x: index * SNAP_INTERVAL, animated: true });
+    setActiveIndex(index);
+    setSelectedPlan(plans[index].key);
+  };
+
+  const handleContinueToCheckout = async () => {
+    const isFree = selectedPlan === 'get_started';
+
+    const priceLabel = isFree
+      ? 'Free'
+      : `${currentPrice}/${selectedBilling === 'monthly' ? 'month' : 'year'}`;
 
     const checkoutParams: ProfileStackParamList['SubscriptionCheckout'] = {
-      tierName: tier.tier_name,
+      tierName: selected.title,
       billing: selectedBilling,
       priceLabel,
       isFree,
       productType: 'vendor',
+      planKey: selectedPlan,
     };
 
     if (!user) {
@@ -81,433 +213,460 @@ export default function SubscriptionPlansScreen() {
     });
   };
 
-  const handleContactSupport = () => {
-    Linking.openURL(`mailto:${SUPPORT_EMAIL}?subject=Subscription%20plan%20support`).catch(() => {
-      Alert.alert('Support unavailable', 'Could not open your email app. Please try again later.');
-    });
-  };
-
-  const formatPrice = (price: number | null) => {
-    return price ? `R${price.toLocaleString()}` : 'Free';
-  };
-
-  const getTierColor = (tierName: string) => {
-    switch (tierName.toLowerCase()) {
-      case 'free': return colors.textMuted;
-      case 'basic': return colors.primary;
-      case 'premium': return '#8B5CF6';
-      case 'enterprise': return '#DC2626';
-      default: return colors.textPrimary;
-    }
-  };
-
-  const getPopularBadge = (tierName: string) => {
-    return tierName.toLowerCase() === 'premium';
-  };
-
-  const renderFeature = (key: string, value: any) => {
-    if (typeof value === 'boolean') {
-      return (
-        <View key={key} style={styles.featureRow}>
-          <MaterialIcons 
-            name={value ? 'check-circle' : 'cancel'} 
-            size={16} 
-            color={value ? colors.primary : colors.textMuted} 
-          />
-          <Text style={[styles.featureText, !value && styles.featureTextDisabled]}>
-            {key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
-          </Text>
-        </View>
-      );
-    }
-    return null;
-  };
-
-  if (loading) {
-    return (
-      <View style={styles.loadingContainer}>
-        <Text style={styles.loadingText}>Loading subscription plans...</Text>
-      </View>
-    );
-  }
-
   return (
-    <View style={styles.container}>
-      <ScrollView contentContainerStyle={styles.scrollContent}>
+    <View style={{ flex: 1, backgroundColor: colors.background }}>
+      <ScrollView contentContainerStyle={{ paddingBottom: spacing.xl }} showsVerticalScrollIndicator={false}>
         {/* Header */}
-        <View style={styles.header}>
+        <View style={{ paddingHorizontal: spacing.lg, paddingTop: spacing.lg }}>
           <TouchableOpacity
             onPress={() => navigation.goBack()}
-            style={styles.backButton}
+            style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.lg }}
           >
             <MaterialIcons name="arrow-back" size={20} color={colors.textPrimary} />
-            <Text style={styles.backText}>Back</Text>
+            <Text style={{ ...typography.body, color: colors.textPrimary, marginLeft: spacing.sm }}>Back</Text>
           </TouchableOpacity>
-          
-          <Text style={styles.title}>Subscription Plans</Text>
-          <Text style={styles.subtitle}>
-            Choose the perfect plan for your business needs
+
+          <Text style={{ ...typography.titleLarge, color: colors.textPrimary, marginBottom: spacing.xs }}>
+            Vendor & Service Plans
+          </Text>
+          <Text style={{ ...typography.body, color: colors.textMuted, marginBottom: spacing.md }}>
+            Limited-time launch offer — no hidden fees, zero commissions
           </Text>
         </View>
 
         {/* Billing Toggle */}
-        <View style={styles.billingToggle}>
+        <View
+          style={{
+            flexDirection: 'row',
+            backgroundColor: colors.surface,
+            borderRadius: radii.full,
+            padding: 4,
+            marginHorizontal: spacing.lg,
+            marginBottom: spacing.md,
+            borderWidth: 1,
+            borderColor: colors.borderSubtle,
+          }}
+        >
           <TouchableOpacity
-            style={[
-              styles.billingOption,
-              selectedBilling === 'monthly' && styles.billingOptionActive
-            ]}
+            style={{
+              flex: 1,
+              paddingVertical: spacing.sm,
+              borderRadius: radii.full,
+              alignItems: 'center',
+              backgroundColor: selectedBilling === 'monthly' ? colors.primary : 'transparent',
+            }}
             onPress={() => setSelectedBilling('monthly')}
           >
-            <Text style={[
-              styles.billingText,
-              selectedBilling === 'monthly' && styles.billingTextActive
-            ]}>
+            <Text
+              style={{
+                ...typography.caption,
+                color: selectedBilling === 'monthly' ? colors.primaryForeground : colors.textMuted,
+                fontWeight: '500',
+              }}
+            >
               Monthly
             </Text>
           </TouchableOpacity>
           <TouchableOpacity
-            style={[
-              styles.billingOption,
-              selectedBilling === 'yearly' && styles.billingOptionActive
-            ]}
+            style={{
+              flex: 1,
+              paddingVertical: spacing.sm,
+              borderRadius: radii.full,
+              alignItems: 'center',
+              backgroundColor: selectedBilling === 'yearly' ? colors.primary : 'transparent',
+            }}
             onPress={() => setSelectedBilling('yearly')}
           >
-            <Text style={[
-              styles.billingText,
-              selectedBilling === 'yearly' && styles.billingTextActive
-            ]}>
+            <Text
+              style={{
+                ...typography.caption,
+                color: selectedBilling === 'yearly' ? colors.primaryForeground : colors.textMuted,
+                fontWeight: '500',
+              }}
+            >
               Yearly (Save 20%)
             </Text>
           </TouchableOpacity>
         </View>
 
-        {/* Plans */}
-        <View style={styles.plansContainer}>
-          {tiers.map((tier) => {
-            const isCurrent = currentTier === tier.tier_name;
-            const isPopular = getPopularBadge(tier.tier_name);
-            const price = selectedBilling === 'monthly' ? tier.price_monthly : tier.price_yearly;
-            
+        {/* Horizontal Swipeable Cards */}
+        <ScrollView
+          ref={scrollRef}
+          horizontal
+          pagingEnabled={false}
+          showsHorizontalScrollIndicator={false}
+          snapToInterval={SNAP_INTERVAL}
+          snapToAlignment="center"
+          decelerationRate="fast"
+          onMomentumScrollEnd={handleScroll}
+          contentContainerStyle={{
+            paddingHorizontal: (SCREEN_WIDTH - CARD_WIDTH) / 2 - CARD_MARGIN,
+            paddingVertical: spacing.xl,
+            alignItems: 'center',
+          }}
+        >
+          {plans.map((plan, index) => {
+            const isActive = index === activeIndex;
+            const distance = Math.abs(index - activeIndex);
+            const scale = isActive
+              ? ACTIVE_SCALE
+              : distance === 1
+                ? SIDE_SCALE
+                : Math.max(FAR_SCALE, 0.55);
+            const opacity = isActive
+              ? ACTIVE_OPACITY
+              : distance === 1
+                ? SIDE_OPACITY
+                : Math.max(FAR_OPACITY, 0.15);
+            const zIndex = isActive ? 20 : distance === 1 ? 15 : 10 - distance;
+            const isCurrentPlan = currentTier?.toLowerCase() === plan.key.replace('_', '');
             return (
-              <View
-                key={tier.id}
-                style={[
-                  styles.planCard,
-                  isCurrent && styles.planCardCurrent,
-                  isPopular && styles.planCardPopular
-                ]}
+              <TouchableOpacity
+                key={plan.key}
+                activeOpacity={0.9}
+                onPress={() => scrollToIndex(index)}
+                style={{
+                  width: CARD_WIDTH,
+                  marginHorizontal: CARD_MARGIN,
+                  borderRadius: radii.xl,
+                  backgroundColor: plan.theme.background,
+                  padding: spacing.md,
+                  transform: [{ scale }],
+                  opacity,
+                  zIndex,
+                  shadowColor: '#000',
+                  shadowOffset: { width: 0, height: isActive ? 10 : 3 },
+                  shadowOpacity: isActive ? 0.3 : 0.06,
+                  shadowRadius: isActive ? 20 : 5,
+                  elevation: isActive ? 14 : 3,
+                }}
               >
-                {isPopular && (
-                  <View style={styles.popularBadge}>
-                    <Text style={styles.popularBadgeText}>MOST POPULAR</Text>
-                  </View>
-                )}
-                
-                {isCurrent && (
-                  <View style={styles.currentBadge}>
-                    <Text style={styles.currentBadgeText}>CURRENT PLAN</Text>
-                  </View>
-                )}
-
-                <View style={styles.planHeader}>
-                  <Text style={[
-                    styles.planName,
-                    { color: getTierColor(tier.tier_name) }
-                  ]}>
-                    {tier.tier_name.toUpperCase()}
-                  </Text>
-                  <Text style={styles.planPrice}>
-                    {formatPrice(price)}
-                    <Text style={styles.planPricePeriod}>
-                      /{selectedBilling.slice(0, -2)}ly
-                    </Text>
-                  </Text>
-                </View>
-
-                <View style={styles.planFeatures}>
-                  <View style={styles.featureRow}>
-                    <MaterialIcons name="photo-library" size={16} color={colors.primary} />
-                    <Text style={styles.featureText}>
-                      {tier.photo_limit} photos
+                {/* Badge */}
+                {plan.badge ? (
+                  <View
+                    style={{
+                      alignSelf: 'flex-start',
+                      backgroundColor: plan.theme.accent,
+                      borderRadius: radii.full,
+                      paddingHorizontal: spacing.sm,
+                      paddingVertical: 2,
+                      marginBottom: spacing.sm,
+                    }}
+                  >
+                    <Text
+                      style={{
+                        ...typography.caption,
+                        color: plan.theme.buttonText,
+                        fontWeight: '700',
+                        fontSize: 9,
+                      }}
+                    >
+                      {plan.badge}
                     </Text>
                   </View>
+                ) : (
+                  <View style={{ height: 18, marginBottom: spacing.sm }} />
+                )}
 
-                  {tier.features && Object.entries(tier.features).map(([key, value]) => 
-                    renderFeature(key, value)
-                  )}
-                </View>
+                {/* Current Plan Indicator */}
+                {isCurrentPlan && (
+                  <View
+                    style={{
+                      alignSelf: 'flex-start',
+                      backgroundColor: plan.theme.accent,
+                      borderRadius: radii.full,
+                      paddingHorizontal: spacing.sm,
+                      paddingVertical: 2,
+                      marginBottom: spacing.sm,
+                    }}
+                  >
+                    <Text
+                      style={{
+                        ...typography.caption,
+                        color: plan.theme.buttonText,
+                        fontWeight: '700',
+                        fontSize: 9,
+                      }}
+                    >
+                      CURRENT
+                    </Text>
+                  </View>
+                )}
 
-                <TouchableOpacity
-                  style={[
-                    styles.planButton,
-                    isCurrent ? styles.planButtonCurrent : 
-                    isPopular ? styles.planButtonPopular : styles.planButtonDefault
-                  ]}
-                  onPress={() => isCurrent ? null : handleUpgrade(tier)}
-                  disabled={isCurrent}
+                {/* Title & Subtitle */}
+                <Text
+                  style={{
+                    ...typography.titleMedium,
+                    color: plan.theme.text,
+                    fontSize: isActive ? 16 : 13,
+                    marginBottom: 2,
+                  }}
                 >
-                  <Text style={[
-                    styles.planButtonText,
-                    isCurrent ? styles.planButtonTextCurrent :
-                    isPopular ? styles.planButtonTextPopular : styles.planButtonTextDefault
-                  ]}>
-                    {isCurrent ? 'Current Plan' : 'Upgrade Now'}
+                  {plan.title}
+                </Text>
+                <Text
+                  style={{
+                    ...typography.caption,
+                    color: plan.theme.textMuted,
+                    marginBottom: spacing.sm,
+                    fontSize: 10,
+                  }}
+                >
+                  {plan.subtitle}
+                </Text>
+
+                {/* Price */}
+                <View style={{ marginBottom: spacing.sm }}>
+                  <Text
+                    style={{
+                      ...typography.displayLarge,
+                      color: plan.theme.text,
+                      fontSize: isActive ? 28 : 20,
+                    }}
+                  >
+                    {selectedBilling === 'monthly' ? plan.priceMonthly : plan.priceYearly}
+                  </Text>
+                  <Text
+                    style={{
+                      ...typography.caption,
+                      color: plan.theme.textMuted,
+                      fontSize: 10,
+                    }}
+                  >
+                    {plan.key === 'get_started' ? 'Forever free' : `per ${selectedBilling === 'monthly' ? 'month' : 'year'}`}
+                  </Text>
+                  {plan.saveLabel && selectedBilling === 'yearly' ? (
+                    <Text
+                      style={{
+                        ...typography.caption,
+                        color: plan.theme.accent,
+                        fontWeight: '700',
+                        marginTop: 1,
+                        fontSize: 10,
+                      }}
+                    >
+                      {plan.saveLabel}
+                    </Text>
+                  ) : null}
+                </View>
+
+                {/* Divider */}
+                <View
+                  style={{
+                    height: 1,
+                    backgroundColor: plan.theme.borderColor,
+                    marginBottom: spacing.sm,
+                  }}
+                />
+
+                {/* Features */}
+                <View style={{ marginBottom: spacing.sm }}>
+                  {features.slice(0, 6).map((feature) => {
+                    const value = feature[plan.key];
+                    return (
+                      <View
+                        key={feature.label}
+                        style={{
+                          flexDirection: 'row',
+                          alignItems: 'center',
+                          marginBottom: 4,
+                        }}
+                      >
+                        {typeof value === 'boolean' ? (
+                          <MaterialIcons
+                            name={value ? 'check-circle' : 'cancel'}
+                            size={12}
+                            color={value ? plan.theme.checkColor : plan.theme.textMuted}
+                          />
+                        ) : (
+                          <Text style={{ ...typography.caption, color: plan.theme.text, fontWeight: '600', fontSize: 10 }}>
+                            {value}
+                          </Text>
+                        )}
+                        <Text
+                          style={{
+                            ...typography.caption,
+                            color: plan.theme.textMuted,
+                            marginLeft: 4,
+                            flex: 1,
+                            fontSize: 9,
+                          }}
+                          numberOfLines={1}
+                        >
+                          {feature.label}
+                        </Text>
+                      </View>
+                    );
+                  })}
+                </View>
+
+                {/* CTA Button */}
+                <TouchableOpacity
+                  onPress={() => {
+                    scrollToIndex(index);
+                    setTimeout(handleContinueToCheckout, 300);
+                  }}
+                  activeOpacity={0.85}
+                  style={{
+                    backgroundColor: isCurrentPlan ? plan.theme.textMuted : plan.theme.buttonBg,
+                    borderRadius: radii.md,
+                    paddingVertical: spacing.sm,
+                    alignItems: 'center',
+                    marginTop: 'auto',
+                  }}
+                  disabled={isCurrentPlan}
+                >
+                  <Text
+                    style={{
+                      ...typography.caption,
+                      color: isCurrentPlan ? plan.theme.text : plan.theme.buttonText,
+                      fontWeight: '700',
+                      fontSize: 11,
+                    }}
+                  >
+                    {isCurrentPlan ? 'Current Plan' : plan.key === 'get_started' ? 'Choose Free' : 'Choose'}
                   </Text>
                 </TouchableOpacity>
-              </View>
+              </TouchableOpacity>
             );
           })}
+        </ScrollView>
+
+        {/* Pagination Dots */}
+        <View
+          style={{
+            flexDirection: 'row',
+            justifyContent: 'center',
+            alignItems: 'center',
+            marginVertical: spacing.md,
+          }}
+        >
+          {plans.map((_, index) => (
+            <TouchableOpacity
+              key={index}
+              onPress={() => scrollToIndex(index)}
+              style={{
+                width: activeIndex === index ? 24 : 8,
+                height: 8,
+                borderRadius: 4,
+                backgroundColor: activeIndex === index ? colors.primary : colors.borderSubtle,
+                marginHorizontal: 4,
+              }}
+            />
+          ))}
         </View>
 
-        {/* Help Section */}
-        <View style={styles.helpSection}>
-          <MaterialIcons name="help-outline" size={24} color={colors.primary} />
-          <View style={styles.helpContent}>
-            <Text style={styles.helpTitle}>Need help choosing?</Text>
-            <Text style={styles.helpText}>
-              Contact our support team for personalized recommendations based on your business needs.
-            </Text>
-            <TouchableOpacity style={styles.helpButton} onPress={handleContactSupport}>
-              <MaterialIcons name="chat" size={16} color={colors.primaryForeground} />
-              <Text style={styles.helpButtonText}>Chat with Support</Text>
-            </TouchableOpacity>
+        {/* Full Feature Comparison */}
+        <View style={{ paddingHorizontal: spacing.lg }}>
+          <Text
+            style={{
+              ...typography.titleMedium,
+              color: colors.textPrimary,
+              marginBottom: spacing.md,
+              marginTop: spacing.sm,
+            }}
+          >
+            Full Feature Comparison
+          </Text>
+
+          <View
+            style={{
+              backgroundColor: colors.surface,
+              borderRadius: radii.lg,
+              borderWidth: 1,
+              borderColor: colors.borderSubtle,
+              overflow: 'hidden',
+            }}
+          >
+            {features.map((feature, idx) => {
+              const value = feature[selectedPlan];
+              const showDivider = idx !== features.length - 1;
+
+              return (
+                <View key={feature.label}>
+                  <View
+                    style={{
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      paddingHorizontal: spacing.lg,
+                      paddingVertical: spacing.md,
+                    }}
+                  >
+                    <Text
+                      style={{
+                        ...typography.body,
+                        color: colors.textPrimary,
+                        flex: 1,
+                        paddingRight: spacing.md,
+                      }}
+                    >
+                      {feature.label}
+                    </Text>
+                    <View style={{ width: 60, alignItems: 'flex-end' }}>
+                      {typeof value === 'boolean' ? (
+                        <MaterialIcons
+                          name={value ? 'check-circle' : 'cancel'}
+                          size={18}
+                          color={value ? colors.primaryTeal : colors.textMuted}
+                        />
+                      ) : (
+                        <Text
+                          style={{
+                            ...typography.caption,
+                            color: colors.textPrimary,
+                            fontWeight: '600',
+                          }}
+                        >
+                          {value}
+                        </Text>
+                      )}
+                    </View>
+                  </View>
+                  {showDivider ? <View style={{ height: 1, backgroundColor: colors.borderSubtle }} /> : null}
+                </View>
+              );
+            })}
           </View>
+        </View>
+
+        {/* Bottom CTA */}
+        <View style={{ paddingHorizontal: spacing.lg, marginTop: spacing.lg }}>
+          <TouchableOpacity
+            onPress={handleContinueToCheckout}
+            activeOpacity={0.9}
+            style={{
+              backgroundColor: colors.primary,
+              borderRadius: radii.lg,
+              paddingVertical: spacing.md,
+              alignItems: 'center',
+            }}
+          >
+            <Text
+              style={{
+                ...typography.body,
+                color: colors.primaryForeground,
+                fontWeight: '700',
+              }}
+            >
+              {selectedPlan === 'get_started'
+                ? 'Confirm Free Plan'
+                : `Continue with ${selected.title} (${selectedBilling})`}
+            </Text>
+          </TouchableOpacity>
+
+          <Text
+            style={{
+              ...typography.caption,
+              color: colors.textMuted,
+              marginTop: spacing.md,
+              textAlign: 'center',
+            }}
+          >
+            Upgrade or cancel anytime. No hidden fees.
+          </Text>
         </View>
       </ScrollView>
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  scrollContent: {
-    paddingBottom: spacing.lg,
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  loadingText: {
-    ...typography.body,
-    color: colors.textMuted,
-  },
-  header: {
-    paddingHorizontal: spacing.lg,
-    paddingTop: spacing.xl,
-    paddingBottom: spacing.lg,
-  },
-  backButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: spacing.lg,
-  },
-  backText: {
-    ...typography.body,
-    color: colors.textPrimary,
-    marginLeft: spacing.sm,
-  },
-  title: {
-    ...typography.displayMedium,
-    color: colors.textPrimary,
-    marginBottom: spacing.xs,
-  },
-  subtitle: {
-    ...typography.body,
-    color: colors.textMuted,
-  },
-  billingToggle: {
-    flexDirection: 'row',
-    backgroundColor: colors.surface,
-    borderRadius: radii.full,
-    padding: 4,
-    marginHorizontal: spacing.lg,
-    marginBottom: spacing.lg,
-    borderWidth: 1,
-    borderColor: colors.borderSubtle,
-  },
-  billingOption: {
-    flex: 1,
-    paddingVertical: spacing.sm,
-    borderRadius: radii.full,
-    alignItems: 'center',
-  },
-  billingOptionActive: {
-    backgroundColor: colors.primary,
-  },
-  billingText: {
-    ...typography.caption,
-    color: colors.textMuted,
-    fontWeight: '500',
-  },
-  billingTextActive: {
-    color: colors.primaryForeground,
-  },
-  plansContainer: {
-    paddingHorizontal: spacing.lg,
-    gap: spacing.md,
-  },
-  planCard: {
-    backgroundColor: colors.surface,
-    borderRadius: radii.lg,
-    padding: spacing.lg,
-    borderWidth: 1,
-    borderColor: colors.borderSubtle,
-    shadowColor: '#000',
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 2,
-    position: 'relative',
-  },
-  planCardCurrent: {
-    borderColor: colors.primary,
-    borderWidth: 2,
-  },
-  planCardPopular: {
-    borderColor: '#8B5CF6',
-    borderWidth: 2,
-  },
-  popularBadge: {
-    position: 'absolute',
-    top: -1,
-    right: 20,
-    backgroundColor: '#8B5CF6',
-    paddingHorizontal: spacing.md,
-    paddingVertical: 4,
-    borderTopLeftRadius: radii.md,
-    borderTopRightRadius: radii.md,
-  },
-  popularBadgeText: {
-    ...typography.caption,
-    color: colors.primaryForeground,
-    fontWeight: '600',
-    fontSize: 10,
-  },
-  currentBadge: {
-    position: 'absolute',
-    top: -1,
-    left: 20,
-    backgroundColor: colors.primary,
-    paddingHorizontal: spacing.md,
-    paddingVertical: 4,
-    borderTopLeftRadius: radii.md,
-    borderTopRightRadius: radii.md,
-  },
-  currentBadgeText: {
-    ...typography.caption,
-    color: colors.primaryForeground,
-    fontWeight: '600',
-    fontSize: 10,
-  },
-  planHeader: {
-    marginBottom: spacing.md,
-  },
-  planName: {
-    ...typography.titleMedium,
-    fontWeight: '700',
-    marginBottom: spacing.xs,
-  },
-  planPrice: {
-    ...typography.displayLarge,
-    color: colors.textPrimary,
-    fontWeight: '700',
-  },
-  planPricePeriod: {
-    ...typography.caption,
-    color: colors.textMuted,
-    fontSize: 16,
-  },
-  planFeatures: {
-    marginBottom: spacing.lg,
-    gap: spacing.xs,
-  },
-  featureRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-  },
-  featureText: {
-    ...typography.caption,
-    color: colors.textPrimary,
-  },
-  featureTextDisabled: {
-    color: colors.textMuted,
-  },
-  planButton: {
-    paddingVertical: spacing.md,
-    borderRadius: radii.md,
-    alignItems: 'center',
-  },
-  planButtonDefault: {
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.primary,
-  },
-  planButtonPopular: {
-    backgroundColor: '#8B5CF6',
-  },
-  planButtonCurrent: {
-    backgroundColor: colors.surfaceMuted,
-    borderWidth: 1,
-    borderColor: colors.borderSubtle,
-  },
-  planButtonText: {
-    ...typography.body,
-    fontWeight: '600',
-  },
-  planButtonTextDefault: {
-    color: colors.primary,
-  },
-  planButtonTextPopular: {
-    color: colors.primaryForeground,
-  },
-  planButtonTextCurrent: {
-    color: colors.textMuted,
-  },
-  helpSection: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: spacing.md,
-    backgroundColor: colors.surface,
-    borderRadius: radii.lg,
-    padding: spacing.lg,
-    marginHorizontal: spacing.lg,
-    marginTop: spacing.lg,
-    borderWidth: 1,
-    borderColor: colors.borderSubtle,
-  },
-  helpContent: {
-    flex: 1,
-  },
-  helpTitle: {
-    ...typography.titleMedium,
-    color: colors.textPrimary,
-    marginBottom: spacing.xs,
-  },
-  helpText: {
-    ...typography.caption,
-    color: colors.textSecondary,
-    lineHeight: 18,
-  },
-  helpButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.primary,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    borderRadius: radii.md,
-    gap: spacing.xs,
-    marginTop: spacing.sm,
-    alignSelf: 'flex-start',
-  },
-  helpButtonText: {
-    ...typography.caption,
-    color: colors.primaryForeground,
-    fontWeight: '600',
-  },
-});
