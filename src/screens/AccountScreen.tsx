@@ -251,9 +251,8 @@ export default function AccountScreen() {
             label: 'My Profile',
             icon: 'person',
             submenu: [
-                { id: 'edit-profile', label: 'Edit Profile', icon: 'edit', action: handleEditAccount },
-                { id: 'change-password', label: 'Change Password', icon: 'lock', route: 'ChangePassword' },
-                { id: 'marketing-permissions', label: 'Marketing Permissions', icon: 'notifications', route: 'MarketingPermissions' },
+                { id: 'edit-username-password', label: 'Edit Username & Password', icon: 'edit', action: handleEditAccount },
+                { id: 'notification', label: 'Notification', icon: 'notifications', route: 'MarketingPermissions' },
             ],
         },
         {
@@ -268,14 +267,11 @@ export default function AccountScreen() {
             ],
         },
         {
-            id: 'listings-subscription',
-            label: currentPlan
-                ? `Listings Subscription Offers (${currentPlan.charAt(0).toUpperCase() + currentPlan.slice(1)} Plan)`
-                : 'Listings Subscription Offers',
-            icon: 'local-offer',
+            id: 'account-management',
+            label: 'Account Management',
+            icon: 'settings',
             submenu: [
-                { id: 'subscription-vendors', label: 'Vendors / Service Professionals', icon: 'store', action: handleBecomeVendor },
-                { id: 'subscription-venues', label: 'Venues', icon: 'location-city', action: handleGoToVenueListingPlans },
+                { id: 'delete-account', label: 'Delete Account', icon: 'delete-forever', color: colors.destructive, action: handleDeleteAccount },
             ],
         },
         {
@@ -305,7 +301,8 @@ export default function AccountScreen() {
         const hideChevron = item.id === 'change-password'
             || item.id === 'marketing-permissions'
             || item.id === 'terms-policies'
-            || item.id === 'help-centre';
+            || item.id === 'help-centre'
+            || item.id === 'delete-account';
 
         const handlePress = () => {
             if (item.action) {
@@ -383,7 +380,9 @@ export default function AccountScreen() {
         <View style={{ flex: 1, backgroundColor: colors.background }}>
             <ScrollView contentContainerStyle={{ paddingBottom: spacing.xl }}>
                 <View style={{ paddingHorizontal: spacing.lg, paddingTop: spacing.xl, paddingBottom: spacing.lg }}>
-                    <Text style={{ ...typography.displayMedium, color: colors.textPrimary }}>My Account</Text>
+                    <Text style={{ ...typography.displayMedium, color: colors.textPrimary }}>
+                        Hello{user?.email ? `, ${user.email.split('@')[0]}` : ''}
+                    </Text>
                     {user && (
                         <View style={{ marginTop: spacing.sm }}>
                             <Text style={{ ...typography.caption, color: colors.textSecondary, marginBottom: spacing.xs }}>

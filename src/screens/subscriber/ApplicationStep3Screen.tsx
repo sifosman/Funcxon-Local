@@ -29,14 +29,12 @@ const MAX_IMAGE_SIZE = 10 * 1024 * 1024; // 10MB
 const MAX_VIDEO_SIZE = 50 * 1024 * 1024; // 50MB
 const MAX_DOCUMENT_SIZE = 10 * 1024 * 1024; // 10MB
 
-type RequiredDocKey = 'bank_confirmation' | 'id_copy' | 'proof_of_residence' | 'company_logo';
+type RequiredDocKey = 'id_copy' | 'company_logo';
 type DocKey = RequiredDocKey | 'cipro';
 
 const BUSINESS_DOCS: Array<{ key: DocKey; label: string; required: boolean; acceptLabel?: string }> = [
-  { key: 'bank_confirmation', label: 'Bank Confirmation letter', required: true },
   { key: 'id_copy', label: 'ID copy', required: true },
   { key: 'cipro', label: 'CIPRO', required: false, acceptLabel: 'If applicable' },
-  { key: 'proof_of_residence', label: 'Proof of trading address', required: true },
   { key: 'company_logo', label: 'Company Logo', required: true },
 ];
 
@@ -832,15 +830,11 @@ export default function ApplicationStep3Screen() {
                 const requiredTag = d.required ? 'Required' : d.acceptLabel || 'Optional';
 
                 const errorKey =
-                  d.key === 'bank_confirmation'
-                    ? 'bankConfirmation'
-                    : d.key === 'id_copy'
-                      ? 'idCopy'
-                      : d.key === 'proof_of_residence'
-                        ? 'proofOfResidence'
-                        : d.key === 'company_logo'
-                          ? 'companyLogo'
-                          : null;
+                  d.key === 'id_copy'
+                    ? 'idCopy'
+                    : d.key === 'company_logo'
+                      ? 'companyLogo'
+                      : null;
 
                 const errorText = errorKey ? errors[errorKey] : undefined;
 

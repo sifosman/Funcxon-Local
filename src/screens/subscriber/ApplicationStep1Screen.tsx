@@ -67,9 +67,7 @@ export default function ApplicationStep1Screen() {
     const isVenueLinksField =
       field === 'instagram' ||
       field === 'facebook' ||
-      field === 'tiktok' ||
-      field === 'linkedin' ||
-      field === 'website';
+      field === 'tiktok';
 
     if (state.portfolioType === 'venues' && isVenueLinksField && !canEditVenueLinks) {
       Alert.alert(
@@ -111,7 +109,7 @@ export default function ApplicationStep1Screen() {
       <ScrollView
         keyboardShouldPersistTaps="handled"
         keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
-        contentContainerStyle={{ paddingBottom: spacing.xxl * 4 }}
+        contentContainerStyle={{ paddingBottom: spacing.xxl * 6 }}
       >
         <View style={{ paddingHorizontal: spacing.lg, paddingTop: spacing.xl }}>
           <TouchableOpacity
@@ -512,62 +510,6 @@ export default function ApplicationStep1Screen() {
                 />
               </View>
 
-              <View>
-                <Text style={{ ...typography.body, fontWeight: '500', color: colors.textPrimary, marginBottom: spacing.xs }}>
-                  LinkedIn
-                </Text>
-                <TextInput
-                  placeholder="LinkedIn profile URL"
-                  value={state.step1.linkedin}
-                  onChangeText={(value) => handleChange('linkedin', value)}
-                  editable={state.portfolioType !== 'venues' || canEditVenueLinks}
-                  autoCapitalize="none"
-                  style={{
-                    borderWidth: 1,
-                    borderColor: colors.borderSubtle,
-                    borderRadius: radii.md,
-                    paddingHorizontal: spacing.md,
-                    paddingVertical: spacing.sm,
-                    backgroundColor:
-                      state.portfolioType === 'venues' && !canEditVenueLinks ? colors.surfaceMuted : colors.surface,
-                    fontSize: 14,
-                    color: colors.textPrimary,
-                    opacity: state.portfolioType === 'venues' && !canEditVenueLinks ? 0.7 : 1,
-                  }}
-                />
-              </View>
-
-              <View>
-                <Text style={{ ...typography.body, fontWeight: '500', color: colors.textPrimary, marginBottom: spacing.xs }}>
-                  Website
-                </Text>
-                <TextInput
-                  placeholder="https://www.yourwebsite.com"
-                  value={state.step1.website}
-                  onChangeText={(value) => handleChange('website', value)}
-                  editable={state.portfolioType !== 'venues' || canEditVenueLinks}
-                  keyboardType="url"
-                  autoCapitalize="none"
-                  style={{
-                    borderWidth: 1,
-                    borderColor: errors.website ? '#EF4444' : colors.borderSubtle,
-                    borderRadius: radii.md,
-                    paddingHorizontal: spacing.md,
-                    paddingVertical: spacing.sm,
-                    backgroundColor:
-                      state.portfolioType === 'venues' && !canEditVenueLinks ? colors.surfaceMuted : colors.surface,
-                    fontSize: 14,
-                    color: colors.textPrimary,
-                    opacity: state.portfolioType === 'venues' && !canEditVenueLinks ? 0.7 : 1,
-                  }}
-                />
-                {errors.website && (
-                  <Text style={{ fontSize: 12, color: '#EF4444', marginTop: 4 }}>
-                    {errors.website}
-                  </Text>
-                )}
-              </View>
-
               {state.portfolioType === 'venues' && !canEditVenueLinks && (
                 <View
                   style={{
@@ -604,139 +546,6 @@ export default function ApplicationStep1Screen() {
                   </TouchableOpacity>
                 </View>
               )}
-            </View>
-          </View>
-
-          {/* Bank Account Details Card */}
-          <View
-            style={{
-              backgroundColor: colors.surface,
-              borderRadius: radii.lg,
-              padding: spacing.lg,
-              marginBottom: spacing.lg,
-              borderWidth: 1,
-              borderColor: colors.borderSubtle,
-              shadowColor: '#000',
-              shadowOpacity: 0.05,
-              shadowRadius: 8,
-              shadowOffset: { width: 0, height: 2 },
-              elevation: 2,
-            }}
-          >
-            <Text style={{ ...typography.titleMedium, color: colors.textPrimary, marginBottom: spacing.xs }}>
-              Bank Account Details
-            </Text>
-            <Text style={{ ...typography.caption, color: colors.textMuted, marginBottom: spacing.lg }}>
-              Please provide your banking information for payment processing.
-            </Text>
-
-            <View style={{ gap: spacing.md }}>
-              <View>
-                <Text style={{ ...typography.body, fontWeight: '500', color: colors.textPrimary, marginBottom: spacing.xs }}>
-                  Account Holder Name
-                </Text>
-                <TextInput
-                  placeholder="Enter account holder name"
-                  value={state.step1.accountHolderName}
-                  onChangeText={(value) => handleChange('accountHolderName', value)}
-                  style={{
-                    borderWidth: 1,
-                    borderColor: colors.borderSubtle,
-                    borderRadius: radii.md,
-                    paddingHorizontal: spacing.md,
-                    paddingVertical: spacing.sm,
-                    backgroundColor: colors.surface,
-                    fontSize: 14,
-                    color: colors.textPrimary,
-                  }}
-                />
-              </View>
-
-              <View>
-                <Text style={{ ...typography.body, fontWeight: '500', color: colors.textPrimary, marginBottom: spacing.xs }}>
-                  Bank
-                </Text>
-                <TextInput
-                  placeholder="Enter bank name"
-                  value={state.step1.bank}
-                  onChangeText={(value) => handleChange('bank', value)}
-                  style={{
-                    borderWidth: 1,
-                    borderColor: colors.borderSubtle,
-                    borderRadius: radii.md,
-                    paddingHorizontal: spacing.md,
-                    paddingVertical: spacing.sm,
-                    backgroundColor: colors.surface,
-                    fontSize: 14,
-                    color: colors.textPrimary,
-                  }}
-                />
-              </View>
-
-              <View>
-                <Text style={{ ...typography.body, fontWeight: '500', color: colors.textPrimary, marginBottom: spacing.xs }}>
-                  Branch
-                </Text>
-                <TextInput
-                  placeholder="Enter branch name"
-                  value={state.step1.branch}
-                  onChangeText={(value) => handleChange('branch', value)}
-                  style={{
-                    borderWidth: 1,
-                    borderColor: colors.borderSubtle,
-                    borderRadius: radii.md,
-                    paddingHorizontal: spacing.md,
-                    paddingVertical: spacing.sm,
-                    backgroundColor: colors.surface,
-                    fontSize: 14,
-                    color: colors.textPrimary,
-                  }}
-                />
-              </View>
-
-              <View>
-                <Text style={{ ...typography.body, fontWeight: '500', color: colors.textPrimary, marginBottom: spacing.xs }}>
-                  Branch Code
-                </Text>
-                <TextInput
-                  placeholder="Enter branch code"
-                  value={state.step1.branchCode}
-                  onChangeText={(value) => handleChange('branchCode', value)}
-                  keyboardType="number-pad"
-                  style={{
-                    borderWidth: 1,
-                    borderColor: colors.borderSubtle,
-                    borderRadius: radii.md,
-                    paddingHorizontal: spacing.md,
-                    paddingVertical: spacing.sm,
-                    backgroundColor: colors.surface,
-                    fontSize: 14,
-                    color: colors.textPrimary,
-                  }}
-                />
-              </View>
-
-              <View>
-                <Text style={{ ...typography.body, fontWeight: '500', color: colors.textPrimary, marginBottom: spacing.xs }}>
-                  Account Number
-                </Text>
-                <TextInput
-                  placeholder="Enter account number"
-                  value={state.step1.accountNumber}
-                  onChangeText={(value) => handleChange('accountNumber', value)}
-                  keyboardType="number-pad"
-                  style={{
-                    borderWidth: 1,
-                    borderColor: colors.borderSubtle,
-                    borderRadius: radii.md,
-                    paddingHorizontal: spacing.md,
-                    paddingVertical: spacing.sm,
-                    backgroundColor: colors.surface,
-                    fontSize: 14,
-                    color: colors.textPrimary,
-                  }}
-                />
-              </View>
             </View>
           </View>
 

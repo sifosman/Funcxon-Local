@@ -22,13 +22,6 @@ export interface Step1Data {
   instagram: string;
   facebook: string;
   tiktok: string;
-  linkedin: string;
-  website: string;
-  accountHolderName: string;
-  bank: string;
-  branch: string;
-  branchCode: string;
-  accountNumber: string;
 }
 
 export interface Step2Data {
@@ -119,13 +112,6 @@ const initialState: ApplicationFormState = {
     instagram: '',
     facebook: '',
     tiktok: '',
-    linkedin: '',
-    website: '',
-    accountHolderName: '',
-    bank: '',
-    branch: '',
-    branchCode: '',
-    accountNumber: '',
   },
   step2: {
     amenities: [],

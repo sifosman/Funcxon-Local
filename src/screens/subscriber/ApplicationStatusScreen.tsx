@@ -162,13 +162,6 @@ export default function ApplicationStatusScreen() {
         instagram: application.company_details?.instagram ?? '',
         facebook: application.company_details?.facebook ?? '',
         tiktok: application.company_details?.tiktok ?? '',
-        linkedin: application.company_details?.linkedin ?? '',
-        website: application.company_details?.website ?? '',
-        accountHolderName: application.company_details?.accountHolderName ?? '',
-        bank: application.company_details?.bank ?? '',
-        branch: application.company_details?.branch ?? '',
-        branchCode: application.company_details?.branchCode ?? '',
-        accountNumber: application.company_details?.accountNumber ?? '',
       },
       step2: {
         venueType: application.service_categories?.venueType ?? '',

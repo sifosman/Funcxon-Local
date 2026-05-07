@@ -249,32 +249,7 @@ export default function ApplicationStep4Screen() {
         // Send application submission confirmation email
         await sendApplicationConfirmationEmail(submission);
 
-        const isPaidPlan = (selectedTierPrice ?? 0) > 0;
-
-        if (isPaidPlan) {
-          Alert.alert(
-            'Application Submitted!',
-            'Your application has been submitted successfully. Please proceed to payment to complete your subscription.',
-            [
-              {
-                text: 'Continue to Payment',
-                onPress: () => {
-                  navigation.navigate('SubscriptionCheckout', {
-                    tierName: selectedTier?.tier_name || state.step4.subscriptionPlan,
-                    billing: (state.step4.billingPeriod as any) || 'monthly',
-                    priceLabel: selectedTierPriceLabel,
-                    isFree: false,
-                    productType: state.portfolioType === 'venues' ? 'venue' : 'vendor',
-                    planKey: state.step4.subscriptionPlan,
-                  });
-                },
-              },
-            ]
-          );
-          return;
-        }
-
-        // Free plan: create vendor/venue record directly
+        // Create vendor/venue record directly (for both free and paid plans)
         try {
           if (state.portfolioType === 'venues' && user?.id) {
             await supabase.from('venues').upsert(
@@ -282,7 +257,7 @@ export default function ApplicationStep4Screen() {
                 user_id: user.id,
                 subscription_plan_key: state.step4.subscriptionPlan,
                 subscription_status: 'active',
-                billing_period: 'monthly',
+                billing_period: state.step4.billingPeriod || 'monthly',
                 billing_email: state.step1.email?.trim() || null,
                 billing_name: state.step1.ownersName?.trim() || null,
                 billing_phone: state.step1.contactPhoneNumber?.trim() || null,
@@ -306,25 +281,23 @@ export default function ApplicationStep4Screen() {
             );
           }
         } catch (e) {
-          console.warn('Failed to create free plan subscriber record:', e);
+          console.warn('Failed to create subscriber record:', e);
         }
 
-        Alert.alert(
-          'Application Submitted!',
-          'Your application has been submitted successfully. We will review it and get back to you within 12 to 24 hours.',
-          [
-            {
-              text: 'OK',
-              onPress: () => {
-                resetForm();
-                navigation.reset({
-                  index: 0,
-                  routes: [{ name: 'ApplicationStatus' }],
-                });
-              },
-            },
-          ]
-        );
+        // Reset form and navigate directly to portfolio (no popup)
+        resetForm();
+        
+        if (state.portfolioType === 'venues') {
+          navigation.reset({
+            index: 0,
+            routes: [{ name: 'UpdateVenuePortfolio' }],
+          });
+        } else {
+          navigation.reset({
+            index: 0,
+            routes: [{ name: 'UpdateVendorPortfolio' }],
+          });
+        }
       } else {
         Alert.alert('Submission Failed', result.error || 'Failed to submit application. Please try again.');
       }

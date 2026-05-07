@@ -60,10 +60,6 @@ export function validateStep1(data: Step1Data): ValidationResult {
     errors.alternatePhone2 = 'Invalid phone number format';
   }
 
-  if (data.website && !validateURL(data.website)) {
-    errors.website = 'Invalid website URL';
-  }
-
   if (data.userEmail && !validateEmail(data.userEmail)) {
     errors.userEmail = 'Invalid email format';
   }
