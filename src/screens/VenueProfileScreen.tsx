@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, Alert, BackHandler, Image, Linking, Platform, ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Alert, BackHandler, Image, Linking, Modal, Platform, ScrollView, Share, Text, TouchableOpacity, View } from 'react-native';
 import { useQuery } from '@tanstack/react-query';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { WebView } from 'react-native-webview';
@@ -76,6 +76,9 @@ export default function VenueProfileScreen({ route, navigation }: Props) {
   const { venueId } = route.params;
   const [activeTab, setActiveTab] = useState<'about' | 'amenities' | 'reviews' | 'calendar'>('about');
   const [mapImageFailed, setMapImageFailed] = useState(false);
+  const [galleryIndex, setGalleryIndex] = useState(0);
+  const [zoomVisible, setZoomVisible] = useState(false);
+  const [zoomImageUri, setZoomImageUri] = useState<string | null>(null);
   const [favouriteIds, setFavouriteIds] = useState<{ vendorIds: number[]; venueIds: number[] }>({
     vendorIds: [],
     venueIds: [],
@@ -444,6 +447,18 @@ export default function VenueProfileScreen({ route, navigation }: Props) {
 
   const isFavourite = venue ? favouriteIds.venueIds.includes(venue.id) : false;
 
+  const handleShare = async () => {
+    if (!venue) return;
+    try {
+      await Share.share({
+        message: `Check out ${venue.name} on Funcxon!`,
+        title: venue.name,
+      });
+    } catch (error) {
+      console.error('Share failed:', error);
+    }
+  };
+
   const handleOpenMap = () => {
     if (!mapCoordinates && !physicalAddress && !mapQuery) return;
     const mapsUrl = mapCoordinates
@@ -604,31 +619,43 @@ export default function VenueProfileScreen({ route, navigation }: Props) {
         <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
           <View style={{ flex: 1, paddingRight: spacing.md }}>
             <Text style={{ ...typography.titleLarge, color: colors.textPrimary }}>{venue.name}</Text>
-            {venue.venue_type && (
-              <Text style={{ ...typography.caption, color: colors.textMuted, marginTop: 4 }}>
-                {venue.venue_type}
-              </Text>
-            )}
           </View>
-          <TouchableOpacity
-            onPress={handleToggleFavourite}
-            style={{
-              width: 40,
-              height: 40,
-              borderRadius: 20,
-              borderWidth: 1,
-              borderColor: colors.borderSubtle,
-              alignItems: 'center',
-              justifyContent: 'center',
-              backgroundColor: colors.surface,
-            }}
-          >
-            <MaterialIcons
-              name={isFavourite ? 'favorite' : 'favorite-border'}
-              size={24}
-              color={isFavourite ? colors.primaryTeal : colors.textMuted}
-            />
-          </TouchableOpacity>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
+            <TouchableOpacity
+              onPress={handleShare}
+              style={{
+                width: 40,
+                height: 40,
+                borderRadius: 20,
+                borderWidth: 1,
+                borderColor: colors.borderSubtle,
+                alignItems: 'center',
+                justifyContent: 'center',
+                backgroundColor: colors.surface,
+              }}
+            >
+              <MaterialIcons name="share" size={22} color={colors.textMuted} />
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={handleToggleFavourite}
+              style={{
+                width: 40,
+                height: 40,
+                borderRadius: 20,
+                borderWidth: 1,
+                borderColor: colors.borderSubtle,
+                alignItems: 'center',
+                justifyContent: 'center',
+                backgroundColor: colors.surface,
+              }}
+            >
+              <MaterialIcons
+                name={isFavourite ? 'favorite' : 'favorite-border'}
+                size={24}
+                color={isFavourite ? colors.primaryTeal : colors.textMuted}
+              />
+            </TouchableOpacity>
+          </View>
         </View>
 
         <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: spacing.sm }}>
@@ -669,8 +696,84 @@ export default function VenueProfileScreen({ route, navigation }: Props) {
         }}
       >
         <View style={{ height: 220, backgroundColor: colors.surfaceMuted }}>
-          {galleryImages[0] ? (
-            <Image source={{ uri: galleryImages[0] }} style={{ width: '100%', height: '100%' }} resizeMode="cover" />
+          {galleryImages.length > 0 ? (
+            <>
+              <TouchableOpacity
+                activeOpacity={0.9}
+                onPress={() => {
+                  setZoomImageUri(galleryImages[galleryIndex]);
+                  setZoomVisible(true);
+                }}
+                style={{ width: '100%', height: '100%' }}
+              >
+                <Image
+                  source={{ uri: galleryImages[galleryIndex] }}
+                  style={{ width: '100%', height: '100%' }}
+                  resizeMode="cover"
+                />
+              </TouchableOpacity>
+              {galleryImages.length > 1 && (
+                <>
+                  <TouchableOpacity
+                    onPress={() => setGalleryIndex((prev) => (prev > 0 ? prev - 1 : galleryImages.length - 1))}
+                    style={{
+                      position: 'absolute',
+                      left: spacing.md,
+                      top: '50%',
+                      marginTop: -18,
+                      width: 36,
+                      height: 36,
+                      borderRadius: 18,
+                      backgroundColor: 'rgba(0,0,0,0.5)',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}
+                  >
+                    <MaterialIcons name="chevron-left" size={24} color="#FFFFFF" />
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    onPress={() => setGalleryIndex((prev) => (prev < galleryImages.length - 1 ? prev + 1 : 0))}
+                    style={{
+                      position: 'absolute',
+                      right: spacing.md,
+                      top: '50%',
+                      marginTop: -18,
+                      width: 36,
+                      height: 36,
+                      borderRadius: 18,
+                      backgroundColor: 'rgba(0,0,0,0.5)',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}
+                  >
+                    <MaterialIcons name="chevron-right" size={24} color="#FFFFFF" />
+                  </TouchableOpacity>
+                  <View
+                    style={{
+                      position: 'absolute',
+                      bottom: spacing.md,
+                      left: 0,
+                      right: 0,
+                      flexDirection: 'row',
+                      justifyContent: 'center',
+                      gap: 6,
+                    }}
+                  >
+                    {galleryImages.map((_, idx) => (
+                      <View
+                        key={idx}
+                        style={{
+                          width: 8,
+                          height: 8,
+                          borderRadius: 4,
+                          backgroundColor: idx === galleryIndex ? '#FFFFFF' : 'rgba(255,255,255,0.4)',
+                        }}
+                      />
+                    ))}
+                  </View>
+                </>
+              )}
+            </>
           ) : (
             <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
               <MaterialIcons name="image" size={48} color={colors.textMuted} />
@@ -682,18 +785,40 @@ export default function VenueProfileScreen({ route, navigation }: Props) {
         </View>
         {galleryImages.length > 1 && (
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ padding: spacing.md }}>
-            {galleryImages.slice(1).map((imageUrl) => (
-              <View key={imageUrl} style={{ marginRight: spacing.sm }}>
+            {galleryImages.map((imageUrl, idx) => (
+              <TouchableOpacity key={imageUrl + idx} onPress={() => setGalleryIndex(idx)}>
                 <Image
                   source={{ uri: imageUrl }}
-                  style={{ width: 80, height: 80, borderRadius: radii.md, backgroundColor: colors.surfaceMuted }}
+                  style={{
+                    width: 80,
+                    height: 80,
+                    borderRadius: radii.md,
+                    backgroundColor: colors.surfaceMuted,
+                    borderWidth: idx === galleryIndex ? 2 : 0,
+                    borderColor: colors.primaryTeal,
+                  }}
                   resizeMode="cover"
                 />
-              </View>
+              </TouchableOpacity>
             ))}
           </ScrollView>
         )}
       </View>
+
+      {/* Zoom Modal */}
+      <Modal visible={zoomVisible} transparent animationType="fade" onRequestClose={() => setZoomVisible(false)}>
+        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.92)', justifyContent: 'center', alignItems: 'center' }}>
+          <TouchableOpacity
+            onPress={() => setZoomVisible(false)}
+            style={{ position: 'absolute', top: 40, right: 20, zIndex: 10 }}
+          >
+            <MaterialIcons name="close" size={32} color="#FFFFFF" />
+          </TouchableOpacity>
+          {zoomImageUri && (
+            <Image source={{ uri: zoomImageUri }} style={{ width: '90%', height: '70%' }} resizeMode="contain" />
+          )}
+        </View>
+      </Modal>
 
       {/* Tabs */}
       <View
@@ -864,46 +989,60 @@ export default function VenueProfileScreen({ route, navigation }: Props) {
             </View>
           ) : null}
 
-          {/* Tags / highlights */}
-          {venue.amenities && venue.amenities.length > 0 && (
-            <View
+          {/* Action Buttons */}
+          <View style={{ marginBottom: spacing.lg, gap: spacing.sm }}>
+            <TouchableOpacity
+              onPress={() =>
+                navigation.navigate('VenueCatalogueView', { venueId: venue.id, venueName: venue.name })
+              }
               style={{
-                marginBottom: spacing.lg,
-                padding: spacing.lg,
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'center',
+                paddingVertical: spacing.md,
+                borderRadius: radii.lg,
+                backgroundColor: colors.primaryTeal,
+                gap: spacing.sm,
+              }}
+            >
+              <MaterialIcons name="inventory-2" size={20} color="#FFFFFF" />
+              <Text style={{ ...typography.body, color: '#FFFFFF', fontWeight: '700' }}>View Catalogue</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              onPress={handleRequestQuote}
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'center',
+                paddingVertical: spacing.md,
+                borderRadius: radii.lg,
+                backgroundColor: colors.primary,
+                gap: spacing.sm,
+              }}
+            >
+              <MaterialIcons name="request-quote" size={20} color="#FFFFFF" />
+              <Text style={{ ...typography.body, color: '#FFFFFF', fontWeight: '700' }}>Request a Quote</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              onPress={() => setActiveTab('reviews')}
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'center',
+                paddingVertical: spacing.md,
                 borderRadius: radii.lg,
                 backgroundColor: colors.surface,
                 borderWidth: 1,
                 borderColor: colors.borderSubtle,
+                gap: spacing.sm,
               }}
             >
-              <Text
-                style={{
-                  ...typography.titleMedium,
-                  color: colors.textPrimary,
-                  marginBottom: spacing.sm,
-                }}
-              >
-                Highlights
-              </Text>
-              <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
-                {venue.amenities?.map((tag) => (
-                  <View
-                    key={tag}
-                    style={{
-                      paddingHorizontal: spacing.md,
-                      paddingVertical: spacing.xs,
-                      borderRadius: radii.full,
-                      backgroundColor: colors.surfaceMuted,
-                      marginRight: spacing.sm,
-                      marginBottom: spacing.sm,
-                    }}
-                  >
-                    <Text style={{ ...typography.caption, color: colors.textPrimary }}>{tag}</Text>
-                  </View>
-                ))}
-              </View>
-            </View>
-          )}
+              <MaterialIcons name="reviews" size={20} color={colors.primaryTeal} />
+              <Text style={{ ...typography.body, color: colors.primaryTeal, fontWeight: '700' }}>View Reviews & Ratings</Text>
+            </TouchableOpacity>
+          </View>
 
           {/* Contact */}
           {(venue.whatsapp_number || venue.contact_email || venue.website_url || venue.instagram_url) && (
@@ -1240,6 +1379,54 @@ export default function VenueProfileScreen({ route, navigation }: Props) {
             </View>
           )}
 
+          {/* Ratings System Explanation */}
+          <View
+            style={{
+              marginBottom: spacing.lg,
+              padding: spacing.lg,
+              borderRadius: radii.lg,
+              backgroundColor: colors.surface,
+              borderWidth: 1,
+              borderColor: colors.borderSubtle,
+            }}
+          >
+            <Text style={{ ...typography.titleMedium, color: colors.textPrimary, marginBottom: spacing.sm }}>
+              Ratings System
+            </Text>
+            <View style={{ gap: spacing.xs }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                <MaterialIcons name="star" size={14} color="#F59E0B" />
+                <Text style={{ ...typography.caption, color: colors.textSecondary, marginLeft: spacing.sm }}>
+                  5 stars = Exceptional experience
+                </Text>
+              </View>
+              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                <MaterialIcons name="star" size={14} color="#F59E0B" />
+                <Text style={{ ...typography.caption, color: colors.textSecondary, marginLeft: spacing.sm }}>
+                  4 stars = Very good experience
+                </Text>
+              </View>
+              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                <MaterialIcons name="star" size={14} color="#F59E0B" />
+                <Text style={{ ...typography.caption, color: colors.textSecondary, marginLeft: spacing.sm }}>
+                  3 stars = Good experience
+                </Text>
+              </View>
+              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                <MaterialIcons name="star" size={14} color="#F59E0B" />
+                <Text style={{ ...typography.caption, color: colors.textSecondary, marginLeft: spacing.sm }}>
+                  2 stars = Below average experience
+                </Text>
+              </View>
+              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                <MaterialIcons name="star" size={14} color="#F59E0B" />
+                <Text style={{ ...typography.caption, color: colors.textSecondary, marginLeft: spacing.sm }}>
+                  1 star = Poor experience
+                </Text>
+              </View>
+            </View>
+          </View>
+
           {user?.id ? (
             <View
               style={{
@@ -1252,13 +1439,13 @@ export default function VenueProfileScreen({ route, navigation }: Props) {
               }}
             >
               <Text style={{ ...typography.titleMedium, color: colors.textPrimary, marginBottom: spacing.sm }}>
-                Leave a review
+                Add a Review
               </Text>
               <Text style={{ ...typography.body, color: colors.textSecondary, marginBottom: spacing.md }}>
-                Reviews are available after you have used this venue.
+                Share your experience with this venue. Reviews help other users make informed decisions.
               </Text>
               <PrimaryButton
-                title={eligibilityLoading ? 'Checking eligibility...' : 'Leave a review'}
+                title={eligibilityLoading ? 'Checking eligibility...' : 'Add a review'}
                 disabled={!canLeaveReview || eligibilityLoading}
                 onPress={() =>
                   navigation.navigate('CreateReview', {

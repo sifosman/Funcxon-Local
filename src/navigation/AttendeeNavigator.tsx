@@ -13,6 +13,7 @@ import BlogDetailScreen from '../screens/BlogDetailScreen';
 import ListersPortalScreen from '../screens/ListersPortalScreen';
 import SubscriptionPlansScreen from '../screens/SubscriptionPlansScreen';
 import VenueListingPlansScreen from '../screens/VenueListingPlansScreen';
+import VenueCatalogueViewScreen from '../screens/VenueCatalogueViewScreen';
 import { colors, typography } from '../theme';
 
 export type AttendeeStackParamList = {
@@ -31,6 +32,7 @@ export type AttendeeStackParamList = {
   QuoteRequest: { vendorId: number; vendorName: string; type?: 'vendor' | 'venue' };
   BookTour: { venueId: number; venueName: string };
   CreateReview: { type: 'vendor' | 'venue'; targetId: number; targetName: string };
+  VenueCatalogueView: { venueId: number; venueName: string };
   Planner: undefined;
   BlogList: undefined;
   BlogDetail: { slug: string };
@@ -119,6 +121,11 @@ export function AttendeeNavigator() {
         name="VenueListingPlans"
         component={VenueListingPlansScreen}
         options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name="VenueCatalogueView"
+        component={VenueCatalogueViewScreen}
+        options={{ title: 'Catalogue' }}
       />
     </Stack.Navigator>
   );

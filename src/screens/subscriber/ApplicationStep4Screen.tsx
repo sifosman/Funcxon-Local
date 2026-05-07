@@ -16,6 +16,14 @@ type ProfileStackParamList = {
   ApplicationStep3: undefined;
   ApplicationStep4: undefined;
   ApplicationStatus: undefined;
+  SubscriptionCheckout: {
+    tierName: string;
+    billing: 'monthly' | 'yearly' | '6_month' | '12_month';
+    priceLabel: string;
+    isFree: boolean;
+    productType?: 'vendor' | 'venue';
+    planKey?: string;
+  };
   Payment: undefined;
   PortfolioProfile: undefined;
   UpdateVenuePortfolio: undefined;
@@ -54,7 +62,7 @@ export default function ApplicationStep4Screen() {
     loadTiers();
   }, [state.portfolioType]);
 
-  const selectedTier = tiers.find((tier) => normalizeTierKey(tier.tier_name) === state.step4.subscriptionPlan);
+  const selectedTier = tiers.find((tier) => normalizeTierKey(tier.tier_name) === normalizeTierKey(state.step4.subscriptionPlan));
   const selectedTierPrice = selectedTier?.price_monthly ?? selectedTier?.price_yearly ?? null;
   const selectedTierPriceLabel = selectedTierPrice ? `R${Number(selectedTierPrice).toLocaleString()}` : 'Free';
 
@@ -240,7 +248,67 @@ export default function ApplicationStep4Screen() {
 
         // Send application submission confirmation email
         await sendApplicationConfirmationEmail(submission);
-        
+
+        const isPaidPlan = (selectedTierPrice ?? 0) > 0;
+
+        if (isPaidPlan) {
+          Alert.alert(
+            'Application Submitted!',
+            'Your application has been submitted successfully. Please proceed to payment to complete your subscription.',
+            [
+              {
+                text: 'Continue to Payment',
+                onPress: () => {
+                  navigation.navigate('SubscriptionCheckout', {
+                    tierName: selectedTier?.tier_name || state.step4.subscriptionPlan,
+                    billing: (state.step4.billingPeriod as any) || 'monthly',
+                    priceLabel: selectedTierPriceLabel,
+                    isFree: false,
+                    productType: state.portfolioType === 'venues' ? 'venue' : 'vendor',
+                    planKey: state.step4.subscriptionPlan,
+                  });
+                },
+              },
+            ]
+          );
+          return;
+        }
+
+        // Free plan: create vendor/venue record directly
+        try {
+          if (state.portfolioType === 'venues' && user?.id) {
+            await supabase.from('venues').upsert(
+              {
+                user_id: user.id,
+                subscription_plan_key: state.step4.subscriptionPlan,
+                subscription_status: 'active',
+                billing_period: 'monthly',
+                billing_email: state.step1.email?.trim() || null,
+                billing_name: state.step1.ownersName?.trim() || null,
+                billing_phone: state.step1.contactPhoneNumber?.trim() || null,
+                subscription_started_at: new Date().toISOString(),
+              },
+              { onConflict: 'user_id' },
+            );
+          } else if (user?.id) {
+            await supabase.from('vendors').upsert(
+              {
+                user_id: user.id,
+                subscription_tier: normalizeTierKey(state.step4.subscriptionPlan),
+                subscription_status: 'active',
+                billing_period: state.step4.billingPeriod || 'monthly',
+                billing_email: state.step1.email?.trim() || null,
+                billing_name: state.step1.ownersName?.trim() || null,
+                billing_phone: state.step1.contactPhoneNumber?.trim() || null,
+                subscription_started_at: new Date().toISOString(),
+              },
+              { onConflict: 'user_id' },
+            );
+          }
+        } catch (e) {
+          console.warn('Failed to create free plan subscriber record:', e);
+        }
+
         Alert.alert(
           'Application Submitted!',
           'Your application has been submitted successfully. We will review it and get back to you within 12 to 24 hours.',

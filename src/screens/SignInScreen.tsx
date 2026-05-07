@@ -27,8 +27,7 @@ export default function SignInScreen({ navigation }: Props) {
       (navigation.getParent() as any)?.navigate('Main', {
         screen: 'Account',
         params: {
-          screen: 'SubscriptionCheckout',
-          params: pendingCheckout,
+          screen: 'ApplicationStep1',
         },
       });
       return;

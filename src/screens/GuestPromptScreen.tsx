@@ -1,12 +1,18 @@
 import { View, Text, TouchableOpacity, Image } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MaterialIcons } from '@expo/vector-icons';
 import { colors, spacing, radii, typography } from '../theme';
+import { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { AuthStackParamList } from '../navigation/AuthNavigator';
 
-export default function GuestPromptScreen({ label }: { label: string }) {
+type Props = NativeStackScreenProps<AuthStackParamList, 'GuestPrompt'> | { label: string };
+
+export default function GuestPromptScreen(props: Props) {
   const navigation = useNavigation<any>();
+  const route = useRoute();
   const insets = useSafeAreaInsets();
+  const label = 'label' in props ? props.label : (props as NativeStackScreenProps<AuthStackParamList, 'GuestPrompt'>).route.params.label;
 
   return (
     <View

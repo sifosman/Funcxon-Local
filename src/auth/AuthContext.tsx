@@ -38,20 +38,32 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // Fetch user role from database
   const fetchUserRole = async (userId: string) => {
     try {
-      const { data: userRow, error: userError } = await supabase
-        .from('users')
-        .select('id, role')
-        .eq('auth_user_id', userId)
-        .maybeSingle();
+      console.log('[fetchUserRole] Starting for userId:', userId);
+      const { data: userRow, error: userError } = await Promise.race([
+        supabase
+          .from('users')
+          .select('id, role')
+          .eq('auth_user_id', userId)
+          .maybeSingle(),
+        new Promise<any>((_, reject) =>
+          setTimeout(() => reject(new Error('fetchUserRole timeout')), 8000)
+        ),
+      ]);
+
+      console.log('[fetchUserRole] users row:', userRow, 'error:', userError);
 
       if (!userError && userRow?.role) {
         const normalizedRole = String(userRow.role).toLowerCase();
         const isVendorRole = normalizedRole === 'vendor' || normalizedRole === 'subscriber';
-        setUserRole(isVendorRole ? 'vendor' : 'attendee');
-        return;
+        console.log('[fetchUserRole] users.role =', normalizedRole, 'isVendorRole =', isVendorRole);
+        if (isVendorRole) {
+          setUserRole('vendor');
+          return;
+        }
       }
 
-      const internalUserId = userRow?.id ?? null;
+      const internalUserId = userRow?.id ?? userId;
+      console.log('[fetchUserRole] internalUserId:', internalUserId);
 
       const { data: vendorRow, error: vendorError } = await supabase
         .from('vendors')
@@ -59,12 +71,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         .eq('user_id', internalUserId)
         .maybeSingle();
 
+      console.log('[fetchUserRole] vendorRow:', vendorRow, 'error:', vendorError);
+
       if (!vendorError && vendorRow) {
         const status = String(vendorRow.subscription_status ?? '').toLowerCase();
         const tier = String(vendorRow.subscription_tier ?? '').toLowerCase();
         const isVendor = status === 'active' || status === 'trial' || tier !== '';
-        setUserRole(isVendor ? 'vendor' : 'attendee');
-        return;
+        console.log('[fetchUserRole] vendor status=', status, 'tier=', tier, 'isVendor=', isVendor);
+        if (isVendor) {
+          setUserRole('vendor');
+          return;
+        }
       }
 
       const { data: fallbackVendorRow, error: fallbackVendorError } = await supabase
@@ -73,18 +90,70 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         .eq('user_id', userId)
         .maybeSingle();
 
+      console.log('[fetchUserRole] fallbackVendorRow:', fallbackVendorRow, 'error:', fallbackVendorError);
+
       if (!fallbackVendorError && fallbackVendorRow) {
         const status = String(fallbackVendorRow.subscription_status ?? '').toLowerCase();
         const tier = String(fallbackVendorRow.subscription_tier ?? '').toLowerCase();
         const isVendor = status === 'active' || status === 'trial' || tier !== '';
-        setUserRole(isVendor ? 'vendor' : 'attendee');
-        return;
+        console.log('[fetchUserRole] fallback vendor status=', status, 'tier=', tier, 'isVendor=', isVendor);
+        if (isVendor) {
+          setUserRole('vendor');
+          return;
+        }
       }
 
-      console.log('No user role found, defaulting to attendee');
+      const { data: venueRow, error: venueError } = await supabase
+        .from('venue_listings')
+        .select('id, subscription_status, subscription_plan')
+        .eq('user_id', internalUserId)
+        .maybeSingle();
+
+      console.log('[fetchUserRole] venueRow:', venueRow, 'error:', venueError);
+
+      if (!venueError && venueRow) {
+        const status = String(venueRow.subscription_status ?? '').toLowerCase();
+        const plan = String(venueRow.subscription_plan ?? '').toLowerCase();
+        const isVendor = status === 'active' || status === 'trial' || plan !== '';
+        console.log('[fetchUserRole] venue status=', status, 'plan=', plan, 'isVendor=', isVendor);
+        if (isVendor) {
+          setUserRole('vendor');
+          return;
+        }
+      }
+
+      const { data: fallbackVenueRow, error: fallbackVenueError } = await supabase
+        .from('venue_listings')
+        .select('id, subscription_status, subscription_plan')
+        .eq('user_id', userId)
+        .maybeSingle();
+
+      console.log('[fetchUserRole] fallbackVenueRow:', fallbackVenueRow, 'error:', fallbackVenueError);
+
+      if (!fallbackVenueError && fallbackVenueRow) {
+        const status = String(fallbackVenueRow.subscription_status ?? '').toLowerCase();
+        const plan = String(fallbackVenueRow.subscription_plan ?? '').toLowerCase();
+        const isVendor = status === 'active' || status === 'trial' || plan !== '';
+        console.log('[fetchUserRole] fallback venue status=', status, 'plan=', plan, 'isVendor=', isVendor);
+        if (isVendor) {
+          setUserRole('vendor');
+          return;
+        }
+      }
+
+      console.log('[fetchUserRole] No active plan found, defaulting to attendee');
       setUserRole('attendee');
     } catch (err) {
-      console.error('Error fetching user role:', err);
+      console.error('[fetchUserRole] Error fetching user role:', err);
+      setUserRole('attendee');
+    }
+  };
+
+  const fetchUserRoleWithTimeout = async (userId: string) => {
+    try {
+      await fetchUserRole(userId);
+    } catch {
+      console.warn('[fetchUserRoleWithTimeout] Timed out or errored, defaulting to attendee');
       setUserRole('attendee');
     }
   };
@@ -148,28 +217,49 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     // Get initial session
+    let loadingTimeout: ReturnType<typeof setTimeout> | null = null;
+
+    const clearLoadingTimeout = () => {
+      if (loadingTimeout) {
+        clearTimeout(loadingTimeout);
+        loadingTimeout = null;
+      }
+    };
+
+    loadingTimeout = setTimeout(() => {
+      console.warn('[AuthContext] Force-clearing isLoading after safety timeout');
+      setIsLoading(false);
+    }, 12000);
+
     supabase.auth
       .getSession()
-      .then(({ data }) => {
+      .then(async ({ data }) => {
         setSession(data.session ?? null);
         if (data.session?.user) {
-          fetchUserRole(data.session.user.id);
+          await fetchUserRoleWithTimeout(data.session.user.id);
         } else {
           setUserRole(null);
         }
+        clearLoadingTimeout();
         setIsLoading(false);
       })
-      .catch(() => {
+      .catch((err) => {
+        console.error('[AuthContext] getSession error:', err);
+        clearLoadingTimeout();
         setSession(null);
         setUserRole(null);
         setIsLoading(false);
       });
 
     // Listen for auth state changes
-    const { data } = supabase.auth.onAuthStateChange((_event, newSession) => {
+    const { data } = supabase.auth.onAuthStateChange(async (_event, newSession) => {
       setSession(newSession ?? null);
       if (newSession?.user) {
-        fetchUserRole(newSession.user.id);
+        try {
+          await fetchUserRoleWithTimeout(newSession.user.id);
+        } catch (e) {
+          console.error('[AuthContext] onAuthStateChange fetchUserRole error:', e);
+        }
       } else {
         setUserRole(null);
       }

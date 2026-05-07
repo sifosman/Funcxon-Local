@@ -457,7 +457,7 @@ export default function AccountScreen() {
                     }}
                 >
                     {menuItems
-                        .filter((item) => hasSubscriberAccess || item.id !== 'subscriber-suite')
+                        .filter((item) => hasSubscriberAccess || (item.id !== 'subscriber-suite' && item.id !== 'lister-portfolio'))
                         .map((item) => renderMenuItem(item))}
                 </View>
             </ScrollView>

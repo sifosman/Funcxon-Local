@@ -15,6 +15,7 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useAuth } from '../auth/AuthContext';
 import { getLatestUserApplicationByType, isBlockingApplicationStatus } from '../lib/applicationService';
 import { savePendingSubscriptionCheckout } from '../lib/pendingSubscriptionCheckout';
+import { useApplicationForm } from '../context/ApplicationFormContext';
 import { colors, spacing, radii, typography } from '../theme';
 import type { ProfileStackParamList } from '../navigation/ProfileNavigator';
 
@@ -62,6 +63,7 @@ type VenueFeature = {
 export default function VenueListingPlansScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<ProfileStackParamList>>();
   const { user } = useAuth();
+  const { setPortfolioType, updateStep4 } = useApplicationForm();
 
   const [containerWidth, setContainerWidth] = useState(0);
 
@@ -283,7 +285,7 @@ export default function VenueListingPlansScreen() {
     );
   };
 
-  const handleContinueToCheckout = async () => {
+  const handleSelectPlan = async () => {
     const latestVenueApplication = await getLatestUserApplicationByType('venue');
     if (
       latestVenueApplication.success &&
@@ -300,20 +302,23 @@ export default function VenueListingPlansScreen() {
       ? 'Free'
       : `R${Number((selected.priceNow || '0').replace(/[^0-9.]/g, '')).toLocaleString()}`;
 
-    const checkoutParams: ProfileStackParamList['SubscriptionCheckout'] = {
-      tierName: selected.title,
-      billing: selectedPlan === 'monthly' ? 'monthly' : selectedPlan === 'get_started' ? 'monthly' : selectedPlan,
-      priceLabel,
-      isFree,
-      productType: 'venue',
-      planKey: selectedPlan,
-    };
+    const billingPeriod = selectedPlan === 'get_started' ? 'monthly' : selectedPlan;
+    await setPortfolioType('venues');
+    updateStep4({ subscriptionPlan: selectedPlan, billingPeriod });
 
     if (!user) {
+      const checkoutParams: ProfileStackParamList['SubscriptionCheckout'] = {
+        tierName: selected.title,
+        billing: billingPeriod,
+        priceLabel,
+        isFree,
+        productType: 'venue',
+        planKey: selectedPlan,
+      };
       savePendingSubscriptionCheckout(checkoutParams)
         .then(() => {
           const rootNav = navigation.getParent()?.getParent() as any;
-          rootNav?.navigate?.('Auth', { screen: 'SignIn' });
+          rootNav?.navigate?.('Auth', { screen: 'GuestPrompt', params: { label: 'Account' } });
         })
         .catch(() => {
           Alert.alert('Login required', 'Please log in to continue with this subscription plan.');
@@ -321,9 +326,7 @@ export default function VenueListingPlansScreen() {
       return;
     }
 
-    navigation.navigate('SubscriptionCheckout', {
-      ...checkoutParams,
-    });
+    navigation.navigate('Account' as any, { screen: 'ApplicationStep1' });
   };
 
   return (
@@ -387,7 +390,13 @@ export default function VenueListingPlansScreen() {
               <TouchableOpacity
                 key={plan._key || plan.key}
                 activeOpacity={0.9}
-                onPress={() => scrollToIndex(realIndex)}
+                onPress={() => {
+                  if (isActive) {
+                    handleSelectPlan();
+                  } else {
+                    scrollToIndex(realIndex);
+                  }
+                }}
                 style={{
                   width: CARD_WIDTH,
                   marginHorizontal: CARD_MARGIN,
@@ -546,7 +555,7 @@ export default function VenueListingPlansScreen() {
                 <TouchableOpacity
                   onPress={() => {
                     scrollToIndex(realIndex);
-                    setTimeout(handleContinueToCheckout, 300);
+                    setTimeout(handleSelectPlan, 300);
                   }}
                   activeOpacity={0.85}
                   style={{
@@ -677,7 +686,7 @@ export default function VenueListingPlansScreen() {
         {/* Bottom CTA */}
         <View style={{ paddingHorizontal: spacing.lg, marginTop: spacing.lg }}>
           <TouchableOpacity
-            onPress={handleContinueToCheckout}
+            onPress={handleSelectPlan}
             activeOpacity={0.9}
             style={{
               backgroundColor: colors.primary,

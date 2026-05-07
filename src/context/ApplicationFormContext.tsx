@@ -72,6 +72,7 @@ export interface Step3Data {
 
 export interface Step4Data {
   subscriptionPlan: string;
+  billingPeriod: 'monthly' | 'yearly' | '6_month' | '12_month' | '';
   termsAccepted: boolean;
   privacyAccepted: boolean;
   marketingConsent: boolean;
@@ -147,6 +148,7 @@ const initialState: ApplicationFormState = {
   },
   step4: {
     subscriptionPlan: '',
+    billingPeriod: '',
     termsAccepted: false,
     privacyAccepted: false,
     marketingConsent: false,

@@ -34,6 +34,7 @@ import BillingScreen from '../screens/BillingScreen';
 import AccountSettingsScreen from '../screens/AccountSettingsScreen';
 import ChangePasswordScreen from '../screens/ChangePasswordScreen';
 import MarketingPermissionsScreen from '../screens/MarketingPermissionsScreen';
+import DebugUserScreen from '../screens/DebugUserScreen';
 import { colors, typography } from '../theme';
 
 export type ProfileStackParamList = {
@@ -84,6 +85,7 @@ export type ProfileStackParamList = {
     MarketingPermissions: undefined;
     TermsAndPolicies: undefined;
     LegalDocument: { documentId: string };
+    DebugUser: undefined;
 };
 
 const Stack = createNativeStackNavigator<ProfileStackParamList>();
@@ -275,6 +277,11 @@ export function ProfileNavigator() {
             <Stack.Screen
                 name="LegalDocument"
                 component={LegalDocumentScreen}
+                options={{ headerShown: false }}
+            />
+            <Stack.Screen
+                name="DebugUser"
+                component={DebugUserScreen}
                 options={{ headerShown: false }}
             />
         </Stack.Navigator>

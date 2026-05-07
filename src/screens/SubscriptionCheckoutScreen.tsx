@@ -457,16 +457,19 @@ export default function SubscriptionCheckoutScreen() {
 
     try {
       await WebBrowser.openBrowserAsync(checkoutUrl);
-      // After returning from PayFast, send welcome email and proceed to application
+      // After returning from PayFast, send welcome email and proceed to success
       await sendWelcomeEmail();
-      
+
       // Set portfolio type based on productType before navigating
       const portfolioType = productType === 'venue' ? 'venues' : 'vendors';
       console.log('SubscriptionCheckoutScreen - Setting portfolio type to:', portfolioType);
       await setPortfolioType(portfolioType);
-      console.log('SubscriptionCheckoutScreen - Navigating to ApplicationStep1');
-      
-      navigation.navigate('ApplicationStep1');
+      console.log('SubscriptionCheckoutScreen - Navigating to ApplicationStatus');
+
+      navigation.reset({
+        index: 0,
+        routes: [{ name: 'ApplicationStatus' }],
+      });
     } catch (err) {
       Alert.alert('Payment Error', 'Could not open PayFast checkout. Please try again.');
     }

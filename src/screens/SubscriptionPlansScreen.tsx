@@ -14,6 +14,8 @@ import { useNavigation, useRoute } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useAuth } from '../auth/AuthContext';
 import { savePendingSubscriptionCheckout } from '../lib/pendingSubscriptionCheckout';
+import { getLatestUserApplicationByType, isBlockingApplicationStatus } from '../lib/applicationService';
+import { useApplicationForm } from '../context/ApplicationFormContext';
 import { colors, spacing, radii, typography } from '../theme';
 import type { ProfileStackParamList } from '../navigation/ProfileNavigator';
 
@@ -66,6 +68,7 @@ export default function SubscriptionPlansScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<ProfileStackParamList>>();
   const route = useRoute();
   const { user } = useAuth();
+  const { setPortfolioType, updateStep4 } = useApplicationForm();
   const { currentTier } = (route.params as RouteParams) || {};
 
   const [containerWidth, setContainerWidth] = useState(0);
@@ -220,27 +223,35 @@ export default function SubscriptionPlansScreen() {
     setSelectedPlan(plans[realIndex].key);
   };
 
-  const handleContinueToCheckout = async () => {
+  const handleSelectPlan = async () => {
+    const latestVendorApplication = await getLatestUserApplicationByType('vendor');
+    if (latestVendorApplication.success && latestVendorApplication.data && isBlockingApplicationStatus(latestVendorApplication.data.status)) {
+      navigation.navigate('ApplicationStatus');
+      return;
+    }
+
     const isFree = selectedPlan === 'get_started';
 
     const priceLabel = isFree
       ? 'Free'
       : `${currentPrice}/${selectedBilling === 'monthly' ? 'month' : 'year'}`;
 
-    const checkoutParams: ProfileStackParamList['SubscriptionCheckout'] = {
-      tierName: selected.title,
-      billing: selectedBilling,
-      priceLabel,
-      isFree,
-      productType: 'vendor',
-      planKey: selectedPlan,
-    };
+    await setPortfolioType('vendors');
+    updateStep4({ subscriptionPlan: selectedPlan, billingPeriod: selectedBilling });
 
     if (!user) {
+      const checkoutParams: ProfileStackParamList['SubscriptionCheckout'] = {
+        tierName: selected.title,
+        billing: selectedBilling,
+        priceLabel,
+        isFree,
+        productType: 'vendor',
+        planKey: selectedPlan,
+      };
       savePendingSubscriptionCheckout(checkoutParams)
         .then(() => {
           const rootNav = navigation.getParent()?.getParent() as any;
-          rootNav?.navigate?.('Auth', { screen: 'SignIn' });
+          rootNav?.navigate?.('Auth', { screen: 'GuestPrompt', params: { label: 'Account' } });
         })
         .catch(() => {
           Alert.alert('Login required', 'Please log in to continue with this subscription plan.');
@@ -248,9 +259,7 @@ export default function SubscriptionPlansScreen() {
       return;
     }
 
-    navigation.navigate('SubscriptionCheckout', {
-      ...checkoutParams,
-    });
+    navigation.navigate('Account' as any, { screen: 'ApplicationStep1' });
   };
 
   return (
@@ -370,7 +379,13 @@ export default function SubscriptionPlansScreen() {
               <TouchableOpacity
                 key={plan._key || plan.key}
                 activeOpacity={0.9}
-                onPress={() => scrollToIndex(realIndex)}
+                onPress={() => {
+                  if (isActive) {
+                    handleSelectPlan();
+                  } else {
+                    scrollToIndex(realIndex);
+                  }
+                }}
                 style={{
                   width: CARD_WIDTH,
                   marginHorizontal: CARD_MARGIN,
@@ -550,7 +565,7 @@ export default function SubscriptionPlansScreen() {
                 <TouchableOpacity
                   onPress={() => {
                     scrollToIndex(realIndex);
-                    setTimeout(handleContinueToCheckout, 300);
+                    setTimeout(handleSelectPlan, 300);
                   }}
                   activeOpacity={0.85}
                   style={{
@@ -680,7 +695,7 @@ export default function SubscriptionPlansScreen() {
         {/* Bottom CTA */}
         <View style={{ paddingHorizontal: spacing.lg, marginTop: spacing.lg }}>
           <TouchableOpacity
-            onPress={handleContinueToCheckout}
+            onPress={handleSelectPlan}
             activeOpacity={0.9}
             style={{
               backgroundColor: colors.primary,

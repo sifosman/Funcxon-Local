@@ -35,9 +35,6 @@ type ProfileStackParamList = {
   TermsAndPolicies: undefined;
   SubscriptionPlans: undefined;
   VenueListingPlans: undefined;
-  CreateReview: { type: 'vendor' | 'venue'; targetId: number; targetName: string };
-  BlogList: undefined;
-  BlogDetail: { slug: string };
 };
 
 type NavigationProp = NativeStackNavigationProp<ProfileStackParamList>;
@@ -59,6 +56,7 @@ type VendorListing = {
   name: string;
   subscription_tier: string | null;
   subscription_status: string | null;
+  subscription_expires_at: string | null;
 };
 
 type VenueListing = {
@@ -66,6 +64,7 @@ type VenueListing = {
   name: string;
   subscription_plan: string | null;
   subscription_status: string | null;
+  subscription_expires_at: string | null;
 };
 
 type ActionItem = {
@@ -105,8 +104,8 @@ export default function ListerPortfolioScreen() {
       const internalUserId = userRow?.id ?? user.id;
 
       const [{ data: vendorData }, { data: venueData }] = await Promise.all([
-        supabase.from('vendors').select('id, name, subscription_tier, subscription_status').eq('user_id', internalUserId).maybeSingle(),
-        supabase.from('venues').select('id, name, subscription_plan, subscription_status').eq('user_id', internalUserId).maybeSingle(),
+        supabase.from('vendors').select('id, name, subscription_tier, subscription_status, subscription_expires_at').eq('user_id', internalUserId).maybeSingle(),
+        supabase.from('venue_listings').select('id, name, subscription_plan, subscription_status, subscription_expires_at').eq('user_id', internalUserId).maybeSingle(),
       ]);
 
       if (vendorData) setVendorListing(vendorData);
@@ -329,6 +328,78 @@ export default function ListerPortfolioScreen() {
         <Text style={styles.welcomeSubtitle}>Let's get into it!!!</Text>
       </View>
 
+      {/* Subscription Info Cards */}
+      {vendorListing && (
+        <View style={{ paddingHorizontal: spacing.lg, marginBottom: spacing.md }}>
+          <View style={{ backgroundColor: colors.surface, borderRadius: radii.lg, padding: spacing.lg, borderWidth: 1, borderColor: colors.borderSubtle }}>
+            <Text style={{ ...typography.titleMedium, color: colors.textPrimary, marginBottom: spacing.sm }}>Vendor Plan</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.xs }}>
+              <Text style={{ ...typography.body, color: colors.textMuted, width: 110 }}>Plan:</Text>
+              <Text style={{ ...typography.body, color: colors.textPrimary, fontWeight: '600' }}>
+                {vendorListing.subscription_tier ? vendorListing.subscription_tier.charAt(0).toUpperCase() + vendorListing.subscription_tier.slice(1) : 'Free'}
+              </Text>
+            </View>
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.sm }}>
+              <Text style={{ ...typography.body, color: colors.textMuted, width: 110 }}>Expires:</Text>
+              <Text style={{ ...typography.body, color: colors.textPrimary }}>
+                {vendorListing.subscription_expires_at
+                  ? new Date(vendorListing.subscription_expires_at).toLocaleDateString('en-ZA')
+                  : '—'}
+              </Text>
+            </View>
+            <View style={{ flexDirection: 'row', gap: spacing.md, marginTop: spacing.sm }}>
+              <TouchableOpacity
+                onPress={() => navigation.navigate('SubscriptionPlans')}
+                style={{ flex: 1, borderWidth: 1, borderColor: colors.primary, borderRadius: radii.md, paddingVertical: spacing.sm, alignItems: 'center' }}
+              >
+                <Text style={{ ...typography.body, color: colors.primary, fontWeight: '600' }}>Renew</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={() => navigation.navigate('SubscriptionPlans')}
+                style={{ flex: 1, backgroundColor: colors.primary, borderRadius: radii.md, paddingVertical: spacing.sm, alignItems: 'center' }}
+              >
+                <Text style={{ ...typography.body, color: '#FFFFFF', fontWeight: '600' }}>Upgrade</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      )}
+      {venueListing && (
+        <View style={{ paddingHorizontal: spacing.lg, marginBottom: spacing.md }}>
+          <View style={{ backgroundColor: colors.surface, borderRadius: radii.lg, padding: spacing.lg, borderWidth: 1, borderColor: colors.borderSubtle }}>
+            <Text style={{ ...typography.titleMedium, color: colors.textPrimary, marginBottom: spacing.sm }}>Venue Plan</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.xs }}>
+              <Text style={{ ...typography.body, color: colors.textMuted, width: 110 }}>Plan:</Text>
+              <Text style={{ ...typography.body, color: colors.textPrimary, fontWeight: '600' }}>
+                {venueListing.subscription_plan ? venueListing.subscription_plan.charAt(0).toUpperCase() + venueListing.subscription_plan.slice(1) : 'Free'}
+              </Text>
+            </View>
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.sm }}>
+              <Text style={{ ...typography.body, color: colors.textMuted, width: 110 }}>Expires:</Text>
+              <Text style={{ ...typography.body, color: colors.textPrimary }}>
+                {venueListing.subscription_expires_at
+                  ? new Date(venueListing.subscription_expires_at).toLocaleDateString('en-ZA')
+                  : '—'}
+              </Text>
+            </View>
+            <View style={{ flexDirection: 'row', gap: spacing.md, marginTop: spacing.sm }}>
+              <TouchableOpacity
+                onPress={() => navigation.navigate('SubscriptionPlans')}
+                style={{ flex: 1, borderWidth: 1, borderColor: colors.primary, borderRadius: radii.md, paddingVertical: spacing.sm, alignItems: 'center' }}
+              >
+                <Text style={{ ...typography.body, color: colors.primary, fontWeight: '600' }}>Renew</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={() => navigation.navigate('VenueListingPlans')}
+                style={{ flex: 1, backgroundColor: colors.primary, borderRadius: radii.md, paddingVertical: spacing.sm, alignItems: 'center' }}
+              >
+                <Text style={{ ...typography.body, color: '#FFFFFF', fontWeight: '600' }}>Upgrade</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      )}
+
       {/* Portfolio Actions Card */}
       <View style={styles.card}>
         <Text style={styles.cardTitle}>Portfolio</Text>
@@ -346,10 +417,11 @@ export default function ListerPortfolioScreen() {
         <TouchableOpacity
           style={styles.ctaButton}
           onPress={() => {
+            const parentNav = (navigation as any).getParent?.();
             if (vendorListing) {
-              navigation.navigate('CreateReview', { type: 'vendor', targetId: vendorListing.id, targetName: vendorListing.name });
+              parentNav?.navigate?.('Main', { screen: 'Home', params: { screen: 'CreateReview', params: { type: 'vendor', targetId: vendorListing.id, targetName: vendorListing.name } } });
             } else if (venueListing) {
-              navigation.navigate('CreateReview', { type: 'venue', targetId: venueListing.id, targetName: venueListing.name });
+              parentNav?.navigate?.('Main', { screen: 'Home', params: { screen: 'CreateReview', params: { type: 'venue', targetId: venueListing.id, targetName: venueListing.name } } });
             } else {
               Alert.alert('No portfolio found', 'Create a portfolio first before submitting a review.');
             }
@@ -363,21 +435,29 @@ export default function ListerPortfolioScreen() {
           <Text style={styles.featuredLabel}>Want priority exposure?</Text>
           <TouchableOpacity
             style={styles.featuredButton}
-            onPress={() => Alert.alert('Coming Soon', 'Featured listings with ad packages and payment gateway will be available in a later release.')}
+            onPress={() => Alert.alert('Coming Soon', 'Featured listings will be available in a later release.')}
           >
             <Text style={styles.featuredButtonText}>GET FEATURED</Text>
           </TouchableOpacity>
-          <Text style={styles.featuredNote}>
-            We will have to add an ad package page with payment gateway. Later stage once we've onboarded enough listers to compete for feature.
-          </Text>
         </View>
+
+        {/* Temporary debug button */}
+        <TouchableOpacity
+          style={[styles.ctaButton, { backgroundColor: '#dc2626' }]}
+          onPress={() => (navigation as any).navigate('DebugUser')}
+        >
+          <Text style={styles.ctaButtonText}>DEBUG: View User Data</Text>
+        </TouchableOpacity>
       </View>
 
       {/* Listers Blog Section */}
       <View style={styles.section}>
         <View style={styles.blogHeader}>
           <Text style={styles.sectionTitle}>Listers Blog</Text>
-          <TouchableOpacity onPress={() => navigation.navigate('BlogList')}>
+          <TouchableOpacity onPress={() => {
+            const parentNav = (navigation as any).getParent?.();
+            parentNav?.navigate?.('Main', { screen: 'Home', params: { screen: 'BlogList' } });
+          }}>
             <Text style={styles.viewAllText}>View all</Text>
           </TouchableOpacity>
         </View>
@@ -391,7 +471,10 @@ export default function ListerPortfolioScreen() {
                 key={post.id}
                 activeOpacity={0.9}
                 style={styles.blogCard}
-                onPress={() => navigation.navigate('BlogDetail', { slug: post.slug })}
+                onPress={() => {
+                  const parentNav = (navigation as any).getParent?.();
+                  parentNav?.navigate?.('Main', { screen: 'Home', params: { screen: 'BlogDetail', params: { slug: post.slug } } });
+                }}
               >
                 <View style={styles.blogCardInner}>
                   {post.cover_image_url ? (

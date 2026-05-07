@@ -106,7 +106,13 @@ export default function AppHeader() {
         </TouchableOpacity>
         <TouchableOpacity
           style={styles.navButton}
-          onPress={() => navigation.navigate('Main', { screen: 'Home', params: { screen: 'ListersPortal' } })}
+          onPress={() => {
+            if (session && isLister) {
+              navigation.navigate('Main', { screen: 'Account', params: { screen: 'ListerPortfolio' } });
+            } else {
+              navigation.navigate('Main', { screen: 'Home', params: { screen: 'ListersPortal' } });
+            }
+          }}
         >
           <MaterialIcons name="list" size={18} color={colors.textPrimary} />
           <Text style={styles.navButtonText}>Listers</Text>
