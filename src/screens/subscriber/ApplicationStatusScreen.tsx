@@ -164,12 +164,11 @@ export default function ApplicationStatusScreen() {
         tiktok: application.company_details?.tiktok ?? '',
       },
       step2: {
-        venueType: application.service_categories?.venueType ?? '',
+        venueType: application.service_categories?.venueType ?? [],
         venueCapacity: application.service_categories?.venueCapacity ?? '',
         amenities: application.service_categories?.amenities ?? [],
         eventTypes: application.service_categories?.eventTypes ?? [],
         awardsAndNominations: application.service_categories?.awardsAndNominations ?? '',
-        browserTags: application.service_categories?.browserTags ?? '',
         halls: application.service_categories?.halls ?? Array.from({ length: 5 }, () => ({ name: '', capacity: '' })),
         paymentTermsAndConditions: application.service_categories?.paymentTermsAndConditions ?? '',
         serviceCategories: application.service_categories?.serviceCategories ?? [],
@@ -186,6 +185,7 @@ export default function ApplicationStatusScreen() {
       },
       step4: {
         subscriptionPlan: application.subscription_tier ?? '',
+        billingPeriod: 'monthly',
         termsAccepted: Boolean(application.terms_accepted),
         privacyAccepted: Boolean(application.privacy_accepted),
         marketingConsent: Boolean(application.marketing_consent),

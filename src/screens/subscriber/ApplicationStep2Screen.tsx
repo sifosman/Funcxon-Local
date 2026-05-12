@@ -228,8 +228,8 @@ export default function ApplicationStep2Screen() {
                   renderCheckboxCardRow({
                     key: type,
                     label: type,
-                    isSelected: state.step2.venueType === type,
-                    onPress: () => updateStep2({ venueType: type }),
+                    isSelected: state.step2.venueType.includes(type),
+                    onPress: () => toggleArrayItem('venueType', type),
                   }),
                 )}
                 {errors.venueType && (
@@ -342,16 +342,14 @@ export default function ApplicationStep2Screen() {
                 <Text style={{ ...typography.caption, color: colors.textMuted, marginBottom: spacing.md }}>
                   Select all event types your venue can host
                 </Text>
-                <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between' }}>
-                  {eventTypes.map((event) =>
-                    renderCheckboxCardGridItem({
-                      key: event,
-                      label: event,
-                      isSelected: state.step2.eventTypes.includes(event),
-                      onPress: () => toggleArrayItem('eventTypes', event),
-                    }),
-                  )}
-                </View>
+                {eventTypes.map((event) =>
+                  renderCheckboxCardRow({
+                    key: event,
+                    label: event,
+                    isSelected: state.step2.eventTypes.includes(event),
+                    onPress: () => toggleArrayItem('eventTypes', event),
+                  }),
+                )}
                 {errors.eventTypes && (
                   <Text style={{ fontSize: 12, color: '#EF4444', marginTop: spacing.xs }}>
                     {errors.eventTypes}
@@ -398,45 +396,6 @@ export default function ApplicationStep2Screen() {
                     color: colors.textPrimary,
                     textAlignVertical: 'top',
                     minHeight: 110,
-                  }}
-                />
-              </View>
-
-              {/* Browser Tags */}
-              <View
-                style={{
-                  backgroundColor: colors.surface,
-                  borderRadius: radii.lg,
-                  padding: spacing.lg,
-                  marginBottom: spacing.lg,
-                  borderWidth: 1,
-                  borderColor: colors.borderSubtle,
-                  shadowColor: '#000',
-                  shadowOpacity: 0.05,
-                  shadowRadius: 8,
-                  shadowOffset: { width: 0, height: 2 },
-                  elevation: 2,
-                }}
-              >
-                <Text style={{ ...typography.titleMedium, color: colors.textPrimary, marginBottom: spacing.xs }}>
-                  Browser Tags
-                </Text>
-                <Text style={{ ...typography.caption, color: colors.textMuted, marginBottom: spacing.md }}>
-                  Add keywords that help users find your venue (comma separated)
-                </Text>
-                <TextInput
-                  placeholder="e.g., outdoor, garden, rustic, modern, luxury..."
-                  value={state.step2.browserTags ?? ''}
-                  onChangeText={(value) => updateStep2({ browserTags: value })}
-                  style={{
-                    borderWidth: 1,
-                    borderColor: colors.borderSubtle,
-                    borderRadius: radii.md,
-                    paddingHorizontal: spacing.md,
-                    paddingVertical: spacing.sm,
-                    backgroundColor: colors.surface,
-                    fontSize: 14,
-                    color: colors.textPrimary,
                   }}
                 />
               </View>

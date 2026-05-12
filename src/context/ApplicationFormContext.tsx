@@ -25,13 +25,12 @@ export interface Step1Data {
 }
 
 export interface Step2Data {
-  venueType?: string;
+  venueType: string[];
   venueCapacity?: string;
   amenities: string[];
   eventTypes: string[];
   awardsAndNominations?: string;
-  browserTags?: string;
-  halls?: Array<{
+  halls: Array<{
     name: string;
     capacity: string;
   }>;
@@ -114,11 +113,11 @@ const initialState: ApplicationFormState = {
     tiktok: '',
   },
   step2: {
+    venueType: [],
     amenities: [],
     eventTypes: [],
     awardsAndNominations: '',
-    browserTags: '',
-    halls: [],
+    halls: Array.from({ length: 5 }, () => ({ name: '', capacity: '' })),
     paymentTermsAndConditions: '',
     serviceCategories: [],
     serviceSubcategories: [],

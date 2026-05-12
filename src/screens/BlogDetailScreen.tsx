@@ -54,7 +54,7 @@ const fetchBlogPostBySlug = async (slug: string): Promise<BlogPost> => {
 const fetchRelatedPosts = async (currentId: number, category: string): Promise<BlogPost[]> => {
   const { data, error } = await supabase
     .from('blog_posts')
-    .select('id, title, slug, excerpt, cover_image_url, author_name, category, published_at, read_time_minutes')
+    .select('id, title, slug, excerpt, content, cover_image_url, author_name, author_avatar_url, category, tags, published_at, read_time_minutes')
     .eq('is_published', true)
     .neq('id', currentId)
     .eq('category', category)

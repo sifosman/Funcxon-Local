@@ -33,7 +33,7 @@ type ProfileStackParamList = {
 
 export default function ApplicationStep4Screen() {
   const navigation = useNavigation<NativeStackNavigationProp<ProfileStackParamList>>();
-  const { state, updateStep4, resetForm } = useApplicationForm();
+  const { state, updateStep4, resetForm, saveDraft } = useApplicationForm();
   const { user } = useAuth();
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -65,6 +65,7 @@ export default function ApplicationStep4Screen() {
   const selectedTier = tiers.find((tier) => normalizeTierKey(tier.tier_name) === normalizeTierKey(state.step4.subscriptionPlan));
   const selectedTierPrice = selectedTier?.price_monthly ?? selectedTier?.price_yearly ?? null;
   const selectedTierPriceLabel = selectedTierPrice ? `R${Number(selectedTierPrice).toLocaleString()}` : 'Free';
+  const isSelectedTierFree = !selectedTierPrice || selectedTierPrice === 0;
 
   const loadTiers = async () => {
     try {
@@ -105,8 +106,6 @@ export default function ApplicationStep4Screen() {
       return;
     }
 
-    setIsSubmitting(true);
-
     const validation = validateStep4(state.step4);
 
     if (!validation.isValid) {
@@ -114,6 +113,30 @@ export default function ApplicationStep4Screen() {
       Alert.alert('Validation Error', 'Please fix the errors before continuing');
       return;
     }
+
+    // For paid plans, navigate to SubscriptionCheckout first
+    if (!isSelectedTierFree && selectedTier) {
+      const billingPeriod = state.step4.billingPeriod || 'monthly';
+      const priceLabel = selectedTierPriceLabel;
+      const productType = state.portfolioType === 'venues' ? 'venue' : 'vendor';
+      const planKey = state.step4.subscriptionPlan;
+      const tierName = selectedTier.tier_name;
+
+      // Save form draft before leaving for checkout
+      await saveDraft();
+
+      navigation.navigate('SubscriptionCheckout', {
+        tierName: tierName.replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase()),
+        billing: billingPeriod,
+        priceLabel,
+        isFree: false,
+        productType,
+        planKey,
+      });
+      return;
+    }
+
+    setIsSubmitting(true);
 
     try {
       // Upload files to Supabase Storage first
@@ -225,6 +248,7 @@ export default function ApplicationStep4Screen() {
               ...(existingFeatures ?? {}),
               halls,
               maxHallCapacity,
+              venueTypes: state.step2.venueType,
             };
 
             await supabase
@@ -234,10 +258,13 @@ export default function ApplicationStep4Screen() {
                   user_id: user.id,
                   name: listingName,
                   description: state.step2.description?.trim() || null,
-                  venue_type: state.step2.venueType ?? null,
+                  venue_type: state.step2.venueType.join(', ') || null,
                   venue_capacity: state.step2.venueCapacity ?? null,
                   capacity: maxHallCapacity,
+                  amenities: state.step2.amenities,
+                  event_types: state.step2.eventTypes,
                   features: nextFeatures,
+                  subscription_status: 'active',
                 } as any,
                 { onConflict: 'user_id' },
               );
@@ -419,7 +446,7 @@ export default function ApplicationStep4Screen() {
             </View>
           </View>
 
-          {/* Selected Package */}
+          {/* Subscription Package Selection */}
           <View
             style={{
               backgroundColor: colors.surface,
@@ -436,73 +463,92 @@ export default function ApplicationStep4Screen() {
             }}
           >
             <Text style={{ ...typography.titleMedium, color: colors.textPrimary, marginBottom: spacing.xs }}>
-              Selected Package
+              Subscription Package *
             </Text>
             <Text style={{ ...typography.caption, color: colors.textMuted, marginBottom: spacing.lg }}>
-              This package was already selected during checkout and will be submitted with your application.
+              Select the plan that best fits your business needs
             </Text>
 
-          {loading ? (
-            <View style={{ padding: spacing.xl, alignItems: 'center' }}>
-              <ActivityIndicator size="small" color={colors.primary} />
-              <Text style={{ ...typography.caption, color: colors.textMuted, marginTop: spacing.sm }}>Loading plans...</Text>
-            </View>
-          ) : !selectedTier ? (
-            <View
-              style={{
-                padding: spacing.lg,
-                borderRadius: radii.md,
-                borderWidth: 1,
-                borderColor: '#F59E0B',
-                backgroundColor: '#FFFBEB',
-              }}
-            >
-              <Text style={{ ...typography.body, color: colors.textPrimary, fontWeight: '600' }}>
-                Package not found
-              </Text>
-              <Text style={{ ...typography.caption, color: colors.textMuted, marginTop: spacing.xs }}>
-                We could not match your paid package details. Please go back to checkout and try again.
-              </Text>
-            </View>
-          ) : (
-            <View
-              style={{
-                padding: spacing.lg,
-                borderRadius: radii.lg,
-                borderWidth: 2,
-                borderColor: colors.primaryTeal,
-                backgroundColor: '#E0F2F7',
-              }}
-            >
-              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing.sm }}>
-                <View style={{ flex: 1 }}>
-                  <Text style={{ ...typography.titleMedium, color: colors.textPrimary }}>
-                    {selectedTier.tier_name.charAt(0).toUpperCase() + selectedTier.tier_name.slice(1)}
-                  </Text>
-                  <Text style={{ ...typography.body, color: colors.textMuted, marginTop: 2 }}>
-                    {selectedTierPriceLabel}
-                  </Text>
-                </View>
-                <MaterialIcons name="check-circle" size={28} color={colors.primaryTeal} />
+            {loading ? (
+              <View style={{ padding: spacing.xl, alignItems: 'center' }}>
+                <ActivityIndicator size="small" color={colors.primary} />
+                <Text style={{ ...typography.caption, color: colors.textMuted, marginTop: spacing.sm }}>Loading plans...</Text>
               </View>
-              <View style={{ gap: spacing.xs }}>
-                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                  <MaterialIcons name="photo-library" size={16} color={colors.primaryTeal} style={{ marginRight: spacing.xs }} />
-                  <Text style={{ ...typography.caption, color: colors.textPrimary }}>
-                    {selectedTier.photo_limit} photos
-                  </Text>
-                </View>
-                {selectedTier.features && Object.entries(selectedTier.features).map(([key, value]) => (
-                  <View key={key} style={{ flexDirection: 'row', alignItems: 'center' }}>
-                    <MaterialIcons name={value ? 'check' : 'cancel'} size={16} color={value ? colors.primaryTeal : colors.textMuted} style={{ marginRight: spacing.xs }} />
-                    <Text style={{ ...typography.caption, color: value ? colors.textPrimary : colors.textMuted }}>
-                      {key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
-                    </Text>
-                  </View>
-                ))}
+            ) : tiers.length === 0 ? (
+              <View
+                style={{
+                  padding: spacing.lg,
+                  borderRadius: radii.md,
+                  borderWidth: 1,
+                  borderColor: '#F59E0B',
+                  backgroundColor: '#FFFBEB',
+                }}
+              >
+                <Text style={{ ...typography.body, color: colors.textPrimary, fontWeight: '600' }}>
+                  No plans available
+                </Text>
               </View>
-            </View>
-          )}
+            ) : (
+              <View style={{ gap: spacing.sm }}>
+                {tiers.map((tier) => {
+                  const isSelected = normalizeTierKey(state.step4.subscriptionPlan) === normalizeTierKey(tier.tier_name);
+                  const price = tier.price_monthly ?? tier.price_yearly ?? 0;
+                  const isFree = price === 0;
+                  return (
+                    <TouchableOpacity
+                      key={tier.id}
+                      onPress={() => {
+                        const billing = state.portfolioType === 'venues'
+                          ? (tier.tier_name === 'get_started' ? 'monthly' : tier.tier_name as any)
+                          : 'monthly';
+                        updateStep4({ subscriptionPlan: tier.tier_name, billingPeriod: billing });
+                        if (errors.subscriptionPlan) {
+                          setErrors((prev) => {
+                            const next = { ...prev };
+                            delete next.subscriptionPlan;
+                            return next;
+                          });
+                        }
+                      }}
+                      activeOpacity={0.9}
+                      style={{
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        padding: spacing.md,
+                        borderRadius: radii.lg,
+                        borderWidth: 2,
+                        borderColor: isSelected ? colors.primaryTeal : colors.borderSubtle,
+                        backgroundColor: isSelected ? '#E0F2F7' : colors.surface,
+                      }}
+                    >
+                      <View
+                        style={{
+                          width: 24,
+                          height: 24,
+                          borderRadius: 12,
+                          borderWidth: 2,
+                          borderColor: isSelected ? colors.primaryTeal : colors.borderStrong,
+                          backgroundColor: isSelected ? colors.primaryTeal : colors.surface,
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          marginRight: spacing.md,
+                        }}
+                      >
+                        {isSelected && <MaterialIcons name="check" size={16} color="#FFFFFF" />}
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <Text style={{ ...typography.body, color: colors.textPrimary, fontWeight: '600' }}>
+                          {tier.tier_name.replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase())}
+                        </Text>
+                        <Text style={{ ...typography.caption, color: colors.textMuted, marginTop: 2 }}>
+                          {isFree ? 'Free' : `R${Number(price).toLocaleString()}`} — {tier.photo_limit} photos
+                        </Text>
+                      </View>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            )}
             {errors.subscriptionPlan && (
               <Text style={{ fontSize: 12, color: '#EF4444', marginTop: spacing.xs }}>
                 {errors.subscriptionPlan}
@@ -666,7 +712,7 @@ export default function ApplicationStep4Screen() {
             <MaterialIcons name="info" size={20} color={colors.primaryTeal} style={{ marginRight: spacing.sm }} />
             <View style={{ flex: 1 }}>
               <Text style={{ ...typography.caption, color: colors.textPrimary }}>
-                By submitting this application, you confirm the package already selected during checkout and agree to the terms below.
+                By continuing, you confirm your selected subscription plan and agree to the terms below. Free plans go live immediately; paid plans require checkout first.
               </Text>
             </View>
           </View>
@@ -707,15 +753,15 @@ export default function ApplicationStep4Screen() {
                 <>
                   <ActivityIndicator size="small" color="#FFFFFF" style={{ marginRight: spacing.sm }} />
                   <Text style={{ color: '#FFFFFF', fontSize: 16, fontWeight: '600' }}>
-                    Submitting...
+                    {isSelectedTierFree ? 'Submitting...' : 'Processing...'}
                   </Text>
                 </>
               ) : (
                 <>
                   <Text style={{ color: '#FFFFFF', fontSize: 16, fontWeight: '600', marginRight: spacing.sm }}>
-                    Submit Application
+                    {isSelectedTierFree ? 'Submit Application' : 'Checkout'}
                   </Text>
-                  <MaterialIcons name="check-circle" size={16} color="#FFFFFF" />
+                  <MaterialIcons name={isSelectedTierFree ? 'check-circle' : 'shopping-cart'} size={16} color="#FFFFFF" />
                 </>
               )}
             </TouchableOpacity>

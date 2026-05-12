@@ -30,12 +30,13 @@ const MAX_VIDEO_SIZE = 50 * 1024 * 1024; // 50MB
 const MAX_DOCUMENT_SIZE = 10 * 1024 * 1024; // 10MB
 
 type RequiredDocKey = 'id_copy' | 'company_logo';
-type DocKey = RequiredDocKey | 'cipro';
+type DocKey = RequiredDocKey | 'cipro' | 'catalogue';
 
 const BUSINESS_DOCS: Array<{ key: DocKey; label: string; required: boolean; acceptLabel?: string }> = [
   { key: 'id_copy', label: 'ID copy', required: true },
   { key: 'cipro', label: 'CIPRO', required: false, acceptLabel: 'If applicable' },
   { key: 'company_logo', label: 'Company Logo', required: true },
+  { key: 'catalogue', label: 'Upload Catalogue (PDF)', required: false, acceptLabel: 'Optional' },
 ];
 
 export default function ApplicationStep3Screen() {
@@ -578,7 +579,7 @@ export default function ApplicationStep3Screen() {
               }}
             >
               <Text style={{ ...typography.caption, color: colors.textPrimary, fontWeight: '600', marginBottom: spacing.sm }}>
-                Upload Limits — Venue Plan
+                Uploads limited to subscription plan
               </Text>
               {/* Photos */}
               <View style={{ marginBottom: spacing.sm }}>

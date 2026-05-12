@@ -549,127 +549,42 @@ export default function ApplicationStep1Screen() {
             </View>
           </View>
 
-          {/* Funcxon User Profile Details Card */}
-          <View
-            style={{
-              backgroundColor: colors.surface,
-              borderRadius: radii.lg,
-              padding: spacing.lg,
-              marginBottom: spacing.lg,
-              borderWidth: 1,
-              borderColor: colors.borderSubtle,
-              shadowColor: '#000',
-              shadowOpacity: 0.05,
-              shadowRadius: 8,
-              shadowOffset: { width: 0, height: 2 },
-              elevation: 2,
-            }}
-          >
-            <Text style={{ ...typography.titleMedium, color: colors.textPrimary, marginBottom: spacing.xs }}>
-              Funcxon User Profile Details
-            </Text>
-            <Text style={{ ...typography.caption, color: colors.textMuted, marginBottom: spacing.lg }}>
-              Your Funcxon profile information for the platform.
-            </Text>
-
-            <View style={{ gap: spacing.md }}>
-              <View>
-                <Text style={{ ...typography.body, fontWeight: '500', color: colors.textPrimary, marginBottom: spacing.xs }}>
-                  Funcxon User Name
-                </Text>
-                <TextInput
-                  placeholder="Enter your Funcxon user name"
-                  value={state.step1.funcxonUserName}
-                  onChangeText={(value) => handleChange('funcxonUserName', value)}
-                  autoCapitalize="none"
-                  style={{
-                    borderWidth: 1,
-                    borderColor: colors.borderSubtle,
-                    borderRadius: radii.md,
-                    paddingHorizontal: spacing.md,
-                    paddingVertical: spacing.sm,
-                    backgroundColor: colors.surface,
-                    fontSize: 14,
-                    color: colors.textPrimary,
-                  }}
-                />
-              </View>
-
-              <View>
-                <Text style={{ ...typography.body, fontWeight: '500', color: colors.textPrimary, marginBottom: spacing.xs }}>
-                  User Whatsapp
-                </Text>
-                <TextInput
-                  placeholder="Enter your WhatsApp number"
-                  value={state.step1.userWhatsapp}
-                  onChangeText={(value) => handleChange('userWhatsapp', value)}
-                  keyboardType="phone-pad"
-                  style={{
-                    borderWidth: 1,
-                    borderColor: errors.userWhatsapp ? '#EF4444' : colors.borderSubtle,
-                    borderRadius: radii.md,
-                    paddingHorizontal: spacing.md,
-                    paddingVertical: spacing.sm,
-                    backgroundColor: colors.surface,
-                    fontSize: 14,
-                    color: colors.textPrimary,
-                  }}
-                />
-                {errors.userWhatsapp && (
-                  <Text style={{ fontSize: 12, color: '#EF4444', marginTop: 4 }}>
-                    {errors.userWhatsapp}
-                  </Text>
-                )}
-              </View>
-
-              <View>
-                <Text style={{ ...typography.body, fontWeight: '500', color: colors.textPrimary, marginBottom: spacing.xs }}>
-                  User Email
-                </Text>
-                <TextInput
-                  placeholder="Enter your email address"
-                  value={state.step1.userEmail}
-                  onChangeText={(value) => handleChange('userEmail', value)}
-                  keyboardType="email-address"
-                  autoCapitalize="none"
-                  style={{
-                    borderWidth: 1,
-                    borderColor: errors.userEmail ? '#EF4444' : colors.borderSubtle,
-                    borderRadius: radii.md,
-                    paddingHorizontal: spacing.md,
-                    paddingVertical: spacing.sm,
-                    backgroundColor: colors.surface,
-                    fontSize: 14,
-                    color: colors.textPrimary,
-                  }}
-                />
-                {errors.userEmail && (
-                  <Text style={{ fontSize: 12, color: '#EF4444', marginTop: 4 }}>
-                    {errors.userEmail}
-                  </Text>
-                )}
-              </View>
-
-              <TouchableOpacity
-                onPress={handleNext}
-                style={{
-                  backgroundColor: colors.primaryTeal,
-                  paddingVertical: spacing.md,
-                  paddingHorizontal: spacing.lg,
-                  borderRadius: radii.md,
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  marginTop: spacing.md,
-                }}
-                activeOpacity={0.8}
-              >
-                <Text style={{ color: '#FFFFFF', fontSize: 16, fontWeight: '600', marginRight: spacing.sm }}>
-                  Next
-                </Text>
-                <MaterialIcons name="arrow-forward" size={16} color="#FFFFFF" />
-              </TouchableOpacity>
-            </View>
+          {/* Navigation Buttons */}
+          <View style={{ flexDirection: 'row', gap: spacing.md, marginBottom: spacing.lg }}>
+            <TouchableOpacity
+              onPress={() => navigation.goBack()}
+              style={{
+                flex: 1,
+                backgroundColor: colors.surface,
+                borderWidth: 1,
+                borderColor: colors.primaryTeal,
+                paddingVertical: spacing.md,
+                borderRadius: radii.md,
+                alignItems: 'center',
+              }}
+            >
+              <Text style={{ color: colors.primaryTeal, fontSize: 16, fontWeight: '600' }}>
+                Back
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={handleNext}
+              style={{
+                flex: 1,
+                backgroundColor: colors.primaryTeal,
+                paddingVertical: spacing.md,
+                borderRadius: radii.md,
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+              activeOpacity={0.8}
+            >
+              <Text style={{ color: '#FFFFFF', fontSize: 16, fontWeight: '600', marginRight: spacing.sm }}>
+                Next
+              </Text>
+              <MaterialIcons name="arrow-forward" size={16} color="#FFFFFF" />
+            </TouchableOpacity>
           </View>
         </View>
       </ScrollView>
