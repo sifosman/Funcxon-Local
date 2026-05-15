@@ -284,9 +284,9 @@ export default function AttendeeHomeScreen() {
   const [search, setSearch] = useState('');
   const [serviceType, setServiceType] = useState<ServiceType>('All');
 
-  // Responsive card width - aim for ~3.5 cards visible to show a half card at the edge
+  // Responsive card width - aim for ~2.5 cards visible
   const [screenWidth, setScreenWidth] = useState(Dimensions.get('window').width);
-  const cardWidth = screenWidth / 3.5;
+  const cardWidth = screenWidth / 2.5;
 
   useEffect(() => {
     const subscription = Dimensions.addEventListener('change', ({ window }) => {
@@ -412,12 +412,12 @@ export default function AttendeeHomeScreen() {
             overflow: 'hidden',
             borderWidth: 1,
             borderColor: colors.borderSubtle,
-            height: cardWidth * 1.3,
+            height: cardWidth * 1.25,
           }}
         >
           <Image
             source={item.image_url ? { uri: item.image_url } : require('../../assets/adaptive-icon.jpg')}
-            style={{ width: '100%', height: cardWidth * 0.67 }}
+            style={{ width: '100%', height: cardWidth * 0.6 }}
             resizeMode="cover"
           />
           <View style={{ flex: 1, padding: spacing.sm, justifyContent: 'space-between' }}>
@@ -1415,12 +1415,12 @@ export default function AttendeeHomeScreen() {
                   overflow: 'hidden',
                   borderWidth: 1,
                   borderColor: colors.borderSubtle,
-                  height: cardWidth * 1.3,
+                  height: cardWidth * 1.25,
                 }}
               >
                 <Image
                   source={option.image}
-                  style={{ width: '100%', height: cardWidth * 0.67 }}
+                  style={{ width: '100%', height: cardWidth * 0.6 }}
                   resizeMode="cover"
                 />
                 <View style={{ flex: 1, padding: spacing.sm, justifyContent: 'space-between' }}>
@@ -1506,7 +1506,7 @@ export default function AttendeeHomeScreen() {
             <TouchableOpacity
               key={post.id}
               activeOpacity={0.9}
-              style={{ width: cardWidth * 1.2, marginRight: spacing.md }}
+              style={{ width: cardWidth, marginRight: spacing.md }}
               onPress={() => navigation.navigate('BlogDetail', { slug: post.slug })}
             >
               <View
@@ -1516,20 +1516,20 @@ export default function AttendeeHomeScreen() {
                   overflow: 'hidden',
                   borderWidth: 1,
                   borderColor: colors.borderSubtle,
-                  height: cardWidth * 1.5,
+                  height: cardWidth * 1.25,
                 }}
               >
                 {post.cover_image_url ? (
                   <Image
                     source={{ uri: post.cover_image_url }}
-                    style={{ width: '100%', height: cardWidth * 0.7 }}
+                    style={{ width: '100%', height: cardWidth * 0.6 }}
                     resizeMode="cover"
                   />
                 ) : (
                   <View
                     style={{
                       width: '100%',
-                      height: cardWidth * 0.7,
+                      height: cardWidth * 0.6,
                       backgroundColor: colors.accent,
                       justifyContent: 'center',
                       alignItems: 'center',
@@ -1604,56 +1604,141 @@ export default function AttendeeHomeScreen() {
       </View>
 
       {/* Get Listed CTA Section */}
-      <View style={{ marginTop: spacing.xl, paddingHorizontal: spacing.lg }}>
-        <View style={{ alignItems: 'center', marginBottom: spacing.lg }}>
-          <Text style={{ ...typography.displayLarge, color: colors.textPrimary, fontWeight: '800', textAlign: 'center' }}>
+      <View style={{ marginTop: spacing.xl }}>
+        <View style={{ paddingHorizontal: spacing.lg, marginBottom: spacing.md }}>
+          <Text
+            style={{
+              ...typography.titleLarge,
+              color: colors.textPrimary,
+              fontWeight: '700',
+            }}
+          >
             Get Listed!
           </Text>
         </View>
 
-        <View style={{ flexDirection: 'row', justifyContent: 'space-between', flexWrap: 'wrap' }}>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={{ paddingHorizontal: spacing.lg }}
+        >
           {/* Create Venue Portfolio */}
-          <View style={{ width: '31%', alignItems: 'center' }}>
-            <View style={{ width: '100%', aspectRatio: 1, borderRadius: radii.lg, overflow: 'hidden', backgroundColor: colors.surfaceMuted, marginBottom: spacing.sm, borderWidth: 1, borderColor: colors.borderSubtle }}>
-              <Image 
-                source={require('../../assets/slider_1.jpeg')} 
-                style={{ width: '100%', height: '100%' }}
+          <TouchableOpacity
+            activeOpacity={0.9}
+            style={{ width: cardWidth, marginRight: spacing.md }}
+            onPress={() => navigation.navigate('Discover', { category: 'venues' })}
+          >
+            <View
+              style={{
+                backgroundColor: colors.surface,
+                borderRadius: radii.lg,
+                overflow: 'hidden',
+                borderWidth: 1,
+                borderColor: colors.borderSubtle,
+                height: cardWidth * 1.25,
+              }}
+            >
+              <Image
+                source={require('../../assets/slider_1.jpeg')}
+                style={{ width: '100%', height: cardWidth * 0.6 }}
                 resizeMode="cover"
               />
+              <View style={{ flex: 1, padding: spacing.sm, justifyContent: 'center' }}>
+                <Text
+                  style={{
+                    ...typography.caption,
+                    color: colors.textPrimary,
+                    fontWeight: '700',
+                    textAlign: 'center',
+                    fontSize: 10,
+                    textTransform: 'uppercase',
+                  }}
+                  numberOfLines={2}
+                >
+                  Create your venue portfolio here
+                </Text>
+              </View>
             </View>
-            <Text style={{ ...typography.caption, color: colors.textPrimary, fontWeight: '700', textAlign: 'center', fontSize: 10, textTransform: 'uppercase' }}>
-              Create your venue portfolio here
-            </Text>
-          </View>
+          </TouchableOpacity>
 
           {/* Create Vendor Portfolio */}
-          <View style={{ width: '31%', alignItems: 'center' }}>
-            <View style={{ width: '100%', aspectRatio: 1, borderRadius: radii.lg, overflow: 'hidden', backgroundColor: colors.surfaceMuted, marginBottom: spacing.sm, borderWidth: 1, borderColor: colors.borderSubtle }}>
-              <Image 
-                source={require('../../assets/slider_1.jpeg')} 
-                style={{ width: '100%', height: '100%' }}
+          <TouchableOpacity
+            activeOpacity={0.9}
+            style={{ width: cardWidth, marginRight: spacing.md }}
+            onPress={() => navigation.navigate('Discover', { category: 'vendors' })}
+          >
+            <View
+              style={{
+                backgroundColor: colors.surface,
+                borderRadius: radii.lg,
+                overflow: 'hidden',
+                borderWidth: 1,
+                borderColor: colors.borderSubtle,
+                height: cardWidth * 1.25,
+              }}
+            >
+              <Image
+                source={require('../../assets/slider_1.jpeg')}
+                style={{ width: '100%', height: cardWidth * 0.6 }}
                 resizeMode="cover"
               />
+              <View style={{ flex: 1, padding: spacing.sm, justifyContent: 'center' }}>
+                <Text
+                  style={{
+                    ...typography.caption,
+                    color: colors.textPrimary,
+                    fontWeight: '700',
+                    textAlign: 'center',
+                    fontSize: 10,
+                    textTransform: 'uppercase',
+                  }}
+                  numberOfLines={2}
+                >
+                  Create your vendor & professional services portfolio here
+                </Text>
+              </View>
             </View>
-            <Text style={{ ...typography.caption, color: colors.textPrimary, fontWeight: '700', textAlign: 'center', fontSize: 10, textTransform: 'uppercase' }}>
-              Create your vendor & professional services portfolio here
-            </Text>
-          </View>
+          </TouchableOpacity>
 
           {/* Listers Portal Login */}
-          <View style={{ width: '31%', alignItems: 'center' }}>
-            <View style={{ width: '100%', aspectRatio: 1, borderRadius: radii.lg, overflow: 'hidden', backgroundColor: colors.surfaceMuted, marginBottom: spacing.sm, borderWidth: 1, borderColor: colors.borderSubtle }}>
-              <Image 
-                source={require('../../assets/adaptive-icon.jpg')} 
-                style={{ width: '100%', height: '100%' }}
+          <TouchableOpacity
+            activeOpacity={0.9}
+            style={{ width: cardWidth, marginRight: spacing.md }}
+            onPress={() => navigation.navigate('ListersPortal')}
+          >
+            <View
+              style={{
+                backgroundColor: colors.surface,
+                borderRadius: radii.lg,
+                overflow: 'hidden',
+                borderWidth: 1,
+                borderColor: colors.borderSubtle,
+                height: cardWidth * 1.25,
+              }}
+            >
+              <Image
+                source={require('../../assets/adaptive-icon.jpg')}
+                style={{ width: '100%', height: cardWidth * 0.6 }}
                 resizeMode="cover"
               />
+              <View style={{ flex: 1, padding: spacing.sm, justifyContent: 'center' }}>
+                <Text
+                  style={{
+                    ...typography.caption,
+                    color: colors.textPrimary,
+                    fontWeight: '700',
+                    textAlign: 'center',
+                    fontSize: 10,
+                    textTransform: 'uppercase',
+                  }}
+                  numberOfLines={2}
+                >
+                  Listers portal login here
+                </Text>
+              </View>
             </View>
-            <Text style={{ ...typography.caption, color: colors.textPrimary, fontWeight: '700', textAlign: 'center', fontSize: 10, textTransform: 'uppercase' }}>
-              Listers portal login here
-            </Text>
-          </View>
-        </View>
+          </TouchableOpacity>
+        </ScrollView>
       </View>
 
       <Modal
