@@ -187,13 +187,13 @@ export default function BlogListScreen() {
   );
 
   const renderHeader = () => (
-    <View style={{ padding: spacing.lg, paddingBottom: spacing.md }}>
+    <View style={{ paddingHorizontal: spacing.lg, paddingTop: spacing.sm, paddingBottom: spacing.md }}>
       <TouchableOpacity
         onPress={() => navigation.goBack()}
         style={{
           flexDirection: 'row',
           alignItems: 'center',
-          marginBottom: spacing.lg,
+          marginBottom: spacing.md,
         }}
       >
         <MaterialIcons name="arrow-back" size={24} color={colors.textPrimary} />

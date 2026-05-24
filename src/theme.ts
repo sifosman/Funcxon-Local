@@ -1,49 +1,49 @@
 // Color palette matching Replit prototype design system
-// Primary: Teal/Cyan hsl(195, 65%, 45%) = #2B9EB3
-// Background: Warm beige hsl(45, 50%, 96%) = #F8F6F0
-// Foreground: Deep teal-gray hsl(195, 15%, 20%) = #2B3840
+// Primary: Deep Navy #010035
+// Background: White
+// Foreground: Deep navy hsl(241, 100%, 10%) = #010035
 
 export const colors = {
   // Backgrounds & surfaces
-  background: '#F8F6F0', // warm beige background hsl(45, 50%, 96%)
-  backgroundAlt: '#EDE9DD', // slightly darker beige hsl(45, 40%, 94%)
+  background: '#FFFFFF', // white background
+  backgroundAlt: '#FFFFFF', // white background
   surface: '#FFFFFF', // white cards/surfaces
-  surfaceMuted: '#F5F1E8', // muted surface hsl(45, 40%, 94%)
+  surfaceMuted: '#FFFFFF', // white muted surface
 
-  // Brand primaries - Teal/Cyan from Replit
-  primary: '#477372', // teal primary hsl(195, 65%, 45%)
-  primaryTeal: '#477372', // same as primary for consistency
+  // Brand primaries - Deep Navy
+  primary: '#010035', // deep navy primary
+  primaryTeal: '#010035', // updated from teal for consistency
   primaryForeground: '#FFFFFF', // white text on primary
   
   // Secondary colors
-  secondary: '#9DCFDB', // lighter teal hsl(165, 50%, 75%)
+  secondary: '#9DCFDB', // light blue
   secondaryForeground: '#2B3840',
-  accent: '#D9EBE8', // very light teal hsl(165, 35%, 88%)
+  accent: '#D9EBE8', // very light blue
   accentForeground: '#2B3840',
 
   // Text colors
-  textPrimary: '#2B3840', // deep teal-gray hsl(195, 15%, 20%)
-  textSecondary: '#5A7A85', // medium teal-gray hsl(195, 15%, 45%)
-  textMuted: '#8FA3AB', // light teal-gray hsl(195, 15%, 60%)
+  textPrimary: '#2B3840', // deep gray-navy
+  textSecondary: '#5A7A85', // medium gray-navy
+  textMuted: '#8FA3AB', // light gray-navy
 
   // Borders & inputs
   borderSubtle: '#D4CFBD', // warm border hsl(165, 25%, 85%)
   borderStrong: '#B8C9C9', // stronger border hsl(165, 25%, 75%)
-  inputBackground: '#E8E4D8', // input bg hsl(165, 25%, 90%)
+  inputBackground: '#FFFFFF', // white input bg
   inputBorder: '#D4CFBD',
   
   // Utility colors
   destructive: '#FF0000', // red for errors/delete
   destructiveForeground: '#FFFFFF',
-  muted: '#EDE9DD', // muted bg hsl(45, 40%, 94%)
+  muted: '#FFFFFF', // white muted bg
   mutedForeground: '#5A7A85',
-  chipBackground: '#F5F1E8', // chip background color
+  chipBackground: '#FFFFFF', // white chip background color
   
-  // Chart colors (from Replit)
-  chart1: '#477372', // primary teal
-  chart2: '#9DCFDB', // secondary teal
+  // Chart colors (from Deep Navy theme)
+  chart1: '#010035', // primary navy
+  chart2: '#9DCFDB', // secondary blue
   chart3: '#D9EBE8', // accent
-  chart4: '#3F6F71', // darker teal
+  chart4: '#1A1948', // darker navy
   chart5: '#2B3840', // darkest
 };
 

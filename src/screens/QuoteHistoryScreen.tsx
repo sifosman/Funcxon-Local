@@ -203,8 +203,8 @@ export default function QuoteHistoryScreen() {
     <View style={{ flex: 1, backgroundColor: colors.background }}>
       <ScrollView contentContainerStyle={{ paddingBottom: spacing.xl }}>
         {/* Header */}
-        <View style={{ paddingHorizontal: spacing.lg, paddingTop: spacing.xl, paddingBottom: spacing.md }}>
-          <TouchableOpacity onPress={() => navigation.goBack()} style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.lg }}>
+        <View style={{ paddingHorizontal: spacing.lg, paddingTop: spacing.sm, paddingBottom: spacing.md }}>
+          <TouchableOpacity onPress={() => navigation.goBack()} style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.md }}>
             <MaterialIcons name="arrow-back" size={20} color={colors.textPrimary} />
             <Text style={{ ...typography.body, color: colors.textPrimary, marginLeft: spacing.sm }}>Back</Text>
           </TouchableOpacity>
@@ -344,7 +344,7 @@ export default function QuoteHistoryScreen() {
                             key={comment.id}
                             style={{
                               padding: spacing.sm,
-                              backgroundColor: comment.author_type === 'vendor' ? '#F0F9FF' : '#F5F1E8',
+                              backgroundColor: comment.author_type === 'vendor' ? '#F0F9FF' : '#FFFFFF',
                               borderRadius: radii.md,
                               marginBottom: spacing.xs,
                               borderLeftWidth: 2,

@@ -593,11 +593,11 @@ export default function VenueProfileScreen({ route, navigation }: Props) {
   return (
     <ScrollView
       style={{ flex: 1, backgroundColor: colors.background }}
-      contentContainerStyle={{ paddingHorizontal: spacing.lg, paddingVertical: spacing.lg }}
+      contentContainerStyle={{ paddingHorizontal: spacing.lg, paddingBottom: spacing.lg, paddingTop: spacing.sm }}
     >
       <TouchableOpacity
         onPress={handleBackNavigation}
-        style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.lg }}
+        style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.md }}
       >
         <MaterialIcons name="arrow-back" size={20} color={colors.textPrimary} />
         <Text style={{ ...typography.body, color: colors.textPrimary, marginLeft: spacing.sm }}>

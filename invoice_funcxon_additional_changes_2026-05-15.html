@@ -1,0 +1,504 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Invoice - Funcxon Additional Changes - R15,000</title>
+  <style>
+    :root {
+      --primary: #0b1f3b;
+      --accent: #0a84ff;
+      --text: #202124;
+      --muted: #5f6368;
+      --border: #e0e0e0;
+      --bg: #ffffff;
+      --soft: #f6f8fb;
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji"; line-height: 1.45; }
+    .container { max-width: 980px; margin: 24px auto; padding: 24px; background: #fff; border: 1px solid var(--border); border-radius: 10px; }
+    header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; gap: 16px; }
+    .logo { display: flex; align-items: center; gap: 12px; }
+    .logo-img { height: 78px; width: auto; border-radius: 8px; display: block; }
+    h1 { margin: 0; font-size: 28px; color: var(--primary); }
+    h2 { margin: 0 0 12px; font-size: 22px; color: var(--primary); }
+    h3 { margin: 0 0 8px; font-size: 14px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); }
+    h4 { margin: 14px 0 6px; font-size: 15px; color: var(--primary); }
+    .meta { text-align: right; font-size: 14px; color: var(--muted); }
+    .row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 24px; }
+    .card { border: 1px solid var(--border); border-radius: 10px; padding: 16px; margin-bottom: 16px; }
+    .card p { margin: 2px 0; }
+    .highlight { background: var(--soft); border-left: 4px solid var(--accent); }
+    table { width: 100%; border-collapse: collapse; margin-top: 8px; }
+    th, td { padding: 10px 9px; border-bottom: 1px solid var(--border); vertical-align: top; }
+    th { text-align: left; font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; }
+    .right { text-align: right; }
+    .totals { margin-top: 12px; display: grid; grid-template-columns: 1fr 260px; }
+    .totals .label { text-align: right; color: var(--muted); }
+    .totals .value { text-align: right; font-weight: 600; }
+    .notes { margin-top: 18px; font-size: 13px; color: var(--muted); }
+    .muted { color: var(--muted); }
+    .pill { display: inline-block; padding: 3px 8px; border-radius: 999px; background: #e9eef6; color: var(--primary); font-size: 12px; font-weight: 700; }
+    .small { font-size: 12px; }
+    .summary-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+    .summary-box { border: 1px solid var(--border); border-radius: 10px; padding: 12px; background: var(--soft); }
+    .summary-box strong { display: block; font-size: 20px; color: var(--primary); }
+    ul { margin-top: 6px; }
+    li { margin-bottom: 5px; }
+    footer { margin-top: 28px; padding-top: 16px; border-top: 1px solid var(--border); font-size: 12px; color: var(--muted); display: flex; justify-content: space-between; gap: 12px; }
+    .btns { display: flex; gap: 8px; justify-content: flex-end; margin: 0 0 10px; }
+    .btn { background: var(--primary); color: #fff; border: none; border-radius: 8px; padding: 10px 14px; cursor: pointer; font-weight: 600; }
+    .btn.secondary { background: #e9eef6; color: var(--primary); }
+    .page-break { page-break-after: always; margin-top: 32px; }
+    @media print {
+      body { background: #fff; }
+      .container { border: none; border-radius: 0; box-shadow: none; margin: 0; width: 100%; max-width: none; }
+      .no-print { display: none !important; }
+      a { color: currentColor; text-decoration: none; }
+      @page { size: A4; margin: 14mm; }
+      .card, .summary-box { page-break-inside: avoid; }
+      table { page-break-inside: auto; }
+      thead { display: table-header-group; }
+      tfoot { display: table-footer-group; }
+      tr { page-break-inside: avoid; page-break-after: auto; }
+      .page-break { page-break-after: always; margin-top: 0; }
+      section { page-break-inside: avoid; }
+    }
+    @media (max-width: 760px) {
+      .row, .summary-grid { grid-template-columns: 1fr; }
+      header { flex-direction: column; align-items: flex-start; }
+      .meta { text-align: left; }
+      .totals { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="no-print btns">
+      <button class="btn" onclick="window.print()">Print / Save as PDF</button>
+      <button class="btn secondary" onclick="downloadHTML()">Download HTML</button>
+    </div>
+
+    <header>
+      <div>
+        <h1>INVOICE</h1>
+        <div class="muted">Additional final-phase change requests and scope expansion</div>
+      </div>
+      <div class="meta">
+        <div><strong>Invoice #</strong>: INV-FUNCXON-CR-2026-0515</div>
+        <div><strong>Date</strong>: 15 May 2026</div>
+        <div><strong>Due</strong>: 7 days from date</div>
+        <div><strong>Reference</strong>: Quote AW824 / HowzEventz Mobile App</div>
+      </div>
+    </header>
+
+    <div class="row">
+      <div class="card">
+        <h3>From</h3>
+        <p><strong>OWD Solutions</strong></p>
+        <p>Mohamed Osman</p>
+        <p>Email: mohamed@owdsolutions.co.za</p>
+        <p>Phone: +27 65 847 5289</p>
+      </div>
+      <div class="card">
+        <h3>Bill To</h3>
+        <p><strong>Vibevents / Howzit Events (Pty) Ltd</strong></p>
+        <p>Project: HowzEventz / Funcxon Mobile App (iOS & Android)</p>
+        <p>Client contact: Julie / Howzit Events team</p>
+      </div>
+    </div>
+
+    <div class="card highlight">
+      <h3>Invoice Note</h3>
+      <p>This invoice covers additional change-request work performed after the original fixed-price MVP scope. A detailed change report with commit evidence begins on the following pages and forms part of this invoice.</p>
+      <p><strong>Important:</strong> This amount is separate from the remaining original project balance of R20,000 referenced by the developer. It also excludes any future full brand redesign or additional colour-scheme iterations unless separately approved in writing.</p>
+    </div>
+
+    <div class="card">
+      <h3>Line Items</h3>
+      <table>
+        <thead>
+          <tr>
+            <th style="width: 58%">Description</th>
+            <th class="right" style="width: 16%">Qty</th>
+            <th class="right" style="width: 26%">Amount (ZAR)</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Final-phase home, discover, navigation, guest-access and marketing CTA changes outside original MVP scope.</td>
+            <td class="right">1</td>
+            <td class="right">R3,000.00</td>
+          </tr>
+          <tr>
+            <td>Listers portal, blog, footer/header, lister portfolio management and related routing refinements.</td>
+            <td class="right">1</td>
+            <td class="right">R3,000.00</td>
+          </tr>
+          <tr>
+            <td>Application form, subscription/package display, checkout positioning, validation and account-flow rework.</td>
+            <td class="right">1</td>
+            <td class="right">R3,000.00</td>
+          </tr>
+          <tr>
+            <td>Catalogue, quote, profile, WhatsApp/email/tour action changes and related implementation/planning work.</td>
+            <td class="right">1</td>
+            <td class="right">R3,000.00</td>
+          </tr>
+          <tr>
+            <td>Testing, regression fixes, TypeScript/navigation corrections, documentation, evidence preparation and commit reporting.</td>
+            <td class="right">1</td>
+            <td class="right">R3,000.00</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="totals">
+        <div></div>
+        <div>
+          <div class="label">Subtotal</div>
+          <div class="value">R15,000.00</div>
+        </div>
+        <div></div>
+        <div>
+          <div class="label">VAT</div>
+          <div class="value">Not charged</div>
+        </div>
+        <div></div>
+        <div>
+          <div class="label" style="font-size: 18px; font-weight: 700; color: var(--primary)">Total Due</div>
+          <div class="value" style="font-size: 18px; font-weight: 700; color: var(--primary)">R15,000.00</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="row" style="margin-top: 16px;">
+      <div class="card">
+        <h3>Payment Details</h3>
+        <p><strong>Bank:</strong> Nedbank</p>
+        <p><strong>Account Name:</strong> M A Osman</p>
+        <p><strong>Account Number:</strong> 1012196151</p>
+        <p><strong>Branch Code:</strong> 131326</p>
+        <p><strong>Reference:</strong> INV-FUNCXON-CR-2026-0515</p>
+      </div>
+      <div class="card">
+        <h3>Contact</h3>
+        <p>For any queries regarding this invoice, contact:</p>
+        <p><strong>Mohamed Osman</strong></p>
+        <p>Email: sifosman@gmail.com / mohamed@owdsolutions.co.za</p>
+        <p>Phone: +27 65 847 5289</p>
+      </div>
+    </div>
+
+    <footer>
+      <div>Thank you for your business.</div>
+      <div>Generated: 15 May 2026</div>
+    </footer>
+
+    <section class="page-break">
+      <h2>Additional Changes Report</h2>
+      <div class="card highlight">
+        <h3>Purpose</h3>
+        <p>This report records the additional work requested and implemented beyond the original fixed-price MVP proposal for the HowzEventz / Funcxon mobile application. It is intended to provide a clear, professional audit trail for the R15,000 change-request invoice.</p>
+      </div>
+
+      <div class="summary-grid">
+        <div class="summary-box">
+          <span class="muted small">Original quotation</span>
+          <strong>R125,000</strong>
+          <span>Fixed-price MVP, Quote AW824</span>
+        </div>
+        <div class="summary-box">
+          <span class="muted small">Additional invoice</span>
+          <strong>R15,000</strong>
+          <span>Change requests outside MVP</span>
+        </div>
+        <div class="summary-box">
+          <span class="muted small">Final-change commit period</span>
+          <strong>8 commits</strong>
+          <span>2 May 2026 - 15 May 2026</span>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>Original Proposal Scope Summary</h3>
+        <p>The original proposal was for a React Native mobile app with Supabase backend/storage, vendor discovery, Google Maps, filters/sorting, vendor profile tabs, plan limits, quote-to-booking flow, payment gateway integration, WhatsApp support link, push/email notifications, admin approvals/reviews, analytics/crash monitoring and App Store/Play Store submission support.</p>
+        <p>The proposal also allowed for <strong>2 UAT rounds</strong> and stated that <strong>changes beyond MVP are quoted separately</strong>. The items below are therefore treated as additional change-request work because they add new screens, redesign existing flows, alter previously built workflows, or require additional testing/stabilisation after late-stage changes.</p>
+      </div>
+    </section>
+
+    <section>
+      <div class="card">
+        <h3>Executive Summary of Additional Work</h3>
+        <ul>
+          <li><strong>Home and discovery redesign:</strong> New banner wording, featured venue/vendor carousels, province cards, discover filtering, guest-access rules and latest home “Get Listed” carousel change.</li>
+          <li><strong>Listers acquisition and management:</strong> New listers portal, CTA sections, reviews block, blog integration, footer/header updates, lister portfolio management and routing changes.</li>
+          <li><strong>Application/subscription flow rework:</strong> Changed application forms, package display, checkout placement, direct navigation to portfolio management, document/field removals and validation updates.</li>
+          <li><strong>Catalogue and quote expansion:</strong> Catalogue screens, catalogue view/form updates, quote edit planning, tour count/notes requirements and quote communication considerations.</li>
+          <li><strong>Profile/account/planner refinements:</strong> Account screen changes, deletion option, profile action changes, WhatsApp/email/tour contact actions and planner requested changes.</li>
+          <li><strong>Stabilisation:</strong> Fixes for navigation, application state, upload handling, maps, TypeScript, forms and regression issues arising from late-stage flow changes.</li>
+        </ul>
+      </div>
+
+      <div class="card">
+        <h3>Out-of-Scope Categories Compared to Initial Proposal</h3>
+        <table>
+          <thead>
+            <tr>
+              <th>Category</th>
+              <th>Examples of Work / Screens</th>
+              <th>Why Additional</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><span class="pill">Home / Discover Redesign</span></td>
+              <td>AttendeeHomeScreen, DiscoverScreen, featured listing carousels, province cards, custom search and Get Listed carousel.</td>
+              <td>Changes the approved UX/layout and adds new browsing/search presentation beyond normal UAT fixes.</td>
+            </tr>
+            <tr>
+              <td><span class="pill">Listers Portal</span></td>
+              <td>ListersPortalScreen, AppHeader, AppFooter, CTAs, reviews, blog sections and guest/login routing.</td>
+              <td>Introduces a marketing/acquisition portal and content sections not explicitly included in the MVP feature list.</td>
+            </tr>
+            <tr>
+              <td><span class="pill">Blog System</span></td>
+              <td>BlogListScreen, BlogDetailScreen, blog_posts migrations and audience targeting.</td>
+              <td>A CMS-style Tips & Ideas blog is a new content module, separate from the quoted discovery/booking MVP.</td>
+            </tr>
+            <tr>
+              <td><span class="pill">Application Forms</span></td>
+              <td>ApplicationStep1-4, ApplicationStatusScreen, ApplicationFormContext and formValidation.</td>
+              <td>Late-stage removals/restructuring of fields, documents, package steps, status flow and validation require rework across multiple screens.</td>
+            </tr>
+            <tr>
+              <td><span class="pill">Subscription / Checkout Rework</span></td>
+              <td>SubscriptionPlansScreen, VenueListingPlansScreen, SubscriptionCheckoutScreen and plan carousel updates.</td>
+              <td>Changing where checkout occurs and how package cards display is functional redesign, not a defect correction.</td>
+            </tr>
+            <tr>
+              <td><span class="pill">Catalogue / Quote Expansion</span></td>
+              <td>VenueCatalogueViewScreen, VendorCatalogueScreen, VenueCatalogueScreen, QuoteDetail planning and quote workflow changes.</td>
+              <td>Extends catalogue and quote interactions beyond simple profile/request quote MVP behaviour.</td>
+            </tr>
+            <tr>
+              <td><span class="pill">Account / Profile Changes</span></td>
+              <td>AccountScreen, VenueProfileScreen, VendorProfileScreen, WhatsApp/email/tour actions, profile wording and account deletion.</td>
+              <td>Changes existing account/profile behaviour after implementation and introduces additional user actions.</td>
+            </tr>
+            <tr>
+              <td><span class="pill">QA / Stabilisation</span></td>
+              <td>TypeScript fixes, navigation fixes, route corrections, form-state corrections and regression testing.</td>
+              <td>Late changes touched core flows, causing additional testing and stabilisation work beyond fixed MVP delivery.</td>
+            </tr>
+            <tr>
+              <td><span class="pill">Brand Refresh</span></td>
+              <td>New logo and requested full colour-scheme change.</td>
+              <td>Brand/theme redesign is outside the original functional MVP quote. This report notes the request; future full redesign iterations should be approved separately.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="page-break">
+      <h2>Commit Evidence and Timeline</h2>
+      <div class="card">
+        <h3>Final-Change Period Commit Summary</h3>
+        <p>The following commits directly evidence the May final-phase change-request work. Together they show substantial implementation, rework, documentation and stabilisation beyond routine bug fixing.</p>
+        <table>
+          <thead>
+            <tr>
+              <th style="width: 24%">Timestamp</th>
+              <th style="width: 12%">Commit</th>
+              <th style="width: 40%">Message</th>
+              <th style="width: 24%">Evidence / Scope Impact</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>2026-05-15 18:24:40 +0200</td>
+              <td>d0611ad</td>
+              <td>Update home get listed carousel</td>
+              <td>Home page CTA layout/navigation polish; 1 file changed, 127 additions, 42 deletions.</td>
+            </tr>
+            <tr>
+              <td>2026-05-12 08:42:10 +0200</td>
+              <td>f0f5ac6</td>
+              <td>Implement venue application form changes across all pages</td>
+              <td>Venue application rework, package cards, checkout navigation, validation/type updates; 8 files changed.</td>
+            </tr>
+            <tr>
+              <td>2026-05-10 15:28:18 +0200</td>
+              <td>5d7975d</td>
+              <td>Add quote edit page plan and vendor application form documentation</td>
+              <td>Planning/reporting for quote edit, catalogue integration, tour count, notes and vendor form changes; 760 additions.</td>
+            </tr>
+            <tr>
+              <td>2026-05-07 22:36:43 +0200</td>
+              <td>da90265</td>
+              <td>Update My Account page and vendor application form</td>
+              <td>Account wording/sections, delete account option, application field removals and direct navigation changes.</td>
+            </tr>
+            <tr>
+              <td>2026-05-07 19:11:19 +0200</td>
+              <td>e7536f8</td>
+              <td>auto plans</td>
+              <td>Catalogue view screen, venue/vendor catalogue updates, lister portfolio updates, profile changes; 19 files changed.</td>
+            </tr>
+            <tr>
+              <td>2026-05-06 19:52:23 +0200</td>
+              <td>c8c4b59</td>
+              <td>feat: Fix listers portal navigation and improve plan carousel UI</td>
+              <td>Listers portal CTA routing, guest access to plan screens, carousel UX and TypeScript fixes; 8 files changed.</td>
+            </tr>
+            <tr>
+              <td>2026-05-06 14:53:42 +0200</td>
+              <td>0e24d11</td>
+              <td>Update subscription and listing plan screens</td>
+              <td>Major subscription/listing plan screen rework; 4 files changed, 1,067 additions, 565 deletions.</td>
+            </tr>
+            <tr>
+              <td>2026-05-02 21:58:36 +0200</td>
+              <td>7cd574a</td>
+              <td>Add Listers Portal screen with blog integration, reviews, CTAs, and footer</td>
+              <td>New listers portal, blog screens, footer/header, auth guard, home/discover rework and blog database migrations; 32 files changed.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="card">
+        <h3>Final-Change Period Volume</h3>
+        <p>From 2 May 2026 to 15 May 2026, the repository records approximately <strong>9,000+ additions</strong> and <strong>3,000+ deletions</strong> across the final-change commits. This level of code churn indicates substantial feature change and rework, not minor text corrections.</p>
+      </div>
+
+      <div class="card">
+        <h3>Supporting Earlier Scope Expansion / Stabilisation Commits</h3>
+        <table>
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Commit</th>
+              <th>Message</th>
+              <th>Relevance</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td>2026-04-13</td><td>6aebb46</td><td>Fix application forms: ensure correct portfolioType is set for vendor and venue flows</td><td>Form-routing correction caused by split vendor/venue application flows.</td></tr>
+            <tr><td>2026-04-12</td><td>c1f11c5</td><td>Fix venue application blocking by pending vendor applications</td><td>Application logic rework to support separate vendor and venue application states.</td></tr>
+            <tr><td>2026-03-31</td><td>3d510ae</td><td>Fix document upload errors and application form routing</td><td>Upload handling, storage routing, logging and application conditional rendering fixes.</td></tr>
+            <tr><td>2026-03-24</td><td>11281ad</td><td>feat: implement needs_changes UX and resubmission flow</td><td>Admin-requested changes/resubmission workflow, status emails and application hydration.</td></tr>
+            <tr><td>2026-03-24</td><td>497c790</td><td>feat: persist home search state across auth and improve vendor session handling</td><td>Search/auth state continuity and vendor-session improvements.</td></tr>
+            <tr><td>2026-03-23</td><td>b4d4ff4</td><td>feat: implement application status flow and fix home screen sorting</td><td>Status flow and home sorting changes beyond simple MVP shell.</td></tr>
+            <tr><td>2026-03-16</td><td>7a9228d</td><td>refactor(account): remove Become a Vendor and implement Change Password and Marketing Permissions</td><td>Account flow and settings changes.</td></tr>
+            <tr><td>2026-03-10</td><td>4ac5034</td><td>feat: implement structured addresses and coordinates for vendor/venue listings</td><td>Address/location data structure and coordinate implementation.</td></tr>
+            <tr><td>2026-02-27</td><td>fe471a4</td><td>Fix quotes screen - resolve user_id null issue and add missing RLS policy</td><td>Quote flow database/security stabilisation.</td></tr>
+            <tr><td>2026-02-24</td><td>9262023</td><td>Fix map display and null pointer errors</td><td>Map/profile stabilisation.</td></tr>
+            <tr><td>2026-02-18</td><td>4d728b1</td><td>feat: Implement complete quote system with notifications, history, and accept/reject flow</td><td>Large quote system implementation with notification/history/response flows.</td></tr>
+            <tr><td>2026-02-17</td><td>1709b13</td><td>Fix venue profile to match vendor profile with rich information</td><td>Venue profile expansion, amenities, tags, contacts and tour booking support.</td></tr>
+            <tr><td>2026-02-09</td><td>5640ab3</td><td>Fix subscription display, file uploads, and add new screens</td><td>Additional subscription/file upload/screens work and correction.</td></tr>
+            <tr><td>2026-02-08</td><td>583b771</td><td>feat: add legal documents and consent management</td><td>Legal documents, consent modal, checkout consent and email function additions.</td></tr>
+            <tr><td>2026-02-08</td><td>610412a</td><td>Fix map crash: use WebView Google Maps instead of native maps, fix Welcome screen button order</td><td>Map crash stabilisation and navigation/UI corrections.</td></tr>
+            <tr><td>2026-02-05</td><td>05c503f</td><td>Fix: Auth redirect, planner UI, calendar editing, navigation, reviews, Android nav, welcome screen</td><td>Planner, auth, navigation, review and Android navigation changes.</td></tr>
+            <tr><td>2026-01-29</td><td>1ff6437</td><td>Add subscription checkout + account gating</td><td>Subscription checkout and auth gating implementation.</td></tr>
+            <tr><td>2026-01-27</td><td>724aa26</td><td>Implement help system, subscriptions, tours, and portfolio assistance</td><td>Help, subscriptions, tour and portfolio assistance additions.</td></tr>
+            <tr><td>2026-01-27</td><td>6951b96</td><td>Enhance location search with multi-select provinces/cities and vendor-only help button</td><td>Advanced location filtering beyond basic search.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="page-break">
+      <h2>Detailed Change Breakdown</h2>
+      <div class="card">
+        <h3>1. Home Page and Discovery Changes</h3>
+        <ul>
+          <li>Home banner and wording updates: “Connect, Collaborate, Celebrate” and “Lets get this party started”.</li>
+          <li>Featured venues and featured vendors/services horizontal scroll layouts.</li>
+          <li>Province-based discovery cards and automatic listing filtering.</li>
+          <li>New home “Get Listed” carousel with venue portfolio, vendor portfolio and listers portal actions.</li>
+          <li>Guest-access browsing with login prompts only on gated actions such as favourites, quotes, planner and account.</li>
+        </ul>
+      </div>
+
+      <div class="card">
+        <h3>2. Listers Portal, Blog and Marketing Sections</h3>
+        <ul>
+          <li>New listers portal screen with welcome, about, marketing hooks and CTA buttons.</li>
+          <li>Review/rating section on listers portal.</li>
+          <li>Blog list/detail screens and Supabase blog post migrations.</li>
+          <li>Header and footer additions for navigation, contact and terms links.</li>
+          <li>CTA routing refinements to plan screens and portfolio management flows.</li>
+        </ul>
+      </div>
+
+      <div class="card">
+        <h3>3. Application Forms and Subscription Flow</h3>
+        <ul>
+          <li>Removed LinkedIn, website and banking details from vendor application Page 1.</li>
+          <li>Removed bank confirmation and proof of trading/residence document requirements.</li>
+          <li>Changed submit behaviour to remove popups and navigate directly to portfolio management.</li>
+          <li>Updated package display and checkout placement on application Page 4.</li>
+          <li>Changed venue type handling to multi-select and updated validation/types accordingly.</li>
+          <li>Added or adjusted legal agreement handling and plan card selection.</li>
+        </ul>
+      </div>
+
+      <div class="card">
+        <h3>4. Catalogue, Quote and Profile Work</h3>
+        <ul>
+          <li>Catalogue screen and catalogue form work for venue/vendor listings.</li>
+          <li>Catalogue view screen and item/price/quantity style quote planning.</li>
+          <li>Quote edit page plan to reflect catalogue form, tour count and notes.</li>
+          <li>Venue/vendor profile changes including catalogue, quote, reviews and contact actions.</li>
+          <li>WhatsApp/email contact actions and tour-related messaging requirements.</li>
+        </ul>
+      </div>
+
+      <div class="card">
+        <h3>5. Account, Planner and Miscellaneous UI Rework</h3>
+        <ul>
+          <li>My Account wording changed to “Hello” style greeting.</li>
+          <li>My Profile submenu changes for username/password and notifications.</li>
+          <li>Account management deletion option.</li>
+          <li>Removal of listing subscription offers from account area.</li>
+          <li>Planner changes requested: title removal, calendar popups, budget labels, currency symbol and pie graph.</li>
+        </ul>
+      </div>
+
+      <div class="card">
+        <h3>6. Testing, Stabilisation and Documentation</h3>
+        <ul>
+          <li>Navigation fixes caused by lister/application/subscription flow changes.</li>
+          <li>TypeScript/type corrections after form and data model changes.</li>
+          <li>Application status and form hydration fixes.</li>
+          <li>Documentation created for quote edit and vendor application form changes.</li>
+          <li>Evidence gathering and invoice/report preparation.</li>
+        </ul>
+      </div>
+    </section>
+
+    <section>
+      <div class="card highlight">
+        <h3>Professional Scope Note</h3>
+        <p>The above work is categorised as additional because it either changes previously implemented functionality, introduces new screens/modules, modifies business flows after the MVP build, or requires additional regression testing. This aligns with the original proposal assumption that changes beyond the MVP are to be quoted separately.</p>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    function downloadHTML() {
+      const blob = new Blob([document.documentElement.outerHTML], { type: 'text/html;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'invoice_funcxon_additional_changes_2026-05-15.html';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }
+  </script>
+</body>
+</html>

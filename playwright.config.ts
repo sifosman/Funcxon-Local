@@ -1,6 +1,7 @@
 import { defineConfig, devices } from '@playwright/test';
 
 export default defineConfig({
+  globalSetup: require.resolve('./tests/playwright/ensureTestUser'),
   testDir: './tests/playwright',
   fullyParallel: false,
   forbidOnly: !!process.env.CI,

@@ -258,13 +258,13 @@ export default function BlogDetailScreen() {
           />
         )}
 
-        <View style={{ padding: spacing.lg }}>
+        <View style={{ paddingHorizontal: spacing.lg, paddingTop: spacing.sm, paddingBottom: spacing.lg }}>
           <TouchableOpacity
             onPress={() => navigation.goBack()}
             style={{
               flexDirection: 'row',
               alignItems: 'center',
-              marginBottom: spacing.lg,
+              marginBottom: spacing.md,
             }}
           >
             <MaterialIcons name="arrow-back" size={24} color={colors.textPrimary} />

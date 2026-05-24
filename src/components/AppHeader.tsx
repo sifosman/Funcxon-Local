@@ -53,9 +53,9 @@ export default function AppHeader() {
 
         {/* Right side - Flag and User */}
         <View style={styles.rightContainer}>
-          {/* South African Flag */}
+          {/* Logo */}
           <Image
-            source={require('../../assets/flag.jpg')}
+            source={require('../../assets/logo.jpg')}
             style={styles.flagImage as any}
             resizeMode="contain"
           />
