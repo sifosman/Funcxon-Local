@@ -61,7 +61,7 @@ export default function ProfileScreen() {
             paddingHorizontal: spacing.lg,
             paddingVertical: spacing.sm,
             borderRadius: radii.full,
-            backgroundColor: colors.primaryTeal,
+            backgroundcolor: colors.textPrimary,
             flexDirection: 'row',
             alignItems: 'center',
           }}

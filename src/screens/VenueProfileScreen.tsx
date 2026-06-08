@@ -451,7 +451,7 @@ export default function VenueProfileScreen({ route, navigation }: Props) {
     if (!venue) return;
     try {
       await Share.share({
-        message: `Check out ${venue.name} on Funcxon!`,
+        message: `Check out ${venue.name} on Funxon!`,
         title: venue.name,
       });
     } catch (error) {
@@ -555,7 +555,7 @@ export default function VenueProfileScreen({ route, navigation }: Props) {
     if (!items || items.length === 0) return null;
     return (
       <View style={{ marginBottom: spacing.md }}>
-        <Text style={{ ...typography.body, color: colors.primaryTeal, fontWeight: '600', marginBottom: spacing.xs }}>
+        <Text style={{ ...typography.body, color: colors.textPrimary, fontWeight: '600', marginBottom: spacing.xs }}>
           {title}
         </Text>
         {items.map((item) => (
@@ -565,7 +565,7 @@ export default function VenueProfileScreen({ route, navigation }: Props) {
                 width: 6,
                 height: 6,
                 borderRadius: 3,
-                backgroundColor: colors.primaryTeal,
+                backgroundcolor: colors.textPrimary,
                 marginRight: spacing.sm,
               }}
             />
@@ -795,7 +795,7 @@ export default function VenueProfileScreen({ route, navigation }: Props) {
                     borderRadius: radii.md,
                     backgroundColor: colors.surfaceMuted,
                     borderWidth: idx === galleryIndex ? 2 : 0,
-                    borderColor: colors.primaryTeal,
+                    bordercolor: colors.textPrimary,
                   }}
                   resizeMode="cover"
                 />
@@ -847,7 +847,7 @@ export default function VenueProfileScreen({ route, navigation }: Props) {
                 flex: 1,
                 paddingVertical: spacing.sm,
                 borderRadius: radii.full,
-                backgroundColor: isActive ? colors.primaryTeal : 'transparent',
+                backgroundColor: isActive ? colors.textPrimary : 'transparent',
                 alignItems: 'center',
               }}
             >
@@ -1001,7 +1001,7 @@ export default function VenueProfileScreen({ route, navigation }: Props) {
                 justifyContent: 'center',
                 paddingVertical: spacing.md,
                 borderRadius: radii.lg,
-                backgroundColor: colors.primaryTeal,
+                backgroundcolor: colors.textPrimary,
                 gap: spacing.sm,
               }}
             >
@@ -1039,8 +1039,8 @@ export default function VenueProfileScreen({ route, navigation }: Props) {
                 gap: spacing.sm,
               }}
             >
-              <MaterialIcons name="reviews" size={20} color={colors.primaryTeal} />
-              <Text style={{ ...typography.body, color: colors.primaryTeal, fontWeight: '700' }}>View Reviews & Ratings</Text>
+              <MaterialIcons name="reviews" size={20} color={colors.textPrimary} />
+              <Text style={{ ...typography.body, color: colors.textPrimary, fontWeight: '700' }}>View Reviews & Ratings</Text>
             </TouchableOpacity>
           </View>
 
@@ -1109,7 +1109,7 @@ export default function VenueProfileScreen({ route, navigation }: Props) {
               }}
             >
               <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.sm }}>
-                <MaterialIcons name="place" size={18} color={colors.primaryTeal} />
+                <MaterialIcons name="place" size={18} color={colors.textPrimary} />
                 <Text style={{ ...typography.titleMedium, color: colors.textPrimary, marginLeft: spacing.sm }}>
                   Location
                 </Text>
@@ -1121,7 +1121,7 @@ export default function VenueProfileScreen({ route, navigation }: Props) {
               )}
               {contactNumber && (
                 <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.sm }}>
-                  <MaterialIcons name="phone" size={16} color={colors.primaryTeal} />
+                  <MaterialIcons name="phone" size={16} color={colors.textPrimary} />
                   <Text style={{ ...typography.body, color: colors.textSecondary, marginLeft: spacing.sm }}>
                     {contactNumber}
                   </Text>
@@ -1183,14 +1183,14 @@ export default function VenueProfileScreen({ route, navigation }: Props) {
                   paddingVertical: spacing.sm,
                   borderRadius: radii.md,
                   borderWidth: 1,
-                  borderColor: colors.primaryTeal,
+                  bordercolor: colors.textPrimary,
                   alignItems: 'center',
                   flexDirection: 'row',
                   justifyContent: 'center',
                 }}
               >
-                <MaterialIcons name="map" size={16} color={colors.primaryTeal} />
-                <Text style={{ color: colors.primaryTeal, marginLeft: spacing.sm, fontWeight: '600' }}>
+                <MaterialIcons name="map" size={16} color={colors.textPrimary} />
+                <Text style={{ color: colors.textPrimary, marginLeft: spacing.sm, fontWeight: '600' }}>
                   Open in Google Maps
                 </Text>
               </TouchableOpacity>
@@ -1222,7 +1222,7 @@ export default function VenueProfileScreen({ route, navigation }: Props) {
                       width: 6,
                       height: 6,
                       borderRadius: 3,
-                      backgroundColor: colors.primaryTeal,
+                      backgroundcolor: colors.textPrimary,
                       marginRight: spacing.sm,
                     }}
                   />
@@ -1492,14 +1492,14 @@ export default function VenueProfileScreen({ route, navigation }: Props) {
           }}
         >
           <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.md }}>
-            <MaterialIcons name="calendar-today" size={18} color={colors.primaryTeal} />
+            <MaterialIcons name="calendar-today" size={18} color={colors.textPrimary} />
             <Text style={{ ...typography.titleMedium, color: colors.textPrimary, marginLeft: spacing.sm }}>
               Availability Calendar
             </Text>
           </View>
           {availabilityLoading ? (
             <View style={{ alignItems: 'center', paddingVertical: spacing.lg }}>
-              <ActivityIndicator color={colors.primaryTeal} />
+              <ActivityIndicator color={colors.textPrimary} />
             </View>
           ) : availability && availability.length > 0 ? (
             <View style={{ gap: spacing.sm }}>
@@ -1566,7 +1566,7 @@ export default function VenueProfileScreen({ route, navigation }: Props) {
             }}
             style={{
               marginTop: spacing.md,
-              backgroundColor: colors.primaryTeal,
+              backgroundcolor: colors.textPrimary,
               paddingVertical: spacing.md,
               borderRadius: radii.md,
               alignItems: 'center',

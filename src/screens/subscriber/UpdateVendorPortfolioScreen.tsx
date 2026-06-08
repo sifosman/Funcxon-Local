@@ -302,7 +302,7 @@ export default function UpdateVendorPortfolioScreen() {
                                 borderColor: colors.borderSubtle,
                             }}
                         >
-                            <MaterialIcons name="verified" size={20} color={colors.primaryTeal} style={{ marginRight: spacing.sm }} />
+                            <MaterialIcons name="verified" size={20} color={colors.textPrimary} style={{ marginRight: spacing.sm }} />
                             <View style={{ flex: 1 }}>
                                 <Text style={{ ...typography.caption, color: colors.textMuted }}>Current Plan</Text>
                                 <Text style={{ ...typography.body, color: colors.textPrimary, fontWeight: '600' }}>
@@ -478,12 +478,12 @@ export default function UpdateVendorPortfolioScreen() {
                                                         paddingHorizontal: spacing.sm,
                                                         paddingVertical: spacing.xs,
                                                         borderRadius: radii.full,
-                                                        backgroundColor: '#E0F2F7',
+                                                        backgroundColor: '#f2f7ff',
                                                         borderWidth: 1,
-                                                        borderColor: colors.primaryTeal,
+                                                        bordercolor: colors.textPrimary,
                                                     }}
                                                 >
-                                                    <Text style={{ ...typography.caption, color: colors.primaryTeal }}>{tag}</Text>
+                                                    <Text style={{ ...typography.caption, color: colors.textPrimary }}>{tag}</Text>
                                                 </View>
                                             ))}
                                         </View>

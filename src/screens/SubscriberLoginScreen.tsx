@@ -197,7 +197,7 @@ export default function SubscriberLoginScreen() {
 
                     {/* Forgot Password Link */}
                     <TouchableOpacity style={{ alignSelf: 'flex-end', marginBottom: spacing.lg }}>
-                        <Text style={{ ...typography.caption, color: colors.primaryTeal }}>Forgot password?</Text>
+                        <Text style={{ ...typography.caption, color: colors.textPrimary }}>Forgot password?</Text>
                     </TouchableOpacity>
 
                     {/* Login Button */}
@@ -205,7 +205,7 @@ export default function SubscriberLoginScreen() {
                         onPress={handleLogin}
                         disabled={loading}
                         style={{
-                            backgroundColor: colors.primaryTeal,
+                            backgroundcolor: colors.textPrimary,
                             paddingVertical: spacing.md,
                             borderRadius: radii.lg,
                             alignItems: 'center',

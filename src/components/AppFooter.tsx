@@ -3,7 +3,7 @@ import { Linking, Platform, StyleSheet, Text, TouchableOpacity, View } from 'rea
 import { MaterialIcons } from '@expo/vector-icons';
 import { colors, spacing, radii, typography } from '../theme';
 
-const SUPPORT_EMAIL = process.env.EXPO_PUBLIC_SUPPORT_EMAIL || 'support@funcxon.com';
+const SUPPORT_EMAIL = process.env.EXPO_PUBLIC_SUPPORT_EMAIL || 'support@funxon.com';
 const SUPPORT_WHATSAPP = process.env.EXPO_PUBLIC_SUPPORT_WHATSAPP || '+27000000000';
 
 type AppFooterProps = {
@@ -15,7 +15,7 @@ type AppFooterProps = {
 export function AppFooter({ onNavigateToFAQs, onNavigateToTerms, onNavigateToHelpDesk }: AppFooterProps) {
   const whatsappLink = useMemo(() => {
     const number = SUPPORT_WHATSAPP.replace(/[^0-9+]/g, '');
-    const message = encodeURIComponent('Hi, I need assistance with Funcxon.');
+    const message = encodeURIComponent('Hi, I need assistance with Funxon.');
     return Platform.select({
       ios: `https://wa.me/${number}?text=${message}`,
       android: `whatsapp://send?phone=${number}&text=${message}`,
@@ -32,7 +32,7 @@ export function AppFooter({ onNavigateToFAQs, onNavigateToTerms, onNavigateToHel
   };
 
   const handleReportProblem = () => {
-    Linking.openURL(`mailto:${SUPPORT_EMAIL}?subject=Problem%20Report%20-%20Funcxon`).catch(() => null);
+    Linking.openURL(`mailto:${SUPPORT_EMAIL}?subject=Problem%20Report%20-%20Funxon`).catch(() => null);
   };
 
   return (
@@ -44,8 +44,8 @@ export function AppFooter({ onNavigateToFAQs, onNavigateToTerms, onNavigateToHel
       <View style={styles.content}>
         {/* Brand Section */}
         <View style={styles.brandSection}>
-          <Text style={styles.brandName}>Funcxon</Text>
-          <Text style={styles.brandTagline}>Your event planning companion</Text>
+          <Text style={styles.brandName}>Funxon</Text>
+          <Text style={styles.brandTagline}>Connect Collaborate Celebrate</Text>
         </View>
 
         {/* Quick Links Section */}
@@ -139,7 +139,7 @@ export function AppFooter({ onNavigateToFAQs, onNavigateToTerms, onNavigateToHel
 
         {/* Copyright */}
         <Text style={styles.copyright}>
-          © {new Date().getFullYear()} Funcxon. All rights reserved.
+          © {new Date().getFullYear()} Funxon. All rights reserved.
         </Text>
       </View>
     </View>

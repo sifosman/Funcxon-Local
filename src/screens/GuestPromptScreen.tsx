@@ -41,9 +41,9 @@ export default function GuestPromptScreen(props: Props) {
         }}
       >
         <Image
-          source={require('../../assets/1000478602.jpg')}
+          source={require('../../assets/logo.png')}
           style={{ width: '100%', height: '100%' }}
-          resizeMode="cover"
+          resizeMode="contain"
         />
       </View>
 
@@ -90,7 +90,7 @@ export default function GuestPromptScreen(props: Props) {
       </TouchableOpacity>
 
       <TouchableOpacity
-        onPress={() => navigation.navigate('Home')}
+        onPress={() => navigation.goBack()}
         style={{ marginTop: spacing.lg, padding: spacing.sm }}
       >
         <Text style={{ ...typography.body, color: colors.textMuted }}>

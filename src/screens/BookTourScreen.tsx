@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Alert, KeyboardAvoidingView, Platform, ScrollView, Text, View, TouchableOpacity } from 'react-native';
+import { MaterialIcons } from '@expo/vector-icons';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import DateTimePicker from '@react-native-community/datetimepicker';
 
@@ -76,6 +77,15 @@ export default function BookTourScreen({ route, navigation }: Props) {
         contentContainerStyle={{ paddingHorizontal: spacing.lg, paddingVertical: spacing.lg, paddingBottom: 120 }}
         keyboardShouldPersistTaps="handled"
       >
+        {Platform.OS === 'web' && (
+          <TouchableOpacity
+            onPress={() => navigation.goBack()}
+            style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.md }}
+          >
+            <MaterialIcons name="arrow-back" size={20} color={colors.textPrimary} />
+            <Text style={{ ...typography.body, color: colors.textPrimary, marginLeft: spacing.xs }}>Back</Text>
+          </TouchableOpacity>
+        )}
         <View
           style={{
             marginBottom: spacing.lg,

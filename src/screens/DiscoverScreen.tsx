@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, Image, Modal, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Image, Modal, Platform, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RouteProp } from '@react-navigation/native';
@@ -547,7 +547,7 @@ export default function DiscoverScreen() {
               <Text style={{ ...typography.titleMedium, color: colors.textPrimary }} numberOfLines={1}>
                 {item.name ?? 'Untitled'}
               </Text>
-              <Text style={{ ...typography.caption, color: colors.primaryTeal, marginTop: 2 }}>
+              <Text style={{ ...typography.caption, color: colors.textPrimary, marginTop: 2 }}>
                 {item.type === 'venue' ? 'Venue' : classifyCategory(item) === 'services' ? 'Service' : 'Vendor'}
               </Text>
             </View>
@@ -559,7 +559,7 @@ export default function DiscoverScreen() {
           </View>
 
           <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.xs }}>
-            <MaterialIcons name="star" size={16} color={colors.primaryTeal} />
+            <MaterialIcons name="star" size={16} color={colors.textPrimary} />
             <Text style={{ ...typography.caption, color: colors.textSecondary, marginLeft: spacing.xs }}>
               {typeof item.rating === 'number' ? item.rating.toFixed(1) : 'No rating yet'}
               {typeof item.review_count === 'number' && item.review_count > 0 ? ` · ${item.review_count} reviews` : ''}
@@ -589,6 +589,15 @@ export default function DiscoverScreen() {
       contentContainerStyle={{ paddingHorizontal: spacing.lg, paddingTop: spacing.lg, paddingBottom: spacing.xl }}
       keyboardShouldPersistTaps="handled"
     >
+      {Platform.OS === 'web' && (
+        <TouchableOpacity
+          onPress={() => navigation.goBack()}
+          style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.md }}
+        >
+          <MaterialIcons name="arrow-back" size={20} color={colors.textPrimary} />
+          <Text style={{ ...typography.body, color: colors.textPrimary, marginLeft: spacing.xs }}>Back</Text>
+        </TouchableOpacity>
+      )}
       <View
         style={{
           backgroundColor: colors.surface,
@@ -620,7 +629,7 @@ export default function DiscoverScreen() {
             <MaterialIcons
               name={isLocationMode ? 'place' : route.params?.presetFilter === 'services' ? 'miscellaneous-services' : route.params?.presetFilter === 'categories' ? 'category' : route.params?.presetFilter === 'amenities' ? 'hotel' : 'travel-explore'}
               size={16}
-              color={colors.primaryTeal}
+              color={colors.textPrimary}
             />
             <Text style={{ ...typography.caption, color: colors.textPrimary, marginLeft: spacing.xs }}>
               {activeSearchModeLabel}

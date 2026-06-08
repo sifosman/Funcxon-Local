@@ -1,10 +1,11 @@
 import { useState } from 'react';
-import { Alert, KeyboardAvoidingView, Platform, ScrollView, Text, View } from 'react-native';
+import { Alert, KeyboardAvoidingView, Platform, ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import { MaterialIcons } from '@expo/vector-icons';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 
 import { supabase } from '../lib/supabaseClient';
 import type { AttendeeStackParamList } from '../navigation/AttendeeNavigator';
-import { colors, spacing, typography } from '../theme';
+import { colors, spacing, typography, radii } from '../theme';
 import { PrimaryButton, ThemedInput } from '../components/ui';
 import { useAuth } from '../auth/AuthContext';
 
@@ -188,6 +189,15 @@ export default function QuoteRequestScreen({ route, navigation }: Props) {
       contentContainerStyle={{ paddingHorizontal: spacing.lg, paddingVertical: spacing.lg, paddingBottom: 120 }}
       keyboardShouldPersistTaps="handled"
     >
+      {Platform.OS === 'web' && (
+        <TouchableOpacity
+          onPress={() => navigation.goBack()}
+          style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.md }}
+        >
+          <MaterialIcons name="arrow-back" size={20} color={colors.textPrimary} />
+          <Text style={{ ...typography.body, color: colors.textPrimary, marginLeft: spacing.xs }}>Back</Text>
+        </TouchableOpacity>
+      )}
       <View
         style={{
           marginBottom: spacing.lg,

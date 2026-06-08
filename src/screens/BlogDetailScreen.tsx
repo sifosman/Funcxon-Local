@@ -13,75 +13,29 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useQuery } from '@tanstack/react-query';
 import { MaterialIcons } from '@expo/vector-icons';
 
-import { supabase } from '../lib/supabaseClient';
+import { fetchHubSpotBlogPostBySlug, fetchHubSpotRelatedPosts, fetchHubSpotAllSlugs, type AppBlogPost } from '../lib/hubspotBlog';
 import { colors, spacing, radii, typography } from '../theme';
 import type { AttendeeStackParamList } from '../navigation/AttendeeNavigator';
 
 type BlogDetailRouteProp = RouteProp<AttendeeStackParamList, 'BlogDetail'>;
 type NavigationProp = NativeStackNavigationProp<AttendeeStackParamList>;
 
-type BlogPost = {
-  id: number;
-  title: string;
-  slug: string;
-  excerpt: string;
-  content: string;
-  cover_image_url: string | null;
-  author_name: string;
-  author_avatar_url: string | null;
-  category: string;
-  tags: string[];
-  published_at: string;
-  read_time_minutes: number;
-};
+type BlogPost = AppBlogPost;
 
 const fetchBlogPostBySlug = async (slug: string): Promise<BlogPost> => {
-  const { data, error } = await supabase
-    .from('blog_posts')
-    .select('*')
-    .eq('slug', slug)
-    .eq('is_published', true)
-    .single();
-
-  if (error) {
-    console.error('Error fetching blog post:', error);
-    throw error;
+  const post = await fetchHubSpotBlogPostBySlug(slug);
+  if (!post) {
+    throw new Error('Blog post not found');
   }
-
-  return data;
+  return post;
 };
 
-const fetchRelatedPosts = async (currentId: number, category: string): Promise<BlogPost[]> => {
-  const { data, error } = await supabase
-    .from('blog_posts')
-    .select('id, title, slug, excerpt, content, cover_image_url, author_name, author_avatar_url, category, tags, published_at, read_time_minutes')
-    .eq('is_published', true)
-    .neq('id', currentId)
-    .eq('category', category)
-    .order('published_at', { ascending: false })
-    .limit(2);
-
-  if (error) {
-    console.error('Error fetching related posts:', error);
-    return [];
-  }
-
-  return data || [];
+const fetchRelatedPosts = async (currentId: string): Promise<BlogPost[]> => {
+  return await fetchHubSpotRelatedPosts(currentId, 2);
 };
 
-const fetchAllPublishedSlugs = async (): Promise<{ id: number; slug: string; title: string }[]> => {
-  const { data, error } = await supabase
-    .from('blog_posts')
-    .select('id, slug, title')
-    .eq('is_published', true)
-    .order('published_at', { ascending: false });
-
-  if (error) {
-    console.error('Error fetching all blog slugs:', error);
-    return [];
-  }
-
-  return data || [];
+const fetchAllPublishedSlugs = async (): Promise<{ id: string; slug: string; title: string }[]> => {
+  return await fetchHubSpotAllSlugs();
 };
 
 export default function BlogDetailScreen() {
@@ -96,12 +50,12 @@ export default function BlogDetailScreen() {
 
   const { data: relatedPosts } = useQuery({
     queryKey: ['related-posts', post?.id],
-    queryFn: () => fetchRelatedPosts(post!.id, post!.category),
+    queryFn: () => fetchRelatedPosts(post!.id),
     enabled: !!post,
   });
 
   const { data: allSlugs } = useQuery({
-    queryKey: ['all-blog-slugs'],
+    queryKey: ['all-blog-slugs', 'hubspot'],
     queryFn: fetchAllPublishedSlugs,
   });
 

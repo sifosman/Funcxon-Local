@@ -535,8 +535,8 @@ export default function VenueCatalogueScreen() {
               disabled={uploadingPdf}
               style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginTop: spacing.md, paddingVertical: spacing.sm, borderWidth: 1, borderColor: colors.borderSubtle, borderRadius: radii.md, borderStyle: 'dashed' }}
             >
-              <MaterialIcons name="upload-file" size={18} color={colors.primaryTeal} style={{ marginRight: spacing.sm }} />
-              <Text style={{ ...typography.body, color: colors.primaryTeal, fontWeight: '600' }}>
+              <MaterialIcons name="upload-file" size={18} color={colors.textPrimary} style={{ marginRight: spacing.sm }} />
+              <Text style={{ ...typography.body, color: colors.textPrimary, fontWeight: '600' }}>
                 {uploadingPdf ? 'Uploading...' : 'Add PDF Catalogue'}
               </Text>
             </TouchableOpacity>
@@ -598,7 +598,7 @@ export default function VenueCatalogueScreen() {
                     {item.image_url ? (
                       <Image source={{ uri: item.image_url }} style={{ width: 100, height: 100 }} resizeMode="cover" />
                     ) : uploadingImage === item.id ? (
-                      <ActivityIndicator color={colors.primaryTeal} />
+                      <ActivityIndicator color={colors.textPrimary} />
                     ) : (
                       <>
                         <MaterialIcons name="add-photo-alternate" size={28} color={colors.textMuted} />
@@ -624,7 +624,7 @@ export default function VenueCatalogueScreen() {
                   </View>
                   <View style={{ justifyContent: 'center', paddingRight: spacing.md, gap: spacing.sm }}>
                     <TouchableOpacity onPress={() => openEdit(item)} disabled={saving}>
-                      <MaterialIcons name="edit" size={20} color={colors.primaryTeal} />
+                      <MaterialIcons name="edit" size={20} color={colors.textPrimary} />
                     </TouchableOpacity>
                     <TouchableOpacity onPress={() => handleDelete(item)} disabled={saving}>
                       <MaterialIcons name="delete-outline" size={20} color={colors.destructive} />

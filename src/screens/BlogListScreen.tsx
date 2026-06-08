@@ -13,38 +13,16 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useQuery } from '@tanstack/react-query';
 import { MaterialIcons } from '@expo/vector-icons';
 
-import { supabase } from '../lib/supabaseClient';
+import { fetchHubSpotBlogPosts, type AppBlogPost } from '../lib/hubspotBlog';
 import { colors, spacing, radii, typography } from '../theme';
 import type { AttendeeStackParamList } from '../navigation/AttendeeNavigator';
 
-type BlogPost = {
-  id: number;
-  title: string;
-  slug: string;
-  excerpt: string;
-  cover_image_url: string | null;
-  author_name: string;
-  category: string;
-  published_at: string;
-  read_time_minutes: number;
-};
+type BlogPost = AppBlogPost;
 
 type NavigationProp = NativeStackNavigationProp<AttendeeStackParamList>;
 
 const fetchBlogPosts = async (): Promise<BlogPost[]> => {
-  const { data, error } = await supabase
-    .from('blog_posts')
-    .select('id, title, slug, excerpt, cover_image_url, author_name, category, published_at, read_time_minutes')
-    .eq('is_published', true)
-    .order('published_at', { ascending: false })
-    .limit(20);
-
-  if (error) {
-    console.error('Error fetching blog posts:', error);
-    throw error;
-  }
-
-  return data || [];
+  return await fetchHubSpotBlogPosts(20);
 };
 
 const BlogPostCard = ({ post }: { post: BlogPost }) => {
@@ -170,7 +148,7 @@ export default function BlogListScreen() {
   const [refreshing, setRefreshing] = useState(false);
 
   const { data: posts, isLoading, error, refetch } = useQuery({
-    queryKey: ['blog-posts'],
+    queryKey: ['blog-posts', 'hubspot'],
     queryFn: fetchBlogPosts,
   });
 
@@ -265,7 +243,7 @@ export default function BlogListScreen() {
     <View style={{ flex: 1, backgroundColor: colors.background }}>
       <FlatList
         data={posts}
-        keyExtractor={(item) => item.id.toString()}
+        keyExtractor={(item) => item.id}
         renderItem={({ item }) => <BlogPostCard post={item} />}
         ListHeaderComponent={renderHeader}
         contentContainerStyle={{ paddingBottom: spacing.xxl }}

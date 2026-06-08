@@ -72,7 +72,7 @@ export default function QuotesScreen() {
       let internalUser = userRows ?? null;
 
       if (!internalUser) {
-        const email = user.email ?? 'attendee@funcxon.com';
+        const email = user.email ?? 'attendee@funxon.com';
         const username = email.split('@')[0] || 'attendee';
         console.log('[QuotesScreen] Creating new user:', { email, username });
         

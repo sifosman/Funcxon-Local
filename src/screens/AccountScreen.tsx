@@ -276,7 +276,7 @@ export default function AccountScreen() {
         },
         {
             id: 'terms-policies',
-            label: 'Funcxon Terms and Policies',
+            label: 'Funxon Terms and Policies',
             icon: 'shield',
             route: 'TermsAndPolicies',
         },
@@ -289,7 +289,7 @@ export default function AccountScreen() {
             id: user ? 'logout' : 'login',
             label: user ? 'Logout' : 'Login',
             icon: user ? 'logout' : 'login',
-            color: user ? colors.destructive : colors.primaryTeal,
+            color: user ? colors.destructive : colors.textPrimary,
             action: user ? handleLogout : handleLogin,
         },
     ];
@@ -341,7 +341,7 @@ export default function AccountScreen() {
                         <MaterialIcons
                             name={item.icon}
                             size={20}
-                            color={isSubmenu ? colors.textMuted : colors.primaryTeal}
+                            color={isSubmenu ? colors.textMuted : colors.textPrimary}
                             style={{ marginRight: spacing.md }}
                         />
                         <Text
@@ -394,7 +394,7 @@ export default function AccountScreen() {
                                         paddingHorizontal: spacing.md,
                                         paddingVertical: spacing.xs,
                                         borderRadius: radii.full,
-                                        backgroundColor: userRole === 'vendor' ? colors.primaryTeal : colors.accent,
+                                        backgroundColor: userRole === 'vendor' ? colors.textPrimary : colors.accent,
                                     }}
                                 >
                                     <Text
@@ -429,10 +429,10 @@ export default function AccountScreen() {
                                             paddingVertical: spacing.xs,
                                             borderRadius: radii.full,
                                             borderWidth: 1,
-                                            borderColor: colors.primaryTeal,
+                                            bordercolor: colors.textPrimary,
                                         }}
                                     >
-                                        <Text style={{ ...typography.caption, color: colors.primaryTeal, fontWeight: '600', fontSize: 10 }}>Upgrade</Text>
+                                        <Text style={{ ...typography.caption, color: colors.textPrimary, fontWeight: '600', fontSize: 10 }}>Upgrade</Text>
                                     </TouchableOpacity>
                                 )}
                             </View>

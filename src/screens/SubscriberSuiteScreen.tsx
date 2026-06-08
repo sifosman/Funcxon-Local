@@ -34,8 +34,8 @@ export default function SubscriberSuiteScreen() {
             description: 'Access your subscriber portal and manage your listings',
             icon: 'business-center',
             route: 'PortfolioProfile',
-            iconColor: colors.primaryTeal,
-            iconBg: '#E0F2F7',
+            iconcolor: colors.textPrimary,
+            iconBg: '#f2f7ff',
         },
         {
             id: 'portfolio-assistance',

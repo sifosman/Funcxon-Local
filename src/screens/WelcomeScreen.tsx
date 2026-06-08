@@ -54,12 +54,12 @@ export default function WelcomeScreen({ navigation }: Props) {
               }}
             >
               <Image
-                source={require('../../assets/1000478602.jpg')}
+                source={require('../../assets/logo.png')}
                 style={{ width: '100%', height: '100%' }}
-                resizeMode="cover"
+                resizeMode="contain"
               />
             </View>
-            <Text style={{ ...typography.titleLarge, color: colors.textPrimary }}>Welcome to Funcxon</Text>
+            <Text style={{ ...typography.titleLarge, color: colors.textPrimary }}>Welcome to Funxon</Text>
             <Text style={{ ...typography.body, color: colors.textSecondary, marginTop: spacing.sm, textAlign: 'center' }}>
               Connect, collaborate, and celebrate with trusted vendors.
             </Text>
@@ -97,7 +97,7 @@ export default function WelcomeScreen({ navigation }: Props) {
                 <MaterialIcons
                   name={item.icon as any}
                   size={24}
-                  color={colors.primaryTeal}
+                  color={colors.primary}
                   style={{ marginRight: spacing.md }}
                 />
                 <View style={{ flex: 1 }}>

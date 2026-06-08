@@ -46,7 +46,7 @@ export default function VendorSignupSuccessScreen() {
           email,
           fullName,
           tierName,
-          applicationUrl: 'https://funcxon.com/vendor-application',
+          applicationUrl: 'https://funxon.com/vendor-application',
         },
       });
 
@@ -121,7 +121,7 @@ export default function VendorSignupSuccessScreen() {
           </View>
 
           <Text style={{ ...typography.displayMedium, color: colors.textPrimary, textAlign: 'center', marginBottom: spacing.md }}>
-            Welcome to Funcxon!
+            Welcome to Funxon!
           </Text>
 
           <Text style={{ ...typography.body, color: colors.textSecondary, textAlign: 'center', marginBottom: spacing.lg }}>
@@ -198,7 +198,7 @@ export default function VendorSignupSuccessScreen() {
 
         {/* Email Note */}
         <Text style={{ ...typography.caption, color: colors.textMuted, textAlign: 'center', marginTop: spacing.xl }}>
-          Didn't receive the email? Check your spam folder or contact support@funcxon.com
+          Didn't receive the email? Check your spam folder or contact support@funxon.com
         </Text>
       </ScrollView>
     </View>

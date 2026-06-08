@@ -255,7 +255,7 @@ export default function VenueCatalogueViewScreen({ route, navigation }: Props) {
                 <Text style={{ ...typography.body, color: colors.textPrimary, flex: 1 }} numberOfLines={1}>
                   {doc.file_name || 'Catalogue PDF'}
                 </Text>
-                <MaterialIcons name="open-in-new" size={18} color={colors.primaryTeal} />
+                <MaterialIcons name="open-in-new" size={18} color={colors.textPrimary} />
               </TouchableOpacity>
             ))}
           </View>
@@ -275,7 +275,7 @@ export default function VenueCatalogueViewScreen({ route, navigation }: Props) {
                     borderRadius: radii.lg,
                     backgroundColor: colors.surface,
                     borderWidth: 2,
-                    borderColor: isSelected ? colors.primaryTeal : colors.borderSubtle,
+                    borderColor: isSelected ? colors.textPrimary : colors.borderSubtle,
                     overflow: 'hidden',
                   }}
                 >
@@ -307,7 +307,7 @@ export default function VenueCatalogueViewScreen({ route, navigation }: Props) {
                         {item.description}
                       </Text>
                     ) : null}
-                    <Text style={{ ...typography.body, color: colors.primaryTeal, fontWeight: '700', marginTop: spacing.sm }}>
+                    <Text style={{ ...typography.body, color: colors.textPrimary, fontWeight: '700', marginTop: spacing.sm }}>
                       R{Number(item.price ?? 0).toLocaleString()}
                     </Text>
                   </View>
@@ -315,7 +315,7 @@ export default function VenueCatalogueViewScreen({ route, navigation }: Props) {
                     <MaterialIcons
                       name={isSelected ? 'check-circle' : 'radio-button-unchecked'}
                       size={28}
-                      color={isSelected ? colors.primaryTeal : colors.borderSubtle}
+                      color={isSelected ? colors.textPrimary : colors.borderSubtle}
                     />
                   </View>
                 </TouchableOpacity>
@@ -386,7 +386,7 @@ export default function VenueCatalogueViewScreen({ route, navigation }: Props) {
                   }}
                 >
                   <Text style={{ ...typography.titleMedium, color: colors.textPrimary }}>Total</Text>
-                  <Text style={{ ...typography.titleMedium, color: colors.primaryTeal }}>R{total.toLocaleString()}</Text>
+                  <Text style={{ ...typography.titleMedium, color: colors.textPrimary }}>R{total.toLocaleString()}</Text>
                 </View>
               </View>
             )}
@@ -425,7 +425,7 @@ export default function VenueCatalogueViewScreen({ route, navigation }: Props) {
                     justifyContent: 'center',
                     paddingVertical: spacing.md,
                     borderRadius: radii.lg,
-                    backgroundColor: selectedItems.length > 0 ? colors.primaryTeal : colors.surfaceMuted,
+                    backgroundColor: selectedItems.length > 0 ? colors.textPrimary : colors.surfaceMuted,
                     gap: spacing.sm,
                   }}
                 >
@@ -561,7 +561,7 @@ export default function VenueCatalogueViewScreen({ route, navigation }: Props) {
               style={{
                 paddingVertical: spacing.md,
                 borderRadius: radii.lg,
-                backgroundColor: saving ? colors.textMuted : colors.primaryTeal,
+                backgroundColor: saving ? colors.textMuted : colors.textPrimary,
                 alignItems: 'center',
                 flexDirection: 'row',
                 justifyContent: 'center',

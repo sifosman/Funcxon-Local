@@ -58,8 +58,8 @@ export default function ApplicationStep2Screen() {
             height: 22,
             borderRadius: 5,
             borderWidth: 1,
-            borderColor: opts.isSelected ? colors.primaryTeal : colors.borderStrong,
-            backgroundColor: opts.isSelected ? colors.primaryTeal : colors.surface,
+            borderColor: opts.isSelected ? colors.textPrimary : colors.borderStrong,
+            backgroundColor: opts.isSelected ? colors.textPrimary : colors.surface,
             alignItems: 'center',
             justifyContent: 'center',
             marginRight: spacing.md,
@@ -102,8 +102,8 @@ export default function ApplicationStep2Screen() {
             height: 22,
             borderRadius: 5,
             borderWidth: 1,
-            borderColor: opts.isSelected ? colors.primaryTeal : colors.borderStrong,
-            backgroundColor: opts.isSelected ? colors.primaryTeal : colors.surface,
+            borderColor: opts.isSelected ? colors.textPrimary : colors.borderStrong,
+            backgroundColor: opts.isSelected ? colors.textPrimary : colors.surface,
             alignItems: 'center',
             justifyContent: 'center',
             marginRight: spacing.md,
@@ -187,7 +187,7 @@ export default function ApplicationStep2Screen() {
               <ApplicationProgress currentStep={2} />
             </View>
             <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: spacing.md }}>
-              <MaterialIcons name="category" size={32} color={colors.primaryTeal} />
+              <MaterialIcons name="category" size={32} color={colors.textPrimary} />
               <View style={{ flex: 1 }}>
                 <Text style={{ ...typography.titleMedium, color: colors.textPrimary }}>
                   {isVenues ? 'Venue Details' : 'Service Category & Coverage'}
@@ -269,9 +269,9 @@ export default function ApplicationStep2Screen() {
                           paddingHorizontal: spacing.md,
                           paddingVertical: spacing.sm,
                           borderRadius: radii.full,
-                          backgroundColor: isSelected ? colors.primaryTeal : colors.surface,
+                          backgroundColor: isSelected ? colors.textPrimary : colors.surface,
                           borderWidth: 1,
-                          borderColor: isSelected ? colors.primaryTeal : colors.borderSubtle,
+                          borderColor: isSelected ? colors.textPrimary : colors.borderSubtle,
                         }}
                       >
                         <Text style={{ color: isSelected ? '#FFFFFF' : colors.textPrimary, fontSize: 13 }}>
@@ -565,9 +565,9 @@ export default function ApplicationStep2Screen() {
                         padding: spacing.md,
                         marginBottom: spacing.sm,
                         borderRadius: radii.md,
-                        backgroundColor: isSelected ? '#E0F2F7' : colors.surface,
+                        backgroundColor: isSelected ? '#f2f7ff' : colors.surface,
                         borderWidth: 1,
-                        borderColor: isSelected ? colors.primaryTeal : colors.borderSubtle,
+                        borderColor: isSelected ? colors.textPrimary : colors.borderSubtle,
                       }}
                     >
                       <View style={{ flex: 1 }}>
@@ -578,7 +578,7 @@ export default function ApplicationStep2Screen() {
                           {category.description}
                         </Text>
                       </View>
-                      {isSelected && <MaterialIcons name="check-circle" size={24} color={colors.primaryTeal} />}
+                      {isSelected && <MaterialIcons name="check-circle" size={24} color={colors.textPrimary} />}
                     </TouchableOpacity>
                   );
                 })}
@@ -628,9 +628,9 @@ export default function ApplicationStep2Screen() {
                                   paddingHorizontal: spacing.md,
                                   paddingVertical: spacing.sm,
                                   borderRadius: radii.full,
-                                  backgroundColor: isSelected ? colors.primaryTeal : colors.surface,
+                                  backgroundColor: isSelected ? colors.textPrimary : colors.surface,
                                   borderWidth: 1,
-                                  borderColor: isSelected ? colors.primaryTeal : colors.borderSubtle,
+                                  borderColor: isSelected ? colors.textPrimary : colors.borderSubtle,
                                 }}
                               >
                                 <Text style={{ color: isSelected ? '#FFFFFF' : colors.textPrimary, fontSize: 13 }}>
@@ -676,9 +676,9 @@ export default function ApplicationStep2Screen() {
                           paddingHorizontal: spacing.md,
                           paddingVertical: spacing.sm,
                           borderRadius: radii.full,
-                          backgroundColor: isSelected ? colors.primaryTeal : colors.surface,
+                          backgroundColor: isSelected ? colors.textPrimary : colors.surface,
                           borderWidth: 1,
-                          borderColor: isSelected ? colors.primaryTeal : colors.borderSubtle,
+                          borderColor: isSelected ? colors.textPrimary : colors.borderSubtle,
                         }}
                       >
                         <Text style={{ color: isSelected ? '#FFFFFF' : colors.textPrimary, fontSize: 13 }}>
@@ -722,9 +722,9 @@ export default function ApplicationStep2Screen() {
                       paddingHorizontal: spacing.md,
                       paddingVertical: spacing.sm,
                       borderRadius: radii.full,
-                      backgroundColor: isSelected ? colors.primaryTeal : colors.surface,
+                      backgroundColor: isSelected ? colors.textPrimary : colors.surface,
                       borderWidth: 1,
-                      borderColor: isSelected ? colors.primaryTeal : colors.borderSubtle,
+                      borderColor: isSelected ? colors.textPrimary : colors.borderSubtle,
                     }}
                   >
                     <Text style={{ color: isSelected ? '#FFFFFF' : colors.textPrimary, fontSize: 13 }}>
@@ -772,9 +772,9 @@ export default function ApplicationStep2Screen() {
                         paddingHorizontal: spacing.md,
                         paddingVertical: spacing.sm,
                         borderRadius: radii.full,
-                        backgroundColor: isSelected ? colors.primaryTeal : colors.surface,
+                        backgroundColor: isSelected ? colors.textPrimary : colors.surface,
                         borderWidth: 1,
-                        borderColor: isSelected ? colors.primaryTeal : colors.borderSubtle,
+                        borderColor: isSelected ? colors.textPrimary : colors.borderSubtle,
                       }}
                     >
                       <Text style={{ color: isSelected ? '#FFFFFF' : colors.textPrimary, fontSize: 13 }}>
@@ -846,13 +846,13 @@ export default function ApplicationStep2Screen() {
                 flex: 1,
                 backgroundColor: colors.surface,
                 borderWidth: 1,
-                borderColor: colors.primaryTeal,
+                bordercolor: colors.textPrimary,
                 paddingVertical: spacing.md,
                 borderRadius: radii.md,
                 alignItems: 'center',
               }}
             >
-              <Text style={{ color: colors.primaryTeal, fontSize: 16, fontWeight: '600' }}>
+              <Text style={{ color: colors.textPrimary, fontSize: 16, fontWeight: '600' }}>
                 Back
               </Text>
             </TouchableOpacity>
@@ -860,7 +860,7 @@ export default function ApplicationStep2Screen() {
               onPress={handleNext}
               style={{
                 flex: 1,
-                backgroundColor: colors.primaryTeal,
+                backgroundcolor: colors.textPrimary,
                 paddingVertical: spacing.md,
                 borderRadius: radii.md,
                 flexDirection: 'row',

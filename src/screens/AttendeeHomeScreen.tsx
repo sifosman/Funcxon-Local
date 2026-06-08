@@ -19,6 +19,7 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useQuery } from '@tanstack/react-query';
 
 import { supabase } from '../lib/supabaseClient';
+import { fetchHubSpotBlogPosts } from '../lib/hubspotBlog';
 import type { AttendeeStackParamList } from '../navigation/AttendeeNavigator';
 import { colors, spacing, radii, typography } from '../theme';
 import { OutlineButton, PrimaryButton, ThemedInput } from '../components/ui';
@@ -325,7 +326,7 @@ export default function AttendeeHomeScreen() {
   const [showMapRadiusSelector, setShowMapRadiusSelector] = useState(false);
   const [mapCenter, setMapCenter] = useState<{ latitude: number; longitude: number } | null>(null);
   const [mapRadius, setMapRadius] = useState<number>(20);
-  const { user } = useAuth();
+  const { user, session } = useAuth();
   const { pendingSearch, shouldApplyPendingSearch, savePendingSearch, markPendingSearchConsumed } = usePendingSearch();
 
   const exploreOptions = [
@@ -333,25 +334,25 @@ export default function AttendeeHomeScreen() {
       key: 'location' as const,
       title: 'By Location',
       subtitle: 'Find venues and services near you',
-      image: require('../../assets/slider_1.jpeg'),
+      image: { uri: 'https://images.unsplash.com/photo-1580060839134-75a5edca2e99?w=800&q=80' },
     },
     {
       key: 'categories' as const,
       title: 'By Categories',
       subtitle: 'Browse popular event categories',
-      image: require('../../assets/slider_1.jpeg'),
+      image: { uri: 'https://images.unsplash.com/photo-1492684223066-81342ee5ff30?w=800&q=80' },
     },
     {
       key: 'amenities' as const,
       title: 'By Venue Amenities',
       subtitle: 'Search venues by key features',
-      image: require('../../assets/slider_1.jpeg'),
+      image: { uri: 'https://images.unsplash.com/photo-1519167758481-83f550bb49b3?w=800&q=80' },
     },
     {
       key: 'services' as const,
       title: 'By Services',
       subtitle: 'Explore service professionals',
-      image: require('../../assets/slider_1.jpeg'),
+      image: { uri: 'https://images.unsplash.com/photo-1511578314322-379afb476865?w=800&q=80' },
     },
   ];
 
@@ -398,60 +399,108 @@ export default function AttendeeHomeScreen() {
     item: VendorListItem,
     onPress: () => void,
   ) => {
+    const isFav =
+      item.type === 'vendor'
+        ? favouriteIds.vendorIds.includes(item.id)
+        : favouriteIds.venueIds.includes(item.id);
+
     return (
       <TouchableOpacity
         key={item.id}
-        activeOpacity={0.9}
+        activeOpacity={0.92}
         onPress={onPress}
         style={{ width: cardWidth, marginRight: spacing.md }}
       >
         <View
           style={{
+            borderRadius: radii.xl,
             backgroundColor: colors.surface,
-            borderRadius: radii.lg,
-            overflow: 'hidden',
             borderWidth: 1,
             borderColor: colors.borderSubtle,
-            height: cardWidth * 1.25,
+            overflow: 'hidden',
+            shadowColor: '#000',
+            shadowOpacity: 0.08,
+            shadowRadius: 10,
+            shadowOffset: { width: 0, height: 3 },
+            elevation: 2,
           }}
         >
-          <Image
-            source={item.image_url ? { uri: item.image_url } : require('../../assets/adaptive-icon.jpg')}
-            style={{ width: '100%', height: cardWidth * 0.6 }}
-            resizeMode="cover"
-          />
-          <View style={{ flex: 1, padding: spacing.sm, justifyContent: 'space-between' }}>
-            <View>
-              <Text
+          {/* Image + favourite button */}
+          <View>
+            {item.image_url ? (
+              <Image
+                source={{ uri: item.image_url }}
+                style={{ width: '100%', height: 150 }}
+                resizeMode="cover"
+              />
+            ) : (
+              <View
                 style={{
-                  ...typography.titleMedium,
-                  color: colors.textPrimary,
-                  marginBottom: spacing.xs,
-                  fontSize: 12,
+                  width: '100%',
+                  height: 150,
+                  backgroundColor: colors.surfaceMuted,
+                  alignItems: 'center',
+                  justifyContent: 'center',
                 }}
-                numberOfLines={1}
               >
-                {item.name || 'Unknown'}
-              </Text>
-              <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.xs }}>
-                <MaterialIcons name="star" size={12} color={colors.primaryTeal} />
-                <Text style={{ ...typography.caption, color: colors.textPrimary, marginLeft: spacing.xs, fontSize: 10 }}>
-                  {typeof item.rating === 'number' ? item.rating.toFixed(1) : '—'}
-                </Text>
+                <MaterialIcons name="image" size={28} color={colors.textMuted} />
               </View>
-            </View>
-            <View
+            )}
+            <TouchableOpacity
+              onPress={(e) => { e.stopPropagation(); handleToggleFavourite(item.id, item.type); }}
               style={{
-                backgroundColor: colors.surfaceMuted,
-                paddingHorizontal: spacing.sm,
-                paddingVertical: 3,
-                borderRadius: radii.full,
+                position: 'absolute',
+                top: spacing.sm,
+                right: spacing.sm,
+                width: 36,
+                height: 36,
+                borderRadius: 18,
+                backgroundColor: '#FFFFFF',
+                alignItems: 'center',
+                justifyContent: 'center',
+                borderWidth: 1,
+                borderColor: colors.borderSubtle,
               }}
             >
-              <Text style={{ ...typography.caption, color: colors.textPrimary, fontWeight: '600', fontSize: 10 }} numberOfLines={1}>
-                {[item.city, item.province].filter(Boolean).join(', ') || item.location || 'Location'}
+              <MaterialIcons
+                name={isFav ? 'favorite' : 'favorite-border'}
+                size={18}
+                color={isFav ? colors.primaryTeal : colors.textMuted}
+              />
+            </TouchableOpacity>
+          </View>
+
+          {/* Card body */}
+          <View style={{ padding: spacing.md }}>
+            <Text style={{ ...typography.titleMedium, color: colors.textPrimary }} numberOfLines={1}>
+              {item.name ?? 'Untitled'}
+            </Text>
+            <Text style={{ ...typography.caption, color: colors.textPrimary, marginTop: 2 }}>
+              {item.type === 'venue' ? 'Venue' : 'Vendor'}
+            </Text>
+
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: spacing.xs }}>
+              <MaterialIcons name="star" size={16} color={colors.textPrimary} />
+              <Text style={{ ...typography.caption, color: colors.textSecondary, marginLeft: spacing.xs }}>
+                {typeof item.rating === 'number' ? item.rating.toFixed(1) : 'No rating yet'}
+                {typeof item.review_count === 'number' && item.review_count > 0
+                  ? ` · ${item.review_count} reviews`
+                  : ''}
               </Text>
             </View>
+
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: spacing.xs }}>
+              <MaterialIcons name="place" size={16} color={colors.textSecondary} />
+              <Text style={{ ...typography.caption, color: colors.textSecondary, marginLeft: spacing.xs, flex: 1 }} numberOfLines={2}>
+                {item.location || [item.city, item.province].filter(Boolean).join(', ') || 'Location available on profile'}
+              </Text>
+            </View>
+
+            {!!item.description && (
+              <Text style={{ ...typography.body, color: colors.textSecondary, marginTop: spacing.xs }} numberOfLines={2}>
+                {item.description}
+              </Text>
+            )}
           </View>
         </View>
       </TouchableOpacity>
@@ -781,21 +830,16 @@ export default function AttendeeHomeScreen() {
   });
 
   const { data: blogPosts, isLoading: blogLoading } = useQuery({
-    queryKey: ['blog-posts-home'],
+    queryKey: ['blog-posts-home', 'hubspot'],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('blog_posts')
-        .select('id, title, slug, excerpt, cover_image_url, author_name, category, published_at, read_time_minutes')
-        .eq('is_published', true)
-        .order('published_at', { ascending: false })
-        .limit(6);
-
-      if (error) {
-        console.error('Error fetching blog posts:', error);
+      try {
+        const posts = await fetchHubSpotBlogPosts(6);
+        console.log('HubSpot blog posts fetched:', posts.length, posts.map(p => p.title));
+        return posts;
+      } catch (err) {
+        console.error('Error fetching blog posts:', err);
         return [];
       }
-
-      return data || [];
     },
   });
 
@@ -1278,7 +1322,7 @@ export default function AttendeeHomeScreen() {
       <View style={{ paddingHorizontal: spacing.lg, paddingTop: spacing.lg }}>
         <View style={{ position: 'relative' }}>
           <Image
-            source={require('../../assets/slider_1.jpeg')}
+            source={require('../../assets/slider_1.jpg')}
             style={{ width: '100%', height: 180, borderRadius: radii.lg }}
             resizeMode="cover"
           />
@@ -1308,13 +1352,14 @@ export default function AttendeeHomeScreen() {
       </View>
 
       {/* Message from app owners */}
-      <View style={{ paddingHorizontal: spacing.lg, marginTop: spacing.lg }}>
+      <View style={{ paddingHorizontal: spacing.lg, marginTop: spacing.xl }}>
         <View
           style={{
             backgroundColor: colors.background,
-            paddingVertical: screenWidth < 375 ? spacing.md : spacing.lg,
+            paddingVertical: spacing.sm,
             paddingHorizontal: spacing.lg,
             alignItems: 'center',
+            justifyContent: 'center',
           }}
         >
           <Text
@@ -1454,8 +1499,8 @@ export default function AttendeeHomeScreen() {
         </ScrollView>
       </View>
 
-      {/* Blog Section */}
-      <View style={{ marginTop: spacing.xl }}>
+      {/* Blog Section - only shown when posts exist */}
+      {blogPosts && blogPosts.length > 0 && <View style={{ marginTop: spacing.xl }}>
         <View
           style={{
             paddingHorizontal: spacing.lg,
@@ -1506,7 +1551,7 @@ export default function AttendeeHomeScreen() {
             <TouchableOpacity
               key={post.id}
               activeOpacity={0.9}
-              style={{ width: cardWidth, marginRight: spacing.md }}
+              style={{ width: screenWidth / 1.9, marginRight: spacing.md }}
               onPress={() => navigation.navigate('BlogDetail', { slug: post.slug })}
             >
               <View
@@ -1516,20 +1561,20 @@ export default function AttendeeHomeScreen() {
                   overflow: 'hidden',
                   borderWidth: 1,
                   borderColor: colors.borderSubtle,
-                  height: cardWidth * 1.25,
+                  height: screenWidth / 1.9 * 1.4,
                 }}
               >
                 {post.cover_image_url ? (
                   <Image
                     source={{ uri: post.cover_image_url }}
-                    style={{ width: '100%', height: cardWidth * 0.6 }}
+                    style={{ width: '100%', height: screenWidth / 1.9 * 0.55 }}
                     resizeMode="cover"
                   />
                 ) : (
                   <View
                     style={{
                       width: '100%',
-                      height: cardWidth * 0.6,
+                      height: screenWidth / 1.9 * 0.55,
                       backgroundColor: colors.accent,
                       justifyContent: 'center',
                       alignItems: 'center',
@@ -1553,7 +1598,7 @@ export default function AttendeeHomeScreen() {
                       <Text
                         style={{
                           color: colors.primary,
-                          fontSize: 10,
+                          fontSize: 11,
                           fontWeight: '600',
                           fontFamily: 'Montserrat_600SemiBold',
                         }}
@@ -1566,9 +1611,9 @@ export default function AttendeeHomeScreen() {
                         ...typography.titleMedium,
                         color: colors.textPrimary,
                         marginBottom: spacing.xs,
-                        fontSize: 13,
+                        fontSize: 14,
                       }}
-                      numberOfLines={2}
+                      numberOfLines={3}
                     >
                       {post.title}
                     </Text>
@@ -1576,9 +1621,10 @@ export default function AttendeeHomeScreen() {
                       style={{
                         ...typography.caption,
                         color: colors.textSecondary,
-                        fontSize: 10,
+                        fontSize: 11,
+                        lineHeight: 16,
                       }}
-                      numberOfLines={2}
+                      numberOfLines={4}
                     >
                       {post.excerpt}
                     </Text>
@@ -1601,145 +1647,186 @@ export default function AttendeeHomeScreen() {
             </TouchableOpacity>
           ))}
         </ScrollView>
-      </View>
+      </View>}
 
       {/* Get Listed CTA Section */}
       <View style={{ marginTop: spacing.xl }}>
-        <View style={{ paddingHorizontal: spacing.lg, marginBottom: spacing.md }}>
-          <Text
-            style={{
-              ...typography.titleLarge,
-              color: colors.textPrimary,
-              fontWeight: '700',
-            }}
-          >
+        <View style={{ paddingHorizontal: spacing.lg, marginBottom: spacing.xs }}>
+          <Text style={{ ...typography.titleLarge, color: colors.textPrimary, fontWeight: '700' }}>
             Get Listed!
+          </Text>
+          <Text style={{ ...typography.body, color: colors.textSecondary, marginTop: spacing.xs }}>
+            Grow your business by listing on Funxon.
           </Text>
         </View>
 
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
-          contentContainerStyle={{ paddingHorizontal: spacing.lg }}
+          contentContainerStyle={{ paddingHorizontal: spacing.lg, paddingTop: spacing.md }}
         >
-          {/* Create Venue Portfolio */}
+          {/* List Your Venue */}
           <TouchableOpacity
             activeOpacity={0.9}
             style={{ width: cardWidth, marginRight: spacing.md }}
-            onPress={() => navigation.navigate('Discover', { category: 'venues' })}
+            onPress={() => {
+              if (session) {
+                navigation.navigate('ListersPortal');
+              } else {
+                (navigation as any).navigate('Auth', { screen: 'GuestPrompt', params: { label: 'Listers Portal' } });
+              }
+            }}
           >
             <View
               style={{
-                backgroundColor: colors.surface,
-                borderRadius: radii.lg,
+                borderRadius: radii.xl,
                 overflow: 'hidden',
                 borderWidth: 1,
                 borderColor: colors.borderSubtle,
-                height: cardWidth * 1.25,
+                shadowColor: '#000',
+                shadowOpacity: 0.1,
+                shadowRadius: 10,
+                shadowOffset: { width: 0, height: 3 },
+                elevation: 3,
               }}
             >
               <Image
-                source={require('../../assets/slider_1.jpeg')}
-                style={{ width: '100%', height: cardWidth * 0.6 }}
+                source={{ uri: 'https://images.unsplash.com/photo-1464366400600-7168b8af9bc3?w=800&q=80' }}
+                style={{ width: '100%', height: cardWidth * 0.65 }}
                 resizeMode="cover"
               />
-              <View style={{ flex: 1, padding: spacing.sm, justifyContent: 'center' }}>
-                <Text
-                  style={{
-                    ...typography.caption,
-                    color: colors.textPrimary,
-                    fontWeight: '700',
-                    textAlign: 'center',
-                    fontSize: 10,
-                    textTransform: 'uppercase',
-                  }}
-                  numberOfLines={2}
-                >
-                  Create your venue portfolio here
+              <View style={{ position: 'absolute', top: 0, left: 0, right: 0, height: cardWidth * 0.65, backgroundColor: 'rgba(0,0,0,0.35)' }} />
+              <View style={{ position: 'absolute', top: spacing.sm, left: spacing.sm }}>
+                <View style={{ backgroundcolor: colors.textPrimary, paddingHorizontal: spacing.sm, paddingVertical: 3, borderRadius: radii.full }}>
+                  <Text style={{ ...typography.caption, color: '#fff', fontSize: 9, fontWeight: '700' }}>VENUE</Text>
+                </View>
+              </View>
+              <View style={{ backgroundColor: colors.surface, padding: spacing.md }}>
+                <Text style={{ ...typography.titleMedium, color: colors.textPrimary, fontWeight: '700' }}>
+                  List Your Venue
                 </Text>
+                <Text style={{ ...typography.caption, color: colors.textSecondary, marginTop: 3 }} numberOfLines={2}>
+                  Showcase your space to thousands of event planners
+                </Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: spacing.sm }}>
+                  <MaterialIcons name="arrow-forward" size={14} color={colors.textPrimary} />
+                  <Text style={{ ...typography.caption, color: colors.textPrimary, marginLeft: 4, fontWeight: '600' }}>
+                    {session ? 'Go to portal' : 'Sign in to get started'}
+                  </Text>
+                </View>
               </View>
             </View>
           </TouchableOpacity>
 
-          {/* Create Vendor Portfolio */}
+          {/* List Your Services */}
           <TouchableOpacity
             activeOpacity={0.9}
             style={{ width: cardWidth, marginRight: spacing.md }}
-            onPress={() => navigation.navigate('Discover', { category: 'vendors' })}
+            onPress={() => {
+              if (session) {
+                navigation.navigate('ListersPortal');
+              } else {
+                (navigation as any).navigate('Auth', { screen: 'GuestPrompt', params: { label: 'Listers Portal' } });
+              }
+            }}
           >
             <View
               style={{
-                backgroundColor: colors.surface,
-                borderRadius: radii.lg,
+                borderRadius: radii.xl,
                 overflow: 'hidden',
                 borderWidth: 1,
                 borderColor: colors.borderSubtle,
-                height: cardWidth * 1.25,
+                shadowColor: '#000',
+                shadowOpacity: 0.1,
+                shadowRadius: 10,
+                shadowOffset: { width: 0, height: 3 },
+                elevation: 3,
               }}
             >
               <Image
-                source={require('../../assets/slider_1.jpeg')}
-                style={{ width: '100%', height: cardWidth * 0.6 }}
+                source={{ uri: 'https://images.unsplash.com/photo-1621844061203-3f31a2a7d6ad?w=800&q=80' }}
+                style={{ width: '100%', height: cardWidth * 0.65 }}
                 resizeMode="cover"
               />
-              <View style={{ flex: 1, padding: spacing.sm, justifyContent: 'center' }}>
-                <Text
-                  style={{
-                    ...typography.caption,
-                    color: colors.textPrimary,
-                    fontWeight: '700',
-                    textAlign: 'center',
-                    fontSize: 10,
-                    textTransform: 'uppercase',
-                  }}
-                  numberOfLines={2}
-                >
-                  Create your vendor & professional services portfolio here
+              <View style={{ position: 'absolute', top: 0, left: 0, right: 0, height: cardWidth * 0.65, backgroundColor: 'rgba(0,0,0,0.35)' }} />
+              <View style={{ position: 'absolute', top: spacing.sm, left: spacing.sm }}>
+                <View style={{ backgroundColor: colors.primary, paddingHorizontal: spacing.sm, paddingVertical: 3, borderRadius: radii.full }}>
+                  <Text style={{ ...typography.caption, color: '#fff', fontSize: 9, fontWeight: '700' }}>VENDOR</Text>
+                </View>
+              </View>
+              <View style={{ backgroundColor: colors.surface, padding: spacing.md }}>
+                <Text style={{ ...typography.titleMedium, color: colors.textPrimary, fontWeight: '700' }}>
+                  List Your Services
                 </Text>
+                <Text style={{ ...typography.caption, color: colors.textSecondary, marginTop: 3 }} numberOfLines={2}>
+                  Reach clients looking for photographers, caterers & more
+                </Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: spacing.sm }}>
+                  <MaterialIcons name="arrow-forward" size={14} color={colors.textPrimary} />
+                  <Text style={{ ...typography.caption, color: colors.textPrimary, marginLeft: 4, fontWeight: '600' }}>
+                    {session ? 'Go to portal' : 'Sign in to get started'}
+                  </Text>
+                </View>
               </View>
             </View>
           </TouchableOpacity>
 
-          {/* Listers Portal Login */}
+          {/* Listers Portal */}
           <TouchableOpacity
             activeOpacity={0.9}
             style={{ width: cardWidth, marginRight: spacing.md }}
-            onPress={() => navigation.navigate('ListersPortal')}
+            onPress={() => {
+              if (session) {
+                navigation.navigate('ListersPortal');
+              } else {
+                (navigation as any).navigate('Auth', { screen: 'GuestPrompt', params: { label: 'Listers Portal' } });
+              }
+            }}
           >
             <View
               style={{
-                backgroundColor: colors.surface,
-                borderRadius: radii.lg,
+                borderRadius: radii.xl,
                 overflow: 'hidden',
                 borderWidth: 1,
                 borderColor: colors.borderSubtle,
-                height: cardWidth * 1.25,
+                shadowColor: '#000',
+                shadowOpacity: 0.1,
+                shadowRadius: 10,
+                shadowOffset: { width: 0, height: 3 },
+                elevation: 3,
               }}
             >
               <Image
-                source={require('../../assets/adaptive-icon.jpg')}
-                style={{ width: '100%', height: cardWidth * 0.6 }}
+                source={{ uri: 'https://images.unsplash.com/photo-1559136555-9303baea8ebd?w=800&q=80' }}
+                style={{ width: '100%', height: cardWidth * 0.65 }}
                 resizeMode="cover"
               />
-              <View style={{ flex: 1, padding: spacing.sm, justifyContent: 'center' }}>
-                <Text
-                  style={{
-                    ...typography.caption,
-                    color: colors.textPrimary,
-                    fontWeight: '700',
-                    textAlign: 'center',
-                    fontSize: 10,
-                    textTransform: 'uppercase',
-                  }}
-                  numberOfLines={2}
-                >
-                  Listers portal login here
+              <View style={{ position: 'absolute', top: 0, left: 0, right: 0, height: cardWidth * 0.65, backgroundColor: 'rgba(0,0,0,0.35)' }} />
+              <View style={{ position: 'absolute', top: spacing.sm, left: spacing.sm }}>
+                <View style={{ backgroundColor: '#6C47FF', paddingHorizontal: spacing.sm, paddingVertical: 3, borderRadius: radii.full }}>
+                  <Text style={{ ...typography.caption, color: '#fff', fontSize: 9, fontWeight: '700' }}>PORTAL</Text>
+                </View>
+              </View>
+              <View style={{ backgroundColor: colors.surface, padding: spacing.md }}>
+                <Text style={{ ...typography.titleMedium, color: colors.textPrimary, fontWeight: '700' }}>
+                  Listers Portal
                 </Text>
+                <Text style={{ ...typography.caption, color: colors.textSecondary, marginTop: 3 }} numberOfLines={2}>
+                  Manage your listings, enquiries and subscriptions
+                </Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: spacing.sm }}>
+                  <MaterialIcons name="arrow-forward" size={14} color={colors.textPrimary} />
+                  <Text style={{ ...typography.caption, color: colors.textPrimary, marginLeft: 4, fontWeight: '600' }}>
+                    {session ? 'Open portal' : 'Sign in to access'}
+                  </Text>
+                </View>
               </View>
             </View>
           </TouchableOpacity>
         </ScrollView>
       </View>
+
+      <View style={{ height: spacing.xl * 2 }} />
 
       <Modal
         visible={openPicker !== null}
@@ -2281,7 +2368,7 @@ export default function AttendeeHomeScreen() {
                       paddingVertical: spacing.sm,
                       flexDirection: 'row',
                       alignItems: 'center',
-                      backgroundColor: sortBy === option.key ? colors.primary + '20' : 'transparent',
+                      backgroundColor: sortBy === option.key ? colors.primaryMuted : 'transparent',
                       borderRadius: radii.md,
                       paddingHorizontal: spacing.sm,
                     }}

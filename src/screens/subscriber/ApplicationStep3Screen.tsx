@@ -544,7 +544,7 @@ export default function ApplicationStep3Screen() {
               <ApplicationProgress currentStep={3} />
             </View>
             <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: spacing.md }}>
-              <MaterialIcons name="cloud-upload" size={32} color={colors.primaryTeal} />
+              <MaterialIcons name="cloud-upload" size={32} color={colors.textPrimary} />
               <View style={{ flex: 1 }}>
                 <Text style={{ ...typography.titleMedium, color: colors.textPrimary }}>
                   Documents & Media
@@ -585,7 +585,7 @@ export default function ApplicationStep3Screen() {
               <View style={{ marginBottom: spacing.sm }}>
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 }}>
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                    <MaterialIcons name="photo-library" size={14} color={colors.primaryTeal} />
+                    <MaterialIcons name="photo-library" size={14} color={colors.textPrimary} />
                     <Text style={{ ...typography.caption, color: colors.textPrimary }}>
                       Photos: {state.step3.images.length} / {venueLimits.photoLimit}
                     </Text>
@@ -614,7 +614,7 @@ export default function ApplicationStep3Screen() {
               <View>
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 }}>
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                    <MaterialIcons name="videocam" size={14} color={colors.primaryTeal} />
+                    <MaterialIcons name="videocam" size={14} color={colors.textPrimary} />
                     <Text style={{ ...typography.caption, color: colors.textPrimary }}>
                       Videos: {state.step3.videos.length} / {venueLimits.videoLimit}
                     </Text>
@@ -705,17 +705,17 @@ export default function ApplicationStep3Screen() {
               onPress={handlePickImages}
               style={{
                 borderWidth: 2,
-                borderColor: colors.primaryTeal,
+                borderColor: colors.textPrimary,
                 borderStyle: 'dashed',
                 borderRadius: radii.md,
                 padding: spacing.xl,
                 alignItems: 'center',
                 justifyContent: 'center',
-                backgroundColor: '#E0F2F7',
+                backgroundColor: '#f2f7ff',
               }}
             >
-              <MaterialIcons name="add-photo-alternate" size={48} color={colors.primaryTeal} />
-              <Text style={{ ...typography.body, color: colors.primaryTeal, marginTop: spacing.sm, fontWeight: '600' }}>
+              <MaterialIcons name="add-photo-alternate" size={48} color={colors.textPrimary} />
+              <Text style={{ ...typography.body, color: colors.textPrimary, marginTop: spacing.sm, fontWeight: '600' }}>
                 Upload Images
               </Text>
               <Text style={{ ...typography.caption, color: colors.textMuted, marginTop: 4 }}>
@@ -765,7 +765,7 @@ export default function ApplicationStep3Screen() {
                       borderRadius: radii.md,
                     }}
                   >
-                    <MaterialIcons name="videocam" size={24} color={colors.primaryTeal} />
+                    <MaterialIcons name="videocam" size={24} color={colors.textPrimary} />
                     <Text
                       style={{ ...typography.body, color: colors.textPrimary, marginLeft: spacing.md, flex: 1 }}
                       numberOfLines={1}
@@ -867,15 +867,15 @@ export default function ApplicationStep3Screen() {
                                 paddingHorizontal: spacing.sm,
                                 paddingVertical: 6,
                                 borderRadius: radii.full,
-                                backgroundColor: '#E0F2F7',
+                                backgroundColor: '#f2f7ff',
                                 flexDirection: 'row',
                                 alignItems: 'center',
                                 gap: 6,
                               }}
                               activeOpacity={0.8}
                             >
-                              <MaterialIcons name="download" size={16} color={colors.primaryTeal} />
-                              <Text style={{ ...typography.caption, color: colors.primaryTeal, fontWeight: '700' }}>Download</Text>
+                              <MaterialIcons name="download" size={16} color={colors.textPrimary} />
+                              <Text style={{ ...typography.caption, color: colors.textPrimary, fontWeight: '700' }}>Download</Text>
                             </TouchableOpacity>
                           </View>
                         ) : (
@@ -906,7 +906,7 @@ export default function ApplicationStep3Screen() {
                           style={{
                             flex: 1,
                             borderWidth: 1,
-                            borderColor: colors.primaryTeal,
+                            borderColor: colors.textPrimary,
                             borderRadius: radii.md,
                             paddingVertical: spacing.sm,
                             alignItems: 'center',
@@ -917,8 +917,8 @@ export default function ApplicationStep3Screen() {
                           }}
                           activeOpacity={0.8}
                         >
-                          <MaterialIcons name="upload-file" size={18} color={colors.primaryTeal} />
-                          <Text style={{ color: colors.primaryTeal, fontWeight: '700' }}>
+                          <MaterialIcons name="upload-file" size={18} color={colors.textPrimary} />
+                          <Text style={{ color: colors.textPrimary, fontWeight: '700' }}>
                             {uploaded ? 'Replace' : 'Upload'}
                           </Text>
                         </TouchableOpacity>
@@ -988,13 +988,13 @@ export default function ApplicationStep3Screen() {
                 flex: 1,
                 backgroundColor: colors.surface,
                 borderWidth: 1,
-                borderColor: colors.primaryTeal,
+                borderColor: colors.textPrimary,
                 paddingVertical: spacing.md,
                 borderRadius: radii.md,
                 alignItems: 'center',
               }}
             >
-              <Text style={{ color: colors.primaryTeal, fontSize: 16, fontWeight: '600' }}>
+              <Text style={{ color: colors.textPrimary, fontSize: 16, fontWeight: '600' }}>
                 Back
               </Text>
             </TouchableOpacity>
@@ -1002,7 +1002,7 @@ export default function ApplicationStep3Screen() {
               onPress={handleNext}
               style={{
                 flex: 1,
-                backgroundColor: colors.primaryTeal,
+                backgroundColor: colors.textPrimary,
                 paddingVertical: spacing.md,
                 borderRadius: radii.md,
                 flexDirection: 'row',

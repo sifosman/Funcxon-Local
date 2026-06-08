@@ -353,12 +353,12 @@ export default function QuoteDetailScreen() {
               paddingVertical: spacing.sm,
               borderRadius: radii.md,
               borderWidth: 1,
-              borderColor: colors.primaryTeal,
+              bordercolor: colors.textPrimary,
               alignItems: 'center',
               justifyContent: 'center',
             }}
           >
-            <Text style={{ ...typography.body, color: colors.primaryTeal, fontWeight: '600' }}>
+            <Text style={{ ...typography.body, color: colors.textPrimary, fontWeight: '600' }}>
               View Full {quote.is_venue ? 'Venue' : 'Vendor'} Profile
             </Text>
           </TouchableOpacity>

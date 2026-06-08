@@ -235,7 +235,7 @@ export default function SignInScreen({ navigation }: Props) {
             style={{ alignSelf: 'flex-end', marginBottom: spacing.md }}
             onPress={handleForgotPassword}
           >
-            <Text style={{ ...typography.caption, color: colors.primaryTeal }}>Forgot password?</Text>
+            <Text style={{ ...typography.caption, color: colors.textPrimary }}>Forgot password?</Text>
           </TouchableOpacity>
 
           <PrimaryButton title={loading ? 'Signing in...' : 'Log in'} onPress={handleSignIn} disabled={loading} />
@@ -244,7 +244,7 @@ export default function SignInScreen({ navigation }: Props) {
             <Text
               style={{
                 ...typography.caption,
-                color: colors.primaryTeal,
+                color: colors.textPrimary,
                 marginTop: spacing.sm,
                 textAlign: 'center',
               }}
@@ -341,7 +341,7 @@ export default function SignInScreen({ navigation }: Props) {
             <Text style={{ ...typography.caption, color: colors.textMuted }}>
               Don’t have an account?{' '}
               <Text
-                style={{ ...typography.caption, color: colors.primaryTeal }}
+                style={{ ...typography.caption, color: colors.textPrimary }}
                 onPress={() => navigation.navigate('SignUp')}
               >
                 Create account

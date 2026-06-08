@@ -105,7 +105,7 @@ export default function MarketingPermissionsScreen() {
             <Switch
               value={marketingOptIn}
               onValueChange={setMarketingOptIn}
-              trackColor={{ false: colors.borderSubtle, true: colors.primaryTeal }}
+              trackColor={{ false: colors.borderSubtle, true: colors.textPrimary }}
               thumbColor="#FFFFFF"
             />
           </View>
@@ -115,7 +115,7 @@ export default function MarketingPermissionsScreen() {
             disabled={loading || saving}
             style={{
               marginTop: spacing.xl,
-              backgroundColor: colors.primaryTeal,
+              backgroundcolor: colors.textPrimary,
               paddingVertical: spacing.md,
               borderRadius: radii.lg,
               alignItems: 'center',

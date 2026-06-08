@@ -374,8 +374,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // On native (Expo), use AuthSession so we can return to the app.
     // IMPORTANT: For Google OAuth to work, we must use the Expo proxy URL
     // (https://auth.expo.io/@owner/slug/auth/callback) instead of a custom scheme.
-    // Google Web OAuth clients don't accept custom URI schemes like vibeventz://
-    const redirectUrl = 'https://auth.expo.io/@sifosman/vibeventz-app/auth/callback';
+    // Google Web OAuth clients don't accept custom URI schemes like funxon://
+    const redirectUrl = 'https://auth.expo.io/@sifosman/funxon/auth/callback';
 
     Alert.alert('Debug', `Redirect URL: ${redirectUrl}`);
     console.log('AuthContext signInWithProvider (native) redirectUrl:', redirectUrl);
@@ -430,7 +430,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         Alert.alert('Debug', `Storage keys after: ${keysAfter.filter(k => k.includes('supabase')).length}`);
         
         // Parse the URL to extract the auth code
-        // Handle both standard URLs and deep links (vibeventz://)
+        // Handle both standard URLs and deep links (funxon://)
         let code: string | null = null;
         let errorParam: string | null = null;
         let errorDescription: string | null = null;

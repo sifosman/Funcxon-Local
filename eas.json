@@ -10,9 +10,14 @@
         "buildType": "apk"
       },
       "env": {
-        "GOOGLE_MAPS_API_KEY": "AIzaSyBjd1KYtTaAzxzdw5ayGwwMu5Sex-gKQLI",
-        "EXPO_PUBLIC_SUPABASE_URL": "https://fhlocaqndxawkbztncwo.supabase.co",
-        "EXPO_PUBLIC_SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZobG9jYXFuZHhhd2tienRuY3dvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjMyOTQ1NzksImV4cCI6MjA3ODg3MDU3OX0.8vDYyxqe7AfHsvNnd2csFNIFaotjdcbUp9Tr2J3V9As"
+        "GOOGLE_MAPS_API_KEY": "",
+        "EXPO_PUBLIC_SUPABASE_URL": "",
+        "EXPO_PUBLIC_SUPABASE_ANON_KEY": "",
+        "EXPO_PUBLIC_HUBSPOT_ACCESS_TOKEN": "",
+        "EXPO_PUBLIC_PAYFAST_MERCHANT_ID": "",
+        "EXPO_PUBLIC_PAYFAST_MERCHANT_KEY": "",
+        "PAYFAST_PASSPHRASE": "",
+        "EXPO_PUBLIC_PAYFAST_SANDBOX": "false"
       }
     },
     "preview": {
@@ -21,16 +26,26 @@
         "buildType": "apk"
       },
       "env": {
-        "GOOGLE_MAPS_API_KEY": "AIzaSyBjd1KYtTaAzxzdw5ayGwwMu5Sex-gKQLI",
-        "EXPO_PUBLIC_SUPABASE_URL": "https://fhlocaqndxawkbztncwo.supabase.co",
-        "EXPO_PUBLIC_SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZobG9jYXFuZHhhd2tienRuY3dvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjMyOTQ1NzksImV4cCI6MjA3ODg3MDU3OX0.8vDYyxqe7AfHsvNnd2csFNIFaotjdcbUp9Tr2J3V9As"
+        "GOOGLE_MAPS_API_KEY": "",
+        "EXPO_PUBLIC_SUPABASE_URL": "",
+        "EXPO_PUBLIC_SUPABASE_ANON_KEY": "",
+        "EXPO_PUBLIC_HUBSPOT_ACCESS_TOKEN": "",
+        "EXPO_PUBLIC_PAYFAST_MERCHANT_ID": "",
+        "EXPO_PUBLIC_PAYFAST_MERCHANT_KEY": "",
+        "PAYFAST_PASSPHRASE": "",
+        "EXPO_PUBLIC_PAYFAST_SANDBOX": "false"
       }
     },
     "production": {
       "env": {
-        "GOOGLE_MAPS_API_KEY": "AIzaSyBjd1KYtTaAzxzdw5ayGwwMu5Sex-gKQLI",
-        "EXPO_PUBLIC_SUPABASE_URL": "https://fhlocaqndxawkbztncwo.supabase.co",
-        "EXPO_PUBLIC_SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZobG9jYXFuZHhhd2tienRuY3dvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjMyOTQ1NzksImV4cCI6MjA3ODg3MDU3OX0.8vDYyxqe7AfHsvNnd2csFNIFaotjdcbUp9Tr2J3V9As"
+        "GOOGLE_MAPS_API_KEY": "",
+        "EXPO_PUBLIC_SUPABASE_URL": "",
+        "EXPO_PUBLIC_SUPABASE_ANON_KEY": "",
+        "EXPO_PUBLIC_HUBSPOT_ACCESS_TOKEN": "",
+        "EXPO_PUBLIC_PAYFAST_MERCHANT_ID": "",
+        "EXPO_PUBLIC_PAYFAST_MERCHANT_KEY": "",
+        "PAYFAST_PASSPHRASE": "",
+        "EXPO_PUBLIC_PAYFAST_SANDBOX": "false"
       }
     }
   }

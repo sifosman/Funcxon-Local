@@ -31,8 +31,8 @@ export default function PortfolioProfileScreen() {
       title: 'Create New Portfolio',
       description: 'Start your application to create a new venue or vendor portfolio',
       icon: 'add-business',
-      iconColor: colors.primaryTeal,
-      iconBg: '#E0F2F7',
+      iconcolor: colors.textPrimary,
+      iconBg: '#f2f7ff',
       route: 'PortfolioType',
     },
   ];
@@ -43,7 +43,7 @@ export default function PortfolioProfileScreen() {
       label: 'Active Portfolios',
       value: '0',
       icon: 'business' as keyof typeof MaterialIcons.glyphMap,
-      color: colors.primaryTeal,
+      color: colors.textPrimary,
     },
     {
       id: 'views',
@@ -205,13 +205,13 @@ export default function PortfolioProfileScreen() {
         <View style={{ paddingHorizontal: spacing.lg, marginTop: spacing.lg }}>
           <View
             style={{
-              backgroundColor: '#E0F2F7',
+              backgroundColor: '#f2f7ff',
               borderRadius: radii.lg,
               padding: spacing.lg,
               flexDirection: 'row',
             }}
           >
-            <MaterialIcons name="info" size={24} color={colors.primaryTeal} style={{ marginRight: spacing.md }} />
+            <MaterialIcons name="info" size={24} color={colors.textPrimary} style={{ marginRight: spacing.md }} />
             <View style={{ flex: 1 }}>
               <Text style={{ ...typography.body, fontWeight: '600', color: colors.textPrimary, marginBottom: spacing.xs }}>
                 Welcome to Your Portfolio Dashboard

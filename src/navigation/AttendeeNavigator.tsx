@@ -1,5 +1,5 @@
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import { Image, Text, TouchableOpacity, View } from 'react-native';
+import { Image, Platform, Text, TouchableOpacity, View } from 'react-native';
 import AttendeeHomeScreen from '../screens/AttendeeHomeScreen';
 import DiscoverScreen from '../screens/DiscoverScreen';
 import VendorProfileScreen from '../screens/VendorProfileScreen';
@@ -47,6 +47,7 @@ export function AttendeeNavigator() {
   return (
     <Stack.Navigator
       screenOptions={{
+        headerShown: Platform.OS !== 'web',
         headerStyle: {
           backgroundColor: colors.surface,
         },

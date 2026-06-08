@@ -469,7 +469,7 @@ export const legalDocumentIndex: LegalIndexItem[] = [
     description: 'How we collect, use, and protect your personal information',
     icon: 'privacy-tip',
     iconColor: '#2B9EB3',
-    iconBg: '#E0F2F7',
+    iconBg: '#f2f7ff',
   },
   {
     id: 'cookie-policy',

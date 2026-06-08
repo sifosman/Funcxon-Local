@@ -180,7 +180,7 @@ export function AddressAutocompleteInput({
           style={{ paddingTop: 2 }}
           activeOpacity={0.7}
         >
-          <MaterialIcons name="search" size={20} color={colors.primaryTeal} />
+          <MaterialIcons name="search" size={20} color={colors.textPrimary} />
         </TouchableOpacity>
       </View>
 
@@ -202,7 +202,7 @@ export function AddressAutocompleteInput({
         >
           {loading && (
             <View style={{ padding: spacing.md, flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
-              <ActivityIndicator size="small" color={colors.primaryTeal} />
+              <ActivityIndicator size="small" color={colors.textPrimary} />
               <Text style={{ ...typography.caption, color: colors.textMuted }}>Searching…</Text>
             </View>
           )}

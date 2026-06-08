@@ -149,7 +149,7 @@ export default function FavouritesScreen() {
               }}
               style={{ marginTop: spacing.md, alignSelf: 'flex-start' }}
             >
-              <Text style={{ ...typography.caption, color: colors.primaryTeal }}>Try again</Text>
+              <Text style={{ ...typography.caption, color: colors.textPrimary }}>Try again</Text>
             </TouchableOpacity>
           </View>
         )}
@@ -237,7 +237,7 @@ export default function FavouritesScreen() {
                         </Text>
                       ) : null}
                       {item.type === 'venue' && (
-                         <Text style={{ ...typography.caption, color: colors.primaryTeal, marginTop: 4 }}>Venue</Text>
+                         <Text style={{ ...typography.caption, color: colors.textPrimary, marginTop: 4 }}>Venue</Text>
                       )}
                     </View>
                     <View style={{ flexDirection: 'row', alignItems: 'center' }}>
@@ -288,7 +288,7 @@ export default function FavouritesScreen() {
                           paddingVertical: spacing.sm,
                           borderRadius: radii.md,
                           alignItems: 'center',
-                          backgroundColor: hasNoteChange && !isSaving ? colors.primaryTeal : colors.surfaceMuted,
+                          backgroundColor: hasNoteChange && !isSaving ? colors.textPrimary : colors.surfaceMuted,
                         }}
                       >
                         <Text style={{ ...typography.caption, color: hasNoteChange && !isSaving ? '#FFFFFF' : colors.textMuted }}>
@@ -352,7 +352,7 @@ export default function FavouritesScreen() {
                 marginBottom: spacing.lg,
               }}
             >
-              <MaterialIcons name="favorite-border" size={40} color={colors.primaryTeal} />
+              <MaterialIcons name="favorite-border" size={40} color={colors.textPrimary} />
             </View>
             <Text
               style={{

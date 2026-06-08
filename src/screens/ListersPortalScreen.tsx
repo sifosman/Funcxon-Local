@@ -16,21 +16,11 @@ import { useAuth } from '../auth/AuthContext';
 import { colors, spacing, radii, typography } from '../theme';
 import { AttendeeStackParamList } from '../navigation/AttendeeNavigator';
 import { AppFooter } from '../components/AppFooter';
-import { supabase } from '../lib/supabaseClient';
+import { fetchHubSpotBlogPosts, type AppBlogPost } from '../lib/hubspotBlog';
 
 type NavigationProp = NativeStackNavigationProp<AttendeeStackParamList>;
 
-type BlogPost = {
-  id: string;
-  title: string;
-  slug: string;
-  excerpt: string;
-  cover_image_url: string | null;
-  author_name: string;
-  category: string;
-  published_at: string;
-  read_time_minutes: number;
-};
+type BlogPost = AppBlogPost;
 
 type Review = {
   id: number;
@@ -44,13 +34,13 @@ const REVIEWS: Review[] = [
     id: 1,
     name: 'Thandi M.',
     rating: 5,
-    comment: 'Funcxon made finding the perfect venue so easy! The platform is intuitive and the vendors are top quality.',
+    comment: 'Funxon made finding the perfect venue so easy! The platform is intuitive and the vendors are top quality.',
   },
   {
     id: 2,
     name: 'James K.',
     rating: 5,
-    comment: 'As a venue owner, listing on Funcxon has brought us so many new clients. Highly recommend!',
+    comment: 'As a venue owner, listing on Funxon has brought us so many new clients. Highly recommend!',
   },
   {
     id: 3,
@@ -99,23 +89,16 @@ export default function ListersPortalScreen() {
     navigation.navigate('SubscriptionPlans' as never);
   };
 
-  // Fetch listers-specific blog posts from Supabase
+  // Fetch blog posts from HubSpot
   const { data: blogPosts, isLoading: blogLoading } = useQuery({
-    queryKey: ['blog-posts-listers'],
+    queryKey: ['blog-posts-listers', 'hubspot'],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('blog_posts')
-        .select('id, title, slug, excerpt, cover_image_url, author_name, category, published_at, read_time_minutes')
-        .eq('is_published', true)
-        .in('audience', ['listers', 'all'])
-        .order('published_at', { ascending: false })
-        .limit(6);
-
-      if (error) {
-        console.error('Error fetching listers blog posts:', error);
+      try {
+        return await fetchHubSpotBlogPosts(6);
+      } catch (err) {
+        console.error('Error fetching listers blog posts:', err);
         return [];
       }
-      return (data || []) as BlogPost[];
     },
   });
 
@@ -138,7 +121,7 @@ export default function ListersPortalScreen() {
 
       {/* Welcome Section */}
       <View style={styles.section}>
-        <Text style={styles.welcomeTitle}>Welcome to Funcxon</Text>
+        <Text style={styles.welcomeTitle}>Welcome to Funxon</Text>
         <Text style={styles.welcomeSubtitle}>
           Your one-stop platform for discovering and listing amazing venues, vendors, and services across South Africa.
         </Text>
@@ -148,17 +131,17 @@ export default function ListersPortalScreen() {
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>ABOUT</Text>
         <Text style={styles.bodyText}>
-          Funcxon is South Africa's premier event planning platform, connecting hosts with the best venues, vendors, and services for every occasion. Whether you're planning a wedding, corporate event, birthday party, or any celebration, we make it easy to find, compare, and book the perfect professionals for your needs.
+          Funxon is South Africa's premier event planning platform, connecting hosts with the best venues, vendors, and services for every occasion. Whether you're planning a wedding, corporate event, birthday party, or any celebration, we make it easy to find, compare, and book the perfect professionals for your needs.
         </Text>
         <Text style={[styles.bodyText, styles.bodyTextSpacing]}>
-          Our mission is to simplify event planning by bringing together a curated network of trusted listers who are passionate about making your events unforgettable. From stunning venues to talented vendors, Funcxon is your trusted partner in creating memorable experiences.
+          Our mission is to simplify event planning by bringing together a curated network of trusted listers who are passionate about making your events unforgettable. From stunning venues to talented vendors, Funxon is your trusted partner in creating memorable experiences.
         </Text>
       </View>
 
       {/* Marketing Hook */}
       <View style={styles.marketingSection}>
         <Text style={styles.marketingText}>
-          ✨ Join thousands of happy hosts and listers who trust Funcxon for their event planning needs!
+          ✨ Join thousands of happy hosts and listers who trust Funxon for their event planning needs!
         </Text>
       </View>
 

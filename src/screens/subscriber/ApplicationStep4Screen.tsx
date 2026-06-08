@@ -372,7 +372,7 @@ export default function ApplicationStep4Screen() {
           fullName: fullName,
           businessName: businessName || undefined,
           tierName: submission.subscription_tier || (state.portfolioType === 'venues' ? 'Venue' : 'Vendor'),
-          applicationUrl: 'vibeventz://application-status',
+          applicationUrl: 'funxon://application-status',
         },
       });
 
@@ -434,7 +434,7 @@ export default function ApplicationStep4Screen() {
               <ApplicationProgress currentStep={4} />
             </View>
             <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: spacing.md }}>
-              <MaterialIcons name="card-membership" size={32} color={colors.primaryTeal} />
+              <MaterialIcons name="card-membership" size={32} color={colors.textPrimary} />
               <View style={{ flex: 1 }}>
                 <Text style={{ ...typography.titleMedium, color: colors.textPrimary }}>
                   Subscription & Legal
@@ -517,8 +517,8 @@ export default function ApplicationStep4Screen() {
                         padding: spacing.md,
                         borderRadius: radii.lg,
                         borderWidth: 2,
-                        borderColor: isSelected ? colors.primaryTeal : colors.borderSubtle,
-                        backgroundColor: isSelected ? '#E0F2F7' : colors.surface,
+                        borderColor: isSelected ? colors.textPrimary : colors.borderSubtle,
+                        backgroundColor: isSelected ? '#f2f7ff' : colors.surface,
                       }}
                     >
                       <View
@@ -527,8 +527,8 @@ export default function ApplicationStep4Screen() {
                           height: 24,
                           borderRadius: 12,
                           borderWidth: 2,
-                          borderColor: isSelected ? colors.primaryTeal : colors.borderStrong,
-                          backgroundColor: isSelected ? colors.primaryTeal : colors.surface,
+                          borderColor: isSelected ? colors.textPrimary : colors.borderStrong,
+                          backgroundColor: isSelected ? colors.textPrimary : colors.surface,
                           alignItems: 'center',
                           justifyContent: 'center',
                           marginRight: spacing.md,
@@ -591,8 +591,8 @@ export default function ApplicationStep4Screen() {
                   height: 24,
                   borderRadius: 6,
                   borderWidth: 2,
-                  borderColor: errors.termsAccepted ? '#EF4444' : state.step4.termsAccepted ? colors.primaryTeal : colors.borderSubtle,
-                  backgroundColor: state.step4.termsAccepted ? colors.primaryTeal : colors.surface,
+                  borderColor: errors.termsAccepted ? '#EF4444' : state.step4.termsAccepted ? colors.textPrimary : colors.borderSubtle,
+                  backgroundColor: state.step4.termsAccepted ? colors.textPrimary : colors.surface,
                   alignItems: 'center',
                   justifyContent: 'center',
                   marginRight: spacing.md,
@@ -606,7 +606,7 @@ export default function ApplicationStep4Screen() {
                 <Text style={{ ...typography.body, color: colors.textPrimary }}>
                   I accept the{' '}
                   <Text
-                    style={{ color: colors.primaryTeal, fontWeight: '600', textDecorationLine: 'underline' }}
+                    style={{ color: colors.textPrimary, fontWeight: '600', textDecorationLine: 'underline' }}
                     onPress={() => navigation.navigate('LegalDocument', { documentId: 'terms-and-conditions' })}
                   >
                     Terms and Conditions
@@ -636,8 +636,8 @@ export default function ApplicationStep4Screen() {
                   height: 24,
                   borderRadius: 6,
                   borderWidth: 2,
-                  borderColor: errors.privacyAccepted ? '#EF4444' : state.step4.privacyAccepted ? colors.primaryTeal : colors.borderSubtle,
-                  backgroundColor: state.step4.privacyAccepted ? colors.primaryTeal : colors.surface,
+                  borderColor: errors.privacyAccepted ? '#EF4444' : state.step4.privacyAccepted ? colors.textPrimary : colors.borderSubtle,
+                  backgroundColor: state.step4.privacyAccepted ? colors.textPrimary : colors.surface,
                   alignItems: 'center',
                   justifyContent: 'center',
                   marginRight: spacing.md,
@@ -651,7 +651,7 @@ export default function ApplicationStep4Screen() {
                 <Text style={{ ...typography.body, color: colors.textPrimary }}>
                   I accept the{' '}
                   <Text
-                    style={{ color: colors.primaryTeal, fontWeight: '600', textDecorationLine: 'underline' }}
+                    style={{ color: colors.textPrimary, fontWeight: '600', textDecorationLine: 'underline' }}
                     onPress={() => navigation.navigate('LegalDocument', { documentId: 'privacy-policy' })}
                   >
                     Privacy Policy
@@ -680,8 +680,8 @@ export default function ApplicationStep4Screen() {
                   height: 24,
                   borderRadius: 6,
                   borderWidth: 2,
-                  borderColor: state.step4.marketingConsent ? colors.primaryTeal : colors.borderSubtle,
-                  backgroundColor: state.step4.marketingConsent ? colors.primaryTeal : colors.surface,
+                  borderColor: state.step4.marketingConsent ? colors.textPrimary : colors.borderSubtle,
+                  backgroundColor: state.step4.marketingConsent ? colors.textPrimary : colors.surface,
                   alignItems: 'center',
                   justifyContent: 'center',
                   marginRight: spacing.md,
@@ -702,14 +702,14 @@ export default function ApplicationStep4Screen() {
           {/* Summary Info */}
           <View
             style={{
-              backgroundColor: '#E0F2F7',
+              backgroundColor: '#f2f7ff',
               borderRadius: radii.md,
               padding: spacing.md,
               flexDirection: 'row',
               marginBottom: spacing.lg,
             }}
           >
-            <MaterialIcons name="info" size={20} color={colors.primaryTeal} style={{ marginRight: spacing.sm }} />
+            <MaterialIcons name="info" size={20} color={colors.textPrimary} style={{ marginRight: spacing.sm }} />
             <View style={{ flex: 1 }}>
               <Text style={{ ...typography.caption, color: colors.textPrimary }}>
                 By continuing, you confirm your selected subscription plan and agree to the terms below. Free plans go live immediately; paid plans require checkout first.
@@ -725,13 +725,13 @@ export default function ApplicationStep4Screen() {
                 flex: 1,
                 backgroundColor: colors.surface,
                 borderWidth: 1,
-                borderColor: colors.primaryTeal,
+                bordercolor: colors.textPrimary,
                 paddingVertical: spacing.md,
                 borderRadius: radii.md,
                 alignItems: 'center',
               }}
             >
-              <Text style={{ color: colors.primaryTeal, fontSize: 16, fontWeight: '600' }}>
+              <Text style={{ color: colors.textPrimary, fontSize: 16, fontWeight: '600' }}>
                 Back
               </Text>
             </TouchableOpacity>
@@ -740,7 +740,7 @@ export default function ApplicationStep4Screen() {
               disabled={isSubmitting}
               style={{
                 flex: 1,
-                backgroundColor: isSubmitting ? colors.borderSubtle : colors.primaryTeal,
+                backgroundColor: isSubmitting ? colors.borderSubtle : colors.textPrimary,
                 paddingVertical: spacing.md,
                 borderRadius: radii.md,
                 flexDirection: 'row',

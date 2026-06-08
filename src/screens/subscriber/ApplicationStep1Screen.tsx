@@ -127,7 +127,7 @@ export default function ApplicationStep1Screen() {
               <ApplicationProgress currentStep={1} />
             </View>
             <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: spacing.md }}>
-              <MaterialIcons name="business" size={32} color={colors.primaryTeal} />
+              <MaterialIcons name="business" size={32} color={colors.textPrimary} />
               <View style={{ flex: 1 }}>
                 <Text style={{ ...typography.titleMedium, color: colors.textPrimary }}>
                   Company Details
@@ -557,13 +557,13 @@ export default function ApplicationStep1Screen() {
                 flex: 1,
                 backgroundColor: colors.surface,
                 borderWidth: 1,
-                borderColor: colors.primaryTeal,
+                bordercolor: colors.textPrimary,
                 paddingVertical: spacing.md,
                 borderRadius: radii.md,
                 alignItems: 'center',
               }}
             >
-              <Text style={{ color: colors.primaryTeal, fontSize: 16, fontWeight: '600' }}>
+              <Text style={{ color: colors.textPrimary, fontSize: 16, fontWeight: '600' }}>
                 Back
               </Text>
             </TouchableOpacity>
@@ -571,7 +571,7 @@ export default function ApplicationStep1Screen() {
               onPress={handleNext}
               style={{
                 flex: 1,
-                backgroundColor: colors.primaryTeal,
+                backgroundcolor: colors.textPrimary,
                 paddingVertical: spacing.md,
                 borderRadius: radii.md,
                 flexDirection: 'row',

@@ -17,6 +17,7 @@ import { useQuery } from '@tanstack/react-query';
 import { colors, spacing, radii, typography } from '../../theme';
 import { useAuth } from '../../auth/AuthContext';
 import { supabase } from '../../lib/supabaseClient';
+import { fetchHubSpotBlogPosts, type AppBlogPost } from '../../lib/hubspotBlog';
 import { AppFooter } from '../../components/AppFooter';
 import { useFocusEffect } from '@react-navigation/native';
 
@@ -39,17 +40,7 @@ type ProfileStackParamList = {
 
 type NavigationProp = NativeStackNavigationProp<ProfileStackParamList>;
 
-type BlogPost = {
-  id: string;
-  title: string;
-  slug: string;
-  excerpt: string;
-  cover_image_url: string | null;
-  author_name: string;
-  category: string;
-  published_at: string;
-  read_time_minutes: number;
-};
+type BlogPost = AppBlogPost;
 
 type VendorListing = {
   id: number;
@@ -124,21 +115,14 @@ export default function ListerPortfolioScreen() {
   );
 
   const { data: blogPosts, isLoading: blogLoading } = useQuery({
-    queryKey: ['blog-posts-lister-portfolio'],
+    queryKey: ['blog-posts-lister-portfolio', 'hubspot'],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('blog_posts')
-        .select('id, title, slug, excerpt, cover_image_url, author_name, category, published_at, read_time_minutes')
-        .eq('is_published', true)
-        .in('audience', ['listers', 'all'])
-        .order('published_at', { ascending: false })
-        .limit(4);
-
-      if (error) {
-        console.error('Error fetching blog posts:', error);
+      try {
+        return await fetchHubSpotBlogPosts(4);
+      } catch (err) {
+        console.error('Error fetching blog posts:', err);
         return [];
       }
-      return (data || []) as BlogPost[];
     },
   });
 
@@ -303,7 +287,7 @@ export default function ListerPortfolioScreen() {
       activeOpacity={0.7}
     >
       <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
-        <MaterialIcons name={item.icon} size={22} color={colors.primaryTeal} style={{ marginRight: spacing.md }} />
+        <MaterialIcons name={item.icon} size={22} color={colors.textPrimary} style={{ marginRight: spacing.md }} />
         <Text style={{ ...typography.body, fontWeight: '500', color: colors.textPrimary }}>
           {item.label}
         </Text>
@@ -315,7 +299,7 @@ export default function ListerPortfolioScreen() {
   if (loading) {
     return (
       <View style={{ flex: 1, backgroundColor: colors.background, justifyContent: 'center', alignItems: 'center' }}>
-        <ActivityIndicator size="large" color={colors.primaryTeal} />
+        <ActivityIndicator size="large" color={colors.textPrimary} />
       </View>
     );
   }
@@ -463,7 +447,7 @@ export default function ListerPortfolioScreen() {
         </View>
 
         {blogLoading ? (
-          <ActivityIndicator color={colors.primaryTeal} style={{ marginVertical: spacing.lg }} />
+          <ActivityIndicator color={colors.textPrimary} style={{ marginVertical: spacing.lg }} />
         ) : blogPosts && blogPosts.length > 0 ? (
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.blogScrollContainer}>
             {blogPosts.map((post) => (
@@ -481,7 +465,7 @@ export default function ListerPortfolioScreen() {
                     <Image source={{ uri: post.cover_image_url }} style={styles.blogCardImage} resizeMode="cover" />
                   ) : (
                     <View style={styles.blogCardImagePlaceholder}>
-                      <MaterialIcons name="article" size={40} color={colors.primaryTeal} />
+                      <MaterialIcons name="article" size={40} color={colors.textPrimary} />
                     </View>
                   )}
                   <View style={styles.blogCardContent}>
@@ -515,7 +499,7 @@ export default function ListerPortfolioScreen() {
           { id: 'helpdesk', label: 'Need app assistance? Contact our helpdesk', icon: 'support-agent' as keyof typeof MaterialIcons.glyphMap, action: () => Alert.alert('Help Desk', 'Help desk coming soon!') },
           { id: 'report', label: 'Report a problem to Funxon', icon: 'report-problem' as keyof typeof MaterialIcons.glyphMap, action: () => Alert.alert('Report Problem', 'Problem reporting coming soon!') },
           { id: 'whatsapp', label: 'Chat with Funxon via WhatsApp', icon: 'chat' as keyof typeof MaterialIcons.glyphMap, action: () => Linking.openURL('https://wa.me/') },
-          { id: 'email', label: 'Chat with Funxon via email', icon: 'email' as keyof typeof MaterialIcons.glyphMap, action: () => Linking.openURL('mailto:support@funcxon.com') },
+          { id: 'email', label: 'Chat with Funxon via email', icon: 'email' as keyof typeof MaterialIcons.glyphMap, action: () => Linking.openURL('mailto:support@funxon.com') },
           { id: 'terms', label: 'Terms & Policies', icon: 'policy' as keyof typeof MaterialIcons.glyphMap, action: () => navigation.navigate('TermsAndPolicies') },
         ].map((item, i, arr) => renderActionCard(item, i, arr.length))}
       </View>
@@ -608,7 +592,7 @@ const styles = StyleSheet.create({
     padding: spacing.lg,
     alignItems: 'center',
     borderLeftWidth: 4,
-    borderLeftColor: colors.primaryTeal,
+    borderLeftcolor: colors.textPrimary,
   },
   featuredLabel: {
     ...typography.body,
@@ -648,7 +632,7 @@ const styles = StyleSheet.create({
   },
   viewAllText: {
     ...typography.body,
-    color: colors.primaryTeal,
+    color: colors.textPrimary,
     fontWeight: '600',
   },
   blogScrollContainer: {
@@ -691,7 +675,7 @@ const styles = StyleSheet.create({
     marginBottom: spacing.sm,
   },
   blogCategoryText: {
-    color: colors.primaryTeal,
+    color: colors.textPrimary,
     fontSize: 10,
     fontWeight: '600',
   },

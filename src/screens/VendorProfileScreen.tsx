@@ -509,7 +509,7 @@ export default function VendorProfileScreen({ route, navigation }: Props) {
     if (!items || items.length === 0) return null;
     return (
       <View style={{ marginBottom: spacing.md }}>
-        <Text style={{ ...typography.body, color: colors.primaryTeal, fontWeight: '600', marginBottom: spacing.xs }}>
+        <Text style={{ ...typography.body, color: colors.textPrimary, fontWeight: '600', marginBottom: spacing.xs }}>
           {title}
         </Text>
         {items.map((item) => (
@@ -519,7 +519,7 @@ export default function VendorProfileScreen({ route, navigation }: Props) {
                 width: 6,
                 height: 6,
                 borderRadius: 3,
-                backgroundColor: colors.primaryTeal,
+                backgroundcolor: colors.textPrimary,
                 marginRight: spacing.sm,
               }}
             />
@@ -757,7 +757,7 @@ export default function VendorProfileScreen({ route, navigation }: Props) {
                 flex: 1,
                 paddingVertical: spacing.sm,
                 borderRadius: radii.full,
-                backgroundColor: isActive ? colors.primaryTeal : 'transparent',
+                backgroundColor: isActive ? colors.textPrimary : 'transparent',
                 alignItems: 'center',
               }}
             >
@@ -941,7 +941,7 @@ export default function VendorProfileScreen({ route, navigation }: Props) {
               }}
             >
               <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.sm }}>
-                <MaterialIcons name="place" size={18} color={colors.primaryTeal} />
+                <MaterialIcons name="place" size={18} color={colors.textPrimary} />
                 <Text style={{ ...typography.titleMedium, color: colors.textPrimary, marginLeft: spacing.sm }}>
                   Location
                 </Text>
@@ -953,7 +953,7 @@ export default function VendorProfileScreen({ route, navigation }: Props) {
               )}
               {contactNumber && (
                 <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.sm }}>
-                  <MaterialIcons name="phone" size={16} color={colors.primaryTeal} />
+                  <MaterialIcons name="phone" size={16} color={colors.textPrimary} />
                   <Text style={{ ...typography.body, color: colors.textSecondary, marginLeft: spacing.sm }}>
                     {contactNumber}
                   </Text>
@@ -1015,14 +1015,14 @@ export default function VendorProfileScreen({ route, navigation }: Props) {
                   paddingVertical: spacing.sm,
                   borderRadius: radii.md,
                   borderWidth: 1,
-                  borderColor: colors.primaryTeal,
+                  bordercolor: colors.textPrimary,
                   alignItems: 'center',
                   flexDirection: 'row',
                   justifyContent: 'center',
                 }}
               >
-                <MaterialIcons name="map" size={16} color={colors.primaryTeal} />
-                <Text style={{ color: colors.primaryTeal, marginLeft: spacing.sm, fontWeight: '600' }}>
+                <MaterialIcons name="map" size={16} color={colors.textPrimary} />
+                <Text style={{ color: colors.textPrimary, marginLeft: spacing.sm, fontWeight: '600' }}>
                   Open in Google Maps
                 </Text>
               </TouchableOpacity>
@@ -1082,7 +1082,7 @@ export default function VendorProfileScreen({ route, navigation }: Props) {
             <TouchableOpacity
               onPress={goToQuoteRequest}
               style={{
-                backgroundColor: colors.primaryTeal,
+                backgroundcolor: colors.textPrimary,
                 paddingVertical: spacing.md,
                 borderRadius: radii.md,
                 alignItems: 'center',
@@ -1095,13 +1095,13 @@ export default function VendorProfileScreen({ route, navigation }: Props) {
               onPress={() => Alert.alert('Coming soon', 'Amend quote functionality will be available soon.')}
               style={{
                 borderWidth: 1,
-                borderColor: colors.primaryTeal,
+                bordercolor: colors.textPrimary,
                 paddingVertical: spacing.md,
                 borderRadius: radii.md,
                 alignItems: 'center',
               }}
             >
-              <Text style={{ color: colors.primaryTeal, fontWeight: '600' }}>Amend Quote</Text>
+              <Text style={{ color: colors.textPrimary, fontWeight: '600' }}>Amend Quote</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -1155,7 +1155,7 @@ export default function VendorProfileScreen({ route, navigation }: Props) {
                         overflow: 'hidden',
                       }}
                     >
-                      <View style={{ width: `${progress * 100}%`, height: '100%', backgroundColor: colors.primaryTeal }} />
+                      <View style={{ width: `${progress * 100}%`, height: '100%', backgroundcolor: colors.textPrimary }} />
                     </View>
                     <Text style={{ ...typography.caption, color: colors.textMuted, width: 20, textAlign: 'right' }}>
                       {count}
@@ -1268,14 +1268,14 @@ export default function VendorProfileScreen({ route, navigation }: Props) {
           }}
         >
           <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.md }}>
-            <MaterialIcons name="calendar-today" size={18} color={colors.primaryTeal} />
+            <MaterialIcons name="calendar-today" size={18} color={colors.textPrimary} />
             <Text style={{ ...typography.titleMedium, color: colors.textPrimary, marginLeft: spacing.sm }}>
               Availability Calendar
             </Text>
           </View>
           {availabilityLoading ? (
             <View style={{ alignItems: 'center', paddingVertical: spacing.lg }}>
-              <ActivityIndicator color={colors.primaryTeal} />
+              <ActivityIndicator color={colors.textPrimary} />
             </View>
           ) : availability && availability.length > 0 ? (
             <View style={{ gap: spacing.sm }}>
@@ -1340,7 +1340,7 @@ export default function VendorProfileScreen({ route, navigation }: Props) {
             }
             style={{
               marginTop: spacing.md,
-              backgroundColor: colors.primaryTeal,
+              backgroundcolor: colors.textPrimary,
               paddingVertical: spacing.md,
               borderRadius: radii.md,
               alignItems: 'center',

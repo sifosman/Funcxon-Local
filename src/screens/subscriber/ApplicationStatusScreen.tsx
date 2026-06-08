@@ -200,7 +200,7 @@ export default function ApplicationStatusScreen() {
     <View style={{ flex: 1, backgroundColor: colors.background }}>
       <ScrollView
         contentContainerStyle={{ paddingBottom: spacing.xl }}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={colors.primaryTeal} />}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintcolor={colors.textPrimary} />}
       >
         <View style={{ paddingHorizontal: spacing.lg, paddingTop: spacing.xl }}>
           <TouchableOpacity
@@ -224,7 +224,7 @@ export default function ApplicationStatusScreen() {
 
           {loading ? (
             <View style={{ paddingVertical: spacing.xxl, alignItems: 'center' }}>
-              <ActivityIndicator size="large" color={colors.primaryTeal} />
+              <ActivityIndicator size="large" color={colors.textPrimary} />
               <Text style={{ ...typography.caption, color: colors.textMuted, marginTop: spacing.sm }}>
                 Loading application status...
               </Text>
@@ -249,7 +249,7 @@ export default function ApplicationStatusScreen() {
                 onPress={() => navigation.navigate('PortfolioType')}
                 style={{
                   alignSelf: 'flex-start',
-                  backgroundColor: colors.primaryTeal,
+                  backgroundcolor: colors.textPrimary,
                   paddingHorizontal: spacing.lg,
                   paddingVertical: spacing.md,
                   borderRadius: radii.md,
@@ -284,7 +284,7 @@ export default function ApplicationStatusScreen() {
                     disabled={cancelling}
                     style={{
                       alignSelf: 'flex-start',
-                      backgroundColor: cancelling ? colors.textMuted : colors.primaryTeal,
+                      backgroundColor: cancelling ? colors.textMuted : colors.textPrimary,
                       paddingHorizontal: spacing.lg,
                       paddingVertical: spacing.md,
                       borderRadius: radii.md,
@@ -321,8 +321,8 @@ export default function ApplicationStatusScreen() {
                       : String(application.status ?? '').toLowerCase() === 'approved'
                         ? 'Your application has been approved. Your listing team will contact you if anything else is needed.'
                         : String(application.status ?? '').toLowerCase() === 'cancelled'
-                          ? 'This application has been cancelled and will no longer be processed by the Funcxon team. You can start a new application when you are ready.'
-                          : 'Your application has been reviewed. Please wait for further guidance from the Funcxon team.'}
+                          ? 'This application has been cancelled and will no longer be processed by the Funxon team. You can start a new application when you are ready.'
+                          : 'Your application has been reviewed. Please wait for further guidance from the Funxon team.'}
                 </Text>
               </View>
 
@@ -350,7 +350,7 @@ export default function ApplicationStatusScreen() {
                 <TouchableOpacity
                   onPress={handleUpdateApplication}
                   style={{
-                    backgroundColor: colors.primaryTeal,
+                    backgroundcolor: colors.textPrimary,
                     borderRadius: radii.lg,
                     paddingVertical: spacing.md,
                     alignItems: 'center',
@@ -404,11 +404,11 @@ export default function ApplicationStatusScreen() {
 
               <View
                 style={{
-                  backgroundColor: '#E0F2F7',
+                  backgroundColor: '#f2f7ff',
                   borderRadius: radii.lg,
                   padding: spacing.lg,
                   borderWidth: 1,
-                  borderColor: '#B6E3EE',
+                  borderColor: '#f2f7ff',
                 }}
               >
                 <Text style={{ ...typography.body, color: colors.textPrimary }}>

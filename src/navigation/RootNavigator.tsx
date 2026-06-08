@@ -29,7 +29,7 @@ export function RootNavigator() {
   if (isLoading) {
     return (
       <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: colors.background }}>
-        <ActivityIndicator size="large" color={colors.primaryTeal} />
+        <ActivityIndicator size="large" color={colors.textPrimary} />
       </View>
     );
   }
@@ -41,8 +41,8 @@ export function RootNavigator() {
     <Tab.Navigator
       initialRouteName={initialRouteName}
       screenOptions={({ route }) => ({
-        tabBarActiveTintColor: colors.primaryTeal,
-        tabBarInactiveTintColor: colors.textMuted,
+        tabBarActiveTintColor: colors.primary,
+        tabBarInactiveTintColor: colors.primary,
         tabBarStyle: {
           backgroundColor: colors.surface,
           borderTopColor: colors.borderSubtle,
@@ -83,16 +83,16 @@ export function RootNavigator() {
             iconName = 'person';
           }
 
-          const icon = <MaterialIcons name={iconName} size={size} color={focused ? colors.primaryTeal : colors.textMuted} />;
+          const icon = <MaterialIcons name={iconName} size={size} color={color} />;
 
           if (!focused) {
-            return icon;
+            return <View style={{ opacity: 0.6 }}>{icon}</View>;
           }
 
           return (
             <View
               style={{
-                shadowColor: colors.primaryTeal,
+                shadowColor: colors.primary,
                 shadowOpacity: 0.5,
                 shadowRadius: 8,
                 shadowOffset: { width: 0, height: 0 },

@@ -355,7 +355,7 @@ export default function SignUpScreen({ navigation }: Props) {
               <Text style={{ ...typography.caption, color: colors.textSecondary, flex: 1, lineHeight: 18 }}>
                 I agree to the{' '}
                 <Text
-                  style={{ color: colors.primaryTeal, fontWeight: '600', textDecorationLine: 'underline' }}
+                  style={{ color: colors.textPrimary, fontWeight: '600', textDecorationLine: 'underline' }}
                   onPress={() => navigation.navigate('LegalDocument', { documentId: 'terms-and-conditions' })}
                 >
                   Terms and Conditions
@@ -388,7 +388,7 @@ export default function SignUpScreen({ navigation }: Props) {
               <Text style={{ ...typography.caption, color: colors.textSecondary, flex: 1, lineHeight: 18 }}>
                 I accept the{' '}
                 <Text
-                  style={{ color: colors.primaryTeal, fontWeight: '600', textDecorationLine: 'underline' }}
+                  style={{ color: colors.textPrimary, fontWeight: '600', textDecorationLine: 'underline' }}
                   onPress={() => navigation.navigate('LegalDocument', { documentId: 'privacy-policy' })}
                 >
                   Privacy Policy
@@ -404,7 +404,7 @@ export default function SignUpScreen({ navigation }: Props) {
             <Text
               style={{
                 ...typography.caption,
-                color: colors.primaryTeal,
+                color: colors.textPrimary,
                 marginTop: spacing.sm,
                 textAlign: 'center',
               }}
@@ -488,7 +488,7 @@ export default function SignUpScreen({ navigation }: Props) {
             <Text style={{ ...typography.caption, color: colors.textMuted }}>
               Already have an account?{' '}
               <Text
-                style={{ ...typography.caption, color: colors.primaryTeal }}
+                style={{ ...typography.caption, color: colors.textPrimary }}
                 onPress={() => navigation.navigate('SignIn')}
               >
                 Log in

@@ -86,7 +86,7 @@ export default function LegalDocumentScreen() {
           onPress={() => navigation.goBack()}
           style={{
             marginTop: spacing.lg,
-            backgroundColor: colors.primaryTeal,
+            backgroundcolor: colors.textPrimary,
             paddingHorizontal: spacing.xl,
             paddingVertical: spacing.md,
             borderRadius: radii.md,
@@ -116,7 +116,7 @@ export default function LegalDocumentScreen() {
           {/* Title Card */}
           <View
             style={{
-              backgroundColor: colors.primaryTeal,
+              backgroundcolor: colors.textPrimary,
               borderRadius: radii.lg,
               padding: spacing.xl,
               marginBottom: spacing.lg,
@@ -180,7 +180,7 @@ export default function LegalDocumentScreen() {
           {document.closing && (
             <View
               style={{
-                backgroundColor: '#E0F2F7',
+                backgroundColor: '#f2f7ff',
                 borderRadius: radii.lg,
                 padding: spacing.lg,
                 flexDirection: 'row',
@@ -190,7 +190,7 @@ export default function LegalDocumentScreen() {
               <MaterialIcons
                 name="info"
                 size={20}
-                color={colors.primaryTeal}
+                color={colors.textPrimary}
                 style={{ marginRight: spacing.sm, marginTop: 2 }}
               />
               <Text

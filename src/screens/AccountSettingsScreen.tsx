@@ -221,14 +221,14 @@ export default function AccountSettingsScreen({ navigation }: Props) {
             style={{
               marginTop: spacing.md,
               borderWidth: 1,
-              borderColor: colors.primaryTeal,
+              bordercolor: colors.textPrimary,
               borderRadius: radii.md,
               paddingVertical: spacing.md,
               alignItems: 'center',
             }}
             activeOpacity={0.8}
           >
-            <Text style={{ ...typography.body, color: colors.primaryTeal, fontWeight: '600' }}>
+            <Text style={{ ...typography.body, color: colors.textPrimary, fontWeight: '600' }}>
               Change Password
             </Text>
           </TouchableOpacity>

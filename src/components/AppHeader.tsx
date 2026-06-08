@@ -45,7 +45,7 @@ export default function AppHeader() {
         {/* Logo - Left side */}
         <View style={styles.logoContainer}>
           <Image
-            source={require('../../logo.jpg')}
+            source={require('../../assets/logo.png')}
             style={styles.logo as any}
             resizeMode="contain"
           />
@@ -53,9 +53,9 @@ export default function AppHeader() {
 
         {/* Right side - Flag and User */}
         <View style={styles.rightContainer}>
-          {/* Logo */}
+          {/* SA Flag */}
           <Image
-            source={require('../../assets/logo.jpg')}
+            source={require('../../assets/sa-icon.jpg')}
             style={styles.flagImage as any}
             resizeMode="contain"
           />
@@ -65,7 +65,7 @@ export default function AppHeader() {
               style={styles.userContainer}
               onPress={() => navigation.navigate('Account')}
             >
-              <MaterialIcons name="person" size={20} color={colors.textPrimary} />
+              <MaterialIcons name="person" size={20} color={colors.primary} />
               {username && (
                 <Text style={styles.greeting}>Hi {username}</Text>
               )}
@@ -75,7 +75,7 @@ export default function AppHeader() {
               style={styles.loginIcon}
               onPress={() => navigation.navigate('Auth', { screen: 'SignIn' })}
             >
-              <MaterialIcons name="person-outline" size={20} color={colors.primary} />
+              <MaterialIcons name="person" size={20} color={colors.primary} />
             </TouchableOpacity>
           )}
         </View>
@@ -87,21 +87,21 @@ export default function AppHeader() {
           style={styles.navButton}
           onPress={() => navigation.navigate('Main', { screen: 'Home', params: { screen: 'VendorList' } })}
         >
-          <MaterialIcons name="home" size={18} color={colors.textPrimary} />
+          <MaterialIcons name="home" size={18} color={colors.primary} />
           <Text style={styles.navButtonText}>Home</Text>
         </TouchableOpacity>
         <TouchableOpacity
           style={styles.navButton}
           onPress={() => openDiscover({ category: 'venues', searchTitle: 'Discover Venues' })}
         >
-          <MaterialIcons name="location-city" size={18} color={colors.textPrimary} />
+          <MaterialIcons name="location-city" size={18} color={colors.primary} />
           <Text style={styles.navButtonText}>Venues</Text>
         </TouchableOpacity>
         <TouchableOpacity
           style={styles.navButton}
           onPress={() => openDiscover({ category: 'vendors', searchTitle: 'Discover Vendors' })}
         >
-          <MaterialIcons name="store" size={18} color={colors.textPrimary} />
+          <MaterialIcons name="store" size={18} color={colors.primary} />
           <Text style={styles.navButtonText}>Vendors</Text>
         </TouchableOpacity>
         <TouchableOpacity
@@ -114,8 +114,8 @@ export default function AppHeader() {
             }
           }}
         >
-          <MaterialIcons name="list" size={18} color={colors.textPrimary} />
-          <Text style={styles.navButtonText}>Listers</Text>
+          <MaterialIcons name="list" size={18} color={colors.primary} />
+          <Text style={styles.navButtonText}>Listers Portal</Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -123,7 +123,7 @@ export default function AppHeader() {
 }
 
 const baseWrapper: any = {
-  backgroundColor: colors.surface,
+  backgroundColor: '#f7f5f0',
 };
 
 const baseContainer: any = {
@@ -132,9 +132,7 @@ const baseContainer: any = {
   justifyContent: 'space-between',
   paddingHorizontal: spacing.lg,
   paddingVertical: spacing.xs,
-  backgroundColor: colors.surface,
-  borderBottomWidth: 1,
-  borderBottomColor: colors.borderSubtle,
+  backgroundColor: '#f7f5f0',
 };
 
 if (Platform.OS === 'web') {
@@ -179,26 +177,24 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.xs,
     paddingHorizontal: spacing.sm,
     borderRadius: radii.full,
-    backgroundColor: colors.backgroundAlt,
+    backgroundColor: colors.surface,
   },
   greeting: {
     ...typography.caption,
-    color: colors.textPrimary,
+    color: colors.primary,
     fontWeight: '500',
   },
   loginIcon: {
     padding: spacing.sm,
     borderRadius: radii.full,
-    backgroundColor: colors.backgroundAlt,
+    backgroundColor: colors.surface,
   },
   navBar: {
     flexDirection: 'row',
     justifyContent: 'space-around',
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.xs,
-    backgroundColor: colors.surface,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.borderSubtle,
+    backgroundColor: '#f7f5f0',
   } as any,
   navButton: {
     flexDirection: 'row',
@@ -207,10 +203,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.sm,
     paddingVertical: 4,
     borderRadius: radii.sm,
+    backgroundColor: '#f7f5f0',
   },
   navButtonText: {
     ...typography.caption,
-    color: colors.textPrimary,
+    color: colors.primary,
     fontWeight: '500',
     fontSize: 11,
   },

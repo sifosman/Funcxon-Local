@@ -142,7 +142,7 @@ export default function ChangePasswordScreen() {
             disabled={saving}
             style={{
               marginTop: spacing.md,
-              backgroundColor: colors.primaryTeal,
+              backgroundcolor: colors.textPrimary,
               paddingVertical: spacing.md,
               borderRadius: radii.lg,
               alignItems: 'center',

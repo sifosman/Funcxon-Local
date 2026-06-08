@@ -23,7 +23,7 @@ export function ApplicationProgress({ currentStep, totalSteps = 4 }: Application
               height: 8,
               borderRadius: 4,
               backgroundColor: isCompleted || isCurrent 
-                ? colors.primaryTeal 
+                ? colors.textPrimary 
                 : colors.borderSubtle,
             }}
           />

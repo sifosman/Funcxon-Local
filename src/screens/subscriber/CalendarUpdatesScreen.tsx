@@ -199,13 +199,13 @@ export default function CalendarUpdatesScreen() {
                                     >
                                         <View style={{
                                             width: 48, height: 48, borderRadius: radii.md,
-                                            backgroundColor: '#E0F2F7', alignItems: 'center', justifyContent: 'center',
+                                            backgroundColor: '#f2f7ff', alignItems: 'center', justifyContent: 'center',
                                             marginRight: spacing.md,
                                         }}>
-                                            <Text style={{ ...typography.titleMedium, color: colors.primaryTeal, fontWeight: '700' }}>
+                                            <Text style={{ ...typography.titleMedium, color: colors.textPrimary, fontWeight: '700' }}>
                                                 {dayNum}
                                             </Text>
-                                            <Text style={{ ...typography.caption, color: colors.primaryTeal, fontSize: 10 }}>
+                                            <Text style={{ ...typography.caption, color: colors.textPrimary, fontSize: 10 }}>
                                                 {dayName}
                                             </Text>
                                         </View>

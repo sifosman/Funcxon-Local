@@ -56,13 +56,13 @@ export default function EmailConfirmationScreen({ route, navigation }: Props) {
               width: 120,
               height: 120,
               borderRadius: radii.full,
-              backgroundColor: '#E0F2F7',
+              backgroundColor: '#f2f7ff',
               alignItems: 'center',
               justifyContent: 'center',
               marginBottom: spacing.lg,
             }}
           >
-            <MaterialIcons name="mark-email-read" size={56} color={colors.primaryTeal} />
+            <MaterialIcons name="mark-email-read" size={56} color={colors.textPrimary} />
           </View>
 
           {/* Title */}
@@ -107,7 +107,7 @@ export default function EmailConfirmationScreen({ route, navigation }: Props) {
                 gap: spacing.sm,
               }}
             >
-              <MaterialIcons name="email" size={20} color={colors.primaryTeal} />
+              <MaterialIcons name="email" size={20} color={colors.textPrimary} />
               <Text
                 style={{
                   ...typography.body,
@@ -162,12 +162,12 @@ export default function EmailConfirmationScreen({ route, navigation }: Props) {
             <MaterialIcons
               name="refresh"
               size={16}
-              color={isResending ? colors.textMuted : colors.primaryTeal}
+              color={isResending ? colors.textMuted : colors.textPrimary}
             />
             <Text
               style={{
                 ...typography.caption,
-                color: isResending ? colors.textMuted : colors.primaryTeal,
+                color: isResending ? colors.textMuted : colors.textPrimary,
                 fontWeight: '600',
               }}
             >

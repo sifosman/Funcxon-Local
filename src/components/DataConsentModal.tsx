@@ -85,13 +85,13 @@ export default function DataConsentModal({ visible, onAccept }: DataConsentModal
                     width: 56,
                     height: 56,
                     borderRadius: 28,
-                    backgroundColor: '#E0F2F7',
+                    backgroundColor: '#f2f7ff',
                     alignItems: 'center',
                     justifyContent: 'center',
                     marginBottom: spacing.md,
                   }}
                 >
-                  <MaterialIcons name="verified-user" size={28} color={colors.primaryTeal} />
+                  <MaterialIcons name="verified-user" size={28} color={colors.textPrimary} />
                 </View>
                 <Text style={{ ...typography.titleLarge, color: colors.textPrimary, textAlign: 'center' }}>
                   Your Privacy Matters
@@ -105,7 +105,7 @@ export default function DataConsentModal({ visible, onAccept }: DataConsentModal
                     lineHeight: 22,
                   }}
                 >
-                  Funcxon is committed to protecting your personal information in compliance with the Protection of Personal Information Act (POPIA).
+                  Funxon is committed to protecting your personal information in compliance with the Protection of Personal Information Act (POPIA).
                 </Text>
               </View>
 
@@ -131,7 +131,7 @@ export default function DataConsentModal({ visible, onAccept }: DataConsentModal
                   { icon: 'security' as const, text: 'Fraud prevention and security' },
                 ].map((item, idx) => (
                   <View key={idx} style={{ flexDirection: 'row', alignItems: 'center', marginBottom: idx < 4 ? spacing.sm : 0 }}>
-                    <MaterialIcons name={item.icon} size={16} color={colors.primaryTeal} style={{ marginRight: spacing.sm }} />
+                    <MaterialIcons name={item.icon} size={16} color={colors.textPrimary} style={{ marginRight: spacing.sm }} />
                     <Text style={{ ...typography.caption, color: colors.textSecondary, flex: 1 }}>
                       {item.text}
                     </Text>
@@ -152,7 +152,7 @@ export default function DataConsentModal({ visible, onAccept }: DataConsentModal
                     borderRadius: radii.lg,
                     padding: spacing.lg,
                     borderWidth: 1,
-                    borderColor: essentialAccepted ? colors.primaryTeal : colors.borderSubtle,
+                    borderColor: essentialAccepted ? colors.textPrimary : colors.borderSubtle,
                   }}
                 >
                   <View
@@ -161,8 +161,8 @@ export default function DataConsentModal({ visible, onAccept }: DataConsentModal
                       height: 24,
                       borderRadius: 6,
                       borderWidth: 2,
-                      borderColor: essentialAccepted ? colors.primaryTeal : colors.borderSubtle,
-                      backgroundColor: essentialAccepted ? colors.primaryTeal : colors.surface,
+                      borderColor: essentialAccepted ? colors.textPrimary : colors.borderSubtle,
+                      backgroundColor: essentialAccepted ? colors.textPrimary : colors.surface,
                       alignItems: 'center',
                       justifyContent: 'center',
                       marginRight: spacing.md,
@@ -177,7 +177,7 @@ export default function DataConsentModal({ visible, onAccept }: DataConsentModal
                       </Text>
                       <View
                         style={{
-                          backgroundColor: colors.primaryTeal,
+                          backgroundcolor: colors.textPrimary,
                           paddingHorizontal: spacing.sm,
                           paddingVertical: 2,
                           borderRadius: radii.sm,
@@ -203,7 +203,7 @@ export default function DataConsentModal({ visible, onAccept }: DataConsentModal
                     borderRadius: radii.lg,
                     padding: spacing.lg,
                     borderWidth: 1,
-                    borderColor: analyticsAccepted ? colors.primaryTeal : colors.borderSubtle,
+                    borderColor: analyticsAccepted ? colors.textPrimary : colors.borderSubtle,
                   }}
                 >
                   <View
@@ -212,8 +212,8 @@ export default function DataConsentModal({ visible, onAccept }: DataConsentModal
                       height: 24,
                       borderRadius: 6,
                       borderWidth: 2,
-                      borderColor: analyticsAccepted ? colors.primaryTeal : colors.borderSubtle,
-                      backgroundColor: analyticsAccepted ? colors.primaryTeal : colors.surface,
+                      borderColor: analyticsAccepted ? colors.textPrimary : colors.borderSubtle,
+                      backgroundColor: analyticsAccepted ? colors.textPrimary : colors.surface,
                       alignItems: 'center',
                       justifyContent: 'center',
                       marginRight: spacing.md,
@@ -248,7 +248,7 @@ export default function DataConsentModal({ visible, onAccept }: DataConsentModal
               {/* Info note */}
               <View
                 style={{
-                  backgroundColor: '#E0F2F7',
+                  backgroundColor: '#f2f7ff',
                   borderRadius: radii.md,
                   padding: spacing.md,
                   flexDirection: 'row',
@@ -256,7 +256,7 @@ export default function DataConsentModal({ visible, onAccept }: DataConsentModal
                   marginBottom: spacing.lg,
                 }}
               >
-                <MaterialIcons name="info" size={18} color={colors.primaryTeal} style={{ marginRight: spacing.sm, marginTop: 2 }} />
+                <MaterialIcons name="info" size={18} color={colors.textPrimary} style={{ marginRight: spacing.sm, marginTop: 2 }} />
                 <Text style={{ ...typography.caption, color: colors.textPrimary, flex: 1, lineHeight: 18 }}>
                   You can review our full Privacy Policy and manage your consent preferences at any time in My Account {'>'} Terms & Policies. You may withdraw consent by contacting our Information Officer.
                 </Text>
@@ -267,7 +267,7 @@ export default function DataConsentModal({ visible, onAccept }: DataConsentModal
                 onPress={handleAccept}
                 disabled={!canProceed}
                 style={{
-                  backgroundColor: canProceed ? colors.primaryTeal : colors.borderSubtle,
+                  backgroundColor: canProceed ? colors.textPrimary : colors.borderSubtle,
                   paddingVertical: spacing.md + 2,
                   borderRadius: radii.lg,
                   alignItems: 'center',

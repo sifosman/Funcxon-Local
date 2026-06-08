@@ -119,7 +119,7 @@ export default function PlannerScreen() {
       let internalUser = userRows ?? null;
 
       if (!internalUser) {
-        const email = user.email ?? 'attendee@funcxon.com';
+        const email = user.email ?? 'attendee@funxon.com';
         const username = email.split('@')[0] || 'attendee';
         const { data: createdUser, error: createError } = await supabase
           .from('users')
@@ -1020,7 +1020,7 @@ export default function PlannerScreen() {
               onPress={handleSaveEdit}
               style={{
                 marginTop: spacing.lg,
-                backgroundColor: colors.primaryTeal,
+                backgroundcolor: colors.textPrimary,
                 paddingVertical: spacing.md,
                 borderRadius: radii.md,
                 alignItems: 'center',

@@ -21,7 +21,7 @@ export function PrimaryButton({ title, onPress, disabled, style }: PrimaryButton
       onPress={onPress}
       disabled={disabled}
       style={{
-        backgroundColor: disabled ? colors.accent : colors.primary,
+        backgroundColor: disabled ? colors.primaryMuted : colors.primary,
         paddingVertical: spacing.md,
         paddingHorizontal: spacing.lg,
         borderRadius: radii.lg,
@@ -91,8 +91,8 @@ export type FilterChipProps = {
 };
 
 export function FilterChip({ label, selected, onPress, style }: FilterChipProps) {
-  const backgroundColor = selected ? colors.primaryTeal : colors.chipBackground;
-  const textColor = selected ? '#FFFFFF' : colors.textPrimary;
+  const backgroundColor = selected ? colors.primary : colors.chipBackground;
+  const textColor = selected ? colors.primaryForeground : colors.textPrimary;
 
   return (
     <TouchableOpacity
@@ -149,7 +149,7 @@ export function ThemedInput({ errorText, style, ...rest }: ThemedInputProps) {
           style={{
             marginTop: 4,
             fontSize: 12,
-            color: colors.primaryTeal,
+            color: colors.textPrimary,
           }}
         >
           {errorText}

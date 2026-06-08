@@ -175,7 +175,7 @@ export default function PortfolioAssistanceScreen() {
       title: 'Schedule Call',
       description: 'Book a 15-30 minute consultation with our expert team',
       icon: 'phone',
-      iconColor: colors.primaryTeal,
+      iconcolor: colors.textPrimary,
       bgColor: '#E0F2FE',
       action: handleScheduleCall
     },
@@ -219,7 +219,7 @@ export default function PortfolioAssistanceScreen() {
               width: 80,
               height: 80,
               borderRadius: 40,
-              backgroundColor: colors.primaryTeal,
+              backgroundcolor: colors.textPrimary,
               justifyContent: 'center',
               alignItems: 'center',
               marginBottom: spacing.md
@@ -246,7 +246,7 @@ export default function PortfolioAssistanceScreen() {
           borderColor: colors.borderSubtle
         }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.sm }}>
-            <MaterialIcons name="schedule" size={20} color={colors.primaryTeal} />
+            <MaterialIcons name="schedule" size={20} color={colors.textPrimary} />
             <Text style={{ ...typography.titleMedium, color: colors.textPrimary, marginLeft: spacing.sm }}>
               Office Hours & Response Times
             </Text>

@@ -184,15 +184,15 @@ export default function BillingScreen() {
             const nameParts = (billing.billing_name || billing.vendor_name || '').split(' ');
             const paymentData = buildPayFastPaymentData({
                 amount: price,
-                itemName: `Funcxon ${billing.subscription_tier} Plan (${billing.billing_period || 'monthly'})`,
+                itemName: `Funxon ${billing.subscription_tier} Plan (${billing.billing_period || 'monthly'})`,
                 itemDescription: `${billing.subscription_tier} subscription renewal`,
                 firstName: nameParts[0] || '',
                 lastName: nameParts.slice(1).join(' ') || '',
                 email: billing.billing_email || '',
                 phone: billing.billing_phone || '',
-                returnUrl: 'https://funcxon.com/payment/success',
-                cancelUrl: 'https://funcxon.com/payment/cancel',
-                notifyUrl: 'https://funcxon.com/api/payfast/notify',
+                returnUrl: 'https://funxon.com/payment/success',
+                cancelUrl: 'https://funxon.com/payment/cancel',
+                notifyUrl: 'https://funxon.com/api/payfast/notify',
             });
 
             const checkoutUrl = getPayFastCheckoutUrl(paymentData);

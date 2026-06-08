@@ -9,13 +9,13 @@ type HelpCenterModalProps = {
   onDeleteAccount?: () => void;
 };
 
-const SUPPORT_EMAIL = process.env.EXPO_PUBLIC_SUPPORT_EMAIL || 'support@funcxon.com';
+const SUPPORT_EMAIL = process.env.EXPO_PUBLIC_SUPPORT_EMAIL || 'support@funxon.com';
 const SUPPORT_WHATSAPP = process.env.EXPO_PUBLIC_SUPPORT_WHATSAPP || '+27000000000';
 
 export function HelpCenterModal({ visible, onClose, onDeleteAccount }: HelpCenterModalProps) {
   const whatsappLink = useMemo(() => {
     const number = SUPPORT_WHATSAPP.replace(/[^0-9+]/g, '');
-    const message = encodeURIComponent('Hi, I need assistance with Funcxon.');
+    const message = encodeURIComponent('Hi, I need assistance with Funxon.');
     return Platform.select({
       ios: `https://wa.me/${number}?text=${message}`,
       android: `whatsapp://send?phone=${number}&text=${message}`,

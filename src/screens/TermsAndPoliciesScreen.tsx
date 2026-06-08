@@ -25,7 +25,7 @@ export default function TermsAndPoliciesScreen() {
           </TouchableOpacity>
 
           <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.xs }}>
-            <MaterialIcons name="shield" size={28} color={colors.primaryTeal} style={{ marginRight: spacing.sm }} />
+            <MaterialIcons name="shield" size={28} color={colors.textPrimary} style={{ marginRight: spacing.sm }} />
             <Text style={{ ...typography.displayMedium, color: colors.textPrimary }}>
               Terms & Policies
             </Text>
@@ -39,7 +39,7 @@ export default function TermsAndPoliciesScreen() {
         <View style={{ paddingHorizontal: spacing.lg, marginBottom: spacing.lg }}>
           <View
             style={{
-              backgroundColor: '#E0F2F7',
+              backgroundColor: '#f2f7ff',
               borderRadius: radii.lg,
               padding: spacing.lg,
               flexDirection: 'row',
@@ -49,7 +49,7 @@ export default function TermsAndPoliciesScreen() {
             <MaterialIcons
               name="verified-user"
               size={24}
-              color={colors.primaryTeal}
+              color={colors.textPrimary}
               style={{ marginRight: spacing.md, marginTop: 2 }}
             />
             <View style={{ flex: 1 }}>
@@ -57,7 +57,7 @@ export default function TermsAndPoliciesScreen() {
                 POPIA Compliant
               </Text>
               <Text style={{ ...typography.caption, color: colors.textSecondary, lineHeight: 18 }}>
-                Funcxon is committed to protecting your personal information in accordance with the Protection of Personal Information Act (POPIA) of South Africa.
+                Funxon is committed to protecting your personal information in accordance with the Protection of Personal Information Act (POPIA) of South Africa.
               </Text>
             </View>
           </View>

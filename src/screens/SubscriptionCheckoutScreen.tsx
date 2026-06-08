@@ -392,7 +392,7 @@ export default function SubscriptionCheckoutScreen() {
     const paymentData = buildPayFastPaymentData({
       amount: priceNum,
       paymentId: payfastPaymentId,
-      itemName: `${productType === 'venue' ? 'Funcxon Venue' : 'Funcxon'} ${tierName} Plan (${billing})`,
+      itemName: `${productType === 'venue' ? 'Funxon Venue' : 'Funxon'} ${tierName} Plan (${billing})`,
       itemDescription: `${productType === 'venue' ? 'Venue' : 'Vendor'} subscription - billed ${billing}`,
       firstName,
       lastName,
@@ -402,8 +402,8 @@ export default function SubscriptionCheckoutScreen() {
       frequency: billing === 'yearly' ? '6' : '3',
       recurringAmount: billing === '6_month' || billing === '12_month' ? undefined : priceNum,
       cycles: billing === '6_month' || billing === '12_month' ? undefined : 0,
-      returnUrl: 'https://funcxon.com/payment/success',
-      cancelUrl: 'https://funcxon.com/payment/cancel',
+      returnUrl: 'https://funxon.com/payment/success',
+      cancelUrl: 'https://funxon.com/payment/cancel',
       notifyUrl,
     });
 
@@ -485,7 +485,7 @@ export default function SubscriptionCheckoutScreen() {
           fullName: fullName.trim(),
           businessName: businessName.trim() || undefined,
           tierName: tierName,
-          applicationUrl: 'https://funcxon.com/vendor-application',
+          applicationUrl: 'https://funxon.com/vendor-application',
         },
       });
 
@@ -739,14 +739,14 @@ export default function SubscriptionCheckoutScreen() {
             <Text style={{ ...typography.caption, color: errors.terms ? '#EF4444' : colors.textPrimary, flex: 1 }}>
               I agree to the{' '}
               <Text
-                style={{ color: colors.primaryTeal, fontWeight: '600', textDecorationLine: 'underline' }}
+                style={{ color: colors.textPrimary, fontWeight: '600', textDecorationLine: 'underline' }}
                 onPress={() => navigation.navigate('LegalDocument', { documentId: 'terms-and-conditions' })}
               >
                 Terms and Conditions
               </Text>
               {' '}and{' '}
               <Text
-                style={{ color: colors.primaryTeal, fontWeight: '600', textDecorationLine: 'underline' }}
+                style={{ color: colors.textPrimary, fontWeight: '600', textDecorationLine: 'underline' }}
                 onPress={() => navigation.navigate('LegalDocument', { documentId: 'privacy-policy' })}
               >
                 Privacy Policy
