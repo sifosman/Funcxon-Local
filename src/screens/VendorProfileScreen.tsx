@@ -1,5 +1,7 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, BackHandler, Image, Linking, Platform, ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { ActivityIndicator, BackHandler, Dimensions, Image, Linking, Platform, ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import Carousel from 'react-native-reanimated-carousel';
+import type { ICarouselInstance } from 'react-native-reanimated-carousel';
 import { showAlert } from '../utils/alert';
 import { useQuery } from '@tanstack/react-query';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -77,6 +79,8 @@ type AvailabilityRecord = {
 export default function VendorProfileScreen({ route, navigation }: Props) {
   const { vendorId } = route.params;
   const [activeTab, setActiveTab] = useState<'about' | 'catalog' | 'reviews' | 'calendar'>('about');
+  const [galleryIndex, setGalleryIndex] = useState(0);
+  const carouselRef = useRef<ICarouselInstance>(null);
   const [mapImageFailed, setMapImageFailed] = useState(false);
   const [favouriteIds, setFavouriteIds] = useState<{ vendorIds: number[]; venueIds: number[] }>({
     vendorIds: [],
@@ -705,8 +709,83 @@ export default function VendorProfileScreen({ route, navigation }: Props) {
         }}
       >
         <View style={{ height: 220, backgroundColor: colors.surfaceMuted }}>
-          {galleryImages[0] ? (
-            <Image source={{ uri: galleryImages[0] }} style={{ width: '100%', height: '100%' }} resizeMode="cover" />
+          {galleryImages.length > 0 ? (
+            <>
+              <Carousel
+                ref={carouselRef}
+                width={Dimensions.get('window').width}
+                height={220}
+                data={galleryImages}
+                loop={galleryImages.length > 1}
+                pagingEnabled={false}
+                snapEnabled
+                onSnapToItem={(index) => setGalleryIndex(index)}
+                renderItem={({ item }) => (
+                  <Image source={{ uri: item }} style={{ width: '100%', height: '100%' }} resizeMode="cover" />
+                )}
+              />
+              {galleryImages.length > 1 && (
+                <>
+                  <TouchableOpacity
+                    onPress={() => carouselRef.current?.prev()}
+                    style={{
+                      position: 'absolute',
+                      left: spacing.md,
+                      top: '50%',
+                      marginTop: -18,
+                      width: 36,
+                      height: 36,
+                      borderRadius: 18,
+                      backgroundColor: 'rgba(0,0,0,0.5)',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}
+                  >
+                    <MaterialIcons name="chevron-left" size={24} color="#FFFFFF" />
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    onPress={() => carouselRef.current?.next()}
+                    style={{
+                      position: 'absolute',
+                      right: spacing.md,
+                      top: '50%',
+                      marginTop: -18,
+                      width: 36,
+                      height: 36,
+                      borderRadius: 18,
+                      backgroundColor: 'rgba(0,0,0,0.5)',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}
+                  >
+                    <MaterialIcons name="chevron-right" size={24} color="#FFFFFF" />
+                  </TouchableOpacity>
+                  <View
+                    style={{
+                      position: 'absolute',
+                      bottom: spacing.md,
+                      left: 0,
+                      right: 0,
+                      flexDirection: 'row',
+                      justifyContent: 'center',
+                      gap: 6,
+                    }}
+                  >
+                    {galleryImages.map((_, idx) => (
+                      <View
+                        key={idx}
+                        style={{
+                          width: 8,
+                          height: 8,
+                          borderRadius: 4,
+                          backgroundColor: idx === galleryIndex ? '#FFFFFF' : 'rgba(255,255,255,0.4)',
+                        }}
+                      />
+                    ))}
+                  </View>
+                </>
+              )}
+            </>
           ) : (
             <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
               <MaterialIcons name="image" size={48} color={colors.textMuted} />
@@ -717,15 +796,35 @@ export default function VendorProfileScreen({ route, navigation }: Props) {
           )}
         </View>
         {galleryImages.length > 1 && (
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ padding: spacing.md }}>
-            {galleryImages.slice(1).map((imageUrl) => (
-              <View key={imageUrl} style={{ marginRight: spacing.sm }}>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            style={{ padding: spacing.md }}
+            snapToInterval={80 + spacing.sm}
+            decelerationRate="fast"
+          >
+            {galleryImages.map((imageUrl, idx) => (
+              <TouchableOpacity
+                key={imageUrl + idx}
+                onPress={() => {
+                  setGalleryIndex(idx);
+                  carouselRef.current?.scrollTo({ index: idx });
+                }}
+                style={{ marginRight: spacing.sm }}
+              >
                 <Image
                   source={{ uri: imageUrl }}
-                  style={{ width: 80, height: 80, borderRadius: radii.md, backgroundColor: colors.surfaceMuted }}
+                  style={{
+                    width: 80,
+                    height: 80,
+                    borderRadius: radii.md,
+                    backgroundColor: colors.surfaceMuted,
+                    borderWidth: idx === galleryIndex ? 2 : 0,
+                    borderColor: colors.textPrimary,
+                  }}
                   resizeMode="cover"
                 />
-              </View>
+              </TouchableOpacity>
             ))}
           </ScrollView>
         )}

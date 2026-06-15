@@ -1,5 +1,7 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, BackHandler, Image, Linking, Modal, Platform, ScrollView, Share, Text, TouchableOpacity, View } from 'react-native';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { ActivityIndicator, BackHandler, Dimensions, Image, Linking, Modal, Platform, ScrollView, Share, Text, TouchableOpacity, View } from 'react-native';
+import Carousel from 'react-native-reanimated-carousel';
+import type { ICarouselInstance } from 'react-native-reanimated-carousel';
 import { showAlert } from '../utils/alert';
 import { useQuery } from '@tanstack/react-query';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -78,6 +80,7 @@ export default function VenueProfileScreen({ route, navigation }: Props) {
   const [activeTab, setActiveTab] = useState<'about' | 'amenities' | 'reviews' | 'calendar'>('about');
   const [mapImageFailed, setMapImageFailed] = useState(false);
   const [galleryIndex, setGalleryIndex] = useState(0);
+  const carouselRef = useRef<ICarouselInstance>(null);
   const [zoomVisible, setZoomVisible] = useState(false);
   const [zoomImageUri, setZoomImageUri] = useState<string | null>(null);
   const [favouriteIds, setFavouriteIds] = useState<{ vendorIds: number[]; venueIds: number[] }>({
@@ -699,24 +702,32 @@ export default function VenueProfileScreen({ route, navigation }: Props) {
         <View style={{ height: 220, backgroundColor: colors.surfaceMuted }}>
           {galleryImages.length > 0 ? (
             <>
-              <TouchableOpacity
-                activeOpacity={0.9}
-                onPress={() => {
-                  setZoomImageUri(galleryImages[galleryIndex]);
-                  setZoomVisible(true);
-                }}
-                style={{ width: '100%', height: '100%' }}
-              >
-                <Image
-                  source={{ uri: galleryImages[galleryIndex] }}
-                  style={{ width: '100%', height: '100%' }}
-                  resizeMode="cover"
-                />
-              </TouchableOpacity>
+              <Carousel
+                ref={carouselRef}
+                width={Dimensions.get('window').width}
+                height={220}
+                data={galleryImages}
+                loop={galleryImages.length > 1}
+                pagingEnabled={false}
+                snapEnabled
+                onSnapToItem={(index) => setGalleryIndex(index)}
+                renderItem={({ item }) => (
+                  <TouchableOpacity
+                    activeOpacity={0.9}
+                    onPress={() => {
+                      setZoomImageUri(item);
+                      setZoomVisible(true);
+                    }}
+                    style={{ width: '100%', height: '100%' }}
+                  >
+                    <Image source={{ uri: item }} style={{ width: '100%', height: '100%' }} resizeMode="cover" />
+                  </TouchableOpacity>
+                )}
+              />
               {galleryImages.length > 1 && (
                 <>
                   <TouchableOpacity
-                    onPress={() => setGalleryIndex((prev) => (prev > 0 ? prev - 1 : galleryImages.length - 1))}
+                    onPress={() => carouselRef.current?.prev()}
                     style={{
                       position: 'absolute',
                       left: spacing.md,
@@ -733,7 +744,7 @@ export default function VenueProfileScreen({ route, navigation }: Props) {
                     <MaterialIcons name="chevron-left" size={24} color="#FFFFFF" />
                   </TouchableOpacity>
                   <TouchableOpacity
-                    onPress={() => setGalleryIndex((prev) => (prev < galleryImages.length - 1 ? prev + 1 : 0))}
+                    onPress={() => carouselRef.current?.next()}
                     style={{
                       position: 'absolute',
                       right: spacing.md,
@@ -785,9 +796,22 @@ export default function VenueProfileScreen({ route, navigation }: Props) {
           )}
         </View>
         {galleryImages.length > 1 && (
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ padding: spacing.md }}>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            style={{ padding: spacing.md }}
+            snapToInterval={80 + spacing.sm}
+            decelerationRate="fast"
+          >
             {galleryImages.map((imageUrl, idx) => (
-              <TouchableOpacity key={imageUrl + idx} onPress={() => setGalleryIndex(idx)}>
+              <TouchableOpacity
+                key={imageUrl + idx}
+                onPress={() => {
+                  setGalleryIndex(idx);
+                  carouselRef.current?.scrollTo({ index: idx });
+                }}
+                style={{ marginRight: spacing.sm }}
+              >
                 <Image
                   source={{ uri: imageUrl }}
                   style={{
@@ -796,7 +820,7 @@ export default function VenueProfileScreen({ route, navigation }: Props) {
                     borderRadius: radii.md,
                     backgroundColor: colors.surfaceMuted,
                     borderWidth: idx === galleryIndex ? 2 : 0,
-                    bordercolor: colors.textPrimary,
+                    borderColor: colors.textPrimary,
                   }}
                   resizeMode="cover"
                 />

@@ -1331,22 +1331,22 @@ export default function AttendeeHomeScreen() {
           <View
             style={{
               position: 'absolute',
-              right: 0,
+              left: 0,
               top: 0,
               bottom: 0,
               justifyContent: 'center',
-              paddingRight: spacing.md,
-              paddingLeft: spacing.xl,
+              paddingLeft: spacing.md,
+              paddingRight: spacing.xl,
               backgroundColor: 'transparent',
             }}
           >
-            <Text style={{ ...typography.displayLarge, color: '#FFFFFF', fontWeight: '700', textShadowColor: 'rgba(0,0,0,0.5)', textShadowOffset: { width: 2, height: 2 }, textShadowRadius: 4, fontSize: screenWidth < 375 ? 22 : screenWidth < 400 ? 25 : 28 }}>
+            <Text style={{ ...typography.displayLarge, color: '#FFFFFF', fontWeight: '700', textShadowColor: 'rgba(0,0,0,0.5)', textShadowOffset: { width: 2, height: 2 }, textShadowRadius: 4, fontSize: screenWidth < 375 ? 22 : screenWidth < 400 ? 25 : 28, textAlign: 'left' }}>
               Connect
             </Text>
-            <Text style={{ ...typography.displayLarge, color: '#FFFFFF', fontWeight: '700', textShadowColor: 'rgba(0,0,0,0.5)', textShadowOffset: { width: 2, height: 2 }, textShadowRadius: 4, fontSize: screenWidth < 375 ? 22 : screenWidth < 400 ? 25 : 28 }}>
+            <Text style={{ ...typography.displayLarge, color: '#FFFFFF', fontWeight: '700', textShadowColor: 'rgba(0,0,0,0.5)', textShadowOffset: { width: 2, height: 2 }, textShadowRadius: 4, fontSize: screenWidth < 375 ? 22 : screenWidth < 400 ? 25 : 28, textAlign: 'left' }}>
               Collaborate
             </Text>
-            <Text style={{ ...typography.displayLarge, color: '#FFFFFF', fontWeight: '700', textShadowColor: 'rgba(0,0,0,0.5)', textShadowOffset: { width: 2, height: 2 }, textShadowRadius: 4, fontSize: screenWidth < 375 ? 22 : screenWidth < 400 ? 25 : 28 }}>
+            <Text style={{ ...typography.displayLarge, color: '#FFFFFF', fontWeight: '700', textShadowColor: 'rgba(0,0,0,0.5)', textShadowOffset: { width: 2, height: 2 }, textShadowRadius: 4, fontSize: screenWidth < 375 ? 22 : screenWidth < 400 ? 25 : 28, textAlign: 'left' }}>
               Celebrate
             </Text>
           </View>
@@ -1387,7 +1387,13 @@ export default function AttendeeHomeScreen() {
             <Text style={{ ...typography.body, color: colors.primary, fontWeight: '600' }}>Find more →</Text>
           </TouchableOpacity>
         </View>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: spacing.lg }}>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={{ paddingHorizontal: spacing.lg }}
+          snapToInterval={cardWidth + spacing.md}
+          decelerationRate="fast"
+        >
           {sortedFeaturedData
             .filter((item) => item.type === 'venue')
             .slice(0, 6)
@@ -1405,7 +1411,13 @@ export default function AttendeeHomeScreen() {
             <Text style={{ ...typography.body, color: colors.primary, fontWeight: '600' }}>Find more →</Text>
           </TouchableOpacity>
         </View>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: spacing.lg }}>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={{ paddingHorizontal: spacing.lg }}
+          snapToInterval={cardWidth + spacing.md}
+          decelerationRate="fast"
+        >
           {sortedFeaturedData
             .filter((item) => item.type === 'vendor')
             .slice(0, 6)
