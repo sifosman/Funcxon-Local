@@ -626,12 +626,12 @@ export default function QuotesScreen() {
                   backgroundColor: '#F0F9FF', 
                   borderRadius: radii.md,
                   borderLeftWidth: 3,
-                  borderLeftColor: '#0284C7'
+                  borderLeftColor: colors.primary
                 }}>
-                  <Text style={{ ...typography.caption, color: '#0C4A6E', fontWeight: '600' }}>
+                  <Text style={{ ...typography.caption, color: colors.primary, fontWeight: '600' }}>
                     Tour Request
                   </Text>
-                  <Text style={{ ...typography.caption, color: '#0C4A6E', marginTop: 2 }}>
+                  <Text style={{ ...typography.caption, color: colors.primary, marginTop: 2 }}>
                     {item.requirements}
                   </Text>
                 </View>

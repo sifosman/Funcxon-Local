@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
-import { Platform, Alert } from 'react-native';
+import { Platform } from 'react-native';
+import { showAlert } from '../utils/alert';
 import type { Session } from '@supabase/supabase-js';
 import * as AuthSession from 'expo-auth-session';
 import * as WebBrowser from 'expo-web-browser';
@@ -303,7 +304,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const signInWithProvider: AuthContextValue['signInWithProvider'] = async (provider) => {
     const scopes = provider === 'facebook' ? 'email public_profile' : undefined;
 
-    Alert.alert('Debug', `Starting ${provider} sign in...`);
 
     // --- NATIVE GOOGLE SIGN-IN ---
     if (provider === 'google' && Platform.OS !== 'web') {
@@ -327,12 +327,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           
           if (error) {
             console.error('Google Sign-In: Supabase error:', error);
-            Alert.alert('Error', error.message);
+            showAlert('Error', error.message);
             return { error };
           }
           console.log('Google Sign-In: Supabase success');
-          Alert.alert('Success', 'Signed in with Google successfully!');
-          return { error: undefined };
+                return { error: undefined };
         } else {
           console.error('Google Sign-In: No ID token found. userInfo:', JSON.stringify(userInfo, null, 2));
           return { error: new Error('No ID token present in Google Sign-In response') };
@@ -345,10 +344,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           return { error: new Error('Google sign-in was cancelled') };
         }
         if (error.code === 'DEVELOPER_ERROR') {
-          Alert.alert('Google Sign-In Error', 'Developer Error: Check your SHA-1 fingerprint and package name in Google Cloud Console. Make sure they match your Android build.');
+          showAlert('Google Sign-In Error', 'Developer Error: Check your SHA-1 fingerprint and package name in Google Cloud Console. Make sure they match your Android build.');
           return { error: new Error('Developer Error - Check Google Cloud Console configuration') };
         }
-        Alert.alert('Google Sign-In Error', error.message);
+        showAlert('Google Sign-In Error', error.message);
         return { error };
       }
     }
@@ -377,13 +376,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // Google Web OAuth clients don't accept custom URI schemes like funxon://
     const redirectUrl = 'https://auth.expo.io/@sifosman/funxon/auth/callback';
 
-    Alert.alert('Debug', `Redirect URL: ${redirectUrl}`);
     console.log('AuthContext signInWithProvider (native) redirectUrl:', redirectUrl);
     
     // Debug: Check AsyncStorage before OAuth
     const keysBefore = await AsyncStorage.getAllKeys();
     console.log('AuthContext: AsyncStorage keys before OAuth:', keysBefore.filter((k: string) => k.includes('supabase')));
-    Alert.alert('Debug', `Storage keys before: ${keysBefore.filter(k => k.includes('supabase')).length}`);
 
     const { data, error } = await supabase.auth.signInWithOAuth({
       provider,
@@ -398,15 +395,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       hasDataUrl: !!data?.url,
       error,
     });
-    Alert.alert('Debug', `Got OAuth URL: ${!!data?.url}`);
 
     if (error) {
-      Alert.alert('Error', `OAuth error: ${error.message}`);
+      showAlert('Error', `OAuth error: ${error.message}`);
       return { error: error ?? undefined };
     }
 
     if (!data?.url) {
-      Alert.alert('Error', 'No OAuth URL returned from Supabase');
+      showAlert('Error', 'No OAuth URL returned from Supabase');
       return { error: new Error('No OAuth URL returned from Supabase') };
     }
 
@@ -414,20 +410,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const result = await WebBrowser.openAuthSessionAsync(data.url, redirectUrl);
 
       console.log('AuthContext signInWithProvider (native) WebBrowser result type:', result.type);
-      Alert.alert('Debug', `WebBrowser result: ${result.type}`);
-
+  
       if (result.type === 'cancel' || result.type === 'dismiss') {
         return { error: new Error(`${provider} sign-in was cancelled`) };
       }
 
       if (result.type === 'success' && result.url) {
         console.log('AuthContext: Full redirect URL:', result.url);
-        Alert.alert('Debug', `Success! URL: ${result.url.substring(0, 100)}...`);
         
         // Debug: Check AsyncStorage after OAuth
         const keysAfter = await AsyncStorage.getAllKeys();
         console.log('AuthContext: AsyncStorage keys after OAuth:', keysAfter.filter((k: string) => k.includes('supabase')));
-        Alert.alert('Debug', `Storage keys after: ${keysAfter.filter(k => k.includes('supabase')).length}`);
         
         // Parse the URL to extract the auth code
         // Handle both standard URLs and deep links (funxon://)
@@ -454,7 +447,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           console.log('AuthContext: code present:', !!code);
           console.log('AuthContext: error param:', errorParam);
           console.log('AuthContext: error_description:', errorDescription);
-          Alert.alert('Debug', `Parsed URL - Code: ${!!code}, Error: ${errorParam}`);
         } catch (e) {
           console.log('AuthContext: URL parsing failed, using regex fallback');
           // Fallback for deep link URLs that might not parse correctly
@@ -490,47 +482,42 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           }
           
           console.log('AuthContext: Extracted via regex - code:', !!code, 'error:', errorParam);
-          Alert.alert('Debug', `Regex fallback - Code: ${!!code}, Error: ${errorParam}`);
         }
         
         if (errorParam) {
           console.error('AuthContext: OAuth error:', errorParam, errorDescription);
-          Alert.alert('OAuth Error', `${errorParam}${errorDescription ? ` - ${errorDescription}` : ''}`);
+          showAlert('OAuth Error', `${errorParam}${errorDescription ? ` - ${errorDescription}` : ''}`);
           return { error: new Error(`OAuth error: ${errorParam}${errorDescription ? ` - ${errorDescription}` : ''}`) };
         }
         
         if (!code) {
           console.error('AuthContext: No auth code found in redirect URL');
           console.error('AuthContext: Redirect URL was:', result.url);
-          Alert.alert('Debug', `No code in URL: ${result.url.substring(0, 50)}...`);
           
           // Check if session was already established by the auth state listener
           // This can happen if Supabase processed the OAuth via deep link before we got here
           const { data: sessionData } = await supabase.auth.getSession();
           if (sessionData.session) {
             console.log('AuthContext: Session already exists, OAuth succeeded');
-            Alert.alert('Success', 'Signed in successfully!');
             return { error: undefined };
           }
           
-          Alert.alert('Error', 'No auth code found in redirect URL');
+          showAlert('Error', 'No auth code found in redirect URL');
           return { error: new Error('No auth code found in redirect URL') };
         }
         
         console.log('AuthContext: Calling exchangeCodeForSession...');
-        Alert.alert('Debug', 'Exchanging code for session...');
         const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
         if (exchangeError) {
           console.error('AuthContext: exchangeCodeForSession error:', exchangeError);
-          Alert.alert('Exchange Error', exchangeError.message);
+          showAlert('Exchange Error', exchangeError.message);
           return { error: exchangeError ?? undefined };
         }
         console.log('AuthContext: exchangeCodeForSession succeeded');
-        Alert.alert('Success', 'OAuth completed successfully!');
       }
     } catch (err: any) {
       console.log('AuthContext signInWithProvider (native) WebBrowser threw:', err);
-      Alert.alert('Exception', err.message);
+      showAlert('Exception', err.message);
       return { error: err instanceof Error ? err : new Error(String(err)) };
     }
 

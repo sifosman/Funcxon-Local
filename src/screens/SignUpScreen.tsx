@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { Alert, Platform, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Platform, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { showAlert } from '../utils/alert';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { AuthStackParamList } from '../navigation/AuthNavigator';
 import { useAuth } from '../auth/AuthContext';
@@ -28,7 +29,7 @@ export default function SignUpScreen({ navigation }: Props) {
     setFormError(null);
 
     if (!name || !email || !password || !confirmPassword) {
-      Alert.alert('Missing details', 'Please fill in name, email, password, and confirm password.');
+      showAlert('Missing details', 'Please fill in name, email, password, and confirm password.');
       setFormError('Please fill in name, email, password, and confirm password.');
       return;
     }
@@ -36,25 +37,25 @@ export default function SignUpScreen({ navigation }: Props) {
     const trimmedEmail = email.trim();
     const emailRegex = /[^@]+@[^.]+\..+/;
     if (!emailRegex.test(trimmedEmail)) {
-      Alert.alert('Invalid email', 'Please enter a valid email address.');
+      showAlert('Invalid email', 'Please enter a valid email address.');
       setFormError('Please enter a valid email address.');
       return;
     }
 
     if (password.length < 6) {
-      Alert.alert('Weak password', 'Password should be at least 6 characters long.');
+      showAlert('Weak password', 'Password should be at least 6 characters long.');
       setFormError('Password should be at least 6 characters long.');
       return;
     }
 
     if (password !== confirmPassword) {
-      Alert.alert('Passwords do not match', 'Please make sure the passwords match.');
+      showAlert('Passwords do not match', 'Please make sure the passwords match.');
       setFormError('Passwords do not match.');
       return;
     }
 
     if (!termsAccepted || !privacyAccepted) {
-      Alert.alert('Consent Required', 'Please accept the Terms and Conditions and Privacy Policy to continue.');
+      showAlert('Consent Required', 'Please accept the Terms and Conditions and Privacy Policy to continue.');
       setFormError('Please accept the Terms and Conditions and Privacy Policy.');
       return;
     }
@@ -76,7 +77,7 @@ export default function SignUpScreen({ navigation }: Props) {
     console.log('SignUp: signUp result', { error });
 
     if (error) {
-      Alert.alert('Sign up failed', error.message);
+      showAlert('Sign up failed', error.message);
       setFormError(error.message);
       return;
     }
@@ -88,7 +89,7 @@ export default function SignUpScreen({ navigation }: Props) {
   const handleGoogleSignUp = async () => {
     const { error } = await signInWithProvider('google');
     if (error) {
-      Alert.alert('Google sign up failed', error.message);
+      showAlert('Google sign up failed', error.message);
     } else {
       navigation.getParent()?.navigate('Main');
     }
@@ -97,7 +98,7 @@ export default function SignUpScreen({ navigation }: Props) {
   const handleFacebookSignUp = async () => {
     const { error } = await signInWithProvider('facebook');
     if (error) {
-      Alert.alert('Facebook sign up failed', error.message);
+      showAlert('Facebook sign up failed', error.message);
     } else {
       navigation.getParent()?.navigate('Main');
     }
@@ -111,8 +112,8 @@ export default function SignUpScreen({ navigation }: Props) {
         contentContainerStyle={{
           flexGrow: 1,
           paddingHorizontal: spacing.lg,
-          paddingVertical: spacing.xl,
-          justifyContent: 'center',
+          paddingTop: spacing.sm,
+          paddingBottom: spacing.xl,
         }}
         keyboardShouldPersistTaps="handled"
       >

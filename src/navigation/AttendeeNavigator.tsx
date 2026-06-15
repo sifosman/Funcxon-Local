@@ -14,6 +14,8 @@ import ListersPortalScreen from '../screens/ListersPortalScreen';
 import SubscriptionPlansScreen from '../screens/SubscriptionPlansScreen';
 import VenueListingPlansScreen from '../screens/VenueListingPlansScreen';
 import VenueCatalogueViewScreen from '../screens/VenueCatalogueViewScreen';
+import TermsAndPoliciesScreen from '../screens/TermsAndPoliciesScreen';
+import LegalDocumentScreen from '../screens/LegalDocumentScreen';
 import { colors, typography } from '../theme';
 
 export type AttendeeStackParamList = {
@@ -39,6 +41,8 @@ export type AttendeeStackParamList = {
   ListersPortal: undefined;
   SubscriptionPlans: undefined;
   VenueListingPlans: undefined;
+  TermsAndPolicies: undefined;
+  LegalDocument: { documentId: string };
 };
 
 const Stack = createNativeStackNavigator<AttendeeStackParamList>();
@@ -127,6 +131,16 @@ export function AttendeeNavigator() {
         name="VenueCatalogueView"
         component={VenueCatalogueViewScreen}
         options={{ title: 'Catalogue' }}
+      />
+      <Stack.Screen
+        name="TermsAndPolicies"
+        component={TermsAndPoliciesScreen}
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name="LegalDocument"
+        component={LegalDocumentScreen}
+        options={{ headerShown: false }}
       />
     </Stack.Navigator>
   );

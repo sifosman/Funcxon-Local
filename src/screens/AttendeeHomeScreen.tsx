@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState, useRef, useCallback } from 'react';
 import {
   ActivityIndicator,
-  Alert,
   Dimensions,
   Image,
   Modal,
@@ -12,6 +11,7 @@ import {
   View,
   Platform,
 } from 'react-native';
+import { showAlert } from '../utils/alert';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
@@ -30,6 +30,7 @@ import { provinces, getCitiesByProvince, getAllCities } from '../config/location
 import { amenitiesList } from '../config/venueTypes';
 import MapRadiusSelector from '../components/MapRadiusSelector';
 import { AppFooter } from '../components/AppFooter';
+import { HelpCenterModal } from '../components/HelpCenterModal';
 import { usePendingSearch } from '../context/PendingSearchContext';
 import type { PendingSearchSnapshot } from '../context/PendingSearchContext';
 
@@ -326,6 +327,7 @@ export default function AttendeeHomeScreen() {
   const [showMapRadiusSelector, setShowMapRadiusSelector] = useState(false);
   const [mapCenter, setMapCenter] = useState<{ latitude: number; longitude: number } | null>(null);
   const [mapRadius, setMapRadius] = useState<number>(20);
+  const [helpVisible, setHelpVisible] = useState(false);
   const { user, session } = useAuth();
   const { pendingSearch, shouldApplyPendingSearch, savePendingSearch, markPendingSearchConsumed } = usePendingSearch();
 
@@ -1184,7 +1186,7 @@ export default function AttendeeHomeScreen() {
 
   const handleToggleFavourite = async (id: number, type: 'vendor' | 'venue' = 'vendor') => {
     if (!user?.id) {
-      Alert.alert('Sign in required', 'Please sign in to save favourites.');
+      showAlert('Sign in required', 'Please sign in to save favourites.');
       return;
     }
 
@@ -1215,13 +1217,13 @@ export default function AttendeeHomeScreen() {
     } catch (error) {
       setFavouriteIds(previous);
       const message = error instanceof Error ? error.message : 'We could not update favourites right now.';
-      Alert.alert('Favourite update failed', message);
+      showAlert('Favourite update failed', message);
     }
   };
 
   async function handleUseMyLocation() {
     if (!provinceOptions || provinceOptions.length === 0) {
-      Alert.alert('Locations not ready', 'Please wait a moment and try again.');
+      showAlert('Locations not ready', 'Please wait a moment and try again.');
       return;
     }
 
@@ -1230,7 +1232,7 @@ export default function AttendeeHomeScreen() {
       const { status } = await Location.requestForegroundPermissionsAsync();
 
       if (status !== 'granted') {
-        Alert.alert(
+        showAlert(
           'Location permission needed',
           'Enable location access in your settings to find vendors near you.',
         );
@@ -1245,7 +1247,7 @@ export default function AttendeeHomeScreen() {
       const searchText = (region || city).toLowerCase();
 
       if (!searchText) {
-        Alert.alert('Location not found', 'We could not determine your province from your location.');
+        showAlert('Location not found', 'We could not determine your province from your location.');
         return;
       }
 
@@ -1264,10 +1266,10 @@ export default function AttendeeHomeScreen() {
           setSelectedCities([city]);
         }
       } else {
-        Alert.alert('Province not recognised', 'We could not match your location to a province filter.');
+        showAlert('Province not recognised', 'We could not match your location to a province filter.');
       }
     } catch (err: any) {
-      Alert.alert('Location error', err?.message ?? 'Failed to detect your location.');
+      showAlert('Location error', err?.message ?? 'Failed to detect your location.');
     } finally {
       setDetectingLocation(false);
     }
@@ -1697,7 +1699,7 @@ export default function AttendeeHomeScreen() {
               />
               <View style={{ position: 'absolute', top: 0, left: 0, right: 0, height: cardWidth * 0.65, backgroundColor: 'rgba(0,0,0,0.35)' }} />
               <View style={{ position: 'absolute', top: spacing.sm, left: spacing.sm }}>
-                <View style={{ backgroundcolor: colors.textPrimary, paddingHorizontal: spacing.sm, paddingVertical: 3, borderRadius: radii.full }}>
+                <View style={{ backgroundColor: colors.textPrimary, paddingHorizontal: spacing.sm, paddingVertical: 3, borderRadius: radii.full }}>
                   <Text style={{ ...typography.caption, color: '#fff', fontSize: 9, fontWeight: '700' }}>VENUE</Text>
                 </View>
               </View>
@@ -2471,10 +2473,11 @@ export default function AttendeeHomeScreen() {
 
       {/* Footer */}
       <AppFooter
-        onNavigateToFAQs={() => Alert.alert('FAQs', 'FAQs page coming soon!')}
-        onNavigateToHelpDesk={() => Alert.alert('Help Desk', 'Help desk coming soon!')}
-        onNavigateToTerms={() => navigation.navigate('TermsAndPolicies' as never)}
+        onNavigateToFAQs={() => showAlert('FAQs', 'FAQs page coming soon!')}
+        onNavigateToHelpDesk={() => setHelpVisible(true)}
+        onNavigateToTerms={() => navigation.navigate('TermsAndPolicies')}
       />
+      <HelpCenterModal visible={helpVisible} onClose={() => setHelpVisible(false)} />
     </ScrollView>
   );
 }

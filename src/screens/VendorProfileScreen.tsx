@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, Alert, BackHandler, Image, Linking, Platform, ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, BackHandler, Image, Linking, Platform, ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import { showAlert } from '../utils/alert';
 import { useQuery } from '@tanstack/react-query';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { WebView } from 'react-native-webview';
@@ -449,7 +450,7 @@ export default function VendorProfileScreen({ route, navigation }: Props) {
   const handleToggleFavourite = async () => {
     if (!vendor?.id) return;
     if (!user?.id) {
-      Alert.alert('Sign in required', 'Please sign in to save favourites.');
+      showAlert('Sign in required', 'Please sign in to save favourites.');
       return;
     }
 
@@ -470,7 +471,7 @@ export default function VendorProfileScreen({ route, navigation }: Props) {
     } catch (error) {
       setFavouriteIds(previous);
       const message = error instanceof Error ? error.message : 'We could not update favourites right now.';
-      Alert.alert('Favourite update failed', message);
+      showAlert('Favourite update failed', message);
     }
   };
 
@@ -1092,7 +1093,7 @@ export default function VendorProfileScreen({ route, navigation }: Props) {
               <Text style={{ color: '#FFFFFF', fontWeight: '600' }}>Request Quote</Text>
             </TouchableOpacity>
             <TouchableOpacity
-              onPress={() => Alert.alert('Coming soon', 'Amend quote functionality will be available soon.')}
+              onPress={() => showAlert('Coming soon', 'Amend quote functionality will be available soon.')}
               style={{
                 borderWidth: 1,
                 bordercolor: colors.textPrimary,

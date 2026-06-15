@@ -348,7 +348,7 @@ export default function QuoteHistoryScreen() {
                               borderRadius: radii.md,
                               marginBottom: spacing.xs,
                               borderLeftWidth: 2,
-                              borderLeftColor: comment.author_type === 'vendor' ? '#0284C7' : '#D97706',
+                              borderLeftColor: comment.author_type === 'vendor' ? colors.primary : '#D97706',
                             }}
                           >
                             <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>

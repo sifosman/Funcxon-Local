@@ -19,6 +19,7 @@ import { useAuth } from '../../auth/AuthContext';
 import { supabase } from '../../lib/supabaseClient';
 import { fetchHubSpotBlogPosts, type AppBlogPost } from '../../lib/hubspotBlog';
 import { AppFooter } from '../../components/AppFooter';
+import { HelpCenterModal } from '../../components/HelpCenterModal';
 import { useFocusEffect } from '@react-navigation/native';
 
 type ProfileStackParamList = {
@@ -71,6 +72,7 @@ export default function ListerPortfolioScreen() {
   const [vendorListing, setVendorListing] = useState<VendorListing | null>(null);
   const [venueListing, setVenueListing] = useState<VenueListing | null>(null);
   const [loading, setLoading] = useState(true);
+  const [helpVisible, setHelpVisible] = useState(false);
 
   const getUsername = () => {
     if (!user) return 'Lister';
@@ -496,7 +498,7 @@ export default function ListerPortfolioScreen() {
         <Text style={styles.cardTitle}>Support</Text>
         {[
           { id: 'faqs', label: "FAQ's", icon: 'help-outline' as keyof typeof MaterialIcons.glyphMap, action: () => Alert.alert("FAQ's", "FAQs page coming soon!") },
-          { id: 'helpdesk', label: 'Need app assistance? Contact our helpdesk', icon: 'support-agent' as keyof typeof MaterialIcons.glyphMap, action: () => Alert.alert('Help Desk', 'Help desk coming soon!') },
+          { id: 'helpdesk', label: 'Need app assistance? Contact our helpdesk', icon: 'support-agent' as keyof typeof MaterialIcons.glyphMap, action: () => setHelpVisible(true) },
           { id: 'report', label: 'Report a problem to Funxon', icon: 'report-problem' as keyof typeof MaterialIcons.glyphMap, action: () => Alert.alert('Report Problem', 'Problem reporting coming soon!') },
           { id: 'whatsapp', label: 'Chat with Funxon via WhatsApp', icon: 'chat' as keyof typeof MaterialIcons.glyphMap, action: () => Linking.openURL('https://wa.me/') },
           { id: 'email', label: 'Chat with Funxon via email', icon: 'email' as keyof typeof MaterialIcons.glyphMap, action: () => Linking.openURL('mailto:support@funxon.com') },
@@ -508,9 +510,10 @@ export default function ListerPortfolioScreen() {
 
       <AppFooter
         onNavigateToFAQs={() => Alert.alert("FAQ's", "FAQs page coming soon!")}
-        onNavigateToHelpDesk={() => Alert.alert('Help Desk', 'Help desk coming soon!')}
+        onNavigateToHelpDesk={() => setHelpVisible(true)}
         onNavigateToTerms={() => navigation.navigate('TermsAndPolicies')}
       />
+      <HelpCenterModal visible={helpVisible} onClose={() => setHelpVisible(false)} />
     </ScrollView>
   );
 }
@@ -592,7 +595,7 @@ const styles = StyleSheet.create({
     padding: spacing.lg,
     alignItems: 'center',
     borderLeftWidth: 4,
-    borderLeftcolor: colors.textPrimary,
+    borderLeftColor: colors.textPrimary,
   },
   featuredLabel: {
     ...typography.body,

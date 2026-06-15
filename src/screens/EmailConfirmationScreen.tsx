@@ -45,8 +45,8 @@ export default function EmailConfirmationScreen({ route, navigation }: Props) {
         contentContainerStyle={{
           flexGrow: 1,
           paddingHorizontal: spacing.lg,
-          paddingVertical: spacing.xl,
-          justifyContent: 'center',
+          paddingTop: spacing.sm,
+          paddingBottom: spacing.xl,
         }}
       >
         <View style={{ width: '100%', maxWidth: 360, alignSelf: 'center', alignItems: 'center' }}>

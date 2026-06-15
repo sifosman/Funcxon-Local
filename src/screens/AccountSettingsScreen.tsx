@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { Alert, KeyboardAvoidingView, Platform, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { KeyboardAvoidingView, Platform, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { showAlert } from '../utils/alert';
 import { MaterialIcons } from '@expo/vector-icons';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { supabase } from '../lib/supabaseClient';
@@ -41,7 +42,7 @@ export default function AccountSettingsScreen({ navigation }: Props) {
 
       if (error) {
         setLoading(false);
-        Alert.alert('Unable to load profile', error.message);
+        showAlert('Unable to load profile', error.message);
         return;
       }
 
@@ -66,7 +67,7 @@ export default function AccountSettingsScreen({ navigation }: Props) {
 
   const handleSave = async () => {
     if (!user?.id) {
-      Alert.alert('Sign in required', 'Please sign in to update your account.');
+      showAlert('Sign in required', 'Please sign in to update your account.');
       return;
     }
 
@@ -74,7 +75,7 @@ export default function AccountSettingsScreen({ navigation }: Props) {
     const trimmedFullName = fullName.trim();
 
     if (!trimmedUsername) {
-      Alert.alert('Username required', 'Please enter a username.');
+      showAlert('Username required', 'Please enter a username.');
       return;
     }
 
@@ -94,7 +95,7 @@ export default function AccountSettingsScreen({ navigation }: Props) {
 
       if (profileError) {
         setSaving(false);
-        Alert.alert('Unable to save profile', profileError.message);
+        showAlert('Unable to save profile', profileError.message);
         return;
       }
     }
@@ -115,16 +116,16 @@ export default function AccountSettingsScreen({ navigation }: Props) {
     setSaving(false);
 
     if (authError) {
-      Alert.alert('Profile saved with warnings', 'Your profile details were saved, but your auth profile could not be fully updated.');
+      showAlert('Profile saved with warnings', 'Your profile details were saved, but your auth profile could not be fully updated.');
       return;
     }
 
     if (!profileRowExists) {
-      Alert.alert('Profile updated', 'Your account details have been saved. Some app profile fields will sync fully once your user profile row is created.');
+      showAlert('Profile updated', 'Your account details have been saved. Some app profile fields will sync fully once your user profile row is created.');
       return;
     }
 
-    Alert.alert('Profile updated', 'Your account details have been saved.');
+    showAlert('Profile updated', 'Your account details have been saved.');
   };
 
   return (

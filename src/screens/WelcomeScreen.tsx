@@ -44,7 +44,7 @@ export default function WelcomeScreen({ navigation }: Props) {
                 width: 80,
                 height: 80,
                 borderRadius: 24,
-                backgroundColor: colors.surface,
+                backgroundColor: '#f7f5f0',
                 alignItems: 'center',
                 justifyContent: 'center',
                 marginBottom: spacing.md,

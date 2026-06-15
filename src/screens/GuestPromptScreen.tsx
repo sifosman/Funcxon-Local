@@ -31,7 +31,7 @@ export default function GuestPromptScreen(props: Props) {
           width: 100,
           height: 100,
           borderRadius: 50,
-          backgroundColor: colors.surface,
+          backgroundColor: '#f7f5f0',
           alignItems: 'center',
           justifyContent: 'center',
           marginBottom: spacing.xl,

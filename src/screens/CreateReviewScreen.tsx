@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
-import { ActivityIndicator, Alert, KeyboardAvoidingView, Platform, ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import { showAlert } from '../utils/alert';
 import { MaterialIcons } from '@expo/vector-icons';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 
@@ -70,12 +71,12 @@ export default function CreateReviewScreen({ route, navigation }: Props) {
 
   const handleSubmit = async () => {
     if (!user?.id) {
-      Alert.alert('Sign in required', 'Please sign in to leave a review.');
+      showAlert('Sign in required', 'Please sign in to leave a review.');
       return;
     }
 
     if (!isFormValid) {
-      Alert.alert('Missing rating', 'Please select a star rating.');
+      showAlert('Missing rating', 'Please select a star rating.');
       return;
     }
 
@@ -83,14 +84,14 @@ export default function CreateReviewScreen({ route, navigation }: Props) {
     try {
       const eligible = await checkEligibility();
       if (!eligible) {
-        Alert.alert('Not eligible', 'You can only leave a review after you have used this service.');
+        showAlert('Not eligible', 'You can only leave a review after you have used this service.');
         return;
       }
 
       if (type === 'vendor') {
         const internalUserId = await resolveInternalUserId();
         if (!internalUserId) {
-          Alert.alert('Missing profile', 'We could not find your user profile. Please sign in again.');
+          showAlert('Missing profile', 'We could not find your user profile. Please sign in again.');
           return;
         }
 
@@ -119,10 +120,10 @@ export default function CreateReviewScreen({ route, navigation }: Props) {
         if (error) throw error;
       }
 
-      Alert.alert('Review submitted', 'Thanks! Your review is pending approval.');
+      showAlert('Review submitted', 'Thanks! Your review is pending approval.');
       navigation.goBack();
     } catch (err: any) {
-      Alert.alert('Error', err?.message ?? 'Failed to submit review.');
+      showAlert('Error', err?.message ?? 'Failed to submit review.');
     } finally {
       setSubmitting(false);
     }

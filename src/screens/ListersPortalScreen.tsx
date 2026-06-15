@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -16,6 +16,7 @@ import { useAuth } from '../auth/AuthContext';
 import { colors, spacing, radii, typography } from '../theme';
 import { AttendeeStackParamList } from '../navigation/AttendeeNavigator';
 import { AppFooter } from '../components/AppFooter';
+import { HelpCenterModal } from '../components/HelpCenterModal';
 import { fetchHubSpotBlogPosts, type AppBlogPost } from '../lib/hubspotBlog';
 
 type NavigationProp = NativeStackNavigationProp<AttendeeStackParamList>;
@@ -53,6 +54,7 @@ const REVIEWS: Review[] = [
 export default function ListersPortalScreen() {
   const navigation = useNavigation<NavigationProp>();
   const { session, user } = useAuth();
+  const [helpVisible, setHelpVisible] = useState(false);
 
   const getUsername = () => {
     if (!user) return null;
@@ -254,9 +256,10 @@ export default function ListersPortalScreen() {
       {/* Footer */}
       <AppFooter
         onNavigateToFAQs={() => Alert.alert('FAQs', 'FAQs page coming soon!')}
-        onNavigateToHelpDesk={() => Alert.alert('Help Desk', 'Help desk coming soon!')}
-        onNavigateToTerms={() => navigation.navigate('TermsAndPolicies' as never)}
+        onNavigateToHelpDesk={() => setHelpVisible(true)}
+        onNavigateToTerms={() => navigation.navigate('TermsAndPolicies')}
       />
+      <HelpCenterModal visible={helpVisible} onClose={() => setHelpVisible(false)} />
     </ScrollView>
   );
 }

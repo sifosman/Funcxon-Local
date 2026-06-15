@@ -65,7 +65,7 @@ export default function MarketingPermissionsScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
-      <ScrollView contentContainerStyle={{ paddingHorizontal: spacing.lg, paddingVertical: spacing.xl }}>
+      <ScrollView contentContainerStyle={{ paddingHorizontal: spacing.lg, paddingTop: spacing.sm, paddingBottom: spacing.xl }}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.xl }}>
           <MaterialIcons name="arrow-back" size={20} color={colors.textPrimary} />
           <Text style={{ ...typography.body, color: colors.textPrimary, marginLeft: spacing.sm }}>Back to My Account</Text>
@@ -115,7 +115,7 @@ export default function MarketingPermissionsScreen() {
             disabled={loading || saving}
             style={{
               marginTop: spacing.xl,
-              backgroundcolor: colors.textPrimary,
+              backgroundColor: colors.textPrimary,
               paddingVertical: spacing.md,
               borderRadius: radii.lg,
               alignItems: 'center',

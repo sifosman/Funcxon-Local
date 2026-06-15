@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { Alert, Platform, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Platform, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { showAlert } from '../utils/alert';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { AuthStackParamList } from '../navigation/AuthNavigator';
 import { useAuth } from '../auth/AuthContext';
@@ -41,7 +42,7 @@ export default function SignInScreen({ navigation }: Props) {
     setFormSuccess(null);
 
     if (!email || !password) {
-      Alert.alert('Missing details', 'Please enter both email and password.');
+      showAlert('Missing details', 'Please enter both email and password.');
       setFormError('Please enter both email and password.');
       return;
     }
@@ -49,13 +50,13 @@ export default function SignInScreen({ navigation }: Props) {
     const trimmedEmail = email.trim();
     const emailRegex = /[^@]+@[^.]+\..+/;
     if (!emailRegex.test(trimmedEmail)) {
-      Alert.alert('Invalid email', 'Please enter a valid email address.');
+      showAlert('Invalid email', 'Please enter a valid email address.');
       setFormError('Please enter a valid email address.');
       return;
     }
 
     if (password.length < 6) {
-      Alert.alert('Weak password', 'Password should be at least 6 characters long.');
+      showAlert('Weak password', 'Password should be at least 6 characters long.');
       setFormError('Password should be at least 6 characters long.');
       return;
     }
@@ -65,7 +66,7 @@ export default function SignInScreen({ navigation }: Props) {
     setLoading(false);
 
     if (error) {
-      Alert.alert('Sign in failed', error.message);
+      showAlert('Sign in failed', error.message);
       setFormError(error.message);
       return;
     }
@@ -78,7 +79,7 @@ export default function SignInScreen({ navigation }: Props) {
 
   const handleForgotPassword = async () => {
     if (!email) {
-      Alert.alert('Enter email', 'Please enter your email address first.');
+      showAlert('Enter email', 'Please enter your email address first.');
       return;
     }
 
@@ -87,11 +88,11 @@ export default function SignInScreen({ navigation }: Props) {
     });
 
     if (error) {
-      Alert.alert('Reset failed', error.message);
+      showAlert('Reset failed', error.message);
       return;
     }
 
-    Alert.alert(
+    showAlert(
       'Check your email',
       'If an account exists for this email, a password reset link has been sent.',
     );
@@ -99,7 +100,7 @@ export default function SignInScreen({ navigation }: Props) {
   const handleGoogleSignIn = async () => {
     const { error } = await signInWithProvider('google');
     if (error) {
-      Alert.alert('Google sign in failed', error.message);
+      showAlert('Google sign in failed', error.message);
     } else {
       redirectAfterSignIn();
     }
@@ -108,7 +109,7 @@ export default function SignInScreen({ navigation }: Props) {
   const handleFacebookSignIn = async () => {
     const { error } = await signInWithProvider('facebook');
     if (error) {
-      Alert.alert('Facebook sign in failed', error.message);
+      showAlert('Facebook sign in failed', error.message);
     } else {
       redirectAfterSignIn();
     }
@@ -122,8 +123,8 @@ export default function SignInScreen({ navigation }: Props) {
         contentContainerStyle={{
           flexGrow: 1,
           paddingHorizontal: spacing.lg,
-          paddingVertical: spacing.xl,
-          justifyContent: 'center',
+          paddingTop: spacing.sm,
+          paddingBottom: spacing.xl,
         }}
         keyboardShouldPersistTaps="handled"
       >

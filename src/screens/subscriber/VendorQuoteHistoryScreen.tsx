@@ -339,7 +339,7 @@ export default function VendorQuoteHistoryScreen() {
                               borderRadius: radii.md,
                               marginBottom: spacing.xs,
                               borderLeftWidth: 2,
-                              borderLeftColor: comment.is_internal ? colors.textMuted : '#0284C7',
+                              borderLeftColor: comment.is_internal ? colors.textMuted : colors.primary,
                             }}
                           >
                             <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>

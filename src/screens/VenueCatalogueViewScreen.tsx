@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, Alert, Image, KeyboardAvoidingView, Linking, Platform, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Image, KeyboardAvoidingView, Linking, Platform, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { showAlert } from '../utils/alert';
 import { MaterialIcons } from '@expo/vector-icons';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { AttendeeStackParamList } from '../navigation/AttendeeNavigator';
@@ -125,21 +126,21 @@ export default function VenueCatalogueViewScreen({ route, navigation }: Props) {
     setTimeout(() => {
       setSaving(false);
       setSaved(true);
-      Alert.alert('Saved', 'Your selection has been saved.');
+      showAlert('Saved', 'Your selection has been saved.');
     }, 400);
   };
 
   const handleSubmitQuotation = async () => {
     if (!user?.id) {
-      Alert.alert('Sign in required', 'Please sign in to submit a quotation.');
+      showAlert('Sign in required', 'Please sign in to submit a quotation.');
       return;
     }
     if (!clientName.trim() || !clientEmail.trim()) {
-      Alert.alert('Missing details', 'Please provide your name and email.');
+      showAlert('Missing details', 'Please provide your name and email.');
       return;
     }
     if (selectedItems.length === 0) {
-      Alert.alert('No items selected', 'Please select at least one catalogue item.');
+      showAlert('No items selected', 'Please select at least one catalogue item.');
       return;
     }
 
@@ -164,10 +165,10 @@ export default function VenueCatalogueViewScreen({ route, navigation }: Props) {
 
       if (insertError) throw insertError;
 
-      Alert.alert('Quotation Submitted', 'Your catalogue quotation has been sent to the venue. You will be notified when they respond.');
+      showAlert('Quotation Submitted', 'Your catalogue quotation has been sent to the venue. You will be notified when they respond.');
       setShowQuoteForm(false);
     } catch (err: any) {
-      Alert.alert('Error', err?.message ?? 'Failed to submit quotation.');
+      showAlert('Error', err?.message ?? 'Failed to submit quotation.');
     } finally {
       setSaving(false);
     }

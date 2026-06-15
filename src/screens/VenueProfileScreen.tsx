@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, Alert, BackHandler, Image, Linking, Modal, Platform, ScrollView, Share, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, BackHandler, Image, Linking, Modal, Platform, ScrollView, Share, Text, TouchableOpacity, View } from 'react-native';
+import { showAlert } from '../utils/alert';
 import { useQuery } from '@tanstack/react-query';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { WebView } from 'react-native-webview';
@@ -419,7 +420,7 @@ export default function VenueProfileScreen({ route, navigation }: Props) {
   const handleToggleFavourite = async () => {
     if (!venue || !user?.id) {
       if (!user?.id) {
-        Alert.alert('Sign in required', 'Please sign in to save favourites.');
+        showAlert('Sign in required', 'Please sign in to save favourites.');
       }
       return;
     }
@@ -441,7 +442,7 @@ export default function VenueProfileScreen({ route, navigation }: Props) {
     } catch (error) {
       setFavouriteIds(previous);
       const message = error instanceof Error ? error.message : 'We could not update favourites right now.';
-      Alert.alert('Favourite update failed', message);
+      showAlert('Favourite update failed', message);
     }
   };
 
