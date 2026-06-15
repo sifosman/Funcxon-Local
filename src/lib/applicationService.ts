@@ -32,7 +32,7 @@ function base64ToBlob(base64: string, mimeType: string): Blob {
   return new Blob([byteArray], { type: mimeType });
 }
 
-const BLOCKING_APPLICATION_STATUSES = ['pending', 'under_review'] as const;
+const BLOCKING_APPLICATION_STATUSES: readonly string[] = [];
 const EDITABLE_APPLICATION_STATUSES = ['needs_changes'] as const;
 
 export type ApplicationSubmission = {
@@ -96,6 +96,7 @@ export async function submitApplication(data: ApplicationSubmission) {
       terms_accepted: data.terms_accepted,
       privacy_accepted: data.privacy_accepted,
       marketing_consent: data.marketing_consent,
+      status: 'approved',
     };
 
     const existingApplicationId = data.existing_application_id ?? null;
@@ -105,7 +106,7 @@ export async function submitApplication(data: ApplicationSubmission) {
           .from('subscriber_applications')
           .update({
             ...payload,
-            status: 'pending',
+            status: 'approved',
             admin_notes: null,
             reviewed_at: null,
             reviewed_by: null,

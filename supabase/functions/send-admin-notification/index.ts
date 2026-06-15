@@ -230,7 +230,7 @@ function generateApplicationSubmittedEmail(payload: NotificationPayload) {
       </div>
       
       <div style="background: #ffffff; padding: 30px; border: 1px solid #D4CFBD; border-top: none; border-radius: 0 0 10px 10px;">
-        <p style="font-size: 16px; margin-bottom: 20px; color: #2B3840;">A new vendor has submitted their application for review.</p>
+        <p style="font-size: 16px; margin-bottom: 20px; color: #2B3840;">A new vendor has submitted their application and has been given immediate access.</p>
         
         <div style="background: #F5F1E8; padding: 20px; border-radius: 8px; margin: 25px 0; border: 1px solid #D4CFBD;">
           <h3 style="margin-top: 0; color: #2B9EB3;">Application Details</h3>
@@ -245,11 +245,11 @@ function generateApplicationSubmittedEmail(payload: NotificationPayload) {
         <div style="text-align: center; margin: 30px 0;">
           <a href="https://funcxonsadmin.vercel.app/dashboard/applications" 
              style="background: #2B9EB3; color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; font-weight: bold; display: inline-block;">
-            Review Application
+            View Application
           </a>
         </div>
         
-        <p style="font-size: 14px; color: #5A7A85;">Please review within 3-5 business days as per SLA.</p>
+        <p style="font-size: 14px; color: #5A7A85;">Applications are now auto-approved. Review only if you spot an issue.</p>
       </div>
     </body>
     </html>
@@ -266,7 +266,7 @@ Application Details:
 - Categories: ${serviceCategories?.join(', ') || 'N/A'}
 - Coverage: ${provinces?.join(', ') || 'N/A'}
 
-Review in admin panel: https://funcxonsadmin.vercel.app/dashboard/applications
+View in admin panel: https://funcxonsadmin.vercel.app/dashboard/applications
   `;
 
   return { subject, htmlContent, textContent };

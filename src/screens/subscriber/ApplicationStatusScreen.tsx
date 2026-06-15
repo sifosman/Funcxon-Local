@@ -249,7 +249,7 @@ export default function ApplicationStatusScreen() {
               Application Status
             </Text>
             <Text style={{ ...typography.body, color: colors.textMuted }}>
-              Track your latest portfolio application and wait for approval before making changes.
+              Track your latest portfolio application and manage your portfolio details.
             </Text>
           </View>
 
@@ -308,7 +308,7 @@ export default function ApplicationStatusScreen() {
                     Existing application in progress
                   </Text>
                   <Text style={{ ...typography.body, color: colors.textPrimary }}>
-                    You already have an existing application that is pending. Please wait for feedback, or cancel it below if you want to submit a new one.
+                    You already have an existing application. You can manage your portfolio or cancel it below if you want to submit a new one.
                   </Text>
                   <TouchableOpacity
                     onPress={handleCancelApplication}
@@ -345,14 +345,14 @@ export default function ApplicationStatusScreen() {
                   </Text>
                 </View>
                 <Text style={{ ...typography.body, color: colors.textPrimary }}>
-                  {hasBlockingApplication
-                    ? 'Your application is under review. While it is pending, you cannot edit or resubmit the application.'
-                    : needsChanges
-                      ? 'Your application needs a few updates before it can be approved. Review the admin notes below, update your details, and resubmit the application.'
-                      : String(application.status ?? '').toLowerCase() === 'approved'
-                        ? 'Your application has been approved. Your listing team will contact you if anything else is needed.'
-                        : String(application.status ?? '').toLowerCase() === 'cancelled'
-                          ? 'This application has been cancelled and will no longer be processed by the Funxon team. You can start a new application when you are ready.'
+                  {needsChanges
+                    ? 'Your application needs a few updates before it can be approved. Review the admin notes below, update your details, and resubmit the application.'
+                    : String(application.status ?? '').toLowerCase() === 'approved'
+                      ? 'Your application has been approved. You now have full access to manage your portfolio.'
+                      : String(application.status ?? '').toLowerCase() === 'cancelled'
+                        ? 'This application has been cancelled and will no longer be processed by the Funxon team. You can start a new application when you are ready.'
+                        : String(application.status ?? '').toLowerCase() === 'pending' || String(application.status ?? '').toLowerCase() === 'under_review'
+                          ? 'Your application has been received. You now have full access to manage your portfolio.'
                           : 'Your application has been reviewed. Please wait for further guidance from the Funxon team.'}
                 </Text>
               </View>
@@ -464,7 +464,7 @@ export default function ApplicationStatusScreen() {
                 }}
               >
                 <Text style={{ ...typography.body, color: colors.textPrimary }}>
-                  We aim to review applications within 12 to 24 hours. You can return here any time to check the latest status.
+                  You can return here any time to check your application details and manage your portfolio.
                 </Text>
               </View>
             </>

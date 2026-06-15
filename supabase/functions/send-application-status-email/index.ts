@@ -50,15 +50,15 @@ const getEmailTemplate = (status: string): EmailTemplate => {
       return {
         subject: 'Changes requested for your Funcxon application',
         heading: 'Changes Requested',
-        intro: 'Our team reviewed your application and requested a few changes before approval.',
+        intro: 'Our team reviewed your application and requested a few changes.',
         nextSteps: 'Open your application status to review the latest update and follow the guidance from the Funcxon team before submitting again.',
         buttonLabel: 'Review Application Update',
       };
     case 'rejected':
       return {
-        subject: 'Your Funcxon application was not approved',
-        heading: 'Application Not Approved',
-        intro: 'We reviewed your application and it was not approved at this time.',
+        subject: 'Your Funcxon application was not accepted',
+        heading: 'Application Not Accepted',
+        intro: 'We reviewed your application and it was not accepted at this time.',
         nextSteps: 'Open your application status to review the update. If you still want to join Funcxon, you can start a new application when you are ready.',
         buttonLabel: 'View Application Status',
       };
@@ -85,8 +85,8 @@ const getEmailTemplate = (status: string): EmailTemplate => {
         subject: 'Your Funcxon application has been submitted',
         heading: 'Application Submitted',
         intro: 'Your application has been submitted successfully.',
-        nextSteps: 'Our team will review your application within 12 to 24 hours. While it is pending, you will not be able to edit or resubmit it.',
-        buttonLabel: 'View Application Status',
+        nextSteps: 'You now have full access to manage your portfolio. Open the app to update your profile, add listings, and start receiving enquiries.',
+        buttonLabel: 'Open Application',
       };
   }
 };

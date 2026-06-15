@@ -76,9 +76,11 @@ export default function ApplicationStep4Screen() {
           .select('id, plan_key, plan_name, price_monthly, price_yearly, photo_upload_limit, video_upload_limit, features, is_active')
           .eq('is_active', true)
           .order('price_monthly', { ascending: true, nullsFirst: true });
-        if (error) throw error;
+        if (error) {
+          console.warn('venue_subscription_plans query failed, using fallback:', error);
+        }
         // Map venue plan shape to the shared tier shape used in this screen
-        const mapped = (data || []).map((p: any) => ({
+        let mapped = (data || []).map((p: any) => ({
           id: p.id,
           tier_name: p.plan_key as string,    // use plan_key so normalizeTierKey matches
           photo_limit: p.photo_upload_limit ?? 10,
@@ -87,6 +89,15 @@ export default function ApplicationStep4Screen() {
           features: p.features ?? null,
           is_active: p.is_active,
         }));
+        // Fallback to hardcoded plans if DB table is empty or missing
+        if (mapped.length === 0) {
+          mapped = [
+            { id: 1, tier_name: 'get_started', photo_limit: 10, price_monthly: 0, price_yearly: null, features: { video_upload_limit: 1 }, is_active: true },
+            { id: 2, tier_name: 'monthly', photo_limit: 50, price_monthly: 1499, price_yearly: null, features: { video_upload_limit: 5 }, is_active: true },
+            { id: 3, tier_name: '6_month', photo_limit: 50, price_monthly: 9995, price_yearly: null, features: { video_upload_limit: 5 }, is_active: true },
+            { id: 4, tier_name: '12_month', photo_limit: 50, price_monthly: 19990, price_yearly: null, features: { video_upload_limit: 5 }, is_active: true },
+          ];
+        }
         setTiers(mapped);
       } else {
         // Load vendor subscription tiers
@@ -347,11 +358,12 @@ export default function ApplicationStep4Screen() {
           );
         }
 
-        // Reset form and navigate to Application Status for confirmation
+        // Reset form and navigate to portfolio management
         resetForm();
+        const nextRoute = state.portfolioType === 'venues' ? 'UpdateVenuePortfolio' : 'UpdateVendorPortfolio';
         navigation.reset({
           index: 0,
-          routes: [{ name: 'ApplicationStatus' }],
+          routes: [{ name: nextRoute }],
         });
       } else {
         Alert.alert('Submission Failed', result.error || 'Failed to submit application. Please try again.');

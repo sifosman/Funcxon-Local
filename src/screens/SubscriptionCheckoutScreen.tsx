@@ -464,11 +464,12 @@ export default function SubscriptionCheckoutScreen() {
       const portfolioType = productType === 'venue' ? 'venues' : 'vendors';
       console.log('SubscriptionCheckoutScreen - Setting portfolio type to:', portfolioType);
       await setPortfolioType(portfolioType);
-      console.log('SubscriptionCheckoutScreen - Navigating to ApplicationStatus');
+      console.log('SubscriptionCheckoutScreen - Navigating to portfolio management');
 
+      const nextRoute = productType === 'venue' ? 'UpdateVenuePortfolio' : 'UpdateVendorPortfolio';
       navigation.reset({
         index: 0,
-        routes: [{ name: 'ApplicationStatus' }],
+        routes: [{ name: nextRoute }],
       });
     } catch (err) {
       Alert.alert('Payment Error', 'Could not open PayFast checkout. Please try again.');
