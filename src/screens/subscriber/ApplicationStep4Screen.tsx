@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, Alert, ActivityIndicator } from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView, Alert, ActivityIndicator, KeyboardAvoidingView, Platform } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -293,38 +293,66 @@ export default function ApplicationStep4Screen() {
               { onConflict: 'user_id' },
             );
           } else if (user?.id) {
-            await supabase.from('vendors').upsert(
-              {
-                user_id: user.id,
-                subscription_tier: normalizeTierKey(state.step4.subscriptionPlan),
-                subscription_status: 'active',
-                billing_period: state.step4.billingPeriod || 'monthly',
-                billing_email: state.step1.email?.trim() || null,
-                billing_name: state.step1.ownersName?.trim() || null,
-                billing_phone: state.step1.contactPhoneNumber?.trim() || null,
-                subscription_started_at: new Date().toISOString(),
-              },
-              { onConflict: 'user_id' },
-            );
+            // Build rich vendor record from application data
+            const listingName =
+              state.step1.tradingName?.trim() ||
+              state.step1.registeredBusinessName?.trim() ||
+              'Vendor Listing';
+
+            const vendorPayload = {
+              user_id: user.id,
+              name: listingName,
+              description: state.step2.description?.trim() || null,
+              location: state.step1.businessPhysicalAddress?.trim() || null,
+              email: state.step1.email?.trim() || null,
+              whatsapp_number: state.step1.contactPhoneNumber?.trim() || null,
+              website_url: state.step1.instagram?.trim() || null,
+              subscription_tier: normalizeTierKey(state.step4.subscriptionPlan),
+              subscription_status: 'active',
+              billing_period: state.step4.billingPeriod || 'monthly',
+              billing_email: state.step1.email?.trim() || null,
+              billing_name: state.step1.ownersName?.trim() || null,
+              billing_phone: state.step1.contactPhoneNumber?.trim() || null,
+              subscription_started_at: new Date().toISOString(),
+              service_options: state.step2.serviceCategories ?? [],
+              vendor_tags: state.step2.serviceSubcategories ?? [],
+            };
+
+            // Use select-then-insert/update for maximum compatibility
+            const { data: existingVendor } = await supabase
+              .from('vendors')
+              .select('id')
+              .eq('user_id', user.id)
+              .maybeSingle();
+
+            if (existingVendor) {
+              const { error: updateError } = await supabase
+                .from('vendors')
+                .update(vendorPayload)
+                .eq('id', existingVendor.id);
+              if (updateError) throw updateError;
+            } else {
+              const { error: insertError } = await supabase
+                .from('vendors')
+                .insert(vendorPayload);
+              if (insertError) throw insertError;
+            }
           }
-        } catch (e) {
-          console.warn('Failed to create subscriber record:', e);
+        } catch (e: any) {
+          console.error('Failed to create portfolio record:', e);
+          Alert.alert(
+            'Portfolio Created',
+            'Your application was submitted successfully, but we had a minor issue setting up your portfolio. You can retry from your account screen.',
+            [{ text: 'OK' }]
+          );
         }
 
-        // Reset form and navigate directly to portfolio (no popup)
+        // Reset form and navigate to Application Status for confirmation
         resetForm();
-        
-        if (state.portfolioType === 'venues') {
-          navigation.reset({
-            index: 0,
-            routes: [{ name: 'UpdateVenuePortfolio' }],
-          });
-        } else {
-          navigation.reset({
-            index: 0,
-            routes: [{ name: 'UpdateVendorPortfolio' }],
-          });
-        }
+        navigation.reset({
+          index: 0,
+          routes: [{ name: 'ApplicationStatus' }],
+        });
       } else {
         Alert.alert('Submission Failed', result.error || 'Failed to submit application. Please try again.');
       }
@@ -416,8 +444,16 @@ export default function ApplicationStep4Screen() {
   };
 
   return (
-    <View style={{ flex: 1, backgroundColor: colors.background }}>
-      <ScrollView contentContainerStyle={{ paddingBottom: spacing.xl }}>
+    <KeyboardAvoidingView
+      style={{ flex: 1, backgroundColor: colors.background }}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? spacing.lg : 0}
+    >
+      <ScrollView
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
+        contentContainerStyle={{ paddingBottom: spacing.xxl * 6 }}
+      >
         <View style={{ paddingHorizontal: spacing.lg, paddingTop: spacing.xl }}>
           <TouchableOpacity
             onPress={() => navigation.goBack()}
@@ -725,7 +761,7 @@ export default function ApplicationStep4Screen() {
                 flex: 1,
                 backgroundColor: colors.surface,
                 borderWidth: 1,
-                bordercolor: colors.textPrimary,
+                borderColor: colors.textPrimary,
                 paddingVertical: spacing.md,
                 borderRadius: radii.md,
                 alignItems: 'center',
@@ -768,6 +804,6 @@ export default function ApplicationStep4Screen() {
           </View>
         </View>
       </ScrollView>
-    </View>
+    </KeyboardAvoidingView>
   );
 }

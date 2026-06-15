@@ -442,27 +442,11 @@ export default function QuotesScreen() {
         contentContainerStyle={{ paddingBottom: spacing.xl }}
         ListHeaderComponent={
           <View>
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-              <View style={{ flex: 1, paddingRight: spacing.md }}>
-                <Text style={{ ...typography.displayMedium, color: colors.textPrimary }}>My Quotes</Text>
-                <Text style={{ ...typography.body, color: colors.textSecondary, marginTop: spacing.xs }}>
-                  Track your vendor quotes by status
-                </Text>
-              </View>
-              <TouchableOpacity
-                activeOpacity={0.9}
-                style={{
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  paddingHorizontal: spacing.lg,
-                  paddingVertical: spacing.sm,
-                  borderRadius: radii.md,
-                  backgroundColor: colors.primary,
-                }}
-              >
-                <MaterialIcons name="add" size={18} color="#FFFFFF" style={{ marginRight: spacing.xs }} />
-                <Text style={{ ...typography.body, color: '#FFFFFF', fontWeight: '600' }}>Request Quote</Text>
-              </TouchableOpacity>
+            <View>
+              <Text style={{ ...typography.displayMedium, color: colors.textPrimary }}>My Quotes</Text>
+              <Text style={{ ...typography.body, color: colors.textSecondary, marginTop: spacing.xs }}>
+                Track your vendor quotes by status
+              </Text>
             </View>
 
             <View

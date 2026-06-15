@@ -6,7 +6,7 @@
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
-    "newArchEnabled": false,
+    "newArchEnabled": true,
     "splash": {
       "image": "./assets/splash_icon.png",
       "resizeMode": "contain",
@@ -33,7 +33,6 @@
           "apiKey": "AIzaSyBjd1KYtTaAzxzdw5ayGwwMu5Sex-gKQLI"
         }
       },
-      "edgeToEdgeEnabled": false,
       "package": "com.anonymous.vibeventzapp",
       "permissions": [
         "ACCESS_FINE_LOCATION",
@@ -70,7 +69,8 @@
         {
           "iosUrlScheme": "com.googleusercontent.apps.686531626266-vp4hdm0nj6mkkvqsudbkm3pt00mcn15p"
         }
-      ]
+      ],
+      "expo-font"
     ],
     "extra": {
       "eas": {

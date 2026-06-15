@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Funxon Lister Features Guide</title>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;800&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:"Montserrat",sans-serif;color:#1a1a2e;background:#f0f1f5;line-height:1.6}
+.container{max-width:960px;margin:0 auto;padding:0 18px}
+.hero{background:linear-gradient(135deg,#030255 0%,#1a1a5c 100%);color:#fff;padding:60px 0 45px;text-align:center}
+.hero h1{font-family:"Playfair Display",serif;font-size:2.4rem;margin-bottom:8px}
+.hero p{font-size:1rem;opacity:.85;max-width:480px;margin:0 auto}
+.badge{display:inline-block;background:#FFD700;color:#000;font-weight:800;font-size:.65rem;text-transform:uppercase;padding:4px 12px;border-radius:50px;margin-bottom:14px}
+section{padding:36px 0}
+.alt{background:#f8f9fb}
+.section-title{font-family:"Playfair Display",serif;font-size:1.7rem;color:#030255;margin-bottom:4px}
+.section-subtitle{color:#6b7280;font-size:.9rem;margin-bottom:24px}
+.pricing-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:14px;margin-bottom:28px}
+.plan-card{background:#fff;border-radius:16px;padding:20px 16px;box-shadow:0 3px 16px rgba(0,0,0,.05);border:2px solid transparent;position:relative}
+.plan-card.popular{border-color:#FFD700}
+.popular-badge{position:absolute;top:-8px;right:12px;background:#FFD700;color:#000;font-size:.6rem;font-weight:800;text-transform:uppercase;padding:3px 8px;border-radius:50px}
+.plan-name{font-size:1.1rem;font-weight:700;margin-bottom:2px}
+.plan-subtitle{font-size:.75rem;color:#6b7280;margin-bottom:10px}
+.plan-price{font-size:1.6rem;font-weight:800;color:#030255;margin-bottom:2px}
+.plan-price .was{font-size:.85rem;color:#9ca3af;text-decoration:line-through;font-weight:500;margin-left:4px}
+.plan-period{font-size:.75rem;color:#6b7280;margin-bottom:10px}
+.plan-save{display:inline-block;background:#ECFDF5;color:#059669;font-size:.65rem;font-weight:700;padding:2px 8px;border-radius:4px;margin-bottom:8px}
+.plan-outcome{font-size:.78rem;font-weight:600;padding-top:8px;border-top:1px solid #f3f4f6}
+.table-wrap{overflow-x:auto;border-radius:10px;box-shadow:0 3px 16px rgba(0,0,0,.05);background:#fff;margin-bottom:24px}
+table{width:100%;border-collapse:collapse;font-size:.82rem}
+thead th{background:#030255;color:#fff;font-weight:600;text-align:left;padding:10px 12px;white-space:nowrap}
+thead th:first-child{border-radius:10px 0 0 0}
+thead th:last-child{border-radius:0 10px 0 0}
+tbody td,tbody th{padding:8px 12px;border-bottom:1px solid #f3f4f6}
+tbody tr:last-child td,tbody tr:last-child th{border-bottom:none}
+tbody tr:nth-child(even){background:#f8f9fb}
+tbody th{font-weight:600;text-align:left}
+td.yes{color:#059669;font-weight:700}
+td.no{color:#DC2626;font-weight:700}
+td.limited{color:#d97706;font-weight:600}
+.feature-list{background:#fff;border-radius:12px;padding:20px;box-shadow:0 3px 16px rgba(0,0,0,.05)}
+.feature-list h3{font-size:1rem;font-weight:700;margin:20px 0 10px;color:#030255;display:flex;align-items:center;gap:6px}
+.feature-list h3:first-child{margin-top:0}
+.feature-list .icon{width:24px;height:24px;border-radius:6px;background:#030255;color:#fff;display:flex;align-items:center;justify-content:center;font-size:.7rem}
+.feature-list ul{list-style:none;font-size:.85rem}
+.feature-list li{padding:8px 0;border-bottom:1px solid #f3f4f6}
+.feature-list li:last-child{border-bottom:none}
+.feature-list li strong{display:block;font-size:.88rem;margin-bottom:2px}
+.feature-list .desc{color:#6b7280;font-size:.78rem;display:block;margin-bottom:3px}
+.tag{font-size:.6rem;font-weight:600;text-transform:uppercase;padding:2px 7px;border-radius:50px;display:inline-block;margin-right:3px}
+.tag-all{background:#ECFDF5;color:#059669}
+.tag-paid{background:#F3E8FF;color:#7c3aed}
+.tag-free{background:#F0F9FF;color:#0284c7}
+.status-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px}
+.status-card{background:#fff;border-radius:10px;padding:16px 18px;box-shadow:0 3px 16px rgba(0,0,0,.05);border-left:4px solid #e5e7eb}
+.status-card.live{border-left-color:#059669}
+.status-card.partial{border-left-color:#d97706}
+.status-card.notbuilt{border-left-color:#DC2626}
+.status-card h4{font-size:.82rem;font-weight:700;margin-bottom:4px}
+.status-card p{font-size:.75rem;color:#6b7280}
+.status-label{display:inline-block;font-size:.58rem;font-weight:800;text-transform:uppercase;padding:2px 7px;border-radius:50px;margin-bottom:5px}
+.status-card.live .status-label{background:#ECFDF5;color:#059669}
+.status-card.partial .status-label{background:#FFFBEB;color:#d97706}
+.status-card.notbuilt .status-label{background:#FEF2F2;color:#DC2626}
+.quick-ref{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px}
+.quick-ref-card{background:#fff;border-radius:14px;padding:20px;box-shadow:0 3px 16px rgba(0,0,0,.05)}
+.quick-ref-card h4{font-size:.95rem;font-weight:700;margin-bottom:8px;color:#030255}
+.quick-ref-card ul{list-style:none;font-size:.82rem;color:#6b7280}
+.quick-ref-card li{padding:4px 0;border-bottom:1px solid #f3f4f6;position:relative;padding-left:16px}
+.quick-ref-card li:last-child{border-bottom:none}
+.quick-ref-card li::before{content:"\2713";position:absolute;left:0;color:#059669;font-weight:700}
+.footer{text-align:center;padding:28px 0;color:#9ca3af;font-size:.75rem}
+@media(max-width:640px){.hero h1{font-size:1.7rem}.plan-price{font-size:1.3rem}}
+</style>
+</head>
+<body>
+
+<header class="hero"><div class="container"><div class="badge">Lister Guide</div><h1>Funxon Lister Features</h1><p>Everything you get as a Venue or Vendor lister. Pick your package, explore your tools, and grow your event business.</p></div></header>
+
+<section id="venue-packages"><div class="container">
+<h2 class="section-title">Venue Listing Packages</h2>
+<p class="section-subtitle">Limited-time launch offer &mdash; no hidden fees, zero commissions.</p>
+<div class="pricing-grid">
+<div class="plan-card"><div class="plan-name">Get Started</div><div class="plan-subtitle">Perfect for trying us out</div><div class="plan-price">R0</div><div class="plan-period">Forever</div><div class="plan-outcome">Get Noticed</div></div>
+<div class="plan-card popular"><div class="popular-badge">Most Popular</div><div class="plan-name">Monthly</div><div class="plan-subtitle">Flexible monthly billing</div><div class="plan-price"><span class="was">R1,999</span> R1,499<span style="font-size:.75rem;font-weight:500">/mo</span></div><div class="plan-period">Billed monthly</div><div class="plan-outcome">Maximum Exposure</div></div>
+<div class="plan-card"><div class="plan-name">6-Month</div><div class="plan-subtitle">Most popular choice</div><div class="plan-price"><span class="was">R11,994</span> R9,995</div><div class="plan-period">Paid upfront</div><div class="plan-save">Save R1,999</div><div class="plan-outcome">Maximum Exposure</div></div>
+<div class="plan-card"><div class="plan-name">12-Month</div><div class="plan-subtitle">Maximum savings</div><div class="plan-price"><span class="was">R23,988</span> R19,990</div><div class="plan-period">Paid upfront</div><div class="plan-save">Save R3,998</div><div class="plan-outcome">Maximum Exposure</div></div>
+</div>
+<div class="table-wrap">
+<table>
+<thead><tr><th>Feature</th><th>Get Started</th><th>Monthly</th><th>6-Month</th><th>12-Month</th></tr></thead>
+<tbody>
+<tr><th>Photo Uploads</th><td>10</td><td class="yes">50</td><td class="yes">50</td><td class="yes">50</td></tr>
+<tr><th>Video Uploads</th><td>1</td><td class="yes">5</td><td class="yes">5</td><td class="yes">5</td></tr>
+<tr><th>Catalogue / Pricelist</th><td class="no">No</td><td class="yes">Yes</td><td class="yes">Yes</td><td class="yes">Yes</td></tr>
+<tr><th>Portfolio Build Assistance</th><td class="yes">Yes</td><td class="yes">Yes</td><td class="yes">Yes</td><td class="yes">Yes</td></tr>
+<tr><th>Full-Time Helpdesk Support</th><td class="yes">Yes</td><td class="yes">Yes</td><td class="yes">Yes</td><td class="yes">Yes</td></tr>
+<tr><th>Dedicated Portfolio Manager</th><td class="no">No</td><td class="yes">Yes</td><td class="yes">Yes</td><td class="yes">Yes</td></tr>
+<tr><th>Analytics &amp; Stats</th><td class="no">No</td><td class="yes">Yes</td><td class="yes">Yes</td><td class="yes">Yes</td></tr>
+<tr><th>Online Quote Requests</th><td class="no">No</td><td class="yes">Yes</td><td class="yes">Yes</td><td class="yes">Yes</td></tr>
+<tr><th>Calendar Availability</th><td class="yes">Yes</td><td class="yes">Yes</td><td class="yes">Yes</td><td class="yes">Yes</td></tr>
+<tr><th>Map Location Display</th><td class="yes">Yes</td><td class="yes">Yes</td><td class="yes">Yes</td><td class="yes">Yes</td></tr>
+<tr><th>Website &amp; Social Links</th><td class="no">No</td><td class="yes">Yes</td><td class="yes">Yes</td><td class="yes">Yes</td></tr>
+<tr><th>Live WhatsApp Chat</th><td class="yes">Yes</td><td class="yes">Yes</td><td class="yes">Yes</td><td class="yes">Yes</td></tr>
+<tr><th>Ratings &amp; Reviews</th><td class="yes">Yes</td><td class="yes">Yes</td><td class="yes">Yes</td><td class="yes">Yes</td></tr>
+<tr><th>Instant Venue Tour Bookings</th><td class="no">No</td><td class="yes">Yes</td><td class="yes">Yes</td><td class="yes">Yes</td></tr>
+</tbody>
+</table>
+</div>
+</div></section>
+
+<section id="vendor-packages" class="alt"><div class="container">
+<h2 class="section-title">Vendor &amp; Service Professional Packages</h2>
+<p class="section-subtitle">Limited-time launch offer &mdash; cancel anytime, upgrade anytime.</p>
+<div class="pricing-grid">
+<div class="plan-card"><div class="plan-name">Get Started</div><div class="plan-subtitle">Perfect for trying us out</div><div class="plan-price">R0</div><div class="plan-period">Forever</div><div class="plan-outcome">Get Noticed</div></div>
+<div class="plan-card popular"><div class="popular-badge">Most Popular</div><div class="plan-name">Premium</div><div class="plan-subtitle">Secure Bookings Online</div><div class="plan-price">R299<span style="font-size:.75rem;font-weight:500">/mo</span></div><div class="plan-period">or R3,289/year</div><div class="plan-save">1 Month Free</div><div class="plan-outcome">Secure Bookings Online</div></div>
+<div class="plan-card"><div class="plan-name">Premium Plus</div><div class="plan-subtitle">Maximum Exposure</div><div class="plan-price">R399<span style="font-size:.75rem;font-weight:500">/mo</span></div><div class="plan-period">or R4,389/year</div><div class="plan-save">1 Month Free</div><div class="plan-outcome">Maximum Exposure &amp; Bookings</div></div>
+</div>
+<div class="table-wrap">
+<table>
+<thead><tr><th>Feature</th><th>Get Started</th><th>Premium</th><th>Premium Plus</th></tr></thead>
+<tbody>
+<tr><th>Photo Uploads</th><td>10</td><td class="yes">40</td><td class="yes">60</td></tr>
+<tr><th>Video Uploads</th><td class="no">No</td><td class="yes">5</td><td class="yes">10</td></tr>
+<tr><th>Catalogue / Pricelist</th><td class="limited">Up to 10 items</td><td class="yes">Full</td><td class="yes">Full</td></tr>
+<tr><th>Portfolio Build Assistance</th><td class="yes">Yes</td><td class="yes">Yes</td><td class="yes">Yes</td></tr>
+<tr><th>Calendar Availability</th><td class="yes">Yes</td><td class="yes">Yes</td><td class="yes">Yes</td></tr>
+<tr><th>Online Quote Requests</th><td class="yes">Yes</td><td class="yes">Yes</td><td class="yes">Yes</td></tr>
+<tr><th>Full-Time Helpdesk Support</th><td class="yes">Yes</td><td class="yes">Yes</td><td class="yes">Yes</td></tr>
+<tr><th>Ratings &amp; Reviews</th><td class="no">No</td><td class="yes">Yes</td><td class="yes">Yes</td></tr>
+<tr><th>Analytics &amp; Stats</th><td class="no">No</td><td class="yes">Yes</td><td class="yes">Yes</td></tr>
+<tr><th>WhatsApp Chat with Browsers</th><td class="no">No</td><td class="yes">Yes</td><td class="yes">Yes</td></tr>
+<tr><th>Website &amp; Social Links</th><td class="no">No</td><td class="yes">Yes</td><td class="yes">Yes</td></tr>
+<tr><th>Edit Portfolio Anytime</th><td class="yes">Yes</td><td class="yes">Yes</td><td class="yes">Yes</td></tr>
+<tr><th>Dedicated Portfolio Manager</th><td class="no">No</td><td class="no">No</td><td class="yes">Yes</td></tr>
+</tbody>
+</table>
+</div>
+</div></section>
+
+<section id="features"><div class="container">
+<h2 class="section-title">Complete Feature Directory</h2>
+<p class="section-subtitle">Every tool and feature available to listers on the Funxon platform.</p>
+<div class="feature-list">
+<h3><span class="icon">A</span> Profile &amp; Portfolio Management</h3>
+<ul>
+<li><strong>1. Portfolio Creation</strong><span class="desc">Apply to create a new venue or vendor portfolio via the step-by-step application flow.</span><span class="tag tag-all">All Plans</span></li>
+<li><strong>2. Portfolio Edit / Update</strong><span class="desc">Edit your business name, description, address, location, contact details, and tags at any time.</span><span class="tag tag-all">All Plans</span></li>
+<li><strong>3. Service Options &amp; Tags</strong><span class="desc">Select relevant categories, amenities, and tags so clients can find you in search.</span><span class="tag tag-all">All Plans</span></li>
+<li><strong>4. Price Range Display</strong><span class="desc">Show a price indicator (e.g. R, RR, RRR) on your public profile.</span><span class="tag tag-all">All Plans</span></li>
+<li><strong>5. Map Location Display</strong><span class="desc">Your address is geocoded and displayed on an interactive map on your public profile.</span><span class="tag tag-all">All Plans</span></li>
+<li><strong>6. Website &amp; Social Links</strong><span class="desc">Add your website URL, Instagram, and other social media links.</span><span class="tag tag-paid">Paid Plans Only</span></li>
+<li><strong>7. Public Profile Screen</strong><span class="desc">A dedicated public-facing profile page with gallery, contact buttons, and catalogue access.</span><span class="tag tag-all">All Plans</span></li>
+<li><strong>8. Image Zoom</strong><span class="desc">Users can tap photos on your profile to view them full-screen.</span><span class="tag tag-all">All Plans</span></li>
+<li><strong>9. Share Profile</strong><span class="desc">Users can share your venue/vendor profile via native share sheet.</span><span class="tag tag-all">All Plans</span></li>
+<li><strong>10. Favourites</strong><span class="desc">Users can favourite your listing and find it later in their saved list.</span><span class="tag tag-all">All Plans</span></li>
+</ul>
+<h3><span class="icon">B</span> Media &amp; Content</h3>
+<ul>
+<li><strong>11. Photo Uploads</strong><span class="desc">Upload high-quality images to your portfolio gallery.</span><span class="tag tag-all">Varies by Plan</span></li>
+<li><strong>12. Video Uploads</strong><span class="desc">Upload promotional or showcase videos.</span><span class="tag tag-all">Varies by Plan</span></li>
+<li><strong>13. Photo Upload Counter</strong><span class="desc">Visual indicator showing how many photos you have used vs. your plan limit.</span><span class="tag tag-all">All Plans</span></li>
+<li><strong>14. PDF Document Upload</strong><span class="desc">Upload pricelists, menus, or brochures as PDF documents to your catalogue.</span><span class="tag tag-paid">Paid Plans</span></li>
+</ul>
+<h3><span class="icon">C</span> Business Catalogue &amp; Pricing</h3>
+<ul>
+<li><strong>15. Catalogue Management</strong><span class="desc">Add, edit, and remove items from your service/venue catalogue with titles, descriptions, prices, and images.</span><span class="tag tag-paid">Venue: Paid Only</span><span class="tag tag-free">Vendor: Free up to 10</span></li>
+<li><strong>16. Real-Time Price Totals</strong><span class="desc">Catalogue screen calculates running totals as you add or update item prices.</span><span class="tag tag-all">All Plans</span></li>
+<li><strong>17. PDF Catalogue Fallback</strong><span class="desc">If you prefer, upload a PDF pricelist instead of building an itemised catalogue.</span><span class="tag tag-paid">Paid Plans</span></li>
+<li><strong>18. View Public Catalogue</strong><span class="desc">Users browsing your profile can tap "View Catalogue" to see your offerings.</span><span class="tag tag-all">All Plans</span></li>
+</ul>
+<h3><span class="icon">D</span> Communication &amp; Client Engagement</h3>
+<ul>
+<li><strong>19. Live WhatsApp Chat</strong><span class="desc">One-tap WhatsApp button on your public profile so browsers can message you directly.</span><span class="tag tag-all">Venue: All Plans</span><span class="tag tag-paid">Vendor: Paid Only</span></li>
+<li><strong>20. Online Quote Requests</strong><span class="desc">Clients submit quote enquiries directly through your profile; you receive them in-app.</span><span class="tag tag-paid">Venue: Paid Only</span><span class="tag tag-all">Vendor: All Plans</span></li>
+<li><strong>21. Quote Request Management</strong><span class="desc">View incoming enquiries, see client details/event info, and update status.</span><span class="tag tag-paid">Venue: Paid Only</span><span class="tag tag-all">Vendor: All Plans</span></li>
+<li><strong>22. Create &amp; Send Quotes</strong><span class="desc">Build and send formal quotes back to clients with line items, prices, and totals.</span><span class="tag tag-all">All Plans</span></li>
+<li><strong>23. Quote History &amp; Revisions</strong><span class="desc">Track all quotes sent for a request, view revision history, and monitor status.</span><span class="tag tag-all">All Plans</span></li>
+<li><strong>24. Ratings &amp; Reviews</strong><span class="desc">Clients leave star ratings and written reviews on your profile after an event.</span><span class="tag tag-all">Venue: All Plans</span><span class="tag tag-paid">Vendor: Paid Only</span></li>
+<li><strong>25. Review Display</strong><span class="desc">Your average rating and review count appear on your profile and in search results.</span><span class="tag tag-all">All Plans</span></li>
+</ul>
+<h3><span class="icon">E</span> Calendar &amp; Availability</h3>
+<ul>
+<li><strong>26. Calendar Availability Updates</strong><span class="desc">Mark dates as available or busy so clients know when you can be booked.</span><span class="tag tag-all">All Plans</span></li>
+<li><strong>27. Tour Booking Calendar</strong><span class="desc">Venues can accept and manage instant tour booking requests with preferred dates/times.</span><span class="tag tag-paid">Paid Plans</span></li>
+</ul>
+<h3><span class="icon">F</span> Venue-Specific Features</h3>
+<ul>
+<li><strong>28. Instant Venue Tour Bookings</strong><span class="desc">Clients request a site visit/tour directly from your venue profile.</span><span class="tag tag-paid">Paid Plans</span></li>
+<li><strong>29. Tour Booking Management</strong><span class="desc">Approve, schedule, or decline tour requests; update status.</span><span class="tag tag-paid">Paid Plans</span></li>
+<li><strong>30. Venue Analytics</strong><span class="desc">Basic in-app analytics showing counts of catalogue items, quote requests, and tour bookings.</span><span class="tag tag-paid">Paid Plans</span></li>
+</ul>
+<h3><span class="icon">G</span> Vendor-Specific Features</h3>
+<ul>
+<li><strong>31. Vendor Dashboard</strong><span class="desc">Overview screen showing your rating, recent reviews, and pending quote requests.</span><span class="tag tag-all">All Plans</span></li>
+<li><strong>32. Quote Request Alerts</strong><span class="desc">Real-time badge/notification showing how many pending quote requests you have.</span><span class="tag tag-all">All Plans</span></li>
+</ul>
+<h3><span class="icon">H</span> Billing &amp; Subscription</h3>
+<ul>
+<li><strong>33. Plan Selection &amp; Checkout</strong><span class="desc">Browse plans, select billing period (monthly/yearly), and subscribe via PayFast.</span><span class="tag tag-all">All Users</span></li>
+<li><strong>34. Billing Dashboard</strong><span class="desc">View current subscription tier, status, next payment due, and billing details.</span><span class="tag tag-paid">Active Subscribers</span></li>
+<li><strong>35. Invoice History</strong><span class="desc">View and track all past invoices with amounts, periods, and payment status.</span><span class="tag tag-paid">Active Subscribers</span></li>
+<li><strong>36. Upgrade / Downgrade</strong><span class="desc">Change your plan or billing period at any time.</span><span class="tag tag-paid">All Subscribers</span></li>
+</ul>
+<h3><span class="icon">I</span> Support &amp; Account Management</h3>
+<ul>
+<li><strong>37. Portfolio Build Assistance</strong><span class="desc">Access help and guidance for creating and optimising your portfolio.</span><span class="tag tag-all">All Plans</span></li>
+<li><strong>38. Full-Time Helpdesk Support</strong><span class="desc">In-app help centre and support access.</span><span class="tag tag-all">All Plans</span></li>
+<li><strong>39. Dedicated Portfolio Manager</strong><span class="desc">A Funxon representative personally assists with your portfolio.</span><span class="tag tag-paid">Premium Plus &amp; Venue Paid</span></li>
+<li><strong>40. Account Settings</strong><span class="desc">Update email, password, display name, and marketing preferences.</span><span class="tag tag-all">All Users</span></li>
+<li><strong>41. Terms &amp; Policies</strong><span class="desc">View subscriber legal terms, privacy policy, and data processing agreements.</span><span class="tag tag-all">All Users</span></li>
+<li><strong>42. Data Consent Management</strong><span class="desc">Control POPIA marketing permissions and consent preferences.</span><span class="tag tag-all">All Users</span></li>
+</ul>
+</div>
+</div></section>
+
+<section id="status" class="alt"><div class="container">
+<h2 class="section-title">Feature Status Summary</h2>
+<p class="section-subtitle">A quick technical check on what is fully live vs. planned in the current app.</p>
+<div class="status-grid">
+<div class="status-card live"><div class="status-label">Fully Live</div><h4>Venue Analytics</h4><p>Basic count stats (catalogue items, quotes, tours). No graphs or visitor traffic data yet.</p></div>
+<div class="status-card notbuilt"><div class="status-label">Not Built</div><h4>Vendor Analytics</h4><p>Listed in subscription plans but no Vendor Analytics screen exists yet. Only VenueAnalyticsScreen is built.</p></div>
+<div class="status-card partial"><div class="status-label">Placeholder</div><h4>Activity Dashboard</h4><p>Menu item exists in Subscriber Suite but routes to a generic screen. Not a real analytics dashboard yet.</p></div>
+<div class="status-card partial"><div class="status-label">Placeholder</div><h4>Portfolio Profile Stats</h4><p>"Total Views" and "Quote Requests" on Portfolio Profile show static "0" values and are not wired to live data yet.</p></div>
+<div class="status-card live"><div class="status-label">Fully Live</div><h4>Calendar Updates</h4><p>Task-based calendar. Listers can add and view event dates.</p></div>
+<div class="status-card live"><div class="status-label">Fully Live</div><h4>Ratings &amp; Reviews</h4><p>Users can leave reviews; they display on public profiles.</p></div>
+<div class="status-card live"><div class="status-label">Fully Live</div><h4>Quote System</h4><p>End-to-end quote requests, creation, and revision tracking is functional.</p></div>
+<div class="status-card live"><div class="status-label">Fully Live</div><h4>Tour Bookings</h4><p>Venue tour request flow and management is functional.</p></div>
+<div class="status-card live"><div class="status-label">Fully Live</div><h4>Catalogue (Venue &amp; Vendor)</h4><p>Full CRUD for catalogue items and PDF upload is functional.</p></div>
+<div class="status-card live"><div class="status-label">Fully Live</div><h4>Billing &amp; Invoices</h4><p>PayFast integration, subscription checkout, and invoice tracking are functional.</p></div>
+</div>
+</div></section>
+
+<section id="quick-ref"><div class="container">
+<h2 class="section-title">Quick Reference: Who Gets What</h2>
+<p class="section-subtitle">A simple summary of what is included in each lister type.</p>
+<div class="quick-ref">
+<div class="quick-ref-card">
+<h4>Venue Lister</h4>
+<ul>
+<li><strong>Free:</strong> Basic profile, 10 photos, 1 video, calendar, map, WhatsApp, reviews, helpdesk.</li>
+<li><strong>Paid:</strong> Everything in Free PLUS catalogue, portfolio manager, analytics, quote requests, website/social links, and instant tour bookings.</li>
+</ul>
+</div>
+<div class="quick-ref-card">
+<h4>Vendor / Service Professional</h4>
+<ul>
+<li><strong>Free:</strong> Basic profile, 10 photos, up to 10 catalogue items, calendar, quote requests, helpdesk, portfolio editing.</li>
+<li><strong>Premium:</strong> Everything in Free PLUS 40 photos, 5 videos, full catalogue, reviews, analytics, WhatsApp, website/social links.</li>
+<li><strong>Premium Plus:</strong> Everything in Premium PLUS 60 photos, 10 videos, and a <strong>Dedicated Portfolio Manager</strong>.</li>
+</ul>
+</div>
+</div>
+</div></section>
+
+<footer class="footer"><div class="container"><p>Document generated for client reference. Features reflect the current state of the Funxon mobile application as of June 2026.</p></div></footer>
+
+</body>
+</html>

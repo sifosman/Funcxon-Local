@@ -35,21 +35,53 @@ serve(async (req) => {
       );
     }
 
-    const url = new URL('https://maps.googleapis.com/maps/api/place/autocomplete/json');
-    url.searchParams.set('input', input.trim());
-    url.searchParams.set('key', GOOGLE_MAPS_API_KEY);
-    url.searchParams.set('types', 'address');
+    const url = 'https://places.googleapis.com/v1/places:autocomplete';
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Goog-Api-Key': GOOGLE_MAPS_API_KEY,
+      },
+      body: JSON.stringify({
+        input: input.trim(),
+        includedRegionCodes: ['za'],
+      }),
+    });
 
-    const response = await fetch(url.toString());
     const data = await response.json();
 
-    return new Response(JSON.stringify(data), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      status: 200,
-    });
-  } catch (error) {
+    if (!response.ok) {
+      console.error('Google Places API (New) error:', data);
+      return new Response(
+        JSON.stringify({ predictions: [], error: data?.error?.message || `HTTP ${response.status}` }),
+        {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 200,
+        }
+      );
+    }
+
+    // Map new API response to legacy format expected by client
+    const predictions = Array.isArray(data?.suggestions)
+      ? data.suggestions
+          .filter((s: any) => s?.placePrediction)
+          .map((s: any) => ({
+            description: s.placePrediction.text?.text || '',
+            place_id: s.placePrediction.placeId || '',
+          }))
+          .filter((p: any) => p.description && p.place_id)
+      : [];
+
     return new Response(
-      JSON.stringify({ error: error.message, predictions: [] }),
+      JSON.stringify({ predictions, status: 'OK' }),
+      {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 200,
+      }
+    );
+  } catch (error: any) {
+    return new Response(
+      JSON.stringify({ error: error?.message || 'Unknown error', predictions: [] }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 500,

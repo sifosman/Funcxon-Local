@@ -557,7 +557,7 @@ export default function ApplicationStep1Screen() {
                 flex: 1,
                 backgroundColor: colors.surface,
                 borderWidth: 1,
-                bordercolor: colors.textPrimary,
+                borderColor: colors.textPrimary,
                 paddingVertical: spacing.md,
                 borderRadius: radii.md,
                 alignItems: 'center',
@@ -571,7 +571,7 @@ export default function ApplicationStep1Screen() {
               onPress={handleNext}
               style={{
                 flex: 1,
-                backgroundcolor: colors.textPrimary,
+                backgroundColor: colors.textPrimary,
                 paddingVertical: spacing.md,
                 borderRadius: radii.md,
                 flexDirection: 'row',

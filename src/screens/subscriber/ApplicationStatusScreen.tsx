@@ -5,6 +5,8 @@ import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { colors, radii, spacing, typography } from '../../theme';
 import type { ProfileStackParamList } from '../../navigation/ProfileNavigator';
+import { supabase } from '../../lib/supabaseClient';
+import { useAuth } from '../../auth/AuthContext';
 import { cancelApplication, getLatestUserApplication, isBlockingApplicationStatus, type SubscriberApplication } from '../../lib/applicationService';
 import { useApplicationForm, type ApplicationFormState } from '../../context/ApplicationFormContext';
 
@@ -55,19 +57,38 @@ const formatDate = (value?: string | null) => {
 export default function ApplicationStatusScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<ProfileStackParamList>>();
   const { hydrateForm } = useApplicationForm();
+  const { user } = useAuth();
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [cancelling, setCancelling] = useState(false);
   const [application, setApplication] = useState<SubscriberApplication | null>(null);
+  const [portfolioExists, setPortfolioExists] = useState(false);
 
   const loadApplication = useCallback(async () => {
     const result = await getLatestUserApplication();
-    if (result.success) {
-      setApplication(result.data ?? null);
-    } else {
-      setApplication(null);
-    }
+    const app = result.success ? (result.data ?? null) : null;
+    setApplication(app);
+    return app;
   }, []);
+
+  const checkPortfolioExists = useCallback(async (portfolioType?: string | null) => {
+    if (!user?.id) {
+      setPortfolioExists(false);
+      return;
+    }
+    try {
+      const table = portfolioType === 'venue' ? 'venue_listings' : 'vendors';
+      const { data, error } = await supabase
+        .from(table)
+        .select('id')
+        .eq('user_id', user.id)
+        .maybeSingle();
+      if (error) throw error;
+      setPortfolioExists(!!data);
+    } catch {
+      setPortfolioExists(false);
+    }
+  }, [user?.id]);
 
   useFocusEffect(
     useCallback(() => {
@@ -75,9 +96,10 @@ export default function ApplicationStatusScreen() {
 
       async function run() {
         setLoading(true);
-        await loadApplication();
+        const app = await loadApplication();
         if (isActive) {
           setLoading(false);
+          await checkPortfolioExists(app?.portfolio_type);
         }
       }
 
@@ -86,12 +108,13 @@ export default function ApplicationStatusScreen() {
       return () => {
         isActive = false;
       };
-    }, [loadApplication]),
+    }, [loadApplication, checkPortfolioExists]),
   );
 
   const handleRefresh = async () => {
     setRefreshing(true);
-    await loadApplication();
+    const app = await loadApplication();
+    await checkPortfolioExists(app?.portfolio_type);
     setRefreshing(false);
   };
 
@@ -133,6 +156,14 @@ export default function ApplicationStatusScreen() {
         },
       },
     ]);
+  };
+
+  const handleManagePortfolio = () => {
+    if (application?.portfolio_type === 'venue') {
+      navigation.navigate('UpdateVenuePortfolio');
+    } else {
+      navigation.navigate('UpdateVendorPortfolio');
+    }
   };
 
   const handleUpdateApplication = () => {
@@ -200,7 +231,7 @@ export default function ApplicationStatusScreen() {
     <View style={{ flex: 1, backgroundColor: colors.background }}>
       <ScrollView
         contentContainerStyle={{ paddingBottom: spacing.xl }}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintcolor={colors.textPrimary} />}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={colors.textPrimary} />}
       >
         <View style={{ paddingHorizontal: spacing.lg, paddingTop: spacing.xl }}>
           <TouchableOpacity
@@ -249,7 +280,7 @@ export default function ApplicationStatusScreen() {
                 onPress={() => navigation.navigate('PortfolioType')}
                 style={{
                   alignSelf: 'flex-start',
-                  backgroundcolor: colors.textPrimary,
+                  backgroundColor: colors.textPrimary,
                   paddingHorizontal: spacing.lg,
                   paddingVertical: spacing.md,
                   borderRadius: radii.md,
@@ -350,7 +381,7 @@ export default function ApplicationStatusScreen() {
                 <TouchableOpacity
                   onPress={handleUpdateApplication}
                   style={{
-                    backgroundcolor: colors.textPrimary,
+                    backgroundColor: colors.textPrimary,
                     borderRadius: radii.lg,
                     paddingVertical: spacing.md,
                     alignItems: 'center',
@@ -359,6 +390,27 @@ export default function ApplicationStatusScreen() {
                 >
                   <Text style={{ ...typography.body, color: '#FFFFFF', fontWeight: '700' }}>
                     Update Application
+                  </Text>
+                </TouchableOpacity>
+              ) : null}
+
+              {portfolioExists ? (
+                <TouchableOpacity
+                  onPress={handleManagePortfolio}
+                  style={{
+                    backgroundColor: colors.textPrimary,
+                    borderRadius: radii.lg,
+                    paddingVertical: spacing.md,
+                    alignItems: 'center',
+                    marginBottom: spacing.lg,
+                    flexDirection: 'row',
+                    justifyContent: 'center',
+                    gap: spacing.sm,
+                  }}
+                >
+                  <MaterialIcons name="storefront" size={20} color="#FFFFFF" />
+                  <Text style={{ ...typography.body, color: '#FFFFFF', fontWeight: '700' }}>
+                    Manage Portfolio
                   </Text>
                 </TouchableOpacity>
               ) : null}
