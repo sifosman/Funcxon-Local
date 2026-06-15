@@ -259,7 +259,14 @@ export default function ListersPortalScreen() {
         onNavigateToHelpDesk={() => setHelpVisible(true)}
         onNavigateToTerms={() => navigation.navigate('TermsAndPolicies')}
       />
-      <HelpCenterModal visible={helpVisible} onClose={() => setHelpVisible(false)} />
+      <HelpCenterModal
+        visible={helpVisible}
+        onClose={() => setHelpVisible(false)}
+        onNavigateToHelp={() => {
+          setHelpVisible(false);
+          navigation.navigate('PortfolioAssistance');
+        }}
+      />
     </ScrollView>
   );
 }

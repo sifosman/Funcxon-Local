@@ -37,6 +37,7 @@ type ProfileStackParamList = {
   TermsAndPolicies: undefined;
   SubscriptionPlans: undefined;
   VenueListingPlans: undefined;
+  PortfolioAssistance: undefined;
 };
 
 type NavigationProp = NativeStackNavigationProp<ProfileStackParamList>;
@@ -427,13 +428,6 @@ export default function ListerPortfolioScreen() {
           </TouchableOpacity>
         </View>
 
-        {/* Temporary debug button */}
-        <TouchableOpacity
-          style={[styles.ctaButton, { backgroundColor: '#dc2626' }]}
-          onPress={() => (navigation as any).navigate('DebugUser')}
-        >
-          <Text style={styles.ctaButtonText}>DEBUG: View User Data</Text>
-        </TouchableOpacity>
       </View>
 
       {/* Listers Blog Section */}
@@ -513,7 +507,14 @@ export default function ListerPortfolioScreen() {
         onNavigateToHelpDesk={() => setHelpVisible(true)}
         onNavigateToTerms={() => navigation.navigate('TermsAndPolicies')}
       />
-      <HelpCenterModal visible={helpVisible} onClose={() => setHelpVisible(false)} />
+      <HelpCenterModal
+        visible={helpVisible}
+        onClose={() => setHelpVisible(false)}
+        onNavigateToHelp={() => {
+          setHelpVisible(false);
+          navigation.navigate('PortfolioAssistance');
+        }}
+      />
     </ScrollView>
   );
 }

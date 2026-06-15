@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, TextInput, Alert } from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView, TextInput, Alert, Linking } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -59,17 +59,15 @@ export default function PortfolioAssistanceScreen() {
 
   const handleLiveChat = () => {
     const whatsappUrl = 'https://wa.me/27812345678?text=Hi, I need help with my portfolio application.';
-    // In a real app, you would use Linking.openURL(whatsappUrl)
     Alert.alert(
       'Live Chat Support',
       'You\'ll be connected to our portfolio specialist via WhatsApp for real-time assistance.',
       [
         { text: 'Cancel', style: 'cancel' },
-        { 
-          text: 'Open WhatsApp', 
+        {
+          text: 'Open WhatsApp',
           onPress: () => {
-            // TODO: Implement actual WhatsApp linking
-            Alert.alert('Coming Soon', 'WhatsApp integration will be available soon.');
+            Linking.openURL(whatsappUrl).catch(() => null);
           }
         }
       ]
@@ -175,7 +173,7 @@ export default function PortfolioAssistanceScreen() {
       title: 'Schedule Call',
       description: 'Book a 15-30 minute consultation with our expert team',
       icon: 'phone',
-      iconcolor: colors.textPrimary,
+      iconColor: colors.textPrimary,
       bgColor: '#E0F2FE',
       action: handleScheduleCall
     },
@@ -219,7 +217,7 @@ export default function PortfolioAssistanceScreen() {
               width: 80,
               height: 80,
               borderRadius: 40,
-              backgroundcolor: colors.textPrimary,
+              backgroundColor: colors.textPrimary,
               justifyContent: 'center',
               alignItems: 'center',
               marginBottom: spacing.md

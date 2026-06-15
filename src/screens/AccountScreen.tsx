@@ -460,9 +460,13 @@ export default function AccountScreen() {
                         .map((item) => renderMenuItem(item))}
                 </View>
             </ScrollView>
-            <HelpCenterModal 
-                visible={helpVisible} 
-                onClose={() => setHelpVisible(false)} 
+            <HelpCenterModal
+                visible={helpVisible}
+                onClose={() => setHelpVisible(false)}
+                onNavigateToHelp={() => {
+                    setHelpVisible(false);
+                    navigation.navigate('PortfolioAssistance');
+                }}
                 onDeleteAccount={handleDeleteAccount}
             />
         </View>

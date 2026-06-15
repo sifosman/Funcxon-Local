@@ -6,13 +6,14 @@ import { colors, spacing, radii, typography } from '../theme';
 type HelpCenterModalProps = {
   visible: boolean;
   onClose: () => void;
+  onNavigateToHelp?: () => void;
   onDeleteAccount?: () => void;
 };
 
 const SUPPORT_EMAIL = process.env.EXPO_PUBLIC_SUPPORT_EMAIL || 'support@funxon.com';
 const SUPPORT_WHATSAPP = process.env.EXPO_PUBLIC_SUPPORT_WHATSAPP || '+27000000000';
 
-export function HelpCenterModal({ visible, onClose, onDeleteAccount }: HelpCenterModalProps) {
+export function HelpCenterModal({ visible, onClose, onNavigateToHelp, onDeleteAccount }: HelpCenterModalProps) {
   const whatsappLink = useMemo(() => {
     const number = SUPPORT_WHATSAPP.replace(/[^0-9+]/g, '');
     const message = encodeURIComponent('Hi, I need assistance with Funxon.');
@@ -73,8 +74,14 @@ export function HelpCenterModal({ visible, onClose, onDeleteAccount }: HelpCente
               <Text style={styles.cardBody}>
                 Browse FAQs for quick answers about quotes, portfolio creation, billing, and bookings.
               </Text>
-              <TouchableOpacity style={styles.chip}>
-                <Text style={styles.chipText}>View FAQs (coming soon)</Text>
+              <TouchableOpacity
+                style={styles.chip}
+                onPress={() => {
+                  onClose();
+                  onNavigateToHelp?.();
+                }}
+              >
+                <Text style={styles.chipText}>Get Help</Text>
               </TouchableOpacity>
             </View>
 
@@ -110,7 +117,7 @@ export function HelpCenterModal({ visible, onClose, onDeleteAccount }: HelpCente
               </Text>
               <TouchableOpacity style={styles.secondaryBtn} onPress={handleRequestManager}>
                 <MaterialIcons name="arrow-forward" size={18} color={colors.textPrimary} />
-                <Text style={styles.secondaryBtnText}>Request a manager (coming soon)</Text>
+                <Text style={styles.secondaryBtnText}>Request a manager</Text>
               </TouchableOpacity>
             </View>
 
