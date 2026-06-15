@@ -1,5 +1,5 @@
-import { useEffect, useLayoutEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, Image, Modal, Platform, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { ActivityIndicator, Animated, Image, Modal, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RouteProp } from '@react-navigation/native';
@@ -49,6 +49,17 @@ export default function DiscoverScreen() {
     venueIds: [],
   });
   const { user } = useAuth();
+  const scrollY = useRef(new Animated.Value(0)).current;
+  const headerTranslateY = scrollY.interpolate({
+    inputRange: [0, 80],
+    outputRange: [0, -60],
+    extrapolate: 'clamp',
+  });
+  const headerOpacity = scrollY.interpolate({
+    inputRange: [0, 60],
+    outputRange: [1, 0],
+    extrapolate: 'clamp',
+  });
 
   const parseLocationParts = (location?: string | null) => {
     if (!location) {
@@ -584,25 +595,36 @@ export default function DiscoverScreen() {
   );
 
   return (
-    <ScrollView
+    <Animated.ScrollView
       style={{ flex: 1, backgroundColor: colors.background }}
-      contentContainerStyle={{ paddingHorizontal: spacing.lg, paddingTop: spacing.lg, paddingBottom: spacing.xl }}
+      contentContainerStyle={{ paddingHorizontal: spacing.lg, paddingTop: spacing.sm, paddingBottom: spacing.xl }}
       keyboardShouldPersistTaps="handled"
+      scrollEventThrottle={16}
+      onScroll={Animated.event(
+        [{ nativeEvent: { contentOffset: { y: scrollY } } }],
+        { useNativeDriver: true }
+      )}
     >
-      {Platform.OS === 'web' && (
+      <Animated.View
+        style={{
+          transform: [{ translateY: headerTranslateY }],
+          opacity: headerOpacity,
+          marginBottom: spacing.sm,
+        }}
+      >
         <TouchableOpacity
           onPress={() => navigation.goBack()}
-          style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.md }}
+          style={{ flexDirection: 'row', alignItems: 'center' }}
         >
           <MaterialIcons name="arrow-back" size={20} color={colors.textPrimary} />
           <Text style={{ ...typography.body, color: colors.textPrimary, marginLeft: spacing.xs }}>Back</Text>
         </TouchableOpacity>
-      )}
+      </Animated.View>
       <View
         style={{
           backgroundColor: colors.surface,
           borderRadius: radii.xl,
-          padding: spacing.lg,
+          padding: spacing.md,
           borderWidth: 1,
           borderColor: colors.borderSubtle,
           marginBottom: spacing.lg,
@@ -611,7 +633,7 @@ export default function DiscoverScreen() {
         <Text style={{ ...typography.displayMedium, color: colors.textPrimary, marginBottom: spacing.xs }}>
           {getDisplayTitle()}
         </Text>
-        <Text style={{ ...typography.body, color: colors.textSecondary, marginBottom: spacing.lg }}>
+        <Text style={{ ...typography.body, color: colors.textSecondary, marginBottom: spacing.md }}>
           Search beautifully curated venues, vendors, and services with fast smart matching and polished filters.
         </Text>
 
@@ -1080,6 +1102,6 @@ export default function DiscoverScreen() {
           </View>
         </View>
       </Modal>
-    </ScrollView>
+    </Animated.ScrollView>
   );
 }

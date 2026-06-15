@@ -70,7 +70,7 @@ export function AttendeeNavigator() {
       <Stack.Screen
         name="Discover"
         component={DiscoverScreen}
-        options={{ title: 'Discover' }}
+        options={{ headerShown: false }}
       />
       <Stack.Screen
         name="VendorProfile"
