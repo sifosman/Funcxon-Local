@@ -47,6 +47,7 @@ export type VendorListItem = {
   location?: string | null;
   category_id?: number | null;
   venue_type?: string | null;
+  venue_capacity?: string | null;
   amenities?: string[] | null;
   service_options?: string[] | null;
   vendor_tags?: string[] | null;
@@ -81,7 +82,7 @@ type CategoryOption = {
   subcategories: string[];
 };
 
-const VENDOR_CATEGORIES: CategoryOption[] = [
+export const VENDOR_CATEGORIES: CategoryOption[] = [
   {
     id: 1,
     label: 'Audio & Visual',

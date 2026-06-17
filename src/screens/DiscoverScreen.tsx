@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, Animated, Image, Modal, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Animated, Image, KeyboardAvoidingView, Modal, Platform, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RouteProp } from '@react-navigation/native';
@@ -9,9 +9,13 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '../lib/supabaseClient';
 import { colors, spacing, radii, typography } from '../theme';
 import type { VendorListItem } from './AttendeeHomeScreen';
+import { VENDOR_CATEGORIES } from './AttendeeHomeScreen';
 import { getFavourites, toggleFavourite } from '../lib/favourites';
 import { useAuth } from '../auth/AuthContext';
 import type { AttendeeStackParamList } from '../navigation/AttendeeNavigator';
+import { venueTypes, amenitiesList, venueCapacityOptions } from '../config/venueTypes';
+import { provinces } from '../config/locations';
+import MapRadiusSelector from '../components/MapRadiusSelector';
 
 type CategoryFilter = 'all' | 'venues' | 'vendors' | 'services';
 type SortBy = 'best-match' | 'rating-desc' | 'reviews-desc' | 'price-asc' | 'alphabetical';
@@ -48,6 +52,28 @@ export default function DiscoverScreen() {
     vendorIds: [],
     venueIds: [],
   });
+
+  // Venue-specific dropdown states
+  const [selectedVenueType, setSelectedVenueType] = useState<string | null>(null);
+  const [selectedVenueAmenities, setSelectedVenueAmenities] = useState<string[]>([]);
+  const [selectedCapacity, setSelectedCapacity] = useState<string | null>(null);
+  const [selectedProvinces, setSelectedProvinces] = useState<string[]>([]);
+  const [selectedCities, setSelectedCities] = useState<string[]>([]);
+
+  // Vendor-specific dropdown states
+  const [selectedVendorCategories, setSelectedVendorCategories] = useState<number[]>([]);
+  const [selectedVendorSubcategories, setSelectedVendorSubcategories] = useState<string[]>([]);
+  const [selectedVendorProvinces, setSelectedVendorProvinces] = useState<string[]>([]);
+  const [selectedVendorCities, setSelectedVendorCities] = useState<string[]>([]);
+
+  // Dropdown picker modal
+  const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
+  const [dropdownSearch, setDropdownSearch] = useState('');
+
+  // Map radius
+  const [showMapRadiusSelector, setShowMapRadiusSelector] = useState(false);
+  const [mapRadius, setMapRadius] = useState(20);
+
   const { user } = useAuth();
   const scrollY = useRef(new Animated.Value(0)).current;
   const headerTranslateY = scrollY.interpolate({
@@ -82,6 +108,42 @@ export default function DiscoverScreen() {
       city: parts[0] ?? null,
       province: null,
     };
+  };
+
+  // Lightweight fuzzy match: checks substring first, then character-order tolerance
+  const fuzzyMatch = (text: string, query: string): boolean => {
+    const t = text.toLowerCase();
+    const q = query.toLowerCase().trim();
+    if (!q) return true;
+    if (t.includes(q)) return true;
+
+    let tIdx = 0;
+    let qIdx = 0;
+    while (tIdx < t.length && qIdx < q.length) {
+      if (t[tIdx] === q[qIdx]) qIdx++;
+      tIdx++;
+    }
+    return qIdx === q.length;
+  };
+
+  const getVenueMaxCapacity = (item: VendorListItem): number | null => {
+    const raw = item.venue_capacity ?? '';
+    if (!raw) return null;
+    const numbers = String(raw).match(/\d+/g);
+    if (!numbers || numbers.length === 0) return null;
+    return parseInt(numbers[numbers.length - 1], 10);
+  };
+
+  const getCapacityThreshold = (capacityLabel: string): number => {
+    switch (capacityLabel) {
+      case 'Under 50': return 50;
+      case 'Under 200': return 200;
+      case 'Under 500': return 500;
+      case 'Under 1000': return 1000;
+      case 'Under 2000': return 2000;
+      case '2000 and More': return 2000;
+      default: return 0;
+    }
   };
 
   const classifyCategory = (item: VendorListItem): CategoryFilter => {
@@ -143,7 +205,7 @@ export default function DiscoverScreen() {
     }
 
     if (route.params?.category === 'vendors') {
-      return 'Searching vendors';
+      return 'Searching vendors and services';
     }
 
     if (route.params?.category === 'services') {
@@ -172,6 +234,20 @@ export default function DiscoverScreen() {
       return 'Search services, e.g. photography, catering, decor';
     }
 
+    const cat = route.params?.category ?? category;
+
+    if (cat === 'venues') {
+      return 'Quick search by venue name';
+    }
+
+    if (cat === 'vendors') {
+      return 'Search vendors and services, city, province...';
+    }
+
+    if (cat === 'services') {
+      return 'Search services, e.g. photography, catering, decor';
+    }
+
     return 'Search venues, vendors, services, city, category...';
   };
 
@@ -187,7 +263,7 @@ export default function DiscoverScreen() {
 
       const { data: venues, error: venueError } = await supabase
         .from('venue_listings')
-        .select('id, name, rating, review_count, image_url, location, description, venue_type, amenities, features')
+        .select('id, name, rating, review_count, image_url, location, description, venue_type, venue_capacity, amenities, features')
         .limit(60);
 
       if (venueError) throw venueError;
@@ -216,6 +292,7 @@ export default function DiscoverScreen() {
           city: locationParts.city,
           province: locationParts.province,
           venue_type: venue.venue_type,
+          venue_capacity: venue.venue_capacity,
           amenities: venue.amenities,
           features: venue.features,
           type: 'venue',
@@ -240,6 +317,23 @@ export default function DiscoverScreen() {
     setFeaturedOnly(route.params.presetFilter === 'featured');
     setLocationSearch(route.params.presetFilter === 'location' ? route.params.initialSearch ?? '' : '');
   }, [route.params]);
+
+  // Clear legacy text filters when switching to venues, vendors, or services (dropdowns take over)
+  useEffect(() => {
+    if (category === 'venues' || category === 'vendors' || category === 'services') {
+      setCityFilter('');
+      setProvinceFilter('');
+      setAmenitiesFilter('');
+      setCategoryTextFilter('');
+    }
+    // Reset vendor dropdowns when switching away from vendors/services
+    if (category !== 'vendors' && category !== 'services') {
+      setSelectedVendorCategories([]);
+      setSelectedVendorSubcategories([]);
+      setSelectedVendorProvinces([]);
+      setSelectedVendorCities([]);
+    }
+  }, [category]);
 
   useEffect(() => {
     let isMounted = true;
@@ -282,37 +376,95 @@ export default function DiscoverScreen() {
   const filtered = useMemo(() => {
     return safeData.filter((item) => {
       const itemCategory = classifyCategory(item);
-      const fields = [
-        item.name ?? '',
-        item.description ?? '',
-        item.location ?? '',
-        item.city ?? '',
-        item.province ?? '',
-        item.venue_type ?? '',
-        ...(Array.isArray(item.amenities) ? item.amenities : []),
-        ...(Array.isArray(item.service_options) ? item.service_options : []),
-        ...(Array.isArray(item.vendor_tags) ? item.vendor_tags : []),
-      ]
-        .join(' ')
-        .toLowerCase();
 
+      // Search: for venues, fuzzy-match name only; otherwise broad match
+      let matchesSearch = true;
+      if (queryTokens.length > 0) {
+        if (category === 'venues' && item.type === 'venue') {
+          matchesSearch = queryTokens.every((token) => fuzzyMatch(item.name ?? '', token));
+        } else {
+          const fields = [
+            item.name ?? '',
+            item.description ?? '',
+            item.location ?? '',
+            item.city ?? '',
+            item.province ?? '',
+            item.venue_type ?? '',
+            ...(Array.isArray(item.amenities) ? item.amenities : []),
+            ...(Array.isArray(item.service_options) ? item.service_options : []),
+            ...(Array.isArray(item.vendor_tags) ? item.vendor_tags : []),
+          ]
+            .join(' ')
+            .toLowerCase();
+          matchesSearch = queryTokens.every((token) => fields.includes(token));
+        }
+      }
+
+      const matchesLocation = !locationQuery || [item.location, item.city, item.province].some((value) => (value ?? '').toLowerCase().includes(locationQuery));
+
+      // Venue-specific dropdown filters (only apply when item is a venue)
+      let matchesVenueType = true;
+      if (selectedVenueType && item.type === 'venue') {
+        const vt = String(item.venue_type ?? '').toLowerCase();
+        matchesVenueType = vt === selectedVenueType.toLowerCase();
+      }
+
+      let matchesVenueAmenities = true;
+      if (selectedVenueAmenities.length > 0 && item.type === 'venue') {
+        const itemAmenities = Array.isArray(item.amenities) ? item.amenities.map((a) => String(a).toLowerCase()) : [];
+        matchesVenueAmenities = selectedVenueAmenities.every((a) => itemAmenities.includes(a.toLowerCase()));
+      }
+
+      let matchesCapacity = true;
+      if (selectedCapacity && item.type === 'venue') {
+        const cap = getVenueMaxCapacity(item);
+        const threshold = getCapacityThreshold(selectedCapacity);
+        if (selectedCapacity === '2000 and More') {
+          matchesCapacity = cap !== null && cap >= threshold;
+        } else {
+          matchesCapacity = cap !== null && cap <= threshold;
+        }
+      }
+
+      const itemProvince = (item.province ?? '').toLowerCase();
+      const itemCity = (item.city ?? '').toLowerCase();
+      const matchesProvinceDropdown = selectedProvinces.length === 0 || selectedProvinces.some((p) => itemProvince === p.toLowerCase() || (itemProvince.includes(p.toLowerCase()) && p.length > 3));
+      const matchesCityDropdown = selectedCities.length === 0 || selectedCities.some((c) => itemCity === c.toLowerCase() || (itemCity.includes(c.toLowerCase()) && c.length > 2));
+
+      // Vendor-specific dropdown filters (only apply when item is a vendor)
+      let matchesVendorCategory = true;
+      if (selectedVendorCategories.length > 0 && item.type === 'vendor') {
+        matchesVendorCategory = item.category_id != null && selectedVendorCategories.includes(item.category_id as number);
+      }
+
+      let matchesVendorSubcategory = true;
+      if (selectedVendorSubcategories.length > 0 && item.type === 'vendor') {
+        const options = Array.isArray(item.service_options) ? item.service_options : [];
+        const tags = Array.isArray(item.vendor_tags) ? item.vendor_tags : [];
+        const haystack = [...options, ...tags].map((v) => String(v ?? '').toLowerCase());
+        const selectedSet = new Set(selectedVendorSubcategories.map((t) => t.toLowerCase()));
+        matchesVendorSubcategory = haystack.some((v) => selectedSet.has(v));
+      }
+
+      const matchesVendorProvinceDropdown = selectedVendorProvinces.length === 0 || selectedVendorProvinces.some((p) => itemProvince === p.toLowerCase() || (itemProvince.includes(p.toLowerCase()) && p.length > 3));
+      const matchesVendorCityDropdown = selectedVendorCities.length === 0 || selectedVendorCities.some((c) => itemCity === c.toLowerCase() || (itemCity.includes(c.toLowerCase()) && c.length > 2));
+
+      // Fallback free-text filters (used for non-venue mode or when legacy filters still set)
       const citySource = (item.city ?? item.location ?? '').toLowerCase();
       const provinceSource = (item.province ?? '').toLowerCase();
       const amenitiesText = (Array.isArray(item.amenities) ? item.amenities : [])
         .join(' ')
         .toLowerCase();
-
-      const matchesSearch = queryTokens.length === 0 || queryTokens.every((token) => fields.includes(token));
-      const matchesLocation = !locationQuery || [item.location, item.city, item.province].some((value) => (value ?? '').toLowerCase().includes(locationQuery));
-      const matchesCity = !cityFilterQuery || citySource.includes(cityFilterQuery);
-      const matchesProvince = !provinceFilterQuery || provinceSource.includes(provinceFilterQuery);
-      const matchesAmenities = !amenitiesFilterQuery || amenitiesText.includes(amenitiesFilterQuery);
+      const matchesCityText = !cityFilterQuery || citySource.includes(cityFilterQuery);
+      const matchesProvinceText = !provinceFilterQuery || provinceSource.includes(provinceFilterQuery);
+      const matchesAmenitiesText = !amenitiesFilterQuery || amenitiesText.includes(amenitiesFilterQuery);
       const matchesCategoryText =
         !categoryTextFilterQuery ||
         [item.name, item.description, ...(Array.isArray(item.service_options) ? item.service_options : []), ...(Array.isArray(item.vendor_tags) ? item.vendor_tags : [])]
           .join(' ')
           .toLowerCase()
           .includes(categoryTextFilterQuery);
+
       const matchesRating = minRating == null || (typeof item.rating === 'number' && item.rating >= minRating);
       const matchesPrice = !onlyWithPrice || !!item.price_range;
       const matchesCategory = category === 'all' || itemCategory === category || (category === 'vendors' && item.type === 'vendor' && itemCategory !== 'services');
@@ -321,9 +473,18 @@ export default function DiscoverScreen() {
       return (
         matchesSearch &&
         matchesLocation &&
-        matchesCity &&
-        matchesProvince &&
-        matchesAmenities &&
+        matchesVenueType &&
+        matchesVenueAmenities &&
+        matchesCapacity &&
+        matchesProvinceDropdown &&
+        matchesCityDropdown &&
+        matchesVendorCategory &&
+        matchesVendorSubcategory &&
+        matchesVendorProvinceDropdown &&
+        matchesVendorCityDropdown &&
+        matchesCityText &&
+        matchesProvinceText &&
+        matchesAmenitiesText &&
         matchesCategoryText &&
         matchesRating &&
         matchesPrice &&
@@ -343,6 +504,15 @@ export default function DiscoverScreen() {
     provinceFilterQuery,
     queryTokens,
     safeData,
+    selectedVenueType,
+    selectedVenueAmenities,
+    selectedCapacity,
+    selectedProvinces,
+    selectedCities,
+    selectedVendorCategories,
+    selectedVendorSubcategories,
+    selectedVendorProvinces,
+    selectedVendorCities,
   ]);
 
   const sorted = useMemo(() => {
@@ -404,6 +574,42 @@ export default function DiscoverScreen() {
   const shouldShowFeatured = !hasActiveSearch && !showFilters && !locationQuery && !featuredOnly;
   const isLocationMode = route.params?.presetFilter === 'location';
   const activeSearchModeLabel = getActiveSearchModeLabel();
+
+  const availableCities = useMemo(() => {
+    if (selectedProvinces.length === 0) {
+      return provinces.flatMap((p) => p.cities).sort();
+    }
+    return selectedProvinces
+      .flatMap((p) => {
+        const prov = provinces.find((pr) => pr.name === p);
+        return prov ? prov.cities : [];
+      })
+      .sort();
+  }, [selectedProvinces]);
+
+  const availableVendorCities = useMemo(() => {
+    if (selectedVendorProvinces.length === 0) {
+      return provinces.flatMap((p) => p.cities).sort();
+    }
+    return selectedVendorProvinces
+      .flatMap((p) => {
+        const prov = provinces.find((pr) => pr.name === p);
+        return prov ? prov.cities : [];
+      })
+      .sort();
+  }, [selectedVendorProvinces]);
+
+  const availableVendorSubcategories = useMemo(() => {
+    const resolvedCategoryIds = selectedVendorCategories.length
+      ? selectedVendorCategories
+      : VENDOR_CATEGORIES.map((c) => c.id);
+
+    const subcats = resolvedCategoryIds
+      .map((id) => VENDOR_CATEGORIES.find((c) => c.id === id)?.subcategories ?? [])
+      .flat();
+
+    return Array.from(new Set(subcats.map((v) => String(v ?? '').trim()).filter(Boolean))).sort();
+  }, [selectedVendorCategories]);
 
   const resultCountLabel = `${sorted.length} ${sorted.length === 1 ? 'listing' : 'listings'}`;
 
@@ -673,7 +879,6 @@ export default function DiscoverScreen() {
           ) : null}
         </View>
 
-        {/* Location mode now uses text + filters only; map removed per design. */}
 
         <View
           style={{
@@ -829,223 +1034,383 @@ export default function DiscoverScreen() {
       )}
 
       <Modal visible={showFilters} transparent animationType="fade" onRequestClose={() => setShowFilters(false)}>
-        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.28)', justifyContent: 'flex-end' }}>
-          <TouchableOpacity style={{ flex: 1 }} activeOpacity={1} onPress={() => setShowFilters(false)} />
-          <View
-            style={{
-              backgroundColor: colors.surface,
-              borderTopLeftRadius: radii.xl,
-              borderTopRightRadius: radii.xl,
-              padding: spacing.lg,
-              borderTopWidth: 1,
-              borderColor: colors.borderSubtle,
-            }}
-          >
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.md }}>
-              <Text style={{ ...typography.titleMedium, color: colors.textPrimary }}>Filters</Text>
-              <TouchableOpacity onPress={() => setShowFilters(false)}>
-                <MaterialIcons name="close" size={20} color={colors.textSecondary} />
-              </TouchableOpacity>
-            </View>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          style={{ flex: 1 }}
+        >
+          <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.28)', justifyContent: 'flex-end' }}>
+            <TouchableOpacity style={{ flex: 1 }} activeOpacity={1} onPress={() => setShowFilters(false)} />
+            <View
+              style={{
+                backgroundColor: colors.surface,
+                borderTopLeftRadius: radii.xl,
+                borderTopRightRadius: radii.xl,
+                padding: spacing.lg,
+                borderTopWidth: 1,
+                borderColor: colors.borderSubtle,
+                maxHeight: '85%',
+              }}
+            >
+              <View style={{ flexDirection: 'row', justifyContent: 'flex-end', alignItems: 'center', marginBottom: spacing.md }}>
+                <TouchableOpacity onPress={() => setShowFilters(false)}>
+                  <MaterialIcons name="close" size={20} color={colors.textSecondary} />
+                </TouchableOpacity>
+              </View>
 
-            <Text style={{ ...typography.caption, color: colors.textMuted, marginBottom: spacing.xs }}>Browse by</Text>
-            <View style={{ flexDirection: 'row', flexWrap: 'wrap', rowGap: spacing.sm, columnGap: spacing.sm, marginBottom: spacing.md }}>
-              {[
-                { key: 'all' as CategoryFilter, label: 'All' },
-                { key: 'venues' as CategoryFilter, label: 'Venues' },
-                { key: 'vendors' as CategoryFilter, label: 'Vendors' },
-                { key: 'services' as CategoryFilter, label: 'Services' },
-              ].map((option) => {
-                const selected = category === option.key;
-                return (
-                  <TouchableOpacity
-                    key={option.key}
-                    onPress={() => setCategory(option.key)}
-                    style={{
-                      paddingHorizontal: spacing.md,
-                      paddingVertical: spacing.xs,
-                      borderRadius: radii.full,
-                      borderWidth: 1,
-                      borderColor: selected ? colors.primary : colors.borderSubtle,
-                      backgroundColor: selected ? colors.primary : colors.surface,
-                    }}
-                  >
-                    <Text style={{ ...typography.caption, color: selected ? colors.primaryForeground : colors.textPrimary }}>
-                      {option.label}
-                    </Text>
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
-
-            {!isLocationMode ? (
-              <>
-                <Text style={{ ...typography.caption, color: colors.textMuted, marginBottom: spacing.xs }}>Location</Text>
-                <View
-                  style={{
-                    borderRadius: radii.md,
-                    borderWidth: 1,
-                    borderColor: colors.borderSubtle,
-                    backgroundColor: colors.surfaceMuted,
-                    paddingHorizontal: spacing.md,
-                    marginBottom: spacing.md,
-                  }}
-                >
-                  <TextInput
-                    value={locationSearch}
-                    onChangeText={setLocationSearch}
-                    placeholder="Filter by city or province"
-                    placeholderTextColor={colors.textMuted}
-                    style={{ paddingVertical: spacing.sm, color: colors.textPrimary }}
-                  />
+              <ScrollView keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+                <Text style={{ ...typography.caption, color: colors.textMuted, marginBottom: spacing.xs }}>Browse by</Text>
+                <View style={{ flexDirection: 'row', flexWrap: 'wrap', rowGap: spacing.sm, columnGap: spacing.sm, marginBottom: spacing.md }}>
+                  {[
+                    { key: 'all' as CategoryFilter, label: 'All' },
+                    { key: 'venues' as CategoryFilter, label: 'Venues' },
+                    { key: 'vendors' as CategoryFilter, label: 'Vendors' },
+                    { key: 'services' as CategoryFilter, label: 'Services' },
+                  ].map((option) => {
+                    const selected = category === option.key;
+                    return (
+                      <TouchableOpacity
+                        key={option.key}
+                        onPress={() => setCategory(option.key)}
+                        style={{
+                          paddingHorizontal: spacing.md,
+                          paddingVertical: spacing.xs,
+                          borderRadius: radii.full,
+                          borderWidth: 1,
+                          borderColor: selected ? colors.primary : colors.borderSubtle,
+                          backgroundColor: selected ? colors.primary : colors.surface,
+                        }}
+                      >
+                        <Text style={{ ...typography.caption, color: selected ? colors.primaryForeground : colors.textPrimary }}>
+                          {option.label}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
                 </View>
-              </>
-            ) : null}
 
-            <Text style={{ ...typography.caption, color: colors.textMuted, marginBottom: spacing.xs }}>City</Text>
-            <View
-              style={{
-                borderRadius: radii.md,
-                borderWidth: 1,
-                borderColor: colors.borderSubtle,
-                backgroundColor: colors.surfaceMuted,
-                paddingHorizontal: spacing.md,
-                marginBottom: spacing.md,
-              }}
-            >
-              <TextInput
-                value={cityFilter}
-                onChangeText={setCityFilter}
-                placeholder="Filter by city"
-                placeholderTextColor={colors.textMuted}
-                style={{ paddingVertical: spacing.sm, color: colors.textPrimary }}
-              />
-            </View>
+                {category === 'venues' ? (
+                  <>
+                    {/* Venue Type Dropdown */}
+                    <Text style={{ ...typography.caption, color: colors.textMuted, marginBottom: spacing.xs }}>Select your preferred venue type</Text>
+                    <TouchableOpacity
+                      onPress={() => { setDropdownSearch(''); setActiveDropdown('venue_type'); }}
+                      style={{
+                        borderRadius: radii.md,
+                        borderWidth: 1,
+                        borderColor: colors.borderSubtle,
+                        backgroundColor: colors.surfaceMuted,
+                        paddingHorizontal: spacing.md,
+                        paddingVertical: spacing.sm,
+                        marginBottom: spacing.md,
+                        flexDirection: 'row',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                      }}
+                    >
+                      <Text style={{ color: selectedVenueType ? colors.textPrimary : colors.textMuted }}>
+                        {selectedVenueType ?? 'Any'}
+                      </Text>
+                      <MaterialIcons name="keyboard-arrow-down" size={20} color={colors.textSecondary} />
+                    </TouchableOpacity>
 
-            <Text style={{ ...typography.caption, color: colors.textMuted, marginBottom: spacing.xs }}>Province / region</Text>
-            <View
-              style={{
-                borderRadius: radii.md,
-                borderWidth: 1,
-                borderColor: colors.borderSubtle,
-                backgroundColor: colors.surfaceMuted,
-                paddingHorizontal: spacing.md,
-                marginBottom: spacing.md,
-              }}
-            >
-              <TextInput
-                value={provinceFilter}
-                onChangeText={setProvinceFilter}
-                placeholder="Filter by province or state"
-                placeholderTextColor={colors.textMuted}
-                style={{ paddingVertical: spacing.sm, color: colors.textPrimary }}
-              />
-            </View>
+                    {/* Venue Amenities Dropdown */}
+                    <Text style={{ ...typography.caption, color: colors.textMuted, marginBottom: spacing.xs }}>Select your ideal venue amenities</Text>
+                    <TouchableOpacity
+                      onPress={() => { setDropdownSearch(''); setActiveDropdown('venue_amenities'); }}
+                      style={{
+                        borderRadius: radii.md,
+                        borderWidth: 1,
+                        borderColor: colors.borderSubtle,
+                        backgroundColor: colors.surfaceMuted,
+                        paddingHorizontal: spacing.md,
+                        paddingVertical: spacing.sm,
+                        marginBottom: spacing.md,
+                        flexDirection: 'row',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                      }}
+                    >
+                      <Text style={{ color: selectedVenueAmenities.length > 0 ? colors.textPrimary : colors.textMuted }} numberOfLines={1}>
+                        {selectedVenueAmenities.length > 0 ? selectedVenueAmenities.join(', ') : 'Any'}
+                      </Text>
+                      <MaterialIcons name="keyboard-arrow-down" size={20} color={colors.textSecondary} />
+                    </TouchableOpacity>
 
-            <Text style={{ ...typography.caption, color: colors.textMuted, marginBottom: spacing.xs }}>Minimum rating</Text>
-            <View style={{ flexDirection: 'row', flexWrap: 'wrap', rowGap: spacing.sm, columnGap: spacing.sm, marginBottom: spacing.md }}>
-              {[
-                { label: 'Any', value: null },
-                { label: '3.5+', value: 3.5 },
-                { label: '4.0+', value: 4 },
-                { label: '4.5+', value: 4.5 },
-              ].map((option) => {
-                const selected = minRating === option.value;
-                return (
+                    {/* Capacity Dropdown */}
+                    <Text style={{ ...typography.caption, color: colors.textMuted, marginBottom: spacing.xs }}>Select venue capacity</Text>
+                    <TouchableOpacity
+                      onPress={() => { setDropdownSearch(''); setActiveDropdown('capacity'); }}
+                      style={{
+                        borderRadius: radii.md,
+                        borderWidth: 1,
+                        borderColor: colors.borderSubtle,
+                        backgroundColor: colors.surfaceMuted,
+                        paddingHorizontal: spacing.md,
+                        paddingVertical: spacing.sm,
+                        marginBottom: spacing.md,
+                        flexDirection: 'row',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                      }}
+                    >
+                      <Text style={{ color: selectedCapacity ? colors.textPrimary : colors.textMuted }}>
+                        {selectedCapacity ?? 'Any'}
+                      </Text>
+                      <MaterialIcons name="keyboard-arrow-down" size={20} color={colors.textSecondary} />
+                    </TouchableOpacity>
+
+                    {/* Province Dropdown */}
+                    <Text style={{ ...typography.caption, color: colors.textMuted, marginBottom: spacing.xs }}>Select preferred provinces</Text>
+                    <TouchableOpacity
+                      onPress={() => { setDropdownSearch(''); setActiveDropdown('province'); }}
+                      style={{
+                        borderRadius: radii.md,
+                        borderWidth: 1,
+                        borderColor: colors.borderSubtle,
+                        backgroundColor: colors.surfaceMuted,
+                        paddingHorizontal: spacing.md,
+                        paddingVertical: spacing.sm,
+                        marginBottom: spacing.md,
+                        flexDirection: 'row',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                      }}
+                    >
+                      <Text style={{ color: selectedProvinces.length > 0 ? colors.textPrimary : colors.textMuted }} numberOfLines={1}>
+                        {selectedProvinces.length > 0 ? selectedProvinces.join(', ') : 'Any'}
+                      </Text>
+                      <MaterialIcons name="keyboard-arrow-down" size={20} color={colors.textSecondary} />
+                    </TouchableOpacity>
+
+                    {/* City Dropdown */}
+                    <Text style={{ ...typography.caption, color: colors.textMuted, marginBottom: spacing.xs }}>Select preferred cities</Text>
+                    <TouchableOpacity
+                      onPress={() => { setDropdownSearch(''); setActiveDropdown('city'); }}
+                      style={{
+                        borderRadius: radii.md,
+                        borderWidth: 1,
+                        borderColor: colors.borderSubtle,
+                        backgroundColor: colors.surfaceMuted,
+                        paddingHorizontal: spacing.md,
+                        paddingVertical: spacing.sm,
+                        marginBottom: spacing.md,
+                        flexDirection: 'row',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                      }}
+                    >
+                      <Text style={{ color: selectedCities.length > 0 ? colors.textPrimary : colors.textMuted }} numberOfLines={1}>
+                        {selectedCities.length > 0 ? selectedCities.join(', ') : 'Any'}
+                      </Text>
+                      <MaterialIcons name="keyboard-arrow-down" size={20} color={colors.textSecondary} />
+                    </TouchableOpacity>
+
+                    {/* Map Radius */}
+                    <TouchableOpacity
+                      onPress={() => { setShowFilters(false); setShowMapRadiusSelector(true); }}
+                      style={{
+                        borderRadius: radii.md,
+                        borderWidth: 1,
+                        borderColor: colors.primary,
+                        backgroundColor: colors.surface,
+                        paddingHorizontal: spacing.md,
+                        paddingVertical: spacing.sm,
+                        marginBottom: spacing.md,
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                      }}
+                    >
+                      <MaterialIcons name="map" size={18} color={colors.primary} style={{ marginRight: spacing.xs }} />
+                      <Text style={{ ...typography.body, color: colors.primary, fontWeight: '600' }}>
+                        Select search area by map radius
+                      </Text>
+                    </TouchableOpacity>
+                  </>
+                ) : (
+                  <>
+                    {/* Vendor Category Dropdown */}
+                    <Text style={{ ...typography.caption, color: colors.textMuted, marginBottom: spacing.xs }}>Select vendor category</Text>
+                    <TouchableOpacity
+                      onPress={() => { setDropdownSearch(''); setActiveDropdown('vendor_category'); }}
+                      style={{
+                        borderRadius: radii.md,
+                        borderWidth: 1,
+                        borderColor: colors.borderSubtle,
+                        backgroundColor: colors.surfaceMuted,
+                        paddingHorizontal: spacing.md,
+                        paddingVertical: spacing.sm,
+                        marginBottom: spacing.md,
+                        flexDirection: 'row',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                      }}
+                    >
+                      <Text style={{ color: selectedVendorCategories.length > 0 ? colors.textPrimary : colors.textMuted }} numberOfLines={1}>
+                        {selectedVendorCategories.length > 0 ? selectedVendorCategories.map((id) => VENDOR_CATEGORIES.find((c) => c.id === id)?.label ?? id).join(', ') : 'Any'}
+                      </Text>
+                      <MaterialIcons name="keyboard-arrow-down" size={20} color={colors.textSecondary} />
+                    </TouchableOpacity>
+
+                    {/* Service Type / Subcategory Dropdown */}
+                    <Text style={{ ...typography.caption, color: colors.textMuted, marginBottom: spacing.xs }}>Select service type</Text>
+                    <TouchableOpacity
+                      onPress={() => { setDropdownSearch(''); setActiveDropdown('vendor_subcategory'); }}
+                      style={{
+                        borderRadius: radii.md,
+                        borderWidth: 1,
+                        borderColor: colors.borderSubtle,
+                        backgroundColor: colors.surfaceMuted,
+                        paddingHorizontal: spacing.md,
+                        paddingVertical: spacing.sm,
+                        marginBottom: spacing.md,
+                        flexDirection: 'row',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                      }}
+                    >
+                      <Text style={{ color: selectedVendorSubcategories.length > 0 ? colors.textPrimary : colors.textMuted }} numberOfLines={1}>
+                        {selectedVendorSubcategories.length > 0 ? selectedVendorSubcategories.join(', ') : 'Any'}
+                      </Text>
+                      <MaterialIcons name="keyboard-arrow-down" size={20} color={colors.textSecondary} />
+                    </TouchableOpacity>
+
+                    {/* Province Dropdown */}
+                    <Text style={{ ...typography.caption, color: colors.textMuted, marginBottom: spacing.xs }}>Select preferred provinces</Text>
+                    <TouchableOpacity
+                      onPress={() => { setDropdownSearch(''); setActiveDropdown('vendor_province'); }}
+                      style={{
+                        borderRadius: radii.md,
+                        borderWidth: 1,
+                        borderColor: colors.borderSubtle,
+                        backgroundColor: colors.surfaceMuted,
+                        paddingHorizontal: spacing.md,
+                        paddingVertical: spacing.sm,
+                        marginBottom: spacing.md,
+                        flexDirection: 'row',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                      }}
+                    >
+                      <Text style={{ color: selectedVendorProvinces.length > 0 ? colors.textPrimary : colors.textMuted }} numberOfLines={1}>
+                        {selectedVendorProvinces.length > 0 ? selectedVendorProvinces.join(', ') : 'Any'}
+                      </Text>
+                      <MaterialIcons name="keyboard-arrow-down" size={20} color={colors.textSecondary} />
+                    </TouchableOpacity>
+
+                    {/* City Dropdown */}
+                    <Text style={{ ...typography.caption, color: colors.textMuted, marginBottom: spacing.xs }}>Select preferred cities</Text>
+                    <TouchableOpacity
+                      onPress={() => { setDropdownSearch(''); setActiveDropdown('vendor_city'); }}
+                      style={{
+                        borderRadius: radii.md,
+                        borderWidth: 1,
+                        borderColor: colors.borderSubtle,
+                        backgroundColor: colors.surfaceMuted,
+                        paddingHorizontal: spacing.md,
+                        paddingVertical: spacing.sm,
+                        marginBottom: spacing.md,
+                        flexDirection: 'row',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                      }}
+                    >
+                      <Text style={{ color: selectedVendorCities.length > 0 ? colors.textPrimary : colors.textMuted }} numberOfLines={1}>
+                        {selectedVendorCities.length > 0 ? selectedVendorCities.join(', ') : 'Any'}
+                      </Text>
+                      <MaterialIcons name="keyboard-arrow-down" size={20} color={colors.textSecondary} />
+                    </TouchableOpacity>
+
+                    {/* Map Radius */}
+                    <TouchableOpacity
+                      onPress={() => { setShowFilters(false); setShowMapRadiusSelector(true); }}
+                      style={{
+                        borderRadius: radii.md,
+                        borderWidth: 1,
+                        borderColor: colors.primary,
+                        backgroundColor: colors.surface,
+                        paddingHorizontal: spacing.md,
+                        paddingVertical: spacing.sm,
+                        marginBottom: spacing.md,
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                      }}
+                    >
+                      <MaterialIcons name="map" size={18} color={colors.primary} style={{ marginRight: spacing.xs }} />
+                      <Text style={{ ...typography.body, color: colors.primary, fontWeight: '600' }}>
+                        Select search area by map radius
+                      </Text>
+                    </TouchableOpacity>
+                  </>
+                )}
+
+                <Text style={{ ...typography.caption, color: colors.textMuted, marginBottom: spacing.xs }}>Minimum rating</Text>
+                <View style={{ flexDirection: 'row', flexWrap: 'wrap', rowGap: spacing.sm, columnGap: spacing.sm, marginBottom: spacing.md }}>
+                  {[
+                    { label: 'Any', value: null },
+                    { label: '3.5+', value: 3.5 },
+                    { label: '4.0+', value: 4 },
+                    { label: '4.5+', value: 4.5 },
+                  ].map((option) => {
+                    const selected = minRating === option.value;
+                    return (
+                      <TouchableOpacity
+                        key={option.label}
+                        onPress={() => setMinRating(option.value)}
+                        style={{
+                          paddingHorizontal: spacing.md,
+                          paddingVertical: spacing.xs,
+                          borderRadius: radii.full,
+                          borderWidth: 1,
+                          borderColor: selected ? colors.primary : colors.borderSubtle,
+                          backgroundColor: selected ? colors.primary : colors.surface,
+                        }}
+                      >
+                        <Text style={{ ...typography.caption, color: selected ? colors.primaryForeground : colors.textPrimary }}>
+                          {option.label}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+
+                <View style={{ flexDirection: 'row', flexWrap: 'wrap', rowGap: spacing.sm, columnGap: spacing.sm }}>
                   <TouchableOpacity
-                    key={option.label}
-                    onPress={() => setMinRating(option.value)}
+                    onPress={() => setOnlyWithPrice((prev) => !prev)}
                     style={{
                       paddingHorizontal: spacing.md,
                       paddingVertical: spacing.xs,
                       borderRadius: radii.full,
                       borderWidth: 1,
-                      borderColor: selected ? colors.primary : colors.borderSubtle,
-                      backgroundColor: selected ? colors.primary : colors.surface,
+                      borderColor: onlyWithPrice ? colors.primary : colors.borderSubtle,
+                      backgroundColor: onlyWithPrice ? colors.primary : colors.surface,
                     }}
                   >
-                    <Text style={{ ...typography.caption, color: selected ? colors.primaryForeground : colors.textPrimary }}>
-                      {option.label}
+                    <Text style={{ ...typography.caption, color: onlyWithPrice ? colors.primaryForeground : colors.textPrimary }}>
+                      Only with price
                     </Text>
                   </TouchableOpacity>
-                );
-              })}
-            </View>
-
-            <Text style={{ ...typography.caption, color: colors.textMuted, marginBottom: spacing.xs }}>Amenities</Text>
-            <View
-              style={{
-                borderRadius: radii.md,
-                borderWidth: 1,
-                borderColor: colors.borderSubtle,
-                backgroundColor: colors.surfaceMuted,
-                paddingHorizontal: spacing.md,
-                marginBottom: spacing.md,
-              }}
-            >
-              <TextInput
-                value={amenitiesFilter}
-                onChangeText={setAmenitiesFilter}
-                placeholder="e.g. garden, pool, chapel"
-                placeholderTextColor={colors.textMuted}
-                style={{ paddingVertical: spacing.sm, color: colors.textPrimary }}
-              />
-            </View>
-
-            <Text style={{ ...typography.caption, color: colors.textMuted, marginBottom: spacing.xs }}>Category keywords</Text>
-            <View
-              style={{
-                borderRadius: radii.md,
-                borderWidth: 1,
-                borderColor: colors.borderSubtle,
-                backgroundColor: colors.surfaceMuted,
-                paddingHorizontal: spacing.md,
-                marginBottom: spacing.lg,
-              }}
-            >
-              <TextInput
-                value={categoryTextFilter}
-                onChangeText={setCategoryTextFilter}
-                placeholder="e.g. photographer, decor, catering"
-                placeholderTextColor={colors.textMuted}
-                style={{ paddingVertical: spacing.sm, color: colors.textPrimary }}
-              />
-            </View>
-
-            <View style={{ flexDirection: 'row', flexWrap: 'wrap', rowGap: spacing.sm, columnGap: spacing.sm }}>
-              <TouchableOpacity
-                onPress={() => setOnlyWithPrice((prev) => !prev)}
-                style={{
-                  paddingHorizontal: spacing.md,
-                  paddingVertical: spacing.xs,
-                  borderRadius: radii.full,
-                  borderWidth: 1,
-                  borderColor: onlyWithPrice ? colors.primary : colors.borderSubtle,
-                  backgroundColor: onlyWithPrice ? colors.primary : colors.surface,
-                }}
-              >
-                <Text style={{ ...typography.caption, color: onlyWithPrice ? colors.primaryForeground : colors.textPrimary }}>
-                  Only with price
-                </Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                onPress={() => setFeaturedOnly((prev) => !prev)}
-                style={{
-                  paddingHorizontal: spacing.md,
-                  paddingVertical: spacing.xs,
-                  borderRadius: radii.full,
-                  borderWidth: 1,
-                  borderColor: featuredOnly ? colors.primary : colors.borderSubtle,
-                  backgroundColor: featuredOnly ? colors.primary : colors.surface,
-                }}
-              >
-                <Text style={{ ...typography.caption, color: featuredOnly ? colors.primaryForeground : colors.textPrimary }}>
-                  Featured focus
-                </Text>
-              </TouchableOpacity>
+                  <TouchableOpacity
+                    onPress={() => setFeaturedOnly((prev) => !prev)}
+                    style={{
+                      paddingHorizontal: spacing.md,
+                      paddingVertical: spacing.xs,
+                      borderRadius: radii.full,
+                      borderWidth: 1,
+                      borderColor: featuredOnly ? colors.primary : colors.borderSubtle,
+                      backgroundColor: featuredOnly ? colors.primary : colors.surface,
+                    }}
+                  >
+                    <Text style={{ ...typography.caption, color: featuredOnly ? colors.primaryForeground : colors.textPrimary }}>
+                      Featured focus
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              </ScrollView>
             </View>
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
 
       <Modal visible={showSortOptions} transparent animationType="fade" onRequestClose={() => setShowSortOptions(false)}>
@@ -1102,6 +1467,315 @@ export default function DiscoverScreen() {
           </View>
         </View>
       </Modal>
+
+      {/* Dropdown Picker Modal */}
+      <Modal visible={activeDropdown !== null} transparent animationType="slide" onRequestClose={() => setActiveDropdown(null)}>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          style={{ flex: 1, justifyContent: 'flex-end' }}
+        >
+          <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.3)', justifyContent: 'flex-end' }}>
+            <TouchableOpacity style={{ flex: 1 }} activeOpacity={1} onPress={() => setActiveDropdown(null)} />
+            <View
+              style={{
+                backgroundColor: colors.surface,
+                borderTopLeftRadius: radii.xl,
+                borderTopRightRadius: radii.xl,
+                padding: spacing.lg,
+                maxHeight: '75%',
+              }}
+            >
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.md }}>
+                <Text style={{ ...typography.titleMedium, color: colors.textPrimary }}>
+                  {activeDropdown === 'venue_type'
+                    ? 'Select your preferred venue type'
+                    : activeDropdown === 'venue_amenities'
+                    ? 'Select your ideal venue amenities'
+                    : activeDropdown === 'capacity'
+                    ? 'Select venue capacity'
+                    : activeDropdown === 'province'
+                    ? 'Select preferred provinces'
+                    : activeDropdown === 'city'
+                    ? 'Select preferred cities'
+                    : activeDropdown === 'vendor_category'
+                    ? 'Select vendor category'
+                    : activeDropdown === 'vendor_subcategory'
+                    ? 'Select service type'
+                    : activeDropdown === 'vendor_province'
+                    ? 'Select preferred provinces'
+                    : activeDropdown === 'vendor_city'
+                    ? 'Select preferred cities'
+                    : ''}
+                </Text>
+                <TouchableOpacity onPress={() => setActiveDropdown(null)}>
+                  <MaterialIcons name="close" size={20} color={colors.textSecondary} />
+                </TouchableOpacity>
+              </View>
+
+              {activeDropdown !== 'capacity' && (
+                <TextInput
+                  value={dropdownSearch}
+                  onChangeText={setDropdownSearch}
+                  placeholder="Search..."
+                  placeholderTextColor={colors.textMuted}
+                  style={{
+                    borderWidth: 1,
+                    borderColor: colors.borderSubtle,
+                    borderRadius: radii.md,
+                    paddingHorizontal: spacing.md,
+                    paddingVertical: spacing.sm,
+                    color: colors.textPrimary,
+                    backgroundColor: colors.surfaceMuted,
+                    marginBottom: spacing.md,
+                  }}
+                />
+              )}
+
+              <ScrollView keyboardShouldPersistTaps="handled" style={{ maxHeight: 400 }}>
+                {(() => {
+                  const isMulti = activeDropdown === 'venue_amenities' || activeDropdown === 'province' || activeDropdown === 'city' || activeDropdown === 'vendor_category' || activeDropdown === 'vendor_subcategory' || activeDropdown === 'vendor_province' || activeDropdown === 'vendor_city';
+                  const isSingle = !isMulti;
+
+                  let allOptions: string[] = [];
+                  if (activeDropdown === 'venue_type') allOptions = venueTypes;
+                  else if (activeDropdown === 'venue_amenities') allOptions = amenitiesList;
+                  else if (activeDropdown === 'capacity') allOptions = venueCapacityOptions;
+                  else if (activeDropdown === 'province') allOptions = provinces.map((p) => p.name);
+                  else if (activeDropdown === 'city') allOptions = availableCities;
+                  else if (activeDropdown === 'vendor_category') allOptions = VENDOR_CATEGORIES.map((c) => c.label);
+                  else if (activeDropdown === 'vendor_subcategory') allOptions = availableVendorSubcategories;
+                  else if (activeDropdown === 'vendor_province') allOptions = provinces.map((p) => p.name);
+                  else if (activeDropdown === 'vendor_city') allOptions = availableVendorCities;
+
+                  const filteredOptions = allOptions.filter((opt) =>
+                    opt.toLowerCase().includes(dropdownSearch.trim().toLowerCase())
+                  );
+
+                  // Any option
+                  const anySelected =
+                    activeDropdown === 'venue_type'
+                      ? selectedVenueType === null
+                      : activeDropdown === 'venue_amenities'
+                      ? selectedVenueAmenities.length === 0
+                      : activeDropdown === 'capacity'
+                      ? selectedCapacity === null
+                      : activeDropdown === 'province'
+                      ? selectedProvinces.length === 0
+                      : activeDropdown === 'city'
+                      ? selectedCities.length === 0
+                      : activeDropdown === 'vendor_category'
+                      ? selectedVendorCategories.length === 0
+                      : activeDropdown === 'vendor_subcategory'
+                      ? selectedVendorSubcategories.length === 0
+                      : activeDropdown === 'vendor_province'
+                      ? selectedVendorProvinces.length === 0
+                      : activeDropdown === 'vendor_city'
+                      ? selectedVendorCities.length === 0
+                      : true;
+
+                  const options = ['Any', ...filteredOptions];
+
+                  return options.map((option) => {
+                    if (option === 'Any') {
+                      return (
+                        <TouchableOpacity
+                          key="any"
+                          onPress={() => {
+                            if (activeDropdown === 'venue_type') setSelectedVenueType(null);
+                            else if (activeDropdown === 'venue_amenities') setSelectedVenueAmenities([]);
+                            else if (activeDropdown === 'capacity') setSelectedCapacity(null);
+                            else if (activeDropdown === 'province') setSelectedProvinces([]);
+                            else if (activeDropdown === 'city') setSelectedCities([]);
+                            else if (activeDropdown === 'vendor_category') { setSelectedVendorCategories([]); setSelectedVendorSubcategories([]); }
+                            else if (activeDropdown === 'vendor_subcategory') setSelectedVendorSubcategories([]);
+                            else if (activeDropdown === 'vendor_province') { setSelectedVendorProvinces([]); setSelectedVendorCities((prev) => prev.filter((c) => provinces.flatMap((p) => p.cities).includes(c))); }
+                            else if (activeDropdown === 'vendor_city') setSelectedVendorCities([]);
+                            if (isSingle) setActiveDropdown(null);
+                          }}
+                          style={{ paddingVertical: spacing.sm, flexDirection: 'row', alignItems: 'center' }}
+                        >
+                          <View
+                            style={{
+                              width: 24,
+                              height: 24,
+                              borderRadius: 4,
+                              borderWidth: 2,
+                              borderColor: anySelected ? colors.primary : '#D1D5DB',
+                              backgroundColor: anySelected ? colors.primary : '#FFFFFF',
+                              marginRight: spacing.sm,
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                            }}
+                          >
+                            {anySelected && <MaterialIcons name="check" size={16} color="#FFFFFF" />}
+                          </View>
+                          <Text style={{ ...typography.body, color: colors.textPrimary }}>Any</Text>
+                        </TouchableOpacity>
+                      );
+                    }
+
+                    const isSelected =
+                      activeDropdown === 'venue_type'
+                        ? selectedVenueType === option
+                        : activeDropdown === 'venue_amenities'
+                        ? selectedVenueAmenities.includes(option)
+                        : activeDropdown === 'capacity'
+                        ? selectedCapacity === option
+                        : activeDropdown === 'province'
+                        ? selectedProvinces.includes(option)
+                        : activeDropdown === 'city'
+                        ? selectedCities.includes(option)
+                        : activeDropdown === 'vendor_category'
+                        ? selectedVendorCategories.some((id) => VENDOR_CATEGORIES.find((c) => c.id === id)?.label === option)
+                        : activeDropdown === 'vendor_subcategory'
+                        ? selectedVendorSubcategories.includes(option)
+                        : activeDropdown === 'vendor_province'
+                        ? selectedVendorProvinces.includes(option)
+                        : activeDropdown === 'vendor_city'
+                        ? selectedVendorCities.includes(option)
+                        : false;
+
+                    return (
+                      <TouchableOpacity
+                        key={option}
+                        onPress={() => {
+                          if (activeDropdown === 'venue_type') {
+                            setSelectedVenueType(isSelected ? null : option);
+                            setActiveDropdown(null);
+                          } else if (activeDropdown === 'venue_amenities') {
+                            setSelectedVenueAmenities((prev) =>
+                              prev.includes(option) ? prev.filter((a) => a !== option) : [...prev, option]
+                            );
+                          } else if (activeDropdown === 'capacity') {
+                            setSelectedCapacity(isSelected ? null : option);
+                            setActiveDropdown(null);
+                          } else if (activeDropdown === 'province') {
+                            setSelectedProvinces((prev) => {
+                              const next = prev.includes(option) ? prev.filter((p) => p !== option) : [...prev, option];
+                              // When provinces change, filter cities to only those in selected provinces
+                              const validCities = next.length === 0
+                                ? provinces.flatMap((p) => p.cities)
+                                : next.flatMap((p) => {
+                                    const prov = provinces.find((pr) => pr.name === p);
+                                    return prov ? prov.cities : [];
+                                  });
+                              setSelectedCities((cityPrev) => cityPrev.filter((c) => validCities.includes(c)));
+                              return next;
+                            });
+                          } else if (activeDropdown === 'city') {
+                            setSelectedCities((prev) =>
+                              prev.includes(option) ? prev.filter((c) => c !== option) : [...prev, option]
+                            );
+                          } else if (activeDropdown === 'vendor_category') {
+                            const cat = VENDOR_CATEGORIES.find((c) => c.label === option);
+                            if (!cat) return;
+                            setSelectedVendorCategories((prev) => {
+                              const next = prev.includes(cat.id) ? prev.filter((id) => id !== cat.id) : [...prev, cat.id];
+                              // Clear subcategories when categories change so stale subcats are removed
+                              setSelectedVendorSubcategories((subPrev) => {
+                                const validSubcats = next
+                                  .map((id) => VENDOR_CATEGORIES.find((c) => c.id === id)?.subcategories ?? [])
+                                  .flat();
+                                return subPrev.filter((s) => validSubcats.includes(s));
+                              });
+                              return next;
+                            });
+                          } else if (activeDropdown === 'vendor_subcategory') {
+                            setSelectedVendorSubcategories((prev) =>
+                              prev.includes(option) ? prev.filter((s) => s !== option) : [...prev, option]
+                            );
+                          } else if (activeDropdown === 'vendor_province') {
+                            setSelectedVendorProvinces((prev) => {
+                              const next = prev.includes(option) ? prev.filter((p) => p !== option) : [...prev, option];
+                              // When provinces change, filter cities to only those in selected provinces
+                              const validCities = next.length === 0
+                                ? provinces.flatMap((p) => p.cities)
+                                : next.flatMap((p) => {
+                                    const prov = provinces.find((pr) => pr.name === p);
+                                    return prov ? prov.cities : [];
+                                  });
+                              setSelectedVendorCities((cityPrev) => cityPrev.filter((c) => validCities.includes(c)));
+                              return next;
+                            });
+                          } else if (activeDropdown === 'vendor_city') {
+                            setSelectedVendorCities((prev) =>
+                              prev.includes(option) ? prev.filter((c) => c !== option) : [...prev, option]
+                            );
+                          }
+                        }}
+                        style={{ paddingVertical: spacing.sm, flexDirection: 'row', alignItems: 'center' }}
+                      >
+                        <View
+                          style={{
+                            width: 24,
+                            height: 24,
+                            borderRadius: 4,
+                            borderWidth: 2,
+                            borderColor: isSelected ? colors.primary : '#D1D5DB',
+                            backgroundColor: isSelected ? colors.primary : '#FFFFFF',
+                            marginRight: spacing.sm,
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                          }}
+                        >
+                          {isSelected && <MaterialIcons name="check" size={16} color="#FFFFFF" />}
+                        </View>
+                        <Text style={{ ...typography.body, color: colors.textPrimary, flex: 1 }}>{option}</Text>
+                      </TouchableOpacity>
+                    );
+                  });
+                })()}
+              </ScrollView>
+            </View>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
+
+      {/* Map Radius Selector */}
+      <MapRadiusSelector
+        visible={showMapRadiusSelector}
+        onClose={() => setShowMapRadiusSelector(false)}
+        onLocationSelected={async (location, radius) => {
+          setMapRadius(radius);
+          setShowMapRadiusSelector(false);
+          // Reverse geocode to auto-detect province
+          try {
+            const { reverseGeocodeAsync } = await import('expo-location');
+            const places = await reverseGeocodeAsync(location);
+            const region = (places[0]?.region ?? '').trim();
+            if (region) {
+              const searchText = region.toLowerCase();
+              const matchingProvince = provinces.find((p) => {
+                const name = p.name.toLowerCase();
+                return name.includes(searchText) || searchText.includes(name);
+              });
+              if (matchingProvince) {
+                if (category === 'venues') {
+                  setSelectedProvinces([matchingProvince.name]);
+                  const provCities = matchingProvince.cities;
+                  setSelectedCities((prev) => prev.filter((c) => provCities.includes(c)));
+                } else if (category === 'vendors' || category === 'services') {
+                  setSelectedVendorProvinces([matchingProvince.name]);
+                  const provCities = matchingProvince.cities;
+                  setSelectedVendorCities((prev) => prev.filter((c) => provCities.includes(c)));
+                } else {
+                  setSelectedProvinces([matchingProvince.name]);
+                  setSelectedVendorProvinces([matchingProvince.name]);
+                  const provCities = matchingProvince.cities;
+                  setSelectedCities((prev) => prev.filter((c) => provCities.includes(c)));
+                  setSelectedVendorCities((prev) => prev.filter((c) => provCities.includes(c)));
+                }
+              }
+            }
+          } catch {
+            // Silently ignore geocoding errors
+          }
+        }}
+        onClearSelection={() => {
+          setMapRadius(20);
+        }}
+        initialRadius={mapRadius}
+      />
     </Animated.ScrollView>
   );
 }
