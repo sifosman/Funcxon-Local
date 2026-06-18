@@ -262,25 +262,49 @@ export default function ApplicationStep4Screen() {
               venueTypes: state.step2.venueType,
             };
 
-            await supabase
+            const { error: listingError } = await supabase
               .from('venue_listings')
               .upsert(
                 {
                   user_id: user.id,
                   name: listingName,
                   description: state.step2.description?.trim() || null,
+                  location: state.step1.businessPhysicalAddress?.trim() || null,
+                  address_line_1: state.step1.businessPhysicalAddress?.trim() || null,
+                  city: state.step2.cities?.[0] || null,
+                  province: state.step2.provinces?.[0] || null,
+                  country: 'South Africa',
+                  contact_email: state.step1.email?.trim() || state.step1.userEmail?.trim() || null,
+                  whatsapp_number: state.step1.userWhatsapp?.trim() || state.step1.contactPhoneNumber?.trim() || null,
+                  instagram_url: state.step1.instagram?.trim() || null,
+                  facebook_url: state.step1.facebook?.trim() || null,
+                  tiktok_url: state.step1.tiktok?.trim() || null,
                   venue_type: state.step2.venueType.join(', ') || null,
                   venue_capacity: state.step2.venueCapacity ?? null,
                   capacity: maxHallCapacity,
                   amenities: state.step2.amenities,
                   event_types: state.step2.eventTypes,
+                  provinces: state.step2.provinces,
+                  cities: state.step2.cities,
                   features: nextFeatures,
+                  image_url: uploadedImages[0] || null,
+                  subscription_plan: state.step4.subscriptionPlan,
                   subscription_status: 'active',
                 } as any,
                 { onConflict: 'user_id' },
               );
-          } catch (e) {
-            console.warn('Failed to persist venue hall capacity details:', e);
+
+            if (listingError) {
+              console.error('Venue listing upsert error:', listingError);
+              throw listingError;
+            }
+          } catch (e: any) {
+            console.error('Failed to create venue listing from application:', e);
+            Alert.alert(
+              'Portfolio Setup Issue',
+              'Your application was submitted, but we could not fully set up your venue listing. You can update it manually from your account.',
+              [{ text: 'OK' }]
+            );
           }
         }
 
@@ -290,9 +314,17 @@ export default function ApplicationStep4Screen() {
         // Create vendor/venue record directly (for both free and paid plans)
         try {
           if (state.portfolioType === 'venues' && user?.id) {
-            await supabase.from('venues').upsert(
+            const venueListingName =
+              state.step1.tradingName?.trim() ||
+              state.step1.registeredBusinessName?.trim() ||
+              'Venue Listing';
+
+            const { error: venueRecordError } = await supabase.from('venues').upsert(
               {
                 user_id: user.id,
+                name: venueListingName,
+                description: state.step2.description?.trim() || null,
+                location: state.step1.businessPhysicalAddress?.trim() || null,
                 subscription_plan_key: state.step4.subscriptionPlan,
                 subscription_status: 'active',
                 billing_period: state.step4.billingPeriod || 'monthly',
@@ -303,6 +335,11 @@ export default function ApplicationStep4Screen() {
               },
               { onConflict: 'user_id' },
             );
+
+            if (venueRecordError) {
+              console.error('Venues table upsert error:', venueRecordError);
+              throw venueRecordError;
+            }
           } else if (user?.id) {
             // Build rich vendor record from application data
             const listingName =
@@ -317,7 +354,10 @@ export default function ApplicationStep4Screen() {
               location: state.step1.businessPhysicalAddress?.trim() || null,
               email: state.step1.email?.trim() || null,
               whatsapp_number: state.step1.contactPhoneNumber?.trim() || null,
-              website_url: state.step1.instagram?.trim() || null,
+              instagram_url: state.step1.instagram?.trim() || null,
+              facebook_url: state.step1.facebook?.trim() || null,
+              tiktok_url: state.step1.tiktok?.trim() || null,
+              image_url: uploadedImages[0] || null,
               subscription_tier: normalizeTierKey(state.step4.subscriptionPlan),
               subscription_status: 'active',
               billing_period: state.step4.billingPeriod || 'monthly',
