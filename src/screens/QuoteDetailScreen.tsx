@@ -1,4 +1,5 @@
 import { ActivityIndicator, ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import { MaterialIcons } from '@expo/vector-icons';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import type { RouteProp } from '@react-navigation/native';
 import { useQuery } from '@tanstack/react-query';
@@ -244,6 +245,16 @@ export default function QuoteDetailScreen() {
         paddingVertical: spacing.lg,
       }}
     >
+      <TouchableOpacity
+        onPress={() => navigation.goBack()}
+        style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.md }}
+      >
+        <MaterialIcons name="arrow-back" size={20} color={colors.textPrimary} />
+        <Text style={{ ...typography.body, color: colors.textPrimary, marginLeft: spacing.sm }}>
+          Back
+        </Text>
+      </TouchableOpacity>
+
       <View
         style={{
           marginBottom: spacing.lg,
@@ -353,7 +364,7 @@ export default function QuoteDetailScreen() {
               paddingVertical: spacing.sm,
               borderRadius: radii.md,
               borderWidth: 1,
-              bordercolor: colors.textPrimary,
+              borderColor: colors.textPrimary,
               alignItems: 'center',
               justifyContent: 'center',
             }}

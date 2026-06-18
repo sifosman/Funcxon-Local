@@ -99,7 +99,7 @@ export default function AppHeader() {
         </TouchableOpacity>
         <TouchableOpacity
           style={styles.navButton}
-          onPress={() => openDiscover({ category: 'vendors', searchTitle: 'Discover Vendors' })}
+          onPress={() => openDiscover({ category: 'vendors', searchTitle: 'Discover Vendors and services' })}
         >
           <MaterialIcons name="store" size={18} color={colors.primary} />
           <Text style={styles.navButtonText}>Vendors</Text>

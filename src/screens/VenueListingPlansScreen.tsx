@@ -1,4 +1,4 @@
-import { useMemo, useState, useRef, useEffect } from 'react';
+import { useMemo, useState, useRef, useEffect, useCallback } from 'react';
 import {
   Alert,
   ScrollView,
@@ -6,9 +6,10 @@ import {
   TouchableOpacity,
   View,
   Dimensions,
-  NativeScrollEvent,
-  NativeSyntheticEvent,
 } from 'react-native';
+import Animated, { useAnimatedStyle, interpolate, Extrapolation } from 'react-native-reanimated';
+import Carousel from 'react-native-reanimated-carousel';
+import type { ICarouselInstance } from 'react-native-reanimated-carousel';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -76,13 +77,13 @@ export default function VenueListingPlansScreen() {
 
   const [selectedPlan, setSelectedPlan] = useState<PlanKey>('monthly');
   const [activeIndex, setActiveIndex] = useState(1);
-  const scrollRef = useRef<ScrollView>(null);
+  const carouselRef = useRef<ICarouselInstance>(null);
 
   useEffect(() => {
-    if (containerWidth > 0 && scrollRef.current) {
-      scrollRef.current.scrollTo({ x: (activeIndex + 1) * SNAP_INTERVAL, animated: false });
+    if (containerWidth > 0 && carouselRef.current) {
+      carouselRef.current.scrollTo({ index: activeIndex, animated: false });
     }
-  }, [containerWidth, activeIndex, SNAP_INTERVAL]);
+  }, [containerWidth, activeIndex]);
 
   const plans: VenuePlan[] = useMemo(
     () => [
@@ -170,14 +171,7 @@ export default function VenueListingPlansScreen() {
     [],
   );
 
-  const circularPlans = useMemo(() => {
-    if (plans.length < 2) return plans;
-    return [
-      { ...plans[plans.length - 1], _key: `${plans[plans.length - 1].key}-clone-start` },
-      ...plans.map((p) => ({ ...p, _key: p.key })),
-      { ...plans[0], _key: `${plans[0].key}-clone-end` },
-    ];
-  }, [plans]);
+  const circularPlans = plans;
 
   const features: VenueFeature[] = useMemo(
     () => [
@@ -237,38 +231,31 @@ export default function VenueListingPlansScreen() {
 
   const selected = plans.find((p) => p.key === selectedPlan) ?? plans[0];
 
-  const handleScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
-    const offsetX = event.nativeEvent.contentOffset.x;
-    const circularIndex = Math.round(offsetX / SNAP_INTERVAL);
-
-    let realIndex: number;
-
-    if (circularIndex === 0) {
-      realIndex = plans.length - 1;
-      setTimeout(() => {
-        scrollRef.current?.scrollTo({ x: plans.length * SNAP_INTERVAL, animated: false });
-      }, 50);
-    } else if (circularIndex === circularPlans.length - 1) {
-      realIndex = 0;
-      setTimeout(() => {
-        scrollRef.current?.scrollTo({ x: 1 * SNAP_INTERVAL, animated: false });
-      }, 50);
-    } else {
-      realIndex = circularIndex - 1;
-    }
-
-    if (realIndex >= 0 && realIndex < plans.length) {
-      setActiveIndex(realIndex);
-      setSelectedPlan(plans[realIndex].key);
-    }
-  };
+  const handleSnapToItem = useCallback((index: number) => {
+    setActiveIndex(index);
+    setSelectedPlan(plans[index].key);
+  }, [plans]);
 
   const scrollToIndex = (realIndex: number) => {
-    const circularIndex = realIndex + 1;
-    scrollRef.current?.scrollTo({ x: circularIndex * SNAP_INTERVAL, animated: true });
+    carouselRef.current?.scrollTo({ index: realIndex, animated: true });
     setActiveIndex(realIndex);
     setSelectedPlan(plans[realIndex].key);
   };
+
+  const customAnimation = useCallback(
+    (value: number, _index: number) => {
+      'worklet';
+      const centerOffset = (SCREEN_WIDTH - SNAP_INTERVAL) / 2;
+      const translate = interpolate(
+        value,
+        [-1, 0, 1],
+        [-SNAP_INTERVAL + centerOffset, centerOffset, SNAP_INTERVAL + centerOffset],
+        Extrapolation.CLAMP,
+      );
+      return { transform: [{ translateX: translate }] };
+    },
+    [SCREEN_WIDTH, SNAP_INTERVAL],
+  );
 
   const renderFeatureValue = (value: string | boolean, theme: VenuePlan['theme']) => {
     if (typeof value === 'boolean') {
@@ -351,236 +338,236 @@ export default function VenueListingPlansScreen() {
         </View>
 
         {/* Horizontal Swipeable Cards */}
-        <View onLayout={(event) => setContainerWidth(event.nativeEvent.layout.width)}>
-          <ScrollView
-            ref={scrollRef}
-            horizontal
+        <View onLayout={(event) => setContainerWidth(event.nativeEvent.layout.width)} style={{ paddingVertical: spacing.xl }}>
+          <Carousel
+            ref={carouselRef}
+            loop
+            snapEnabled
             pagingEnabled={false}
-            showsHorizontalScrollIndicator={false}
-            snapToInterval={SNAP_INTERVAL}
-            snapToAlignment="center"
-            decelerationRate="fast"
-            onMomentumScrollEnd={handleScroll}
-            contentContainerStyle={{
-              paddingHorizontal: (SCREEN_WIDTH - CARD_WIDTH) / 2 - CARD_MARGIN,
-              paddingVertical: spacing.xl,
-              alignItems: 'center',
-            }}
-          >
-          {circularPlans.map((plan, circularIndex) => {
-            const realIndex = circularIndex === 0
-              ? plans.length - 1
-              : circularIndex === circularPlans.length - 1
-                ? 0
-                : circularIndex - 1;
-            const isActive = realIndex === activeIndex;
-            const distance = Math.abs(realIndex - activeIndex);
-            const scale = isActive
-              ? ACTIVE_SCALE
-              : distance === 1
-                ? SIDE_SCALE
-                : Math.max(FAR_SCALE, 0.55);
-            const opacity = isActive
-              ? ACTIVE_OPACITY
-              : distance === 1
-                ? SIDE_OPACITY
-                : Math.max(FAR_OPACITY, 0.15);
-            const zIndex = isActive ? 20 : distance === 1 ? 15 : 10 - distance;
-            return (
-              <TouchableOpacity
-                key={plan._key || plan.key}
-                activeOpacity={0.9}
-                onPress={() => {
-                  if (isActive) {
-                    handleSelectPlan();
-                  } else {
-                    scrollToIndex(realIndex);
-                  }
-                }}
-                style={{
-                  width: CARD_WIDTH,
-                  marginHorizontal: CARD_MARGIN,
-                  borderRadius: radii.xl,
-                  backgroundColor: plan.theme.background,
-                  padding: spacing.md,
-                  transform: [{ scale }],
-                  opacity,
-                  zIndex,
-                  shadowColor: '#000',
-                  shadowOffset: { width: 0, height: isActive ? 10 : 3 },
-                  shadowOpacity: isActive ? 0.3 : 0.06,
-                  shadowRadius: isActive ? 20 : 5,
-                  elevation: isActive ? 14 : 3,
-                }}
-              >
-                {/* Badge */}
-                {plan.badge ? (
-                  <View
-                    style={{
-                      alignSelf: 'flex-start',
-                      backgroundColor: plan.theme.accent,
-                      borderRadius: radii.full,
-                      paddingHorizontal: spacing.sm,
-                      paddingVertical: 2,
-                      marginBottom: spacing.sm,
-                    }}
+            defaultIndex={activeIndex}
+            scrollAnimationDuration={800}
+            overscrollEnabled={false}
+            width={SNAP_INTERVAL}
+            height={420}
+            data={plans}
+            style={{ width: '100%' }}
+            customAnimation={customAnimation}
+            onSnapToItem={handleSnapToItem}
+            renderItem={({ item: plan, animationValue }) => {
+              const planIndex = plans.findIndex((p) => p.key === plan.key);
+              const isActive = planIndex === activeIndex;
+              const animatedStyle = useAnimatedStyle(() => {
+                const value = Math.abs(animationValue.value);
+                const scale = interpolate(
+                  value,
+                  [0, 1, 2],
+                  [ACTIVE_SCALE, SIDE_SCALE, FAR_SCALE],
+                  Extrapolation.CLAMP,
+                );
+                const opacity = interpolate(
+                  value,
+                  [0, 1, 2],
+                  [ACTIVE_OPACITY, SIDE_OPACITY, FAR_OPACITY],
+                  Extrapolation.CLAMP,
+                );
+                return { transform: [{ scale }], opacity };
+              });
+              return (
+                <TouchableOpacity
+                  activeOpacity={0.9}
+                  onPress={() => {
+                    if (isActive) {
+                      handleSelectPlan();
+                    } else {
+                      scrollToIndex(planIndex);
+                    }
+                  }}
+                  style={{ width: CARD_WIDTH, marginHorizontal: CARD_MARGIN }}
+                >
+                  <Animated.View
+                    style={[
+                      {
+                        borderRadius: radii.xl,
+                        backgroundColor: plan.theme.background,
+                        padding: spacing.md,
+                        shadowColor: '#000',
+                        shadowOffset: { width: 0, height: isActive ? 10 : 3 },
+                        shadowOpacity: isActive ? 0.3 : 0.06,
+                        shadowRadius: isActive ? 20 : 5,
+                        elevation: isActive ? 14 : 3,
+                      },
+                      animatedStyle,
+                    ]}
                   >
+                    {/* Badge */}
+                    {plan.badge ? (
+                      <View
+                        style={{
+                          alignSelf: 'flex-start',
+                          backgroundColor: plan.theme.accent,
+                          borderRadius: radii.full,
+                          paddingHorizontal: spacing.sm,
+                          paddingVertical: 2,
+                          marginBottom: spacing.sm,
+                        }}
+                      >
+                        <Text
+                          style={{
+                            ...typography.caption,
+                            color: plan.theme.buttonText,
+                            fontWeight: '700',
+                            fontSize: 9,
+                          }}
+                        >
+                          {plan.badge}
+                        </Text>
+                      </View>
+                    ) : (
+                      <View style={{ height: 18, marginBottom: spacing.sm }} />
+                    )}
+
+                    {/* Title & Subtitle */}
                     <Text
                       style={{
-                        ...typography.caption,
-                        color: plan.theme.buttonText,
-                        fontWeight: '700',
-                        fontSize: 9,
+                        ...typography.titleMedium,
+                        color: plan.theme.text,
+                        fontSize: isActive ? 16 : 13,
+                        marginBottom: 2,
                       }}
                     >
-                      {plan.badge}
+                      {plan.title}
                     </Text>
-                  </View>
-                ) : (
-                  <View style={{ height: 18, marginBottom: spacing.sm }} />
-                )}
-
-                {/* Title & Subtitle */}
-                <Text
-                  style={{
-                    ...typography.titleMedium,
-                    color: plan.theme.text,
-                    fontSize: isActive ? 16 : 13,
-                    marginBottom: 2,
-                  }}
-                >
-                  {plan.title}
-                </Text>
-                <Text
-                  style={{
-                    ...typography.caption,
-                    color: plan.theme.textMuted,
-                    marginBottom: spacing.sm,
-                    fontSize: 10,
-                  }}
-                >
-                  {plan.subtitle}
-                </Text>
-
-                {/* Price */}
-                <View style={{ marginBottom: spacing.sm }}>
-                  {plan.priceWas ? (
                     <Text
                       style={{
                         ...typography.caption,
                         color: plan.theme.textMuted,
-                        textDecorationLine: 'line-through',
-                        marginBottom: 1,
+                        marginBottom: spacing.sm,
                         fontSize: 10,
                       }}
                     >
-                      Was {plan.priceWas}
+                      {plan.subtitle}
                     </Text>
-                  ) : null}
-                  <Text
-                    style={{
-                      ...typography.displayLarge,
-                      color: plan.theme.text,
-                      fontSize: isActive ? 22 : 16,
-                    }}
-                  >
-                    {plan.priceNow}
-                  </Text>
-                  {plan.saveLabel ? (
-                    <Text
-                      style={{
-                        ...typography.caption,
-                        color: plan.theme.accent,
-                        fontWeight: '700',
-                        marginTop: 1,
-                        fontSize: 10,
-                      }}
-                    >
-                      {plan.saveLabel}
-                    </Text>
-                  ) : null}
-                </View>
 
-                {/* Divider */}
-                <View
-                  style={{
-                    height: 1,
-                    backgroundColor: plan.theme.borderColor,
-                    marginBottom: spacing.sm,
-                  }}
-                />
-
-                {/* Features */}
-                <View style={{ marginBottom: spacing.sm }}>
-                  {features.slice(0, 5).map((feature) => {
-                    const value = feature[plan.key];
-                    return (
-                      <View
-                        key={feature.label}
-                        style={{
-                          flexDirection: 'row',
-                          alignItems: 'center',
-                          marginBottom: 4,
-                        }}
-                      >
-                        {typeof value === 'boolean' ? (
-                          <MaterialIcons
-                            name={value ? 'check-circle' : 'cancel'}
-                            size={12}
-                            color={value ? plan.theme.checkColor : plan.theme.textMuted}
-                          />
-                        ) : (
-                          <Text style={{ ...typography.caption, color: plan.theme.text, fontWeight: '600', fontSize: 10 }}>
-                            {value}
-                          </Text>
-                        )}
+                    {/* Price */}
+                    <View style={{ marginBottom: spacing.sm }}>
+                      {plan.priceWas ? (
                         <Text
                           style={{
                             ...typography.caption,
                             color: plan.theme.textMuted,
-                            marginLeft: 4,
-                            flex: 1,
-                            fontSize: 9,
+                            textDecorationLine: 'line-through',
+                            marginBottom: 1,
+                            fontSize: 10,
                           }}
-                          numberOfLines={1}
                         >
-                          {feature.label}
+                          Was {plan.priceWas}
                         </Text>
-                      </View>
-                    );
-                  })}
-                </View>
+                      ) : null}
+                      <Text
+                        style={{
+                          ...typography.displayLarge,
+                          color: plan.theme.text,
+                          fontSize: isActive ? 22 : 16,
+                        }}
+                      >
+                        {plan.priceNow}
+                      </Text>
+                      {plan.saveLabel ? (
+                        <Text
+                          style={{
+                            ...typography.caption,
+                            color: plan.theme.accent,
+                            fontWeight: '700',
+                            marginTop: 1,
+                            fontSize: 10,
+                          }}
+                        >
+                          {plan.saveLabel}
+                        </Text>
+                      ) : null}
+                    </View>
 
-                {/* CTA Button */}
-                <TouchableOpacity
-                  onPress={() => {
-                    scrollToIndex(realIndex);
-                    setTimeout(handleSelectPlan, 300);
-                  }}
-                  activeOpacity={0.85}
-                  style={{
-                    backgroundColor: plan.theme.buttonBg,
-                    borderRadius: radii.md,
-                    paddingVertical: spacing.sm,
-                    alignItems: 'center',
-                    marginTop: 'auto',
-                  }}
-                >
-                  <Text
-                    style={{
-                      ...typography.caption,
-                      color: plan.theme.buttonText,
-                      fontWeight: '700',
-                      fontSize: 11,
-                    }}
-                  >
-                    {plan.key === 'get_started' ? 'Choose Free' : 'Choose'}
-                  </Text>
+                    {/* Divider */}
+                    <View
+                      style={{
+                        height: 1,
+                        backgroundColor: plan.theme.borderColor,
+                        marginBottom: spacing.sm,
+                      }}
+                    />
+
+                    {/* Features */}
+                    <View style={{ marginBottom: spacing.sm }}>
+                      {features.slice(0, 5).map((feature) => {
+                        const value = feature[plan.key];
+                        return (
+                          <View
+                            key={feature.label}
+                            style={{
+                              flexDirection: 'row',
+                              alignItems: 'center',
+                              marginBottom: 4,
+                            }}
+                          >
+                            {typeof value === 'boolean' ? (
+                              <MaterialIcons
+                                name={value ? 'check-circle' : 'cancel'}
+                                size={12}
+                                color={value ? plan.theme.checkColor : plan.theme.textMuted}
+                              />
+                            ) : (
+                              <Text style={{ ...typography.caption, color: plan.theme.text, fontWeight: '600', fontSize: 10 }}>
+                                {value}
+                              </Text>
+                            )}
+                            <Text
+                              style={{
+                                ...typography.caption,
+                                color: plan.theme.textMuted,
+                                marginLeft: 4,
+                                flex: 1,
+                                fontSize: 9,
+                              }}
+                              numberOfLines={1}
+                            >
+                              {feature.label}
+                            </Text>
+                          </View>
+                        );
+                      })}
+                    </View>
+
+                    {/* CTA Button */}
+                    <TouchableOpacity
+                      onPress={() => {
+                        scrollToIndex(planIndex);
+                        setTimeout(handleSelectPlan, 300);
+                      }}
+                      activeOpacity={0.85}
+                      style={{
+                        backgroundColor: plan.theme.buttonBg,
+                        borderRadius: radii.md,
+                        paddingVertical: spacing.sm,
+                        alignItems: 'center',
+                        marginTop: 'auto',
+                      }}
+                    >
+                      <Text
+                        style={{
+                          ...typography.caption,
+                          color: plan.theme.buttonText,
+                          fontWeight: '700',
+                          fontSize: 11,
+                        }}
+                      >
+                        {plan.key === 'get_started' ? 'Choose Free' : 'Choose'}
+                      </Text>
+                    </TouchableOpacity>
+                  </Animated.View>
                 </TouchableOpacity>
-              </TouchableOpacity>
-            );
-          })}
-        </ScrollView>
+              );
+            }}
+          />
         </View>
 
         {/* Pagination Dots */}

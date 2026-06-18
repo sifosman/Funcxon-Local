@@ -91,15 +91,15 @@ export default function ListerPortfolioScreen() {
     try {
       const { data: userRow } = await supabase
         .from('users')
-        .select('id')
+        .select('id, auth_user_id')
         .eq('auth_user_id', user.id)
         .maybeSingle();
 
-      const internalUserId = userRow?.id ?? user.id;
+      const listingUserId = userRow?.auth_user_id ?? user.id;
 
       const [{ data: vendorData }, { data: venueData }] = await Promise.all([
-        supabase.from('vendors').select('id, name, subscription_tier, subscription_status, subscription_expires_at').eq('user_id', internalUserId).maybeSingle(),
-        supabase.from('venue_listings').select('id, name, subscription_plan, subscription_status, subscription_expires_at').eq('user_id', internalUserId).maybeSingle(),
+        supabase.from('vendors').select('id, name, subscription_tier, subscription_status, subscription_expires_at').eq('user_id', listingUserId).maybeSingle(),
+        supabase.from('venue_listings').select('id, name, subscription_plan, subscription_status, subscription_expires_at').eq('user_id', listingUserId).maybeSingle(),
       ]);
 
       if (vendorData) setVendorListing(vendorData);
@@ -422,7 +422,7 @@ export default function ListerPortfolioScreen() {
           <Text style={styles.featuredLabel}>Want priority exposure?</Text>
           <TouchableOpacity
             style={styles.featuredButton}
-            onPress={() => Alert.alert('Coming Soon', 'Featured listings will be available in a later release.')}
+            onPress={() => navigation.navigate('SubscriptionPlans')}
           >
             <Text style={styles.featuredButtonText}>GET FEATURED</Text>
           </TouchableOpacity>
@@ -491,9 +491,9 @@ export default function ListerPortfolioScreen() {
       <View style={styles.card}>
         <Text style={styles.cardTitle}>Support</Text>
         {[
-          { id: 'faqs', label: "FAQ's", icon: 'help-outline' as keyof typeof MaterialIcons.glyphMap, action: () => Alert.alert("FAQ's", "FAQs page coming soon!") },
+          { id: 'faqs', label: "FAQ's", icon: 'help-outline' as keyof typeof MaterialIcons.glyphMap, action: () => setHelpVisible(true) },
           { id: 'helpdesk', label: 'Need app assistance? Contact our helpdesk', icon: 'support-agent' as keyof typeof MaterialIcons.glyphMap, action: () => setHelpVisible(true) },
-          { id: 'report', label: 'Report a problem to Funxon', icon: 'report-problem' as keyof typeof MaterialIcons.glyphMap, action: () => Alert.alert('Report Problem', 'Problem reporting coming soon!') },
+          { id: 'report', label: 'Report a problem to Funxon', icon: 'report-problem' as keyof typeof MaterialIcons.glyphMap, action: () => Linking.openURL('mailto:support@funxon.com?subject=Problem%20Report%20-%20Funxon') },
           { id: 'whatsapp', label: 'Chat with Funxon via WhatsApp', icon: 'chat' as keyof typeof MaterialIcons.glyphMap, action: () => Linking.openURL('https://wa.me/') },
           { id: 'email', label: 'Chat with Funxon via email', icon: 'email' as keyof typeof MaterialIcons.glyphMap, action: () => Linking.openURL('mailto:support@funxon.com') },
           { id: 'terms', label: 'Terms & Policies', icon: 'policy' as keyof typeof MaterialIcons.glyphMap, action: () => navigation.navigate('TermsAndPolicies') },
@@ -503,7 +503,7 @@ export default function ListerPortfolioScreen() {
       <View style={{ height: spacing.xl }} />
 
       <AppFooter
-        onNavigateToFAQs={() => Alert.alert("FAQ's", "FAQs page coming soon!")}
+        onNavigateToFAQs={() => setHelpVisible(true)}
         onNavigateToHelpDesk={() => setHelpVisible(true)}
         onNavigateToTerms={() => navigation.navigate('TermsAndPolicies')}
       />

@@ -35,7 +35,7 @@ export default function AccountScreen() {
         try {
             const { data: userData } = await supabase
                 .from('users')
-                .select('id')
+                .select('id, auth_user_id')
                 .eq('auth_user_id', user.id)
                 .maybeSingle();
             if (!userData) return;
@@ -43,7 +43,7 @@ export default function AccountScreen() {
             const { data: vendorData } = await supabase
                 .from('vendors')
                 .select('subscription_tier')
-                .eq('user_id', userData.id)
+                .eq('user_id', userData.auth_user_id)
                 .maybeSingle();
 
             setCurrentPlan(vendorData?.subscription_tier || null);
@@ -135,40 +135,26 @@ export default function AccountScreen() {
 
         const { data: userData, error: userError } = await supabase
             .from('users')
-            .select('id')
+            .select('id, auth_user_id')
             .eq('auth_user_id', user.id)
             .maybeSingle();
 
-        const internalUserId = userData?.id ?? null;
+        const vendorUserId = userData?.auth_user_id ?? user.id;
 
         const { data: vendorData, error: vendorError } = await supabase
             .from('vendors')
             .select('id, subscription_status, subscription_tier')
-            .eq('user_id', internalUserId)
+            .eq('user_id', vendorUserId)
             .maybeSingle();
 
-        let resolvedVendorData = vendorData;
-        let resolvedVendorError = vendorError;
-
-        if ((!resolvedVendorData && !resolvedVendorError) || userError) {
-            const fallbackResult = await supabase
-                .from('vendors')
-                .select('id, subscription_status, subscription_tier')
-                .eq('user_id', user.id)
-                .maybeSingle();
-
-            resolvedVendorData = fallbackResult.data;
-            resolvedVendorError = fallbackResult.error;
-        }
-
-        if (resolvedVendorError) {
+        if (vendorError) {
             navigation.navigate('SubscriptionPlans');
             return;
         }
 
-        const status = String(resolvedVendorData?.subscription_status ?? '').toLowerCase();
-        const tier = String(resolvedVendorData?.subscription_tier ?? '').toLowerCase();
-        const hasActiveSubscription = !!resolvedVendorData && (status === 'active' || status === 'trial' || tier === 'basic' || tier === 'premium' || tier === 'enterprise');
+        const status = String(vendorData?.subscription_status ?? '').toLowerCase();
+        const tier = String(vendorData?.subscription_tier ?? '').toLowerCase();
+        const hasActiveSubscription = !!vendorData && (status === 'active' || status === 'trial' || tier === 'basic' || tier === 'premium' || tier === 'enterprise');
 
         if (!hasActiveSubscription) {
             navigation.navigate('SubscriptionPlans');

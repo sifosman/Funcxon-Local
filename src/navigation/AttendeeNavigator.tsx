@@ -77,12 +77,12 @@ export function AttendeeNavigator() {
       <Stack.Screen
         name="VendorProfile"
         component={VendorProfileScreen}
-        options={{ title: 'Vendor profile' }}
+        options={{ headerShown: false }}
       />
       <Stack.Screen
         name="VenueProfile"
         component={VenueProfileScreen}
-        options={{ title: 'Venue profile' }}
+        options={{ headerShown: false }}
       />
       <Stack.Screen
         name="QuoteRequest"
