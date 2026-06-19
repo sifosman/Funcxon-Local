@@ -111,4 +111,14 @@ export const typography = {
     marginBottom: 8,
     color: colors.textPrimary,
   },
+  button: {
+    fontSize: 16,
+    fontWeight: '600' as const,
+    fontFamily: 'Montserrat_600SemiBold',
+  },
+  buttonMedium: {
+    fontSize: 13,
+    fontWeight: '500' as const,
+    fontFamily: 'Montserrat_500Medium',
+  },
 };

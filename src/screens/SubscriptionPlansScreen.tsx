@@ -331,12 +331,12 @@ export default function SubscriptionPlansScreen() {
             ref={carouselRef}
             loop
             snapEnabled
-            pagingEnabled={false}
+            pagingEnabled={true}
             defaultIndex={activeIndex}
-            scrollAnimationDuration={800}
+            scrollAnimationDuration={350}
             overscrollEnabled={false}
             width={SNAP_INTERVAL}
-            height={420}
+            height={460}
             data={plans}
             style={{ width: '100%' }}
             customAnimation={customAnimation}
