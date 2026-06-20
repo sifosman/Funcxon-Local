@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, Image, Alert, Platform, Linking, Dimensions, StyleSheet, KeyboardAvoidingView } from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView, Image, Platform, Linking, Dimensions, StyleSheet, KeyboardAvoidingView } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -18,6 +18,7 @@ import { canUploadMorePhotos, incrementVendorPhotoCount, decrementVendorPhotoCou
 import { getMyVenueEntitlement } from '../../lib/venueSubscription';
 import { useAuth } from '../../auth/AuthContext';
 import { supabase } from '../../lib/supabaseClient';
+import ThemedAlert from '../../components/ThemedAlert';
 
 type ProfileStackParamList = {
   ApplicationStep2: undefined;
@@ -45,6 +46,7 @@ export default function ApplicationStep3Screen() {
   const { user } = useAuth();
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [vendorId, setVendorId] = useState<number | null>(null);
+  const [alertState, setAlertState] = useState<{visible: boolean; title: string; message: string; buttons?: any[]} | null>(null);
   const [vendorVideoLimit, setVendorVideoLimit] = useState<number | null>(null);
   const [venueLimits, setVenueLimits] = useState<{ photoLimit: number; videoLimit: number } | null>(null);
 
@@ -91,11 +93,7 @@ export default function ApplicationStep3Screen() {
         const limit = venueLimits?.photoLimit ?? 10;
         const remaining = Math.max(0, limit - state.step3.images.length);
         if (remaining <= 0) {
-          Alert.alert(
-            'Photo Limit Reached',
-            "You've reached your photo upload limit for your current venue plan.",
-            [{ text: 'OK' }],
-          );
+          setAlertState({ visible: true, title: 'Photo Limit Reached', message: "You've reached your photo upload limit for your current venue plan.", buttons: [{ text: 'OK', style: 'default', onPress: () => setAlertState(null) }] });
           return;
         }
       }
@@ -107,7 +105,7 @@ export default function ApplicationStep3Screen() {
           const message = vendorVideoLimit === 0
             ? 'Video uploads are available on paid vendor plans. Please upgrade to upload videos.'
             : "You've reached your video upload limit for your current vendor plan.";
-          Alert.alert('Video Limit Reached', message, [{ text: 'OK' }]);
+          setAlertState({ visible: true, title: 'Video Limit Reached', message, buttons: [{ text: 'OK', style: 'default', onPress: () => setAlertState(null) }] });
           return;
         }
       }
@@ -116,11 +114,7 @@ export default function ApplicationStep3Screen() {
       if (vendorId) {
         const canUpload = await canUploadMorePhotos(vendorId);
         if (!canUpload) {
-          Alert.alert(
-            'Photo Limit Reached',
-            'You\'ve reached your photo limit. Upgrade your subscription to add more photos.',
-            [{ text: 'OK' }]
-          );
+          setAlertState({ visible: true, title: 'Photo Limit Reached', message: 'You\'ve reached your photo limit. Upgrade your subscription to add more photos.', buttons: [{ text: 'OK', style: 'default', onPress: () => setAlertState(null) }] });
           return;
         }
       }
@@ -128,11 +122,7 @@ export default function ApplicationStep3Screen() {
       // Request permission
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (status !== 'granted') {
-        Alert.alert(
-          'Permission Required',
-          'Please grant access to your photo library to upload images.',
-          [{ text: 'OK' }]
-        );
+        setAlertState({ visible: true, title: 'Permission Required', message: 'Please grant access to your photo library to upload images.', buttons: [{ text: 'OK', style: 'default', onPress: () => setAlertState(null) }] });
         return;
       }
 
@@ -155,10 +145,7 @@ export default function ApplicationStep3Screen() {
         const validImages = result.assets.filter((asset) => {
           const fileSize = asset.fileSize || 0;
           if (fileSize > MAX_IMAGE_SIZE) {
-            Alert.alert(
-              'File Too Large',
-              `${asset.fileName || 'Image'} exceeds 10MB limit.`
-            );
+            setAlertState({ visible: true, title: 'File Too Large', message: `${asset.fileName || 'Image'} exceeds 10MB limit.` });
             return false;
           }
           return true;
@@ -194,11 +181,7 @@ export default function ApplicationStep3Screen() {
         if (state.portfolioType === 'venues') {
           const limit = venueLimits?.photoLimit ?? 10;
           if (updatedImages.length > limit) {
-            Alert.alert(
-              'Photo Limit Reached',
-              `Your venue plan allows up to ${limit} photo(s).`,
-              [{ text: 'OK' }],
-            );
+            setAlertState({ visible: true, title: 'Photo Limit Reached', message: `Your venue plan allows up to ${limit} photo(s).`, buttons: [{ text: 'OK', style: 'default', onPress: () => setAlertState(null) }] });
             updateStep3({ images: updatedImages.slice(0, limit) });
             return;
           }
@@ -214,12 +197,12 @@ export default function ApplicationStep3Screen() {
         }
 
         if (validImages.length > 0) {
-          Alert.alert('Success', `${validImages.length} image(s) added successfully.`);
+          setAlertState({ visible: true, title: 'Success', message: `${validImages.length} image(s) added successfully.` });
         }
       }
     } catch (error) {
       console.error('Image picker error:', error);
-      Alert.alert('Error', 'Failed to pick images. Please try again.');
+      setAlertState({ visible: true, title: 'Error', message: 'Failed to pick images. Please try again.' });
     }
   };
 
@@ -247,7 +230,7 @@ export default function ApplicationStep3Screen() {
       if (!result.canceled && result.assets) {
         const asset = result.assets[0];
         if (asset.size && asset.size > MAX_DOCUMENT_SIZE) {
-          Alert.alert('File Too Large', `${asset.name} exceeds 10MB limit.`);
+          setAlertState({ visible: true, title: 'File Too Large', message: `${asset.name} exceeds 10MB limit.` });
           return;
         }
 
@@ -272,11 +255,11 @@ export default function ApplicationStep3Screen() {
 
         upsertBusinessDoc(key, newDoc);
 
-        Alert.alert('Success', `${asset.name} uploaded successfully.`);
+        setAlertState({ visible: true, title: 'Success', message: `${asset.name} uploaded successfully.` });
       }
     } catch (error) {
       console.error('Document picker error:', error);
-      Alert.alert('Error', 'Failed to pick documents. Please try again.');
+      setAlertState({ visible: true, title: 'Error', message: 'Failed to pick documents. Please try again.' });
     }
   };
 
@@ -284,11 +267,7 @@ export default function ApplicationStep3Screen() {
     try {
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (status !== 'granted') {
-        Alert.alert(
-          'Permission Required',
-          'Please grant access to your photo library to upload your company logo.',
-          [{ text: 'OK' }],
-        );
+        setAlertState({ visible: true, title: 'Permission Required', message: 'Please grant access to your photo library to upload your company logo.', buttons: [{ text: 'OK', style: 'default', onPress: () => setAlertState(null) }] });
         return;
       }
 
@@ -303,7 +282,7 @@ export default function ApplicationStep3Screen() {
         const asset = result.assets[0];
         const fileSize = asset.fileSize || 0;
         if (fileSize > MAX_IMAGE_SIZE) {
-          Alert.alert('File Too Large', `${asset.fileName || 'Logo'} exceeds 10MB limit.`);
+          setAlertState({ visible: true, title: 'File Too Large', message: `${asset.fileName || 'Logo'} exceeds 10MB limit.` });
           return;
         }
 
@@ -329,11 +308,11 @@ export default function ApplicationStep3Screen() {
         };
 
         upsertBusinessDoc('company_logo', logoDoc);
-        Alert.alert('Success', 'Company logo uploaded successfully.');
+        setAlertState({ visible: true, title: 'Success', message: 'Company logo uploaded successfully.' });
       }
     } catch (error) {
       console.error('Company logo picker error:', error);
-      Alert.alert('Error', 'Failed to pick the company logo. Please try again.');
+      setAlertState({ visible: true, title: 'Error', message: 'Failed to pick the company logo. Please try again.' });
     }
   };
 
@@ -380,7 +359,7 @@ export default function ApplicationStep3Screen() {
       await FileSystem.copyAsync({ from: doc.uri, to: destUri });
       await Linking.openURL(destUri);
     } catch {
-      Alert.alert('Unable to download file', 'Please try again.');
+      setAlertState({ visible: true, title: 'Unable to download file', message: 'Please try again.' });
     }
   };
 
@@ -391,11 +370,7 @@ export default function ApplicationStep3Screen() {
         const limit = venueLimits?.videoLimit ?? 1;
         const remaining = Math.max(0, limit - state.step3.videos.length);
         if (remaining <= 0) {
-          Alert.alert(
-            'Video Limit Reached',
-            "You've reached your video upload limit for your current venue plan.",
-            [{ text: 'OK' }],
-          );
+          setAlertState({ visible: true, title: 'Video Limit Reached', message: "You've reached your video upload limit for your current venue plan.", buttons: [{ text: 'OK', style: 'default', onPress: () => setAlertState(null) }] });
           return;
         }
       }
@@ -403,11 +378,7 @@ export default function ApplicationStep3Screen() {
       // Request permission
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (status !== 'granted') {
-        Alert.alert(
-          'Permission Required',
-          'Please grant access to your photo library to upload videos.',
-          [{ text: 'OK' }]
-        );
+        setAlertState({ visible: true, title: 'Permission Required', message: 'Please grant access to your photo library to upload videos.', buttons: [{ text: 'OK', style: 'default', onPress: () => setAlertState(null) }] });
         return;
       }
 
@@ -433,10 +404,7 @@ export default function ApplicationStep3Screen() {
         const validVideos = result.assets.filter((asset) => {
           const fileSize = asset.fileSize || 0;
           if (fileSize > MAX_VIDEO_SIZE) {
-            Alert.alert(
-              'File Too Large',
-              `${asset.fileName || 'Video'} exceeds 50MB limit.`
-            );
+            setAlertState({ visible: true, title: 'File Too Large', message: `${asset.fileName || 'Video'} exceeds 50MB limit.` });
             return false;
           }
           return true;
@@ -471,11 +439,7 @@ export default function ApplicationStep3Screen() {
         if (state.portfolioType === 'venues') {
           const limit = venueLimits?.videoLimit ?? 1;
           if (updatedVideos.length > limit) {
-            Alert.alert(
-              'Video Limit Reached',
-              `Your venue plan allows up to ${limit} video(s).`,
-              [{ text: 'OK' }],
-            );
+            setAlertState({ visible: true, title: 'Video Limit Reached', message: `Your venue plan allows up to ${limit} video(s).`, buttons: [{ text: 'OK', style: 'default', onPress: () => setAlertState(null) }] });
             updateStep3({ videos: updatedVideos.slice(0, limit) });
             return;
           }
@@ -484,12 +448,12 @@ export default function ApplicationStep3Screen() {
         updateStep3({ videos: updatedVideos });
 
         if (validVideos.length > 0) {
-          Alert.alert('Success', `${validVideos.length} video(s) added successfully.`);
+          setAlertState({ visible: true, title: 'Success', message: `${validVideos.length} video(s) added successfully.` });
         }
       }
     } catch (error) {
       console.error('Video picker error:', error);
-      Alert.alert('Error', 'Failed to pick videos. Please try again.');
+      setAlertState({ visible: true, title: 'Error', message: 'Failed to pick videos. Please try again.' });
     }
   };
 
@@ -518,7 +482,7 @@ export default function ApplicationStep3Screen() {
 
     if (!validation.isValid) {
       setErrors(validation.errors);
-      Alert.alert('Validation Error', 'Please fix the errors before continuing');
+      setAlertState({ visible: true, title: 'Validation Error', message: 'Please fix the errors before continuing' });
       return;
     }
 
@@ -1027,6 +991,16 @@ export default function ApplicationStep3Screen() {
           </View>
         </View>
       </ScrollView>
+
+      {alertState && (
+        <ThemedAlert
+          visible={alertState.visible}
+          title={alertState.title}
+          message={alertState.message}
+          buttons={alertState.buttons ?? [{ text: 'OK', style: 'default', onPress: () => setAlertState(null) }]}
+          onDismiss={() => setAlertState(null)}
+        />
+      )}
     </KeyboardAvoidingView>
   );
 }

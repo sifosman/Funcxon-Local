@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Alert, KeyboardAvoidingView, Platform, ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import { useEffect, useState } from 'react';
+import { KeyboardAvoidingView, Platform, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 
@@ -8,35 +8,86 @@ import type { AttendeeStackParamList } from '../navigation/AttendeeNavigator';
 import { colors, spacing, typography, radii } from '../theme';
 import { PrimaryButton, ThemedInput } from '../components/ui';
 import { useAuth } from '../auth/AuthContext';
+import ThemedAlert from '../components/ThemedAlert';
 
 type Props = NativeStackScreenProps<AttendeeStackParamList, 'QuoteRequest'>;
 
-// Web-safe alert helper
-const showAlert = (title: string, message: string) => {
-  if (Platform.OS === 'web') {
-    window.alert(`${title}\n\n${message}`);
-  } else {
-    Alert.alert(title, message);
-  }
-};
-
 export default function QuoteRequestScreen({ route, navigation }: Props) {
-  const { vendorId, vendorName, type = 'vendor' } = route.params;
+  const { vendorId, vendorName, type = 'vendor', editMode = false, quoteId } = route.params;
   const { user } = useAuth();
 
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [eventDetails, setEventDetails] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [loadingEdit, setLoadingEdit] = useState(false);
+  const [alertState, setAlertState] = useState<{visible: boolean; title: string; message: string; buttons?: any[]} | null>(null);
+
+  useEffect(() => {
+    if (!editMode || !quoteId) return;
+    setLoadingEdit(true);
+    const load = async () => {
+      try {
+        if (type === 'venue') {
+          const { data } = await supabase
+            .from('venue_quote_requests')
+            .select('requester_name, requester_email, message')
+            .eq('id', quoteId)
+            .maybeSingle();
+          if (data) {
+            setName(data.requester_name ?? '');
+            setEmail(data.requester_email ?? '');
+            setEventDetails(data.message ?? '');
+          }
+        } else {
+          const { data } = await supabase
+            .from('quote_requests')
+            .select('name, email, details')
+            .eq('id', quoteId)
+            .maybeSingle();
+          if (data) {
+            setName(data.name ?? '');
+            setEmail(data.email ?? '');
+            setEventDetails(data.details ?? '');
+          }
+        }
+      } catch (e) {
+        console.error('Failed to load quote for edit:', e);
+      } finally {
+        setLoadingEdit(false);
+      }
+    };
+    load();
+  }, [editMode, quoteId, type]);
 
   async function handleSubmit() {
     if (!name.trim() || !email.trim()) {
-      showAlert('Missing details', 'Please provide your name and email.');
+      setAlertState({ visible: true, title: 'Missing details', message: 'Please provide your name and email.' });
       return;
     }
 
     setSubmitting(true);
     try {
+      if (editMode && quoteId) {
+        // Update existing quote request
+        if (type === 'venue') {
+          const { error: updateError } = await supabase
+            .from('venue_quote_requests')
+            .update({ requester_name: name, requester_email: email, message: eventDetails || null })
+            .eq('id', quoteId);
+          if (updateError) throw updateError;
+        } else {
+          const { error: updateError } = await supabase
+            .from('quote_requests')
+            .update({ name, email, details: eventDetails || null })
+            .eq('id', quoteId);
+          if (updateError) throw updateError;
+        }
+        setAlertState({ visible: true, title: 'Quote updated', message: 'Your quote request has been updated successfully.', buttons: [{ text: 'OK', style: 'default', onPress: () => { setAlertState(null); navigation.goBack(); } }] });
+        setSubmitting(false);
+        return;
+      }
+
       if (type === 'venue') {
         const { error: insertError } = await supabase.from('venue_quote_requests').insert({
           listing_id: vendorId,
@@ -107,11 +158,10 @@ export default function QuoteRequestScreen({ route, navigation }: Props) {
         await sendVendorNotification(vendorId, vendorName);
       }
 
-      showAlert('Quote requested', 'Your quote request has been sent successfully.');
-      navigation.goBack();
+      setAlertState({ visible: true, title: 'Quote requested', message: 'Your quote request has been sent successfully.', buttons: [{ text: 'OK', style: 'default', onPress: () => { setAlertState(null); navigation.goBack(); } }] });
     } catch (err: any) {
       console.error('Submit error:', err);
-      showAlert('Error', err?.message ?? 'Failed to submit quote request.');
+      setAlertState({ visible: true, title: 'Error', message: err?.message ?? 'Failed to submit quote request.' });
     } finally {
       setSubmitting(false);
     }
@@ -214,7 +264,7 @@ export default function QuoteRequestScreen({ route, navigation }: Props) {
             color: colors.textPrimary,
           }}
         >
-          Request a quote from
+          {editMode ? 'Amend your quote request for' : 'Request a quote from'}
         </Text>
         <Text
           style={{
@@ -226,6 +276,10 @@ export default function QuoteRequestScreen({ route, navigation }: Props) {
           {vendorName}
         </Text>
       </View>
+
+      {loadingEdit && (
+        <Text style={{ ...typography.caption, color: colors.textMuted, marginBottom: spacing.md }}>Loading...</Text>
+      )}
 
       <View
         style={{
@@ -298,13 +352,23 @@ export default function QuoteRequestScreen({ route, navigation }: Props) {
         />
 
         <PrimaryButton
-          title={submitting ? 'Submitting...' : 'Submit quote request'}
+          title={submitting ? (editMode ? 'Updating...' : 'Submitting...') : (editMode ? 'Update quote request' : 'Submit quote request')}
           onPress={handleSubmit}
-          disabled={submitting}
+          disabled={submitting || loadingEdit}
           style={{ marginTop: spacing.lg }}
         />
       </View>
     </ScrollView>
+
+    {alertState && (
+      <ThemedAlert
+        visible={alertState.visible}
+        title={alertState.title}
+        message={alertState.message}
+        buttons={alertState.buttons ?? [{ text: 'OK', style: 'default', onPress: () => setAlertState(null) }]}
+        onDismiss={() => setAlertState(null)}
+      />
+    )}
     </KeyboardAvoidingView>
   );
 }

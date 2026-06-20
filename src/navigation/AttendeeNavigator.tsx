@@ -32,7 +32,7 @@ export type AttendeeStackParamList = {
     | undefined;
   VendorProfile: { vendorId: number; from?: 'Favourites' | 'Quotes' };
   VenueProfile: { venueId: number; from?: 'Favourites' | 'Quotes' };
-  QuoteRequest: { vendorId: number; vendorName: string; type?: 'vendor' | 'venue' };
+  QuoteRequest: { vendorId: number; vendorName: string; type?: 'vendor' | 'venue'; editMode?: boolean; quoteId?: number };
   BookTour: { venueId: number; venueName: string };
   CreateReview: { type: 'vendor' | 'venue'; targetId: number; targetName: string };
   VenueCatalogueView: { venueId: number; venueName: string };

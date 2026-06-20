@@ -1,6 +1,5 @@
 import { useMemo, useState, useRef, useEffect, useCallback } from 'react';
 import {
-  Alert,
   ScrollView,
   Text,
   TouchableOpacity,
@@ -14,11 +13,13 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useAuth } from '../auth/AuthContext';
+import { supabase } from '../lib/supabaseClient';
 import { savePendingSubscriptionCheckout } from '../lib/pendingSubscriptionCheckout';
 import { getLatestUserApplicationByType, isBlockingApplicationStatus } from '../lib/applicationService';
 import { useApplicationForm } from '../context/ApplicationFormContext';
 import { colors, spacing, radii, typography } from '../theme';
 import type { ProfileStackParamList } from '../navigation/ProfileNavigator';
+import ThemedAlert from '../components/ThemedAlert';
 
 const CARD_MARGIN = 4;
 const ACTIVE_SCALE = 1.08;
@@ -84,6 +85,8 @@ export default function SubscriptionPlansScreen() {
   const [selectedBilling, setSelectedBilling] = useState<BillingPeriod>('monthly');
   const [selectedPlan, setSelectedPlan] = useState<PlanKey>('premium');
   const [activeIndex, setActiveIndex] = useState(1);
+  const [existingVendorId, setExistingVendorId] = useState<number | null>(null);
+  const [alertState, setAlertState] = useState<{visible: boolean; title: string; message: string} | null>(null);
   const carouselRef = useRef<ICarouselInstance>(null);
 
   useEffect(() => {
@@ -91,6 +94,18 @@ export default function SubscriptionPlansScreen() {
       carouselRef.current.scrollTo({ index: activeIndex, animated: false });
     }
   }, [containerWidth, activeIndex]);
+
+  useEffect(() => {
+    if (!user?.id) return;
+    supabase
+      .from('vendors')
+      .select('id')
+      .eq('user_id', user.id)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (data?.id) setExistingVendorId(data.id);
+      });
+  }, [user?.id]);
 
   const plans: VendorPlan[] = useMemo(
     () => [
@@ -226,23 +241,29 @@ export default function SubscriptionPlansScreen() {
     await setPortfolioType('vendors');
     updateStep4({ subscriptionPlan: selectedPlan, billingPeriod: selectedBilling });
 
+    const checkoutParams: ProfileStackParamList['SubscriptionCheckout'] = {
+      tierName: selected.title,
+      billing: selectedBilling,
+      priceLabel,
+      isFree,
+      productType: 'vendor',
+      planKey: selectedPlan,
+    };
+
     if (!user) {
-      const checkoutParams: ProfileStackParamList['SubscriptionCheckout'] = {
-        tierName: selected.title,
-        billing: selectedBilling,
-        priceLabel,
-        isFree,
-        productType: 'vendor',
-        planKey: selectedPlan,
-      };
       savePendingSubscriptionCheckout(checkoutParams)
         .then(() => {
           const rootNav = navigation.getParent()?.getParent() as any;
           rootNav?.navigate?.('Auth', { screen: 'GuestPrompt', params: { label: 'Account' } });
         })
         .catch(() => {
-          Alert.alert('Login required', 'Please log in to continue with this subscription plan.');
+          setAlertState({ visible: true, title: 'Login required', message: 'Please log in to continue with this subscription plan.' });
         });
+      return;
+    }
+
+    if (existingVendorId) {
+      navigation.navigate('SubscriptionCheckout', checkoutParams);
       return;
     }
 
@@ -716,6 +737,16 @@ export default function SubscriptionPlansScreen() {
           </Text>
         </View>
       </ScrollView>
+
+      {alertState && (
+        <ThemedAlert
+          visible={alertState.visible}
+          title={alertState.title}
+          message={alertState.message}
+          buttons={[{ text: 'OK', style: 'default', onPress: () => setAlertState(null) }]}
+          onDismiss={() => setAlertState(null)}
+        />
+      )}
     </View>
   );
 }

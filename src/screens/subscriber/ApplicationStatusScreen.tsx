@@ -1,5 +1,5 @@
 import { useCallback, useState } from 'react';
-import { ActivityIndicator, Alert, RefreshControl, ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, RefreshControl, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -9,6 +9,7 @@ import { supabase } from '../../lib/supabaseClient';
 import { useAuth } from '../../auth/AuthContext';
 import { cancelApplication, getLatestUserApplication, isBlockingApplicationStatus, type SubscriberApplication } from '../../lib/applicationService';
 import { useApplicationForm, type ApplicationFormState } from '../../context/ApplicationFormContext';
+import ThemedAlert from '../../components/ThemedAlert';
 
 const formatStatusLabel = (status?: string | null) => {
   const normalized = String(status ?? 'pending').replace(/_/g, ' ').trim();
@@ -61,6 +62,7 @@ export default function ApplicationStatusScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [cancelling, setCancelling] = useState(false);
+  const [alertState, setAlertState] = useState<{visible: boolean; title: string; message: string; buttons?: any[]} | null>(null);
   const [application, setApplication] = useState<SubscriberApplication | null>(null);
   const [portfolioExists, setPortfolioExists] = useState(false);
 
@@ -133,29 +135,32 @@ export default function ApplicationStatusScreen() {
       return;
     }
 
-    Alert.alert('Cancel Application', 'Are you sure you want to cancel your application?', [
-      {
-        text: 'Keep Application',
-        style: 'cancel',
-      },
-      {
-        text: 'Cancel Application',
-        style: 'destructive',
-        onPress: async () => {
-          setCancelling(true);
-          const result = await cancelApplication(application.id);
-          setCancelling(false);
+    setAlertState({
+      visible: true,
+      title: 'Cancel Application',
+      message: 'Are you sure you want to cancel your application?',
+      buttons: [
+        { text: 'Keep Application', style: 'cancel', onPress: () => setAlertState(null) },
+        {
+          text: 'Cancel Application',
+          style: 'destructive',
+          onPress: async () => {
+            setAlertState(null);
+            setCancelling(true);
+            const result = await cancelApplication(application.id);
+            setCancelling(false);
 
-          if (!result.success) {
-            Alert.alert('Cancellation failed', result.error || 'We could not cancel your application right now.');
-            return;
-          }
+            if (!result.success) {
+              setAlertState({ visible: true, title: 'Cancellation failed', message: result.error || 'We could not cancel your application right now.' });
+              return;
+            }
 
-          await loadApplication();
-          Alert.alert('Application cancelled', 'Your application has been cancelled. You can now create a new application.');
+            await loadApplication();
+            setAlertState({ visible: true, title: 'Application cancelled', message: 'Your application has been cancelled. You can now create a new application.' });
+          },
         },
-      },
-    ]);
+      ],
+    });
   };
 
   const handleManagePortfolio = () => {
@@ -471,6 +476,16 @@ export default function ApplicationStatusScreen() {
           )}
         </View>
       </ScrollView>
+
+      {alertState && (
+        <ThemedAlert
+          visible={alertState.visible}
+          title={alertState.title}
+          message={alertState.message}
+          buttons={alertState.buttons ?? [{ text: 'OK', style: 'default', onPress: () => setAlertState(null) }]}
+          onDismiss={() => setAlertState(null)}
+        />
+      )}
     </View>
   );
 }

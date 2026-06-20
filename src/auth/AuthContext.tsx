@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { Platform } from 'react-native';
-import { showAlert } from '../utils/alert';
+import ThemedAlert from '../components/ThemedAlert';
 import type { Session } from '@supabase/supabase-js';
 import * as AuthSession from 'expo-auth-session';
 import * as WebBrowser from 'expo-web-browser';
@@ -35,6 +35,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null | undefined>(undefined);
   const [userRole, setUserRole] = useState<'attendee' | 'vendor' | null | undefined>(undefined);
   const [isLoading, setIsLoading] = useState(true);
+  const [alertState, setAlertState] = useState<{visible: boolean; title: string; message: string} | null>(null);
 
   // Fetch user role from database
   const fetchUserRole = async (userId: string) => {
@@ -327,7 +328,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           
           if (error) {
             console.error('Google Sign-In: Supabase error:', error);
-            showAlert('Error', error.message);
+            setAlertState({ visible: true, title: 'Error', message: error.message });
             return { error };
           }
           console.log('Google Sign-In: Supabase success');
@@ -344,10 +345,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           return { error: new Error('Google sign-in was cancelled') };
         }
         if (error.code === 'DEVELOPER_ERROR') {
-          showAlert('Google Sign-In Error', 'Developer Error: Check your SHA-1 fingerprint and package name in Google Cloud Console. Make sure they match your Android build.');
+          setAlertState({ visible: true, title: 'Google Sign-In Error', message: 'Developer Error: Check your SHA-1 fingerprint and package name in Google Cloud Console. Make sure they match your Android build.' });
           return { error: new Error('Developer Error - Check Google Cloud Console configuration') };
         }
-        showAlert('Google Sign-In Error', error.message);
+        setAlertState({ visible: true, title: 'Google Sign-In Error', message: error.message });
         return { error };
       }
     }
@@ -397,12 +398,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
 
     if (error) {
-      showAlert('Error', `OAuth error: ${error.message}`);
+      setAlertState({ visible: true, title: 'Error', message: `OAuth error: ${error.message}` });
       return { error: error ?? undefined };
     }
 
     if (!data?.url) {
-      showAlert('Error', 'No OAuth URL returned from Supabase');
+      setAlertState({ visible: true, title: 'Error', message: 'No OAuth URL returned from Supabase' });
       return { error: new Error('No OAuth URL returned from Supabase') };
     }
 
@@ -486,7 +487,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         
         if (errorParam) {
           console.error('AuthContext: OAuth error:', errorParam, errorDescription);
-          showAlert('OAuth Error', `${errorParam}${errorDescription ? ` - ${errorDescription}` : ''}`);
+          setAlertState({ visible: true, title: 'OAuth Error', message: `${errorParam}${errorDescription ? ` - ${errorDescription}` : ''}` });
           return { error: new Error(`OAuth error: ${errorParam}${errorDescription ? ` - ${errorDescription}` : ''}`) };
         }
         
@@ -502,7 +503,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             return { error: undefined };
           }
           
-          showAlert('Error', 'No auth code found in redirect URL');
+          setAlertState({ visible: true, title: 'Error', message: 'No auth code found in redirect URL' });
           return { error: new Error('No auth code found in redirect URL') };
         }
         
@@ -510,14 +511,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
         if (exchangeError) {
           console.error('AuthContext: exchangeCodeForSession error:', exchangeError);
-          showAlert('Exchange Error', exchangeError.message);
+          setAlertState({ visible: true, title: 'Exchange Error', message: exchangeError.message });
           return { error: exchangeError ?? undefined };
         }
         console.log('AuthContext: exchangeCodeForSession succeeded');
       }
     } catch (err: any) {
       console.log('AuthContext signInWithProvider (native) WebBrowser threw:', err);
-      showAlert('Exception', err.message);
+      setAlertState({ visible: true, title: 'Exception', message: err.message });
       return { error: err instanceof Error ? err : new Error(String(err)) };
     }
 
@@ -541,6 +542,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }}
     >
       {children}
+      {alertState && (
+        <ThemedAlert
+          visible={alertState.visible}
+          title={alertState.title}
+          message={alertState.message}
+          buttons={[{ text: 'OK', style: 'default', onPress: () => setAlertState(null) }]}
+          onDismiss={() => setAlertState(null)}
+        />
+      )}
     </AuthContext.Provider>
   );
 }

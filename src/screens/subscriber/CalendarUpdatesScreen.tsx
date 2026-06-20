@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, Modal, Platform, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Modal, Platform, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -7,6 +7,7 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import { colors, spacing, radii, typography } from '../../theme';
 import { supabase } from '../../lib/supabaseClient';
 import { useAuth } from '../../auth/AuthContext';
+import ThemedAlert from '../../components/ThemedAlert';
 
 type ProfileStackParamList = {
     SubscriberProfile: undefined;
@@ -31,6 +32,7 @@ export default function CalendarUpdatesScreen() {
     const [showDatePicker, setShowDatePicker] = useState(false);
     const [addForm, setAddForm] = useState({ title: '', date: new Date().toISOString().split('T')[0], time: '', notes: '' });
     const [saving, setSaving] = useState(false);
+    const [alertState, setAlertState] = useState<{visible: boolean; title: string; message: string; buttons?: any[]} | null>(null);
 
     const loadEvents = useCallback(async () => {
         if (!user?.id) return;
@@ -93,24 +95,30 @@ export default function CalendarUpdatesScreen() {
             setAddForm({ title: '', date: new Date().toISOString().split('T')[0], time: '', notes: '' });
             await loadEvents();
         } catch (err: any) {
-            Alert.alert('Error', err?.message ?? 'Failed to add event.');
+            setAlertState({ visible: true, title: 'Error', message: err?.message ?? 'Failed to add event.' });
         } finally {
             setSaving(false);
         }
     };
 
     const handleDelete = async (id: number) => {
-        Alert.alert('Delete Event', 'Are you sure you want to remove this event?', [
-            { text: 'Cancel', style: 'cancel' },
-            {
-                text: 'Delete',
-                style: 'destructive',
-                onPress: async () => {
-                    setEvents((prev) => prev.filter((e) => e.id !== id));
-                    await supabase.from('tasks').delete().eq('id', id);
+        setAlertState({
+            visible: true,
+            title: 'Delete Event',
+            message: 'Are you sure you want to remove this event?',
+            buttons: [
+                { text: 'Cancel', style: 'cancel', onPress: () => setAlertState(null) },
+                {
+                    text: 'Delete',
+                    style: 'destructive',
+                    onPress: async () => {
+                        setAlertState(null);
+                        setEvents((prev) => prev.filter((e) => e.id !== id));
+                        await supabase.from('tasks').delete().eq('id', id);
+                    },
                 },
-            },
-        ]);
+            ],
+        });
     };
 
     const groupedEvents = events.reduce<Record<string, CalendarEvent[]>>((acc, event) => {
@@ -296,6 +304,16 @@ export default function CalendarUpdatesScreen() {
                     </View>
                 </View>
             </Modal>
+
+            {alertState && (
+                <ThemedAlert
+                    visible={alertState.visible}
+                    title={alertState.title}
+                    message={alertState.message}
+                    buttons={alertState.buttons ?? [{ text: 'OK', style: 'default', onPress: () => setAlertState(null) }]}
+                    onDismiss={() => setAlertState(null)}
+                />
+            )}
         </View>
     );
 }

@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, BackHandler, Dimensions, Image, Linking, Modal, Platform, ScrollView, Share, Text, TouchableOpacity, View } from 'react-native';
 import Carousel from 'react-native-reanimated-carousel';
 import type { ICarouselInstance } from 'react-native-reanimated-carousel';
-import { showAlert } from '../utils/alert';
+import ThemedAlert from '../components/ThemedAlert';
 import { useQuery } from '@tanstack/react-query';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { WebView } from 'react-native-webview';
@@ -87,6 +87,7 @@ export default function VenueProfileScreen({ route, navigation }: Props) {
     vendorIds: [],
     venueIds: [],
   });
+  const [alertState, setAlertState] = useState<{visible: boolean; title: string; message: string} | null>(null);
   const { user } = useAuth();
 
   const cameFromFavourites = route.params?.from === 'Favourites';
@@ -423,7 +424,7 @@ export default function VenueProfileScreen({ route, navigation }: Props) {
   const handleToggleFavourite = async () => {
     if (!venue || !user?.id) {
       if (!user?.id) {
-        showAlert('Sign in required', 'Please sign in to save favourites.');
+        setAlertState({ visible: true, title: 'Sign in required', message: 'Please sign in to save favourites.' });
       }
       return;
     }
@@ -445,7 +446,7 @@ export default function VenueProfileScreen({ route, navigation }: Props) {
     } catch (error) {
       setFavouriteIds(previous);
       const message = error instanceof Error ? error.message : 'We could not update favourites right now.';
-      showAlert('Favourite update failed', message);
+      setAlertState({ visible: true, title: 'Favourite update failed', message });
     }
   };
 
@@ -569,7 +570,7 @@ export default function VenueProfileScreen({ route, navigation }: Props) {
                 width: 6,
                 height: 6,
                 borderRadius: 3,
-                backgroundcolor: colors.textPrimary,
+                backgroundColor: colors.textPrimary,
                 marginRight: spacing.sm,
               }}
             />
@@ -953,7 +954,7 @@ export default function VenueProfileScreen({ route, navigation }: Props) {
                   marginBottom: spacing.sm,
                 }}
               >
-                About {venue.name}
+                About - {venue.name}
               </Text>
               <Text style={{ ...typography.body, color: colors.textSecondary, lineHeight: 20 }}>{venue.description}</Text>
             </View>
@@ -1026,7 +1027,7 @@ export default function VenueProfileScreen({ route, navigation }: Props) {
                 justifyContent: 'center',
                 paddingVertical: spacing.md,
                 borderRadius: radii.lg,
-                backgroundcolor: colors.textPrimary,
+                backgroundColor: colors.textPrimary,
                 gap: spacing.sm,
               }}
             >
@@ -1208,7 +1209,7 @@ export default function VenueProfileScreen({ route, navigation }: Props) {
                   paddingVertical: spacing.sm,
                   borderRadius: radii.md,
                   borderWidth: 1,
-                  bordercolor: colors.textPrimary,
+                  borderColor: colors.textPrimary,
                   alignItems: 'center',
                   flexDirection: 'row',
                   justifyContent: 'center',
@@ -1247,7 +1248,7 @@ export default function VenueProfileScreen({ route, navigation }: Props) {
                       width: 6,
                       height: 6,
                       borderRadius: 3,
-                      backgroundcolor: colors.textPrimary,
+                      backgroundColor: colors.textPrimary,
                       marginRight: spacing.sm,
                     }}
                   />
@@ -1591,7 +1592,7 @@ export default function VenueProfileScreen({ route, navigation }: Props) {
             }}
             style={{
               marginTop: spacing.md,
-              backgroundcolor: colors.textPrimary,
+              backgroundColor: colors.textPrimary,
               paddingVertical: spacing.md,
               borderRadius: radii.md,
               alignItems: 'center',
@@ -1630,6 +1631,16 @@ export default function VenueProfileScreen({ route, navigation }: Props) {
         </Text>
         <PrimaryButton title="Request a quote" onPress={handleRequestQuote} />
       </View>
+
+      {alertState && (
+        <ThemedAlert
+          visible={alertState.visible}
+          title={alertState.title}
+          message={alertState.message}
+          buttons={[{ text: 'OK', style: 'default', onPress: () => setAlertState(null) }]}
+          onDismiss={() => setAlertState(null)}
+        />
+      )}
     </ScrollView>
   );
 }

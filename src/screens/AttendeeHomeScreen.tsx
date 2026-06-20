@@ -11,7 +11,7 @@ import {
   View,
   Platform,
 } from 'react-native';
-import { showAlert } from '../utils/alert';
+import ThemedAlert from '../components/ThemedAlert';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
@@ -329,6 +329,7 @@ export default function AttendeeHomeScreen() {
   const [mapCenter, setMapCenter] = useState<{ latitude: number; longitude: number } | null>(null);
   const [mapRadius, setMapRadius] = useState<number>(20);
   const [helpVisible, setHelpVisible] = useState(false);
+  const [alertState, setAlertState] = useState<{visible: boolean; title: string; message: string} | null>(null);
   const { user, session } = useAuth();
   const { pendingSearch, shouldApplyPendingSearch, savePendingSearch, markPendingSearchConsumed } = usePendingSearch();
 
@@ -1187,7 +1188,7 @@ export default function AttendeeHomeScreen() {
 
   const handleToggleFavourite = async (id: number, type: 'vendor' | 'venue' = 'vendor') => {
     if (!user?.id) {
-      showAlert('Sign in required', 'Please sign in to save favourites.');
+      setAlertState({ visible: true, title: 'Sign in required', message: 'Please sign in to save favourites.' });
       return;
     }
 
@@ -1218,13 +1219,13 @@ export default function AttendeeHomeScreen() {
     } catch (error) {
       setFavouriteIds(previous);
       const message = error instanceof Error ? error.message : 'We could not update favourites right now.';
-      showAlert('Favourite update failed', message);
+      setAlertState({ visible: true, title: 'Favourite update failed', message });
     }
   };
 
   async function handleUseMyLocation() {
     if (!provinceOptions || provinceOptions.length === 0) {
-      showAlert('Locations not ready', 'Please wait a moment and try again.');
+      setAlertState({ visible: true, title: 'Locations not ready', message: 'Please wait a moment and try again.' });
       return;
     }
 
@@ -1233,10 +1234,7 @@ export default function AttendeeHomeScreen() {
       const { status } = await Location.requestForegroundPermissionsAsync();
 
       if (status !== 'granted') {
-        showAlert(
-          'Location permission needed',
-          'Enable location access in your settings to find vendors near you.',
-        );
+        setAlertState({ visible: true, title: 'Location permission needed', message: 'Enable location access in your settings to find vendors near you.' });
         return;
       }
 
@@ -1248,7 +1246,7 @@ export default function AttendeeHomeScreen() {
       const searchText = (region || city).toLowerCase();
 
       if (!searchText) {
-        showAlert('Location not found', 'We could not determine your province from your location.');
+        setAlertState({ visible: true, title: 'Location not found', message: 'We could not determine your province from your location.' });
         return;
       }
 
@@ -1267,10 +1265,10 @@ export default function AttendeeHomeScreen() {
           setSelectedCities([city]);
         }
       } else {
-        showAlert('Province not recognised', 'We could not match your location to a province filter.');
+      setAlertState({ visible: true, title: 'Province not recognised', message: 'We could not match your location to a province filter.' });
       }
     } catch (err: any) {
-      showAlert('Location error', err?.message ?? 'Failed to detect your location.');
+      setAlertState({ visible: true, title: 'Location error', message: err?.message ?? 'Failed to detect your location.' });
     } finally {
       setDetectingLocation(false);
     }
@@ -2486,7 +2484,7 @@ export default function AttendeeHomeScreen() {
 
       {/* Footer */}
       <AppFooter
-        onNavigateToFAQs={() => showAlert('FAQs', 'FAQs page coming soon!')}
+        onNavigateToFAQs={() => setAlertState({ visible: true, title: 'FAQs', message: 'FAQs page coming soon!' })}
         onNavigateToHelpDesk={() => setHelpVisible(true)}
         onNavigateToTerms={() => navigation.navigate('TermsAndPolicies')}
       />
@@ -2498,6 +2496,16 @@ export default function AttendeeHomeScreen() {
           navigation.navigate('PortfolioAssistance');
         }}
       />
+
+      {alertState && (
+        <ThemedAlert
+          visible={alertState.visible}
+          title={alertState.title}
+          message={alertState.message}
+          buttons={[{ text: 'OK', style: 'default', onPress: () => setAlertState(null) }]}
+          onDismiss={() => setAlertState(null)}
+        />
+      )}
     </ScrollView>
   );
 }

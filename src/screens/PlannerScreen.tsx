@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { ActivityIndicator, Alert, Modal, Platform, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Modal, Platform, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import DateTimePicker from '@react-native-community/datetimepicker';
@@ -7,6 +7,23 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import { supabase } from '../lib/supabaseClient';
 import { colors, spacing, radii, typography } from '../theme';
 import { useAuth } from '../auth/AuthContext';
+import ThemedAlert from '../components/ThemedAlert';
+
+const fallbackEventTypes = [
+  'Wedding',
+  'Engagement party',
+  'Birthday party',
+  'Corporate event',
+  'Baby shower',
+  'Bridal shower',
+  'Anniversary',
+  'Graduation',
+  'Funeral',
+  'Product launch',
+  'Year-end function',
+  'Conference',
+  'Other',
+];
 
 type Task = {
   id: number;
@@ -56,6 +73,7 @@ export default function PlannerScreen() {
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [editTaskTitle, setEditTaskTitle] = useState('');
   const [addingTask, setAddingTask] = useState(false);
+  const [alertState, setAlertState] = useState<{visible: boolean; title: string; message: string; buttons?: any[]} | null>(null);
   const [budgetItems, setBudgetItems] = useState<BudgetItem[]>([
     { name: 'Venue', spent: 0, total: 0 },
     { name: 'Catering', spent: 0, total: 0 },
@@ -98,6 +116,25 @@ export default function PlannerScreen() {
     tag: 'meeting',
     tagColor: '#3B82F6',
   });
+  const [showEventTypeModal, setShowEventTypeModal] = useState(false);
+
+  const { data: eventTypeOptions } = useQuery<string[]>({
+    queryKey: ['event-type-options'],
+    queryFn: async () => {
+      const { data: rows } = await supabase
+        .from('dropdown_options')
+        .select('value')
+        .eq('category', 'event_type')
+        .order('sort_order', { ascending: true });
+      if (rows && rows.length > 0) {
+        return rows.map((r: any) => r.value as string);
+      }
+      return fallbackEventTypes;
+    },
+    staleTime: 1000 * 60 * 5,
+  });
+
+  const eventTypes = eventTypeOptions ?? fallbackEventTypes;
 
   const { data, isLoading, error, refetch } = useQuery<PlannerData>({
     queryKey: ['planner-tasks', user?.id],
@@ -335,23 +372,25 @@ export default function PlannerScreen() {
   };
 
   const handleDeleteItem = (itemId: number) => {
-    Alert.alert(
-      'Delete Event',
-      'Are you sure you want to delete this event?',
-      [
-        { text: 'Cancel', style: 'cancel' },
+    setAlertState({
+      visible: true,
+      title: 'Delete Event',
+      message: 'Are you sure you want to delete this event?',
+      buttons: [
+        { text: 'Cancel', style: 'cancel', onPress: () => setAlertState(null) },
         {
           text: 'Delete',
           style: 'destructive',
           onPress: () => {
+            setAlertState(null);
             setCalendarItems((prev) => prev.filter((item) => item.id !== itemId));
             if (editingItem?.id === itemId) {
               setEditingItem(null);
             }
           },
         },
-      ]
-    );
+      ],
+    });
   };
 
   const handleSelectTag = (tagValue: string, tagColor: string) => {
@@ -461,11 +500,8 @@ export default function PlannerScreen() {
           </View>
           <View>
             <Text style={{ ...typography.caption, color: colors.textMuted }}>My Event Type</Text>
-            <TextInput
-              value={eventDetails.type}
-              onChangeText={(value) => setEventDetails((prev) => ({ ...prev, type: value }))}
-              placeholder="Select event type"
-              placeholderTextColor={colors.textMuted}
+            <TouchableOpacity
+              onPress={() => setShowEventTypeModal(true)}
               style={{
                 marginTop: spacing.xs,
                 borderWidth: 1,
@@ -474,9 +510,16 @@ export default function PlannerScreen() {
                 paddingHorizontal: spacing.md,
                 paddingVertical: spacing.sm,
                 backgroundColor: colors.surfaceMuted,
-                color: colors.textPrimary,
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'space-between',
               }}
-            />
+            >
+              <Text style={{ color: eventDetails.type ? colors.textPrimary : colors.textMuted }}>
+                {eventDetails.type || 'Select event type'}
+              </Text>
+              <MaterialIcons name="arrow-drop-down" size={20} color={colors.textMuted} />
+            </TouchableOpacity>
           </View>
           <View>
             <Text style={{ ...typography.caption, color: colors.textMuted }}>My Event Date</Text>
@@ -1020,7 +1063,7 @@ export default function PlannerScreen() {
               onPress={handleSaveEdit}
               style={{
                 marginTop: spacing.lg,
-                backgroundcolor: colors.textPrimary,
+                backgroundColor: colors.textPrimary,
                 paddingVertical: spacing.md,
                 borderRadius: radii.md,
                 alignItems: 'center',
@@ -1031,6 +1074,50 @@ export default function PlannerScreen() {
           </View>
         </View>
       </Modal>
+
+      <Modal visible={showEventTypeModal} transparent animationType="slide" onRequestClose={() => setShowEventTypeModal(false)}>
+        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'center', alignItems: 'center', padding: 24 }}>
+          <TouchableOpacity style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }} activeOpacity={1} onPress={() => setShowEventTypeModal(false)} />
+          <View style={{ backgroundColor: colors.surface, borderRadius: radii.xl, padding: spacing.lg, width: '100%', maxWidth: 400, maxHeight: '70%' }}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.md }}>
+              <Text style={{ ...typography.titleMedium, color: colors.textPrimary }}>Select Event Type</Text>
+              <TouchableOpacity onPress={() => setShowEventTypeModal(false)}>
+                <MaterialIcons name="close" size={20} color={colors.textSecondary} />
+              </TouchableOpacity>
+            </View>
+            <ScrollView showsVerticalScrollIndicator={false}>
+              {eventTypes.map((type) => (
+                <TouchableOpacity
+                  key={type}
+                  onPress={() => {
+                    setEventDetails((prev) => ({ ...prev, type }));
+                    setShowEventTypeModal(false);
+                  }}
+                  style={{
+                    paddingVertical: spacing.sm,
+                    paddingHorizontal: spacing.md,
+                    borderRadius: radii.md,
+                    backgroundColor: eventDetails.type === type ? colors.primary : 'transparent',
+                    marginBottom: spacing.xs,
+                  }}
+                >
+                  <Text style={{ color: eventDetails.type === type ? colors.primaryForeground : colors.textPrimary }}>{type}</Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
+
+      {alertState && (
+        <ThemedAlert
+          visible={alertState.visible}
+          title={alertState.title}
+          message={alertState.message}
+          buttons={alertState.buttons ?? [{ text: 'OK', style: 'default', onPress: () => setAlertState(null) }]}
+          onDismiss={() => setAlertState(null)}
+        />
+      )}
     </ScrollView>
   );
 }

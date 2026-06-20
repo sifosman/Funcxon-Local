@@ -40,31 +40,31 @@ const getEmailTemplate = (status: string): EmailTemplate => {
   switch (status) {
     case 'approved':
       return {
-        subject: 'Your Funcxon application has been approved',
+        subject: 'Your Funxons application has been approved',
         heading: 'Application Approved',
         intro: 'Great news. Your application has been approved successfully.',
-        nextSteps: 'You can now open the app to view your application status and continue with your Funcxon account.',
+        nextSteps: 'You can now open the app to view your application status and continue with your Funxons account.',
         buttonLabel: 'Open Application Status',
       };
     case 'needs_changes':
       return {
-        subject: 'Changes requested for your Funcxon application',
+        subject: 'Changes requested for your Funxons application',
         heading: 'Changes Requested',
         intro: 'Our team reviewed your application and requested a few changes.',
-        nextSteps: 'Open your application status to review the latest update and follow the guidance from the Funcxon team before submitting again.',
+        nextSteps: 'Open your application status to review the latest update and follow the guidance from the Funxons team before submitting again.',
         buttonLabel: 'Review Application Update',
       };
     case 'rejected':
       return {
-        subject: 'Your Funcxon application was not accepted',
+        subject: 'Your Funxons application was not accepted',
         heading: 'Application Not Accepted',
         intro: 'We reviewed your application and it was not accepted at this time.',
-        nextSteps: 'Open your application status to review the update. If you still want to join Funcxon, you can start a new application when you are ready.',
+        nextSteps: 'Open your application status to review the update. If you still want to join Funxons, you can start a new application when you are ready.',
         buttonLabel: 'View Application Status',
       };
     case 'cancelled':
       return {
-        subject: 'Your Funcxon application has been cancelled',
+        subject: 'Your Funxons application has been cancelled',
         heading: 'Application Cancelled',
         intro: 'Your application has been cancelled and will no longer be reviewed by our team.',
         nextSteps: 'Open your application status if you want to confirm the cancellation or start a new application later.',
@@ -72,9 +72,9 @@ const getEmailTemplate = (status: string): EmailTemplate => {
       };
     case 'under_review':
       return {
-        subject: 'Your Funcxon application is under review',
+        subject: 'Your Funxons application is under review',
         heading: 'Application Under Review',
-        intro: 'Your application is currently under review by the Funcxon team.',
+        intro: 'Your application is currently under review by the Funxons team.',
         nextSteps: 'You can open your application status at any time to check for the latest progress.',
         buttonLabel: 'View Application Status',
       };
@@ -82,7 +82,7 @@ const getEmailTemplate = (status: string): EmailTemplate => {
     case 'pending':
     default:
       return {
-        subject: 'Your Funcxon application has been submitted',
+        subject: 'Your Funxons application has been submitted',
         heading: 'Application Submitted',
         intro: 'Your application has been submitted successfully.',
         nextSteps: 'You now have full access to manage your portfolio. Open the app to update your profile, add listings, and start receiving enquiries.',
@@ -105,7 +105,7 @@ Deno.serve(async (req: Request) => {
   try {
     const brevoApiKey = Deno.env.get('BREVO_API_KEY');
     const fromEmail = Deno.env.get('FROM_EMAIL') || 'noreply@funcxon.com';
-    const fromName = Deno.env.get('FROM_NAME') || 'Funcxon Team';
+    const fromName = Deno.env.get('FROM_NAME') || 'Funxons Team';
 
     if (!brevoApiKey) {
       throw new Error('BREVO_API_KEY environment variable is not set');

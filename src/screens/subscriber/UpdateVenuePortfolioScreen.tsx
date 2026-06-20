@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, Alert, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -7,6 +7,7 @@ import { colors, spacing, radii, typography } from '../../theme';
 import { supabase } from '../../lib/supabaseClient';
 import { useAuth } from '../../auth/AuthContext';
 import { getMyVenueEntitlement, isVenueFeatureEnabled } from '../../lib/venueSubscription';
+import ThemedAlert from '../../components/ThemedAlert';
 
 function buildLegacyLocation(parts: Array<string | null | undefined>) {
   return parts.map((part) => part?.trim() ?? '').filter(Boolean).join(', ') || null;
@@ -66,6 +67,7 @@ export default function UpdateVenuePortfolioScreen() {
   const [canUseQuoteRequests, setCanUseQuoteRequests] = useState(true);
   const [canUseTourBookings, setCanUseTourBookings] = useState(true);
   const [canUseAnalytics, setCanUseAnalytics] = useState(true);
+  const [alertState, setAlertState] = useState<{visible: boolean; title: string; message: string; buttons?: any[]} | null>(null);
 
   const [form, setForm] = useState({
     name: '',
@@ -182,14 +184,15 @@ export default function UpdateVenuePortfolioScreen() {
       key === 'linkedin_url';
 
     if (isLinksField && linksLocked) {
-      Alert.alert(
-        'Upgrade Required',
-        'Website & social media links are available on paid venue plans. Please upgrade to add these links.',
-        [
-          { text: 'Not now', style: 'cancel' },
-          { text: 'View Plans', onPress: () => navigation.navigate('VenueListingPlans') },
+      setAlertState({
+        visible: true,
+        title: 'Upgrade Required',
+        message: 'Website & social media links are available on paid venue plans. Please upgrade to add these links.',
+        buttons: [
+          { text: 'Not now', style: 'cancel', onPress: () => setAlertState(null) },
+          { text: 'View Plans', style: 'default', onPress: () => { setAlertState(null); navigation.navigate('VenueListingPlans'); } },
         ],
-      );
+      });
       return;
     }
 
@@ -199,14 +202,14 @@ export default function UpdateVenuePortfolioScreen() {
   const handleSave = async () => {
     if (!user?.id) return;
     if (!form.name.trim()) {
-      Alert.alert('Required', 'Venue name is required.');
+      setAlertState({ visible: true, title: 'Required', message: 'Venue name is required.', buttons: [{ text: 'OK', style: 'default', onPress: () => setAlertState(null) }] });
       return;
     }
 
     const latitude = parseCoordinate(form.latitude);
     const longitude = parseCoordinate(form.longitude);
     if ((form.latitude.trim() && latitude === null) || (form.longitude.trim() && longitude === null)) {
-      Alert.alert('Invalid coordinates', 'Latitude and longitude must be valid numbers.');
+      setAlertState({ visible: true, title: 'Invalid coordinates', message: 'Latitude and longitude must be valid numbers.', buttons: [{ text: 'OK', style: 'default', onPress: () => setAlertState(null) }] });
       return;
     }
 
@@ -248,9 +251,9 @@ export default function UpdateVenuePortfolioScreen() {
       if (error) throw error;
 
       setListing(data as VenueListing);
-      Alert.alert('Saved', 'Your venue listing has been updated.');
+      setAlertState({ visible: true, title: 'Saved', message: 'Your venue listing has been updated.', buttons: [{ text: 'OK', style: 'default', onPress: () => setAlertState(null) }] });
     } catch (err: any) {
-      Alert.alert('Error', err?.message ?? 'Failed to save changes.');
+      setAlertState({ visible: true, title: 'Error', message: err?.message ?? 'Failed to save changes.', buttons: [{ text: 'OK', style: 'default', onPress: () => setAlertState(null) }] });
     } finally {
       setSaving(false);
     }
@@ -383,7 +386,7 @@ export default function UpdateVenuePortfolioScreen() {
               <TouchableOpacity
                 onPress={() => {
                   if (!listing) {
-                    Alert.alert('Create listing first', 'Please create your venue listing before adding catalogue items.');
+                    setAlertState({ visible: true, title: 'Create listing first', message: 'Please create your venue listing before adding catalogue items.', buttons: [{ text: 'OK', style: 'default', onPress: () => setAlertState(null) }] });
                     return;
                   }
 
@@ -452,7 +455,7 @@ export default function UpdateVenuePortfolioScreen() {
               <TouchableOpacity
                 onPress={() => {
                   if (!listing) {
-                    Alert.alert('Create listing first', 'Please create your venue listing before viewing analytics.');
+                    setAlertState({ visible: true, title: 'Create listing first', message: 'Please create your venue listing before viewing analytics.', buttons: [{ text: 'OK', style: 'default', onPress: () => setAlertState(null) }] });
                     return;
                   }
 
@@ -527,7 +530,7 @@ export default function UpdateVenuePortfolioScreen() {
               <TouchableOpacity
                 onPress={() => {
                   if (!listing) {
-                    Alert.alert('Create listing first', 'Please create your venue listing before viewing tour bookings.');
+                    setAlertState({ visible: true, title: 'Create listing first', message: 'Please create your venue listing before viewing tour bookings.', buttons: [{ text: 'OK', style: 'default', onPress: () => setAlertState(null) }] });
                     return;
                   }
 
@@ -602,7 +605,7 @@ export default function UpdateVenuePortfolioScreen() {
               <TouchableOpacity
                 onPress={() => {
                   if (!listing) {
-                    Alert.alert('Create listing first', 'Please create your venue listing before viewing quote requests.');
+                    setAlertState({ visible: true, title: 'Create listing first', message: 'Please create your venue listing before viewing quote requests.', buttons: [{ text: 'OK', style: 'default', onPress: () => setAlertState(null) }] });
                     return;
                   }
 
@@ -740,6 +743,16 @@ export default function UpdateVenuePortfolioScreen() {
           )}
         </View>
       </ScrollView>
+
+      {alertState && (
+        <ThemedAlert
+          visible={alertState.visible}
+          title={alertState.title}
+          message={alertState.message}
+          buttons={alertState.buttons ?? [{ text: 'OK', style: 'default', onPress: () => setAlertState(null) }]}
+          onDismiss={() => setAlertState(null)}
+        />
+      )}
     </View>
   );
 }

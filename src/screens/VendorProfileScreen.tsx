@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, BackHandler, Dimensions, Image, Linking, Platform, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import Carousel from 'react-native-reanimated-carousel';
 import type { ICarouselInstance } from 'react-native-reanimated-carousel';
-import { showAlert } from '../utils/alert';
+import ThemedAlert from '../components/ThemedAlert';
 import { useQuery } from '@tanstack/react-query';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { WebView } from 'react-native-webview';
@@ -86,6 +86,7 @@ export default function VendorProfileScreen({ route, navigation }: Props) {
     vendorIds: [],
     venueIds: [],
   });
+  const [alertState, setAlertState] = useState<{visible: boolean; title: string; message: string} | null>(null);
   const { user, session } = useAuth();
 
   const goToQuoteRequest = () => {
@@ -454,7 +455,7 @@ export default function VendorProfileScreen({ route, navigation }: Props) {
   const handleToggleFavourite = async () => {
     if (!vendor?.id) return;
     if (!user?.id) {
-      showAlert('Sign in required', 'Please sign in to save favourites.');
+      setAlertState({ visible: true, title: 'Sign in required', message: 'Please sign in to save favourites.' });
       return;
     }
 
@@ -475,7 +476,7 @@ export default function VendorProfileScreen({ route, navigation }: Props) {
     } catch (error) {
       setFavouriteIds(previous);
       const message = error instanceof Error ? error.message : 'We could not update favourites right now.';
-      showAlert('Favourite update failed', message);
+      setAlertState({ visible: true, title: 'Favourite update failed', message });
     }
   };
 
@@ -524,7 +525,7 @@ export default function VendorProfileScreen({ route, navigation }: Props) {
                 width: 6,
                 height: 6,
                 borderRadius: 3,
-                backgroundcolor: colors.textPrimary,
+                backgroundColor: colors.textPrimary,
                 marginRight: spacing.sm,
               }}
             />
@@ -896,7 +897,7 @@ export default function VendorProfileScreen({ route, navigation }: Props) {
                   marginBottom: spacing.sm,
                 }}
               >
-                About {name}
+                About - {name}
               </Text>
               <Text style={{ ...typography.body, color: colors.textSecondary, lineHeight: 20 }}>{description}</Text>
             </View>
@@ -1115,7 +1116,7 @@ export default function VendorProfileScreen({ route, navigation }: Props) {
                   paddingVertical: spacing.sm,
                   borderRadius: radii.md,
                   borderWidth: 1,
-                  bordercolor: colors.textPrimary,
+                  borderColor: colors.textPrimary,
                   alignItems: 'center',
                   flexDirection: 'row',
                   justifyContent: 'center',
@@ -1182,7 +1183,7 @@ export default function VendorProfileScreen({ route, navigation }: Props) {
             <TouchableOpacity
               onPress={goToQuoteRequest}
               style={{
-                backgroundcolor: colors.textPrimary,
+                backgroundColor: colors.textPrimary,
                 paddingVertical: spacing.md,
                 borderRadius: radii.md,
                 alignItems: 'center',
@@ -1192,10 +1193,10 @@ export default function VendorProfileScreen({ route, navigation }: Props) {
               <Text style={{ color: '#FFFFFF', fontWeight: '600' }}>Request Quote</Text>
             </TouchableOpacity>
             <TouchableOpacity
-              onPress={() => showAlert('Coming soon', 'Amend quote functionality will be available soon.')}
+              onPress={() => setAlertState({ visible: true, title: 'Coming soon', message: 'Amend quote functionality will be available soon.' })}
               style={{
                 borderWidth: 1,
-                bordercolor: colors.textPrimary,
+                borderColor: colors.textPrimary,
                 paddingVertical: spacing.md,
                 borderRadius: radii.md,
                 alignItems: 'center',
@@ -1255,7 +1256,7 @@ export default function VendorProfileScreen({ route, navigation }: Props) {
                         overflow: 'hidden',
                       }}
                     >
-                      <View style={{ width: `${progress * 100}%`, height: '100%', backgroundcolor: colors.textPrimary }} />
+                      <View style={{ width: `${progress * 100}%`, height: '100%', backgroundColor: colors.textPrimary }} />
                     </View>
                     <Text style={{ ...typography.caption, color: colors.textMuted, width: 20, textAlign: 'right' }}>
                       {count}
@@ -1440,7 +1441,7 @@ export default function VendorProfileScreen({ route, navigation }: Props) {
             }
             style={{
               marginTop: spacing.md,
-              backgroundcolor: colors.textPrimary,
+              backgroundColor: colors.textPrimary,
               paddingVertical: spacing.md,
               borderRadius: radii.md,
               alignItems: 'center',
@@ -1482,6 +1483,16 @@ export default function VendorProfileScreen({ route, navigation }: Props) {
           onPress={goToQuoteRequest}
         />
       </View>
+
+      {alertState && (
+        <ThemedAlert
+          visible={alertState.visible}
+          title={alertState.title}
+          message={alertState.message}
+          buttons={[{ text: 'OK', style: 'default', onPress: () => setAlertState(null) }]}
+          onDismiss={() => setAlertState(null)}
+        />
+      )}
     </ScrollView>
   );
 }

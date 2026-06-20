@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, Linking, RefreshControl, ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Linking, RefreshControl, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -9,6 +9,7 @@ import { supabase } from '../lib/supabaseClient';
 import { useAuth } from '../auth/AuthContext';
 import { buildPayFastPaymentData, getPayFastCheckoutUrl } from '../config/payfast';
 import type { ProfileStackParamList } from '../navigation/ProfileNavigator';
+import ThemedAlert from '../components/ThemedAlert';
 
 type BillingInfo = {
     vendor_id: number;
@@ -63,6 +64,7 @@ export default function BillingScreen() {
     const [venueBilling, setVenueBilling] = useState<VenueBillingInfo | null>(null);
     const [invoices, setInvoices] = useState<Invoice[]>([]);
     const [payingNow, setPayingNow] = useState(false);
+    const [alertState, setAlertState] = useState<{visible: boolean; title: string; message: string; buttons?: any[]} | null>(null);
 
     const loadBillingData = useCallback(async () => {
         if (!user?.id) return;
@@ -166,7 +168,7 @@ export default function BillingScreen() {
         if (!billing) return;
         const isFree = billing.subscription_tier === 'free';
         if (isFree) {
-            Alert.alert('Free Plan', 'Your plan is free and does not require payment. Upgrade to a paid plan for more features.');
+            setAlertState({ visible: true, title: 'Free Plan', message: 'Your plan is free and does not require payment. Upgrade to a paid plan for more features.' });
             return;
         }
 
@@ -175,7 +177,7 @@ export default function BillingScreen() {
             : billing.price_monthly;
 
         if (!price || price <= 0) {
-            Alert.alert('Error', 'Could not determine the payment amount.');
+            setAlertState({ visible: true, title: 'Error', message: 'Could not determine the payment amount.' });
             return;
         }
 
@@ -201,7 +203,7 @@ export default function BillingScreen() {
             // After returning, refresh billing data
             loadBillingData();
         } catch (err) {
-            Alert.alert('Payment Error', 'Could not open PayFast checkout. Please try again.');
+            setAlertState({ visible: true, title: 'Payment Error', message: 'Could not open PayFast checkout. Please try again.' });
         } finally {
             setPayingNow(false);
         }
@@ -663,6 +665,16 @@ export default function BillingScreen() {
                 </View>
                 )}
             </ScrollView>
+
+            {alertState && (
+                <ThemedAlert
+                    visible={alertState.visible}
+                    title={alertState.title}
+                    message={alertState.message}
+                    buttons={alertState.buttons ?? [{ text: 'OK', style: 'default', onPress: () => setAlertState(null) }]}
+                    onDismiss={() => setAlertState(null)}
+                />
+            )}
         </View>
     );
 }

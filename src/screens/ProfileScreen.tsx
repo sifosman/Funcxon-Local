@@ -1,11 +1,13 @@
 import { useState } from 'react';
-import { Alert, ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import { ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { colors, spacing, radii, typography } from '../theme';
 import { useAuth } from '../auth/AuthContext';
+import ThemedAlert from '../components/ThemedAlert';
 
 export default function ProfileScreen() {
   const [menuOpen, setMenuOpen] = useState(false);
+  const [alertState, setAlertState] = useState<{visible: boolean; title: string; message: string} | null>(null);
   const { signOut } = useAuth();
 
   const toggleMenu = () => {
@@ -61,7 +63,7 @@ export default function ProfileScreen() {
             paddingHorizontal: spacing.lg,
             paddingVertical: spacing.sm,
             borderRadius: radii.full,
-            backgroundcolor: colors.textPrimary,
+            backgroundColor: colors.textPrimary,
             flexDirection: 'row',
             alignItems: 'center',
           }}
@@ -141,7 +143,7 @@ export default function ProfileScreen() {
                   if (item.label === 'Sign out') {
                     const { error } = await signOut();
                     if (error) {
-                      Alert.alert('Sign out failed', error.message);
+                      setAlertState({ visible: true, title: 'Sign out failed', message: error.message });
                     }
                     setMenuOpen(false);
                   }
@@ -172,6 +174,16 @@ export default function ProfileScreen() {
             ))}
           </View>
         </View>
+      )}
+
+      {alertState && (
+        <ThemedAlert
+          visible={alertState.visible}
+          title={alertState.title}
+          message={alertState.message}
+          buttons={[{ text: 'OK', style: 'default', onPress: () => setAlertState(null) }]}
+          onDismiss={() => setAlertState(null)}
+        />
       )}
     </View>
   );

@@ -6,7 +6,6 @@ import {
   ScrollView,
   TouchableOpacity,
   Image,
-  Alert,
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
@@ -18,6 +17,7 @@ import { AttendeeStackParamList } from '../navigation/AttendeeNavigator';
 import { AppFooter } from '../components/AppFooter';
 import { HelpCenterModal } from '../components/HelpCenterModal';
 import { fetchHubSpotBlogPosts, type AppBlogPost } from '../lib/hubspotBlog';
+import ThemedAlert from '../components/ThemedAlert';
 
 type NavigationProp = NativeStackNavigationProp<AttendeeStackParamList>;
 
@@ -55,6 +55,7 @@ export default function ListersPortalScreen() {
   const navigation = useNavigation<NavigationProp>();
   const { session, user } = useAuth();
   const [helpVisible, setHelpVisible] = useState(false);
+  const [alertState, setAlertState] = useState<{visible: boolean; title: string; message: string} | null>(null);
 
   const getUsername = () => {
     if (!user) return null;
@@ -255,7 +256,7 @@ export default function ListersPortalScreen() {
 
       {/* Footer */}
       <AppFooter
-        onNavigateToFAQs={() => Alert.alert('FAQs', 'FAQs page coming soon!')}
+        onNavigateToFAQs={() => setAlertState({ visible: true, title: 'FAQs', message: 'FAQs page coming soon!' })}
         onNavigateToHelpDesk={() => setHelpVisible(true)}
         onNavigateToTerms={() => navigation.navigate('TermsAndPolicies')}
       />
@@ -267,6 +268,16 @@ export default function ListersPortalScreen() {
           navigation.navigate('PortfolioAssistance');
         }}
       />
+
+      {alertState && (
+        <ThemedAlert
+          visible={alertState.visible}
+          title={alertState.title}
+          message={alertState.message}
+          buttons={[{ text: 'OK', style: 'default', onPress: () => setAlertState(null) }]}
+          onDismiss={() => setAlertState(null)}
+        />
+      )}
     </ScrollView>
   );
 }

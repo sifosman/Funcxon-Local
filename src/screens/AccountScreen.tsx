@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Alert, ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import { ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -9,6 +9,7 @@ import { supabase } from '../lib/supabaseClient';
 import { getLatestUserApplication, getLatestUserApplicationByType, isBlockingApplicationStatus } from '../lib/applicationService';
 import type { ProfileStackParamList } from '../navigation/ProfileNavigator';
 import { HelpCenterModal } from '../components/HelpCenterModal';
+import ThemedAlert from '../components/ThemedAlert';
 import { useApplicationForm } from '../context/ApplicationFormContext';
 
 type MenuItem = {
@@ -27,6 +28,9 @@ export default function AccountScreen() {
     const { resetForm } = useApplicationForm();
     const [expandedMenus, setExpandedMenus] = useState<Set<string>>(new Set());
     const [helpVisible, setHelpVisible] = useState(false);
+    const [deleteAlertVisible, setDeleteAlertVisible] = useState(false);
+    const [logoutAlert, setLogoutAlert] = useState<{visible: boolean; title: string; message: string} | null>(null);
+    const [subscriberAlert, setSubscriberAlert] = useState<{visible: boolean; title: string; message: string} | null>(null);
     const [currentPlan, setCurrentPlan] = useState<string | null>(null);
     const hasSubscriberAccess = userRole === 'vendor';
 
@@ -71,19 +75,11 @@ export default function AccountScreen() {
     const handleLogout = async () => {
         const { error } = await signOut();
         if (error) {
-            Alert.alert('Sign out failed', error.message);
+            setLogoutAlert({ visible: true, title: 'Sign out failed', message: error.message });
             return;
         }
 
-        Alert.alert('Logged out', 'You have been logged out successfully.', [
-            {
-                text: 'OK',
-                onPress: () => {
-                    const parentNav = navigation.getParent() as any;
-                    parentNav?.navigate?.('Home');
-                },
-            },
-        ]);
+        setLogoutAlert({ visible: true, title: 'Logged out', message: 'You have been logged out successfully.' });
     };
 
     const handleLogin = () => {
@@ -183,8 +179,7 @@ export default function AccountScreen() {
 
     const handleSubscriberAccess = () => {
         if (!hasSubscriberAccess) {
-            Alert.alert('Subscriber access only', 'This area is only available to vendors and venues with subscriber access. You can view plans to upgrade your account.');
-            navigation.navigate('SubscriptionPlans');
+            setSubscriberAlert({ visible: true, title: 'Subscriber access only', message: 'This area is only available to vendors and venues with subscriber access. You can view plans to upgrade your account.' });
             return;
         }
 
@@ -203,26 +198,25 @@ export default function AccountScreen() {
     };
 
     const handleDeleteAccount = async () => {
-        Alert.alert(
-            'Delete Account',
-            'This will permanently delete your account and all associated data. Are you absolutely sure?',
-            [
-                { text: 'Cancel', style: 'cancel' },
-                { 
-                    text: 'Delete Forever', 
-                    style: 'destructive',
-                    onPress: async () => {
-                        // TODO: Implement actual account deletion logic
-                        // This should delete user data from all relevant tables
-                        // and then delete the auth user
-                        Alert.alert(
-                            'Feature Coming Soon',
-                            'Account deletion will be available soon. For now, please contact support to delete your account.'
-                        );
-                    }
-                }
-            ]
-        );
+        setDeleteAlertVisible(true);
+    };
+
+    const [errorAlert, setErrorAlert] = useState<{visible: boolean; title: string; message: string} | null>(null);
+
+    const executeDeleteAccount = async () => {
+        try {
+            const { data, error } = await supabase.functions.invoke('delete-user-account', {});
+            if (error || !data?.success) {
+                throw new Error(error?.message || data?.error || 'Failed to delete account');
+            }
+
+            await signOut();
+            const rootNav = navigation.getParent()?.getParent() as any;
+            rootNav?.navigate?.('Auth', { screen: 'SignIn' });
+        } catch (err: any) {
+            setDeleteAlertVisible(false);
+            setErrorAlert({ visible: true, title: 'Deletion Failed', message: err?.message || 'Could not delete account. Please try again or contact support.' });
+        }
     };
 
     const menuItems: MenuItem[] = [
@@ -415,7 +409,7 @@ export default function AccountScreen() {
                                             paddingVertical: spacing.xs,
                                             borderRadius: radii.full,
                                             borderWidth: 1,
-                                            bordercolor: colors.textPrimary,
+                                            borderColor: colors.textPrimary,
                                         }}
                                     >
                                         <Text style={{ ...typography.caption, color: colors.textPrimary, fontWeight: '600', fontSize: 10 }}>Upgrade</Text>
@@ -455,6 +449,48 @@ export default function AccountScreen() {
                 }}
                 onDeleteAccount={handleDeleteAccount}
             />
+            <ThemedAlert
+                visible={deleteAlertVisible}
+                title="Delete Account"
+                message="This will permanently delete your account and all associated data. Are you absolutely sure?"
+                buttons={[
+                    { text: 'Cancel', style: 'cancel', onPress: () => setDeleteAlertVisible(false) },
+                    { text: 'Delete Forever', style: 'destructive', onPress: executeDeleteAccount }
+                ]}
+                onDismiss={() => setDeleteAlertVisible(false)}
+            />
+            {logoutAlert && (
+                <ThemedAlert
+                    visible={logoutAlert.visible}
+                    title={logoutAlert.title}
+                    message={logoutAlert.message}
+                    buttons={[
+                        { text: 'OK', style: 'default', onPress: () => { setLogoutAlert(null); const parentNav = navigation.getParent() as any; parentNav?.navigate?.('Home'); } }
+                    ]}
+                    onDismiss={() => setLogoutAlert(null)}
+                />
+            )}
+            {subscriberAlert && (
+                <ThemedAlert
+                    visible={subscriberAlert.visible}
+                    title={subscriberAlert.title}
+                    message={subscriberAlert.message}
+                    buttons={[
+                        { text: 'View Plans', style: 'default', onPress: () => { setSubscriberAlert(null); navigation.navigate('SubscriptionPlans'); } },
+                        { text: 'Cancel', style: 'cancel', onPress: () => setSubscriberAlert(null) }
+                    ]}
+                    onDismiss={() => setSubscriberAlert(null)}
+                />
+            )}
+            {errorAlert && (
+                <ThemedAlert
+                    visible={errorAlert.visible}
+                    title={errorAlert.title}
+                    message={errorAlert.message}
+                    buttons={[{ text: 'OK', style: 'default', onPress: () => setErrorAlert(null) }]}
+                    onDismiss={() => setErrorAlert(null)}
+                />
+            )}
         </View>
     );
 }

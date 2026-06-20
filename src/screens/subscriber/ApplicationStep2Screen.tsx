@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, TextInput, Alert, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView, TextInput, KeyboardAvoidingView, Platform } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -10,6 +10,7 @@ import { ApplicationProgress } from '../../components/ApplicationProgress';
 import { serviceCategories, specialServiceFeatures } from '../../config/serviceProfessionals';
 import { venueTypes, amenitiesList, venueCapacityOptions, eventTypes } from '../../config/venueTypes';
 import { provinces, getCitiesByProvince } from '../../config/locations';
+import ThemedAlert from '../../components/ThemedAlert';
 
 type ProfileStackParamList = {
   ApplicationStep1: undefined;
@@ -21,6 +22,7 @@ export default function ApplicationStep2Screen() {
   const navigation = useNavigation<NativeStackNavigationProp<ProfileStackParamList>>();
   const { state, updateStep2 } = useApplicationForm();
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [alertState, setAlertState] = useState<{visible: boolean; title: string; message: string; buttons?: any[]} | null>(null);
   const isVenues = state.portfolioType === 'venues';
   const isVendors = state.portfolioType === 'vendors';
 
@@ -161,7 +163,7 @@ export default function ApplicationStep2Screen() {
 
     if (!validation.isValid) {
       setErrors(validation.errors);
-      Alert.alert('Validation Error', 'Please fix the errors before continuing');
+      setAlertState({ visible: true, title: 'Validation Error', message: 'Please fix the errors before continuing', buttons: [{ text: 'OK', style: 'default', onPress: () => setAlertState(null) }] });
       return;
     }
 
@@ -885,6 +887,16 @@ export default function ApplicationStep2Screen() {
           </View>
         </View>
       </ScrollView>
+
+      {alertState && (
+        <ThemedAlert
+          visible={alertState.visible}
+          title={alertState.title}
+          message={alertState.message}
+          buttons={alertState.buttons ?? [{ text: 'OK', style: 'default', onPress: () => setAlertState(null) }]}
+          onDismiss={() => setAlertState(null)}
+        />
+      )}
     </KeyboardAvoidingView>
   );
 }

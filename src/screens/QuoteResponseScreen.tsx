@@ -1,6 +1,5 @@
 import { useState, useCallback, useEffect } from 'react';
 import {
-  Alert,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -17,6 +16,7 @@ import { supabase } from '../lib/supabaseClient';
 import { colors, spacing, radii, typography } from '../theme';
 import { PrimaryButton, ThemedInput } from '../components/ui';
 import { useAuth } from '../auth/AuthContext';
+import ThemedAlert from '../components/ThemedAlert';
 
 type QuotesStackParamList = {
   QuoteResponse: {
@@ -66,6 +66,7 @@ export default function QuoteResponseScreen() {
   const [vendor, setVendor] = useState<VendorInfo | null>(null);
   const [feedback, setFeedback] = useState('');
   const [responseType, setResponseType] = useState<'accept' | 'reject' | null>(null);
+  const [alertState, setAlertState] = useState<{visible: boolean; title: string; message: string; buttons?: any[]} | null>(null);
 
   const loadQuoteDetails = useCallback(async () => {
     if (!user?.id) return;
@@ -79,7 +80,7 @@ export default function QuoteResponseScreen() {
         .maybeSingle();
 
       if (!internalUser) {
-        Alert.alert('Error', 'User not found');
+        setAlertState({ visible: true, title: 'Error', message: 'User not found' });
         return;
       }
 
@@ -91,7 +92,7 @@ export default function QuoteResponseScreen() {
         .maybeSingle();
 
       if (!rev) {
-        Alert.alert('Error', 'Quote not found');
+        setAlertState({ visible: true, title: 'Error', message: 'Quote not found' });
         return;
       }
 
@@ -109,7 +110,7 @@ export default function QuoteResponseScreen() {
       }
     } catch (err) {
       console.error('Error loading quote:', err);
-      Alert.alert('Error', 'Failed to load quote details');
+      setAlertState({ visible: true, title: 'Error', message: 'Failed to load quote details' });
     } finally {
       setLoading(false);
     }
@@ -123,7 +124,7 @@ export default function QuoteResponseScreen() {
     if (!responseType || !revision || !user?.id) return;
 
     if (responseType === 'reject' && !feedback.trim()) {
-      Alert.alert('Feedback Required', 'Please provide feedback on why you\'re rejecting this quote. This helps the vendor improve their offer.');
+      setAlertState({ visible: true, title: 'Feedback Required', message: 'Please provide feedback on why you\'re rejecting this quote. This helps the vendor improve their offer.' });
       return;
     }
 
@@ -163,15 +164,16 @@ export default function QuoteResponseScreen() {
       // Send notification to vendor
       await sendVendorNotification(responseType);
 
-      Alert.alert(
-        responseType === 'accept' ? 'Quote Accepted!' : 'Quote Rejected',
-        responseType === 'accept'
+      setAlertState({
+        visible: true,
+        title: responseType === 'accept' ? 'Quote Accepted!' : 'Quote Rejected',
+        message: responseType === 'accept'
           ? 'You have accepted this quote. The vendor will be notified to proceed.'
           : 'You have rejected this quote. The vendor may submit a revised quote.',
-        [{ text: 'OK', onPress: () => navigation.goBack() }]
-      );
+        buttons: [{ text: 'OK', style: 'default', onPress: () => { setAlertState(null); navigation.goBack(); } }],
+      });
     } catch (err: any) {
-      Alert.alert('Error', err?.message || 'Failed to submit response');
+      setAlertState({ visible: true, title: 'Error', message: err?.message || 'Failed to submit response' });
     } finally {
       setSaving(false);
     }
@@ -519,6 +521,16 @@ export default function QuoteResponseScreen() {
           </View>
         )}
       </ScrollView>
+
+      {alertState && (
+        <ThemedAlert
+          visible={alertState.visible}
+          title={alertState.title}
+          message={alertState.message}
+          buttons={alertState.buttons ?? [{ text: 'OK', style: 'default', onPress: () => setAlertState(null) }]}
+          onDismiss={() => setAlertState(null)}
+        />
+      )}
     </KeyboardAvoidingView>
   );
 }

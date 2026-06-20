@@ -1,6 +1,5 @@
 import { useMemo, useState, useRef, useEffect, useCallback } from 'react';
 import {
-  Alert,
   ScrollView,
   Text,
   TouchableOpacity,
@@ -14,11 +13,13 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useAuth } from '../auth/AuthContext';
+import { supabase } from '../lib/supabaseClient';
 import { getLatestUserApplicationByType, isBlockingApplicationStatus } from '../lib/applicationService';
 import { savePendingSubscriptionCheckout } from '../lib/pendingSubscriptionCheckout';
 import { useApplicationForm } from '../context/ApplicationFormContext';
 import { colors, spacing, radii, typography } from '../theme';
 import type { ProfileStackParamList } from '../navigation/ProfileNavigator';
+import ThemedAlert from '../components/ThemedAlert';
 
 const CARD_MARGIN = 4;
 const ACTIVE_SCALE = 1.08;
@@ -77,6 +78,8 @@ export default function VenueListingPlansScreen() {
 
   const [selectedPlan, setSelectedPlan] = useState<PlanKey>('monthly');
   const [activeIndex, setActiveIndex] = useState(1);
+  const [existingVenueId, setExistingVenueId] = useState<number | null>(null);
+  const [alertState, setAlertState] = useState<{visible: boolean; title: string; message: string} | null>(null);
   const carouselRef = useRef<ICarouselInstance>(null);
 
   useEffect(() => {
@@ -84,6 +87,18 @@ export default function VenueListingPlansScreen() {
       carouselRef.current.scrollTo({ index: activeIndex, animated: false });
     }
   }, [containerWidth, activeIndex]);
+
+  useEffect(() => {
+    if (!user?.id) return;
+    supabase
+      .from('venue_listings')
+      .select('id')
+      .eq('user_id', user.id)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (data?.id) setExistingVenueId(data.id);
+      });
+  }, [user?.id]);
 
   const plans: VenuePlan[] = useMemo(
     () => [
@@ -293,23 +308,29 @@ export default function VenueListingPlansScreen() {
     await setPortfolioType('venues');
     updateStep4({ subscriptionPlan: selectedPlan, billingPeriod });
 
+    const checkoutParams: ProfileStackParamList['SubscriptionCheckout'] = {
+      tierName: selected.title,
+      billing: billingPeriod,
+      priceLabel,
+      isFree,
+      productType: 'venue',
+      planKey: selectedPlan,
+    };
+
     if (!user) {
-      const checkoutParams: ProfileStackParamList['SubscriptionCheckout'] = {
-        tierName: selected.title,
-        billing: billingPeriod,
-        priceLabel,
-        isFree,
-        productType: 'venue',
-        planKey: selectedPlan,
-      };
       savePendingSubscriptionCheckout(checkoutParams)
         .then(() => {
           const rootNav = navigation.getParent()?.getParent() as any;
           rootNav?.navigate?.('Auth', { screen: 'GuestPrompt', params: { label: 'Account' } });
         })
         .catch(() => {
-          Alert.alert('Login required', 'Please log in to continue with this subscription plan.');
+          setAlertState({ visible: true, title: 'Login required', message: 'Please log in to continue with this subscription plan.' });
         });
+      return;
+    }
+
+    if (existingVenueId) {
+      navigation.navigate('SubscriptionCheckout', checkoutParams);
       return;
     }
 
@@ -707,6 +728,16 @@ export default function VenueListingPlansScreen() {
           </Text>
         </View>
       </ScrollView>
+
+      {alertState && (
+        <ThemedAlert
+          visible={alertState.visible}
+          title={alertState.title}
+          message={alertState.message}
+          buttons={[{ text: 'OK', style: 'default', onPress: () => setAlertState(null) }]}
+          onDismiss={() => setAlertState(null)}
+        />
+      )}
     </View>
   );
 }

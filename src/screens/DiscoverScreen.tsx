@@ -97,15 +97,18 @@ export default function DiscoverScreen() {
       .map((part) => part.trim())
       .filter(Boolean);
 
-    if (parts.length >= 2) {
+    // Remove "South Africa" from the end if present
+    const cleanParts = parts.filter((p) => p.toLowerCase() !== 'south africa');
+
+    if (cleanParts.length >= 2) {
       return {
-        city: parts[0] ?? null,
-        province: parts[parts.length - 1] ?? null,
+        city: cleanParts[0] ?? null,
+        province: cleanParts[cleanParts.length - 1] ?? null,
       };
     }
 
     return {
-      city: parts[0] ?? null,
+      city: cleanParts[0] ?? null,
       province: null,
     };
   };
@@ -377,27 +380,23 @@ export default function DiscoverScreen() {
     return safeData.filter((item) => {
       const itemCategory = classifyCategory(item);
 
-      // Search: for venues, fuzzy-match name only; otherwise broad match
+      // Search: broad match across name, location, city, province, type, amenities, tags
       let matchesSearch = true;
       if (queryTokens.length > 0) {
-        if (category === 'venues' && item.type === 'venue') {
-          matchesSearch = queryTokens.every((token) => fuzzyMatch(item.name ?? '', token));
-        } else {
-          const fields = [
-            item.name ?? '',
-            item.description ?? '',
-            item.location ?? '',
-            item.city ?? '',
-            item.province ?? '',
-            item.venue_type ?? '',
-            ...(Array.isArray(item.amenities) ? item.amenities : []),
-            ...(Array.isArray(item.service_options) ? item.service_options : []),
-            ...(Array.isArray(item.vendor_tags) ? item.vendor_tags : []),
-          ]
-            .join(' ')
-            .toLowerCase();
-          matchesSearch = queryTokens.every((token) => fields.includes(token));
-        }
+        const fields = [
+          item.name ?? '',
+          item.description ?? '',
+          item.location ?? '',
+          item.city ?? '',
+          item.province ?? '',
+          item.venue_type ?? '',
+          ...(Array.isArray(item.amenities) ? item.amenities : []),
+          ...(Array.isArray(item.service_options) ? item.service_options : []),
+          ...(Array.isArray(item.vendor_tags) ? item.vendor_tags : []),
+        ]
+          .join(' ')
+          .toLowerCase();
+        matchesSearch = queryTokens.every((token) => fields.includes(token));
       }
 
       const matchesLocation = !locationQuery || [item.location, item.city, item.province].some((value) => (value ?? '').toLowerCase().includes(locationQuery));
@@ -883,9 +882,9 @@ export default function DiscoverScreen() {
         <View
           style={{
             borderRadius: radii.full,
-            borderWidth: 1,
-            borderColor: colors.borderSubtle,
-            backgroundColor: colors.surfaceMuted,
+            borderWidth: 1.5,
+            borderColor: colors.primary,
+            backgroundColor: colors.surface,
             flexDirection: 'row',
             alignItems: 'center',
             paddingHorizontal: spacing.md,
@@ -909,6 +908,12 @@ export default function DiscoverScreen() {
             </TouchableOpacity>
           ) : null}
         </View>
+
+        {hasActiveSearch && (
+          <Text style={{ ...typography.caption, color: colors.textMuted, marginBottom: spacing.sm }}>
+            {sorted.length} result{sorted.length !== 1 ? 's' : ''} showing
+          </Text>
+        )}
 
         {isLocationMode ? (
           <View
@@ -1414,16 +1419,18 @@ export default function DiscoverScreen() {
       </Modal>
 
       <Modal visible={showSortOptions} transparent animationType="fade" onRequestClose={() => setShowSortOptions(false)}>
-        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.28)', justifyContent: 'flex-end' }}>
-          <TouchableOpacity style={{ flex: 1 }} activeOpacity={1} onPress={() => setShowSortOptions(false)} />
+        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.28)', justifyContent: 'center', alignItems: 'center', padding: 24 }}>
+          <TouchableOpacity style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }} activeOpacity={1} onPress={() => setShowSortOptions(false)} />
           <View
             style={{
               backgroundColor: colors.surface,
-              borderTopLeftRadius: radii.xl,
-              borderTopRightRadius: radii.xl,
+              borderRadius: radii.xl,
               padding: spacing.lg,
-              borderTopWidth: 1,
+              borderWidth: 1,
               borderColor: colors.borderSubtle,
+              maxHeight: '60%',
+              width: '100%',
+              maxWidth: 420,
             }}
           >
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.md }}>

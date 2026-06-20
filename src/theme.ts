@@ -42,7 +42,7 @@ export const colors = {
   inputBorder: '#f7f5f0',
 
   // Utility colors
-  destructive: '#FF0000', // red for errors/delete
+  destructive: '#DC2626', // red for errors/delete
   destructiveForeground: '#FFFFFF',
   muted: '#FFFFFF', // white muted bg
   mutedForeground: '#000000',

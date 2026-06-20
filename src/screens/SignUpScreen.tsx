@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Platform, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
-import { showAlert } from '../utils/alert';
+import ThemedAlert from '../components/ThemedAlert';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { AuthStackParamList } from '../navigation/AuthNavigator';
 import { useAuth } from '../auth/AuthContext';
@@ -23,13 +23,14 @@ export default function SignUpScreen({ navigation }: Props) {
   const [privacyAccepted, setPrivacyAccepted] = useState(false);
   const [loading, setLoading] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
+  const [alertState, setAlertState] = useState<{visible: boolean; title: string; message: string} | null>(null);
 
   const handleSignUp = async () => {
     console.log('SignUp: handleSignUp pressed');
     setFormError(null);
 
     if (!name || !email || !password || !confirmPassword) {
-      showAlert('Missing details', 'Please fill in name, email, password, and confirm password.');
+      setAlertState({ visible: true, title: 'Missing details', message: 'Please fill in name, email, password, and confirm password.' });
       setFormError('Please fill in name, email, password, and confirm password.');
       return;
     }
@@ -37,25 +38,25 @@ export default function SignUpScreen({ navigation }: Props) {
     const trimmedEmail = email.trim();
     const emailRegex = /[^@]+@[^.]+\..+/;
     if (!emailRegex.test(trimmedEmail)) {
-      showAlert('Invalid email', 'Please enter a valid email address.');
+      setAlertState({ visible: true, title: 'Invalid email', message: 'Please enter a valid email address.' });
       setFormError('Please enter a valid email address.');
       return;
     }
 
     if (password.length < 6) {
-      showAlert('Weak password', 'Password should be at least 6 characters long.');
+      setAlertState({ visible: true, title: 'Weak password', message: 'Password should be at least 6 characters long.' });
       setFormError('Password should be at least 6 characters long.');
       return;
     }
 
     if (password !== confirmPassword) {
-      showAlert('Passwords do not match', 'Please make sure the passwords match.');
+      setAlertState({ visible: true, title: 'Passwords do not match', message: 'Please make sure the passwords match.' });
       setFormError('Passwords do not match.');
       return;
     }
 
     if (!termsAccepted || !privacyAccepted) {
-      showAlert('Consent Required', 'Please accept the Terms and Conditions and Privacy Policy to continue.');
+      setAlertState({ visible: true, title: 'Consent Required', message: 'Please accept the Terms and Conditions and Privacy Policy to continue.' });
       setFormError('Please accept the Terms and Conditions and Privacy Policy.');
       return;
     }
@@ -77,7 +78,7 @@ export default function SignUpScreen({ navigation }: Props) {
     console.log('SignUp: signUp result', { error });
 
     if (error) {
-      showAlert('Sign up failed', error.message);
+      setAlertState({ visible: true, title: 'Sign up failed', message: error.message });
       setFormError(error.message);
       return;
     }
@@ -89,7 +90,7 @@ export default function SignUpScreen({ navigation }: Props) {
   const handleGoogleSignUp = async () => {
     const { error } = await signInWithProvider('google');
     if (error) {
-      showAlert('Google sign up failed', error.message);
+      setAlertState({ visible: true, title: 'Google sign up failed', message: error.message });
     } else {
       navigation.getParent()?.navigate('Main');
     }
@@ -98,7 +99,7 @@ export default function SignUpScreen({ navigation }: Props) {
   const handleFacebookSignUp = async () => {
     const { error } = await signInWithProvider('facebook');
     if (error) {
-      showAlert('Facebook sign up failed', error.message);
+      setAlertState({ visible: true, title: 'Facebook sign up failed', message: error.message });
     } else {
       navigation.getParent()?.navigate('Main');
     }
@@ -498,6 +499,16 @@ export default function SignUpScreen({ navigation }: Props) {
           </View>
         </View>
       </ScrollView>
+
+      {alertState && (
+        <ThemedAlert
+          visible={alertState.visible}
+          title={alertState.title}
+          message={alertState.message}
+          buttons={[{ text: 'OK', style: 'default', onPress: () => setAlertState(null) }]}
+          onDismiss={() => setAlertState(null)}
+        />
+      )}
     </View>
   );
 }

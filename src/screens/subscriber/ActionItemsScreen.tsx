@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { colors, spacing, radii, typography } from '../../theme';
 import { supabase } from '../../lib/supabaseClient';
 import { useAuth } from '../../auth/AuthContext';
+import ThemedAlert from '../../components/ThemedAlert';
 
 type ProfileStackParamList = {
     SubscriberProfile: undefined;
@@ -29,6 +30,7 @@ export default function ActionItemsScreen() {
     const [newItem, setNewItem] = useState('');
     const [adding, setAdding] = useState(false);
     const [internalUserId, setInternalUserId] = useState<number | null>(null);
+    const [alertState, setAlertState] = useState<{visible: boolean; title: string; message: string} | null>(null);
 
     const loadItems = useCallback(async () => {
         if (!user?.id) return;
@@ -93,7 +95,7 @@ export default function ActionItemsScreen() {
             setNewItem('');
             await loadItems();
         } catch (err: any) {
-            Alert.alert('Error', err?.message ?? 'Failed to add item.');
+            setAlertState({ visible: true, title: 'Error', message: err?.message ?? 'Failed to add item.' });
         } finally {
             setAdding(false);
         }
@@ -245,6 +247,16 @@ export default function ActionItemsScreen() {
                     })}
                 </View>
             </ScrollView>
+
+            {alertState && (
+                <ThemedAlert
+                    visible={alertState.visible}
+                    title={alertState.title}
+                    message={alertState.message}
+                    buttons={[{ text: 'OK', style: 'default', onPress: () => setAlertState(null) }]}
+                    onDismiss={() => setAlertState(null)}
+                />
+            )}
         </View>
     );
 }

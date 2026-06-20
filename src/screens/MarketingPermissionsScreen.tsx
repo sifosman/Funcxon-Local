@@ -1,17 +1,19 @@
 import { useCallback, useState } from 'react';
-import { Alert, ScrollView, Switch, Text, TouchableOpacity, View } from 'react-native';
+import { ScrollView, Switch, Text, TouchableOpacity, View } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { supabase } from '../lib/supabaseClient';
 import type { ProfileStackParamList } from '../navigation/ProfileNavigator';
 import { colors, spacing, radii, typography } from '../theme';
+import ThemedAlert from '../components/ThemedAlert';
 
 export default function MarketingPermissionsScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<ProfileStackParamList>>();
   const [marketingOptIn, setMarketingOptIn] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [alertState, setAlertState] = useState<{visible: boolean; title: string; message: string; buttons?: any[]} | null>(null);
 
   const loadPreference = useCallback(async () => {
     const { data: sessionResult, error: sessionError } = await supabase.auth.getSession();
@@ -42,7 +44,7 @@ export default function MarketingPermissionsScreen() {
   const handleSave = async () => {
     const { data: sessionResult, error: sessionError } = await supabase.auth.getSession();
     if (sessionError || !sessionResult.session?.user?.id) {
-      Alert.alert('Session expired', 'Please sign in again before updating your preferences.');
+      setAlertState({ visible: true, title: 'Session expired', message: 'Please sign in again before updating your preferences.' });
       return;
     }
 
@@ -54,13 +56,11 @@ export default function MarketingPermissionsScreen() {
     setSaving(false);
 
     if (error) {
-      Alert.alert('Update failed', error.message);
+      setAlertState({ visible: true, title: 'Update failed', message: error.message });
       return;
     }
 
-    Alert.alert('Preferences updated', 'Your marketing permissions have been saved.', [
-      { text: 'OK', onPress: () => navigation.goBack() },
-    ]);
+    setAlertState({ visible: true, title: 'Preferences updated', message: 'Your marketing permissions have been saved.', buttons: [{ text: 'OK', style: 'default', onPress: () => { setAlertState(null); navigation.goBack(); } }] });
   };
 
   return (
@@ -129,6 +129,16 @@ export default function MarketingPermissionsScreen() {
           </TouchableOpacity>
         </View>
       </ScrollView>
+
+      {alertState && (
+        <ThemedAlert
+          visible={alertState.visible}
+          title={alertState.title}
+          message={alertState.message}
+          buttons={alertState.buttons ?? [{ text: 'OK', style: 'default', onPress: () => setAlertState(null) }]}
+          onDismiss={() => setAlertState(null)}
+        />
+      )}
     </View>
   );
 }

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, Alert, Image, Modal, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Image, Modal, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -10,6 +10,7 @@ import { decode } from 'base64-arraybuffer';
 import { colors, spacing, radii, typography } from '../../theme';
 import { supabase } from '../../lib/supabaseClient';
 import { useAuth } from '../../auth/AuthContext';
+import ThemedAlert from '../../components/ThemedAlert';
 import { getMyVenueEntitlement, isVenueFeatureEnabled } from '../../lib/venueSubscription';
 
 type ProfileStackParamList = {
@@ -58,6 +59,7 @@ export default function VenueCatalogueScreen() {
   const [pdfDocs, setPdfDocs] = useState<PdfDocument[]>([]);
   const [uploadingImage, setUploadingImage] = useState<number | null>(null);
   const [uploadingPdf, setUploadingPdf] = useState(false);
+  const [alertState, setAlertState] = useState<{visible: boolean; title: string; message: string; buttons?: any[]} | null>(null);
 
   const [canUseCatalogue, setCanUseCatalogue] = useState<boolean>(false);
 
@@ -166,18 +168,18 @@ export default function VenueCatalogueScreen() {
 
   const handleSave = async () => {
     if (!listing) {
-      Alert.alert('No listing found', 'Create your venue listing first before adding catalogue items.');
+      setAlertState({ visible: true, title: 'No listing found', message: 'Create your venue listing first before adding catalogue items.' });
       return;
     }
 
     if (!editForm.title.trim()) {
-      Alert.alert('Required', 'Item title is required.');
+      setAlertState({ visible: true, title: 'Required', message: 'Item title is required.' });
       return;
     }
 
     const parsedPrice = editForm.price.trim() ? Number(editForm.price.trim()) : null;
     if (editForm.price.trim() && (Number.isNaN(parsedPrice) || parsedPrice === null)) {
-      Alert.alert('Invalid price', 'Please enter a valid number for price.');
+      setAlertState({ visible: true, title: 'Invalid price', message: 'Please enter a valid number for price.' });
       return;
     }
 
@@ -213,7 +215,7 @@ export default function VenueCatalogueScreen() {
       closeEdit();
       await loadListingAndItems();
     } catch (err: any) {
-      Alert.alert('Error', err?.message ?? 'Failed to save catalogue item.');
+      setAlertState({ visible: true, title: 'Error', message: err?.message ?? 'Failed to save catalogue item.' });
     } finally {
       setSaving(false);
     }
@@ -223,7 +225,7 @@ export default function VenueCatalogueScreen() {
     try {
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (status !== 'granted') {
-        Alert.alert('Permission Required', 'Please allow access to your photo library to upload images.');
+        setAlertState({ visible: true, title: 'Permission Required', message: 'Please allow access to your photo library to upload images.' });
         return;
       }
       const result = await ImagePicker.launchImageLibraryAsync({
@@ -255,7 +257,7 @@ export default function VenueCatalogueScreen() {
       if (updateError) throw updateError;
       await loadListingAndItems();
     } catch (err: any) {
-      Alert.alert('Upload failed', err?.message ?? 'Could not upload image.');
+      setAlertState({ visible: true, title: 'Upload failed', message: err?.message ?? 'Could not upload image.' });
     } finally {
       setUploadingImage(null);
     }
@@ -294,51 +296,63 @@ export default function VenueCatalogueScreen() {
       if (dbError) throw dbError;
       await loadListingAndItems();
     } catch (err: any) {
-      Alert.alert('Upload failed', err?.message ?? 'Could not upload PDF.');
+      setAlertState({ visible: true, title: 'Upload failed', message: err?.message ?? 'Could not upload PDF.' });
     } finally {
       setUploadingPdf(false);
     }
   };
 
   const deletePdf = async (doc: PdfDocument) => {
-    Alert.alert('Delete PDF', `Remove "${doc.file_name || 'PDF'}"?`, [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Delete',
-        style: 'destructive',
-        onPress: async () => {
-          try {
-            const { error } = await supabase.from('venue_documents').delete().eq('id', doc.id);
-            if (error) throw error;
-            setPdfDocs((prev) => prev.filter((d) => d.id !== doc.id));
-          } catch (err: any) {
-            Alert.alert('Error', err?.message ?? 'Failed to delete PDF.');
-          }
+    setAlertState({
+      visible: true,
+      title: 'Delete PDF',
+      message: `Remove "${doc.file_name || 'PDF'}"?`,
+      buttons: [
+        { text: 'Cancel', style: 'cancel', onPress: () => setAlertState(null) },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            setAlertState(null);
+            try {
+              const { error } = await supabase.from('venue_documents').delete().eq('id', doc.id);
+              if (error) throw error;
+              setPdfDocs((prev) => prev.filter((d) => d.id !== doc.id));
+            } catch (err: any) {
+              setAlertState({ visible: true, title: 'Error', message: err?.message ?? 'Failed to delete PDF.' });
+            }
+          },
         },
-      },
-    ]);
+      ],
+    });
   };
 
   const handleDelete = async (item: CatalogueItem) => {
-    Alert.alert('Delete item', `Remove "${item.title}" from your catalogue?`, [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Delete',
-        style: 'destructive',
-        onPress: async () => {
-          try {
-            setSaving(true);
-            const { error } = await supabase.from('venue_catalogue_items').delete().eq('id', item.id);
-            if (error) throw error;
-            await loadListingAndItems();
-          } catch (err: any) {
-            Alert.alert('Error', err?.message ?? 'Failed to delete item.');
-          } finally {
-            setSaving(false);
-          }
+    setAlertState({
+      visible: true,
+      title: 'Delete item',
+      message: `Remove "${item.title}" from your catalogue?`,
+      buttons: [
+        { text: 'Cancel', style: 'cancel', onPress: () => setAlertState(null) },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            setAlertState(null);
+            try {
+              setSaving(true);
+              const { error } = await supabase.from('venue_catalogue_items').delete().eq('id', item.id);
+              if (error) throw error;
+              await loadListingAndItems();
+            } catch (err: any) {
+              setAlertState({ visible: true, title: 'Error', message: err?.message ?? 'Failed to delete item.' });
+            } finally {
+              setSaving(false);
+            }
+          },
         },
-      },
-    ]);
+      ],
+    });
   };
 
   if (loading) {
@@ -747,6 +761,16 @@ export default function VenueCatalogueScreen() {
           </View>
         </View>
       </Modal>
+
+      {alertState && (
+        <ThemedAlert
+          visible={alertState.visible}
+          title={alertState.title}
+          message={alertState.message}
+          buttons={alertState.buttons ?? [{ text: 'OK', style: 'default', onPress: () => setAlertState(null) }]}
+          onDismiss={() => setAlertState(null)}
+        />
+      )}
     </View>
   );
 }

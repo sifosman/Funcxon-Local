@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useState } from 'react';
-import { ActivityIndicator, Alert, FlatList, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, FlatList, Text, TouchableOpacity, View } from 'react-native';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useQuery } from '@tanstack/react-query';
@@ -9,6 +9,7 @@ import { supabase } from '../lib/supabaseClient';
 import { colors, spacing, radii, typography } from '../theme';
 import type { QuotesStackParamList } from '../navigation/QuotesNavigator';
 import { useAuth } from '../auth/AuthContext';
+import ThemedAlert from '../components/ThemedAlert';
 
 type QuoteRequest = {
   id: number | string;
@@ -46,6 +47,7 @@ export default function QuotesScreen() {
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState<'all' | 'pending' | 'finalised' | 'tours'>('all');
   const [actionLoadingId, setActionLoadingId] = useState<number | string | null>(null);
+  const [alertState, setAlertState] = useState<{visible: boolean; title: string; message: string; buttons?: any[]} | null>(null);
 
   const { data, isLoading, error, refetch } = useQuery<QuoteRequest[]>({
     queryKey: ['attendee-quotes', user?.id],
@@ -269,7 +271,7 @@ export default function QuotesScreen() {
     const targetId = quote.target_id ?? quote.vendor_id;
 
     if (!targetId) {
-      Alert.alert('Missing listing', 'This quote is missing a vendor or venue reference.');
+      setAlertState({ visible: true, title: 'Missing listing', message: 'This quote is missing a vendor or venue reference.' });
       return;
     }
 
@@ -299,11 +301,11 @@ export default function QuotesScreen() {
           });
         } else {
           // Fallback if no revision found
-          Alert.alert('Quote Ready', 'A quote has been prepared for you. View details to see more.');
+          setAlertState({ visible: true, title: 'Quote Ready', message: 'A quote has been prepared for you. View details to see more.' });
         }
       } catch (err) {
         console.error('Error fetching revision:', err);
-        Alert.alert('Error', 'Failed to load quote details');
+        setAlertState({ visible: true, title: 'Error', message: 'Failed to load quote details' });
       } finally {
         setActionLoadingId(null);
       }
@@ -324,7 +326,13 @@ export default function QuotesScreen() {
     }
 
     if (quote.status === 'pending') {
-      navigation.navigate('QuoteDetail', { quoteId: quote.id });
+      navigation.navigate('QuoteRequest', {
+        vendorId: targetId ?? 0,
+        vendorName: quote.target_name ?? 'Vendor',
+        type: quote.is_venue ? 'venue' : 'vendor',
+        editMode: true,
+        quoteId: quote.id,
+      });
       return;
     }
 
@@ -342,7 +350,7 @@ export default function QuotesScreen() {
 
         await refetch();
       } catch (err: any) {
-        Alert.alert('Unable to approve', err?.message ?? 'Please try again.');
+        setAlertState({ visible: true, title: 'Unable to approve', message: err?.message ?? 'Please try again.' });
       } finally {
         setActionLoadingId(null);
       }
@@ -364,7 +372,7 @@ export default function QuotesScreen() {
       return;
     }
 
-    Alert.alert('In progress', 'This quote is still being prepared by the vendor.');
+    setAlertState({ visible: true, title: 'In progress', message: 'This quote is still being prepared by the vendor.' });
   };
 
   if (isLoading) {
@@ -684,6 +692,16 @@ export default function QuotesScreen() {
           );
         }}
       />
+
+      {alertState && (
+        <ThemedAlert
+          visible={alertState.visible}
+          title={alertState.title}
+          message={alertState.message}
+          buttons={alertState.buttons ?? [{ text: 'OK', style: 'default', onPress: () => setAlertState(null) }]}
+          onDismiss={() => setAlertState(null)}
+        />
+      )}
     </View>
   );
 }

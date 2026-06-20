@@ -1,11 +1,12 @@
 import { useState } from 'react';
-import { Alert, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { colors, spacing, radii, typography } from '../theme';
 import type { ProfileStackParamList } from '../navigation/ProfileNavigator';
 import { useApplicationForm } from '../context/ApplicationFormContext';
+import ThemedAlert from '../components/ThemedAlert';
 
 // Dev mode - accepts any credentials
 const DEV_MODE = __DEV__;
@@ -17,6 +18,7 @@ export default function SubscriberLoginScreen() {
     const [password, setPassword] = useState('');
     const [showPassword, setShowPassword] = useState(false);
     const [loading, setLoading] = useState(false);
+    const [alertState, setAlertState] = useState<{visible: boolean; title: string; message: string} | null>(null);
 
     const handleRegisterPortfolio = (type: 'venues' | 'vendors') => {
         resetForm();
@@ -26,7 +28,7 @@ export default function SubscriberLoginScreen() {
 
     const handleLogin = async () => {
         if (!email || !password) {
-            Alert.alert('Missing details', 'Please enter both email and password.');
+            setAlertState({ visible: true, title: 'Missing details', message: 'Please enter both email and password.' });
             return;
         }
 
@@ -40,7 +42,7 @@ export default function SubscriberLoginScreen() {
         // Email format validation for production
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         if (!emailRegex.test(email)) {
-            Alert.alert('Invalid email', 'Please enter a valid email address.');
+            setAlertState({ visible: true, title: 'Invalid email', message: 'Please enter a valid email address.' });
             return;
         }
 
@@ -205,7 +207,7 @@ export default function SubscriberLoginScreen() {
                         onPress={handleLogin}
                         disabled={loading}
                         style={{
-                            backgroundcolor: colors.textPrimary,
+                            backgroundColor: colors.textPrimary,
                             paddingVertical: spacing.md,
                             borderRadius: radii.lg,
                             alignItems: 'center',
@@ -299,6 +301,16 @@ export default function SubscriberLoginScreen() {
                     </View>
                 </View>
             </ScrollView>
+
+            {alertState && (
+                <ThemedAlert
+                    visible={alertState.visible}
+                    title={alertState.title}
+                    message={alertState.message}
+                    buttons={[{ text: 'OK', style: 'default', onPress: () => setAlertState(null) }]}
+                    onDismiss={() => setAlertState(null)}
+                />
+            )}
         </View>
     );
 }

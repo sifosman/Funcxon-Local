@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, Alert, ActivityIndicator, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView, ActivityIndicator, KeyboardAvoidingView, Platform } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -11,6 +11,7 @@ import { getSubscriptionTiers } from '../../lib/subscription';
 import { submitApplication, uploadFileToStorage } from '../../lib/applicationService';
 import { useAuth } from '../../auth/AuthContext';
 import { supabase } from '../../lib/supabaseClient';
+import ThemedAlert from '../../components/ThemedAlert';
 
 type ProfileStackParamList = {
   ApplicationStep3: undefined;
@@ -37,6 +38,7 @@ export default function ApplicationStep4Screen() {
   const { user } = useAuth();
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [alertState, setAlertState] = useState<{visible: boolean; title: string; message: string; buttons?: any[]} | null>(null);
   const [tiers, setTiers] = useState<Array<{
     id: number;
     tier_name: string;
@@ -113,7 +115,7 @@ export default function ApplicationStep4Screen() {
 
   const handleSubmit = async () => {
     if (!user?.id) {
-      Alert.alert('Error', 'You must be signed in to submit an application');
+      setAlertState({ visible: true, title: 'Error', message: 'You must be signed in to submit an application' });
       return;
     }
 
@@ -121,7 +123,7 @@ export default function ApplicationStep4Screen() {
 
     if (!validation.isValid) {
       setErrors(validation.errors);
-      Alert.alert('Validation Error', 'Please fix the errors before continuing');
+      setAlertState({ visible: true, title: 'Validation Error', message: 'Please fix the errors before continuing' });
       return;
     }
 
@@ -191,11 +193,7 @@ export default function ApplicationStep4Screen() {
       // If any uploads failed, show error and prevent submission
       if (uploadErrors.length > 0) {
         console.error('Upload errors:', uploadErrors);
-        Alert.alert(
-          'Upload Failed',
-          `Some files could not be uploaded:\n\n${uploadErrors.join('\n')}\n\nPlease try again or contact support.`,
-          [{ text: 'OK' }]
-        );
+        setAlertState({ visible: true, title: 'Upload Failed', message: `Some files could not be uploaded:\n\n${uploadErrors.join('\n')}\n\nPlease try again or contact support.`, buttons: [{ text: 'OK', style: 'default', onPress: () => setAlertState(null) }] });
         return;
       }
 
@@ -300,11 +298,7 @@ export default function ApplicationStep4Screen() {
             }
           } catch (e: any) {
             console.error('Failed to create venue listing from application:', e);
-            Alert.alert(
-              'Portfolio Setup Issue',
-              'Your application was submitted, but we could not fully set up your venue listing. You can update it manually from your account.',
-              [{ text: 'OK' }]
-            );
+            setAlertState({ visible: true, title: 'Portfolio Setup Issue', message: 'Your application was submitted, but we could not fully set up your venue listing. You can update it manually from your account.', buttons: [{ text: 'OK', style: 'default', onPress: () => setAlertState(null) }] });
           }
         }
 
@@ -391,11 +385,7 @@ export default function ApplicationStep4Screen() {
           }
         } catch (e: any) {
           console.error('Failed to create portfolio record:', e);
-          Alert.alert(
-            'Portfolio Created',
-            'Your application was submitted successfully, but we had a minor issue setting up your portfolio. You can retry from your account screen.',
-            [{ text: 'OK' }]
-          );
+          setAlertState({ visible: true, title: 'Portfolio Created', message: 'Your application was submitted successfully, but we had a minor issue setting up your portfolio. You can retry from your account screen.', buttons: [{ text: 'OK', style: 'default', onPress: () => setAlertState(null) }] });
         }
 
         // Reset form and navigate to portfolio management
@@ -406,11 +396,11 @@ export default function ApplicationStep4Screen() {
           routes: [{ name: nextRoute }],
         });
       } else {
-        Alert.alert('Submission Failed', result.error || 'Failed to submit application. Please try again.');
+        setAlertState({ visible: true, title: 'Submission Failed', message: result.error || 'Failed to submit application. Please try again.' });
       }
     } catch (error) {
       console.error('Submit application error:', error);
-      Alert.alert('Error', 'An unexpected error occurred. Please try again.');
+      setAlertState({ visible: true, title: 'Error', message: 'An unexpected error occurred. Please try again.' });
     } finally {
       setIsSubmitting(false);
     }
@@ -856,6 +846,16 @@ export default function ApplicationStep4Screen() {
           </View>
         </View>
       </ScrollView>
+
+      {alertState && (
+        <ThemedAlert
+          visible={alertState.visible}
+          title={alertState.title}
+          message={alertState.message}
+          buttons={alertState.buttons ?? [{ text: 'OK', style: 'default', onPress: () => setAlertState(null) }]}
+          onDismiss={() => setAlertState(null)}
+        />
+      )}
     </KeyboardAvoidingView>
   );
 }

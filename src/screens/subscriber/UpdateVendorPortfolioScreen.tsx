@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, Alert, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { colors, spacing, radii, typography } from '../../theme';
 import { supabase } from '../../lib/supabaseClient';
 import { useAuth } from '../../auth/AuthContext';
+import ThemedAlert from '../../components/ThemedAlert';
 
 function buildLegacyLocation(parts: Array<string | null | undefined>) {
     return parts.map((part) => part?.trim() ?? '').filter(Boolean).join(', ') || null;
@@ -58,6 +59,7 @@ export default function UpdateVendorPortfolioScreen() {
     const [saving, setSaving] = useState(false);
     const [vendor, setVendor] = useState<VendorListing | null>(null);
     const [canEditLinks, setCanEditLinks] = useState(true);
+    const [alertState, setAlertState] = useState<{visible: boolean; title: string; message: string; buttons?: any[]} | null>(null);
     const [form, setForm] = useState({
         name: '',
         description: '',
@@ -142,14 +144,15 @@ export default function UpdateVendorPortfolioScreen() {
     const handleChange = (key: keyof typeof form, value: string) => {
         const isLinksField = key === 'website_url' || key === 'instagram_url';
         if (isLinksField && !canEditLinks) {
-            Alert.alert(
-                'Upgrade Required',
-                'Website & social media links are available on paid vendor plans. Please upgrade to add these links.',
-                [
-                    { text: 'Not now', style: 'cancel' },
-                    { text: 'View Plans', onPress: () => navigation.navigate('SubscriptionPlans') },
+            setAlertState({
+                visible: true,
+                title: 'Upgrade Required',
+                message: 'Website & social media links are available on paid vendor plans. Please upgrade to add these links.',
+                buttons: [
+                    { text: 'Not now', style: 'cancel', onPress: () => setAlertState(null) },
+                    { text: 'View Plans', style: 'default', onPress: () => { setAlertState(null); navigation.navigate('SubscriptionPlans'); } },
                 ],
-            );
+            });
             return;
         }
 
@@ -161,46 +164,84 @@ export default function UpdateVendorPortfolioScreen() {
     }, [loadVendor]);
 
     const handleSave = async () => {
-        if (!vendor) return;
         if (!form.name.trim()) {
-            Alert.alert('Required', 'Business name is required.');
+            setAlertState({ visible: true, title: 'Required', message: 'Business name is required.', buttons: [{ text: 'OK', style: 'default', onPress: () => setAlertState(null) }] });
+            return;
+        }
+        if (!user?.id) {
+            setAlertState({ visible: true, title: 'Error', message: 'You must be signed in to save a portfolio.', buttons: [{ text: 'OK', style: 'default', onPress: () => setAlertState(null) }] });
             return;
         }
         const latitude = parseCoordinate(form.latitude);
         const longitude = parseCoordinate(form.longitude);
         if ((form.latitude.trim() && latitude === null) || (form.longitude.trim() && longitude === null)) {
-            Alert.alert('Invalid coordinates', 'Latitude and longitude must be valid numbers.');
+            setAlertState({ visible: true, title: 'Invalid coordinates', message: 'Latitude and longitude must be valid numbers.', buttons: [{ text: 'OK', style: 'default', onPress: () => setAlertState(null) }] });
             return;
         }
         setSaving(true);
         try {
-            const { error } = await supabase
-                .from('vendors')
-                .update({
-                    name: form.name.trim(),
-                    description: form.description.trim() || null,
-                    location: derivedLocationPreview || (form.location.trim() || null),
-                    address_line_1: form.address_line_1.trim() || null,
-                    address_line_2: form.address_line_2.trim() || null,
-                    suburb: form.suburb.trim() || null,
-                    city: form.city.trim() || null,
-                    province: form.province.trim() || null,
-                    postal_code: form.postal_code.trim() || null,
-                    country: form.country.trim() || null,
-                    latitude,
-                    longitude,
-                    price_range: form.price_range.trim() || null,
-                    email: form.email.trim() || null,
-                    whatsapp_number: form.whatsapp_number.trim() || null,
-                    website_url: form.website_url.trim() || null,
-                    instagram_url: form.instagram_url.trim() || null,
-                })
-                .eq('id', vendor.id);
+            const payload = {
+                name: form.name.trim(),
+                description: form.description.trim() || null,
+                location: derivedLocationPreview || (form.location.trim() || null),
+                address_line_1: form.address_line_1.trim() || null,
+                address_line_2: form.address_line_2.trim() || null,
+                suburb: form.suburb.trim() || null,
+                city: form.city.trim() || null,
+                province: form.province.trim() || null,
+                postal_code: form.postal_code.trim() || null,
+                country: form.country.trim() || null,
+                latitude,
+                longitude,
+                price_range: form.price_range.trim() || null,
+                email: form.email.trim() || null,
+                whatsapp_number: form.whatsapp_number.trim() || null,
+                website_url: form.website_url.trim() || null,
+                instagram_url: form.instagram_url.trim() || null,
+            };
 
-            if (error) throw error;
-            Alert.alert('Saved', 'Your portfolio has been updated.');
+            if (vendor) {
+                const { error } = await supabase.from('vendors').update(payload).eq('id', vendor.id);
+                if (error) throw error;
+                setAlertState({ visible: true, title: 'Saved', message: 'Your portfolio has been updated.', buttons: [{ text: 'OK', style: 'default', onPress: () => setAlertState(null) }] });
+            } else {
+                const { data, error } = await supabase
+                    .from('vendors')
+                    .insert({ ...payload, user_id: user.id })
+                    .select('id')
+                    .single();
+                if (error) throw error;
+                if (data) {
+                    setVendor({
+                        id: data.id,
+                        name: form.name.trim(),
+                        description: form.description.trim() || null,
+                        location: derivedLocationPreview || (form.location.trim() || null),
+                        address_line_1: form.address_line_1.trim() || null,
+                        address_line_2: form.address_line_2.trim() || null,
+                        suburb: form.suburb.trim() || null,
+                        city: form.city.trim() || null,
+                        province: form.province.trim() || null,
+                        postal_code: form.postal_code.trim() || null,
+                        country: form.country.trim() || null,
+                        latitude,
+                        longitude,
+                        price_range: form.price_range.trim() || null,
+                        email: form.email.trim() || null,
+                        whatsapp_number: form.whatsapp_number.trim() || null,
+                        website_url: form.website_url.trim() || null,
+                        instagram_url: form.instagram_url.trim() || null,
+                        subscription_tier: null,
+                        subscription_status: null,
+                        service_options: null,
+                        amenities: null,
+                        vendor_tags: null,
+                    });
+                }
+                setAlertState({ visible: true, title: 'Created', message: 'Your vendor portfolio has been created.', buttons: [{ text: 'OK', style: 'default', onPress: () => setAlertState(null) }] });
+            }
         } catch (err: any) {
-            Alert.alert('Error', err?.message ?? 'Failed to save changes.');
+            setAlertState({ visible: true, title: 'Error', message: err?.message ?? 'Failed to save changes.', buttons: [{ text: 'OK', style: 'default', onPress: () => setAlertState(null) }] });
         } finally {
             setSaving(false);
         }
@@ -258,71 +299,68 @@ export default function UpdateVendorPortfolioScreen() {
                     </TouchableOpacity>
 
                     <Text style={{ ...typography.displayMedium, color: colors.textPrimary, marginBottom: spacing.xs }}>
-                        Update Vendor Portfolio
+                        {vendor ? 'Update Vendor Portfolio' : 'Create Vendor Portfolio'}
                     </Text>
                     <Text style={{ ...typography.body, color: colors.textMuted }}>
-                        Edit your business listing details
+                        {vendor ? 'Edit your business listing details' : 'Set up your business listing details'}
                     </Text>
                 </View>
 
-                {!vendor ? (
-                    <View style={{ paddingHorizontal: spacing.lg, alignItems: 'center', paddingTop: spacing.xl }}>
-                        <MaterialIcons name="storefront" size={48} color={colors.textMuted} />
-                        <Text style={{ ...typography.titleMedium, color: colors.textPrimary, marginTop: spacing.md, textAlign: 'center' }}>
-                            No Vendor Portfolio Found
-                        </Text>
-                        <Text style={{ ...typography.body, color: colors.textMuted, marginTop: spacing.sm, textAlign: 'center' }}>
-                            You haven't created a vendor portfolio yet.
-                        </Text>
-                        <TouchableOpacity
-                            onPress={() => navigation.goBack()}
-                            style={{
-                                marginTop: spacing.lg,
-                                paddingHorizontal: spacing.xl,
-                                paddingVertical: spacing.md,
-                                borderRadius: radii.md,
-                                backgroundColor: colors.primary,
-                            }}
-                        >
-                            <Text style={{ ...typography.body, color: '#FFFFFF', fontWeight: '600' }}>Go Back</Text>
-                        </TouchableOpacity>
-                    </View>
-                ) : (
-                    <View style={{ paddingHorizontal: spacing.lg }}>
-                        {/* Current Plan Badge */}
+                <View style={{ paddingHorizontal: spacing.lg }}>
+                    {!vendor && (
                         <View
                             style={{
-                                flexDirection: 'row',
-                                alignItems: 'center',
                                 backgroundColor: colors.surface,
                                 borderRadius: radii.md,
                                 padding: spacing.md,
                                 marginBottom: spacing.lg,
                                 borderWidth: 1,
                                 borderColor: colors.borderSubtle,
+                                flexDirection: 'row',
+                                alignItems: 'center',
                             }}
                         >
-                            <MaterialIcons name="verified" size={20} color={colors.textPrimary} style={{ marginRight: spacing.sm }} />
-                            <View style={{ flex: 1 }}>
-                                <Text style={{ ...typography.caption, color: colors.textMuted }}>Current Plan</Text>
-                                <Text style={{ ...typography.body, color: colors.textPrimary, fontWeight: '600' }}>
-                                    {(vendor.subscription_tier || 'Free').charAt(0).toUpperCase() + (vendor.subscription_tier || 'free').slice(1)}
-                                </Text>
-                            </View>
-                            <TouchableOpacity
-                                onPress={() => navigation.navigate('SubscriptionPlans')}
+                            <MaterialIcons name="info" size={20} color={colors.textMuted} style={{ marginRight: spacing.sm }} />
+                            <Text style={{ ...typography.body, color: colors.textSecondary, flex: 1 }}>
+                                You haven't created a vendor portfolio yet. Fill in the details below and save to create one.
+                            </Text>
+                        </View>
+                    )}
+                        {vendor && (
+                            <View
                                 style={{
-                                    paddingHorizontal: spacing.md,
-                                    paddingVertical: spacing.xs,
-                                    borderRadius: radii.full,
-                                    backgroundColor: colors.primary,
+                                    flexDirection: 'row',
+                                    alignItems: 'center',
+                                    backgroundColor: colors.surface,
+                                    borderRadius: radii.md,
+                                    padding: spacing.md,
+                                    marginBottom: spacing.lg,
+                                    borderWidth: 1,
+                                    borderColor: colors.borderSubtle,
                                 }}
                             >
-                                <Text style={{ ...typography.caption, color: '#FFFFFF', fontWeight: '600' }}>Upgrade</Text>
-                            </TouchableOpacity>
-                        </View>
+                                <MaterialIcons name="verified" size={20} color={colors.textPrimary} style={{ marginRight: spacing.sm }} />
+                                <View style={{ flex: 1 }}>
+                                    <Text style={{ ...typography.caption, color: colors.textMuted }}>Current Plan</Text>
+                                    <Text style={{ ...typography.body, color: colors.textPrimary, fontWeight: '600' }}>
+                                        {(vendor.subscription_tier || 'Free').charAt(0).toUpperCase() + (vendor.subscription_tier || 'free').slice(1)}
+                                    </Text>
+                                </View>
+                                <TouchableOpacity
+                                    onPress={() => navigation.navigate('SubscriptionPlans')}
+                                    style={{
+                                        paddingHorizontal: spacing.md,
+                                        paddingVertical: spacing.xs,
+                                        borderRadius: radii.full,
+                                        backgroundColor: colors.primary,
+                                    }}
+                                >
+                                    <Text style={{ ...typography.caption, color: '#FFFFFF', fontWeight: '600' }}>Upgrade</Text>
+                                </TouchableOpacity>
+                            </View>
+                        )}
 
-                        <View
+                        {vendor && <View
                             style={{
                                 backgroundColor: colors.surface,
                                 borderRadius: radii.lg,
@@ -344,7 +382,7 @@ export default function UpdateVendorPortfolioScreen() {
                                 <TouchableOpacity
                                     onPress={() => {
                                         if (!vendor) {
-                                            Alert.alert('Create profile first', 'Please create your vendor profile before adding catalogue items.');
+                                            setAlertState({ visible: true, title: 'Create profile first', message: 'Please create your vendor profile before adding catalogue items.', buttons: [{ text: 'OK', style: 'default', onPress: () => setAlertState(null) }] });
                                             return;
                                         }
                                         navigation.navigate('VendorCatalogue');
@@ -361,7 +399,7 @@ export default function UpdateVendorPortfolioScreen() {
                                     </Text>
                                 </TouchableOpacity>
                             </View>
-                        </View>
+                        </View>}
 
                         {/* Edit Form */}
                         <View
@@ -427,7 +465,7 @@ export default function UpdateVendorPortfolioScreen() {
                         </View>
 
                         {/* Tags display */}
-                        {(vendor.service_options?.length || vendor.vendor_tags?.length) ? (
+                        {vendor && (vendor.service_options?.length || vendor.vendor_tags?.length) ? (
                             <View
                                 style={{
                                     backgroundColor: colors.surface,
@@ -480,7 +518,7 @@ export default function UpdateVendorPortfolioScreen() {
                                                         borderRadius: radii.full,
                                                         backgroundColor: '#f2f7ff',
                                                         borderWidth: 1,
-                                                        bordercolor: colors.textPrimary,
+                                                        borderColor: colors.textPrimary,
                                                     }}
                                                 >
                                                     <Text style={{ ...typography.caption, color: colors.textPrimary }}>{tag}</Text>
@@ -505,12 +543,21 @@ export default function UpdateVendorPortfolioScreen() {
                             }}
                         >
                             <Text style={{ ...typography.body, color: '#FFFFFF', fontWeight: '600' }}>
-                                {saving ? 'Saving...' : 'Save Changes'}
+                                {saving ? 'Saving...' : (vendor ? 'Save Changes' : 'Create Portfolio')}
                             </Text>
                         </TouchableOpacity>
                     </View>
-                )}
             </ScrollView>
+
+            {alertState && (
+                <ThemedAlert
+                    visible={alertState.visible}
+                    title={alertState.title}
+                    message={alertState.message}
+                    buttons={alertState.buttons ?? [{ text: 'OK', style: 'default', onPress: () => setAlertState(null) }]}
+                    onDismiss={() => setAlertState(null)}
+                />
+            )}
         </View>
     );
 }

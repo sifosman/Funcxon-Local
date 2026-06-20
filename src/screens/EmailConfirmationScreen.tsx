@@ -1,9 +1,10 @@
 import { useState } from 'react';
-import { ScrollView, Text, View, TouchableOpacity, Alert } from 'react-native';
+import { ScrollView, Text, View, TouchableOpacity } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { colors, spacing, radii, typography } from '../theme';
 import { PrimaryButton } from '../components/ui';
 import { useAuth } from '../auth/AuthContext';
+import ThemedAlert from '../components/ThemedAlert';
 
 type Props = {
   navigation: { navigate: (screen: 'SignIn') => void };
@@ -16,10 +17,11 @@ export default function EmailConfirmationScreen({ route, navigation }: Props) {
   const role = route.params?.role === 'vendor' ? 'vendor' : 'attendee';
   const roleLabel = role === 'vendor' ? 'Vendor' : 'Attendee';
   const [isResending, setIsResending] = useState(false);
+  const [alertState, setAlertState] = useState<{visible: boolean; title: string; message: string} | null>(null);
 
   const handleResendEmail = async () => {
     if (!email) {
-      Alert.alert('Error', 'No email address found. Please sign up again.');
+      setAlertState({ visible: true, title: 'Error', message: 'No email address found. Please sign up again.' });
       return;
     }
 
@@ -27,12 +29,12 @@ export default function EmailConfirmationScreen({ route, navigation }: Props) {
     try {
       const { error } = await resendConfirmationEmail(email);
       if (error) {
-        Alert.alert('Error', error.message);
+        setAlertState({ visible: true, title: 'Error', message: error.message });
       } else {
-        Alert.alert('Success', 'Confirmation email resent! Please check your inbox.');
+        setAlertState({ visible: true, title: 'Success', message: 'Confirmation email resent! Please check your inbox.' });
       }
     } catch (error) {
-      Alert.alert('Error', 'Failed to resend email. Please try again.');
+      setAlertState({ visible: true, title: 'Error', message: 'Failed to resend email. Please try again.' });
     } finally {
       setIsResending(false);
     }
@@ -188,6 +190,16 @@ export default function EmailConfirmationScreen({ route, navigation }: Props) {
           </Text>
         </View>
       </ScrollView>
+
+      {alertState && (
+        <ThemedAlert
+          visible={alertState.visible}
+          title={alertState.title}
+          message={alertState.message}
+          buttons={[{ text: 'OK', style: 'default', onPress: () => setAlertState(null) }]}
+          onDismiss={() => setAlertState(null)}
+        />
+      )}
     </View>
   );
 }

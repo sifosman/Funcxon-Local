@@ -6,7 +6,6 @@ import {
   ScrollView,
   TouchableOpacity,
   Image,
-  Alert,
   Linking,
   ActivityIndicator,
 } from 'react-native';
@@ -20,6 +19,7 @@ import { supabase } from '../../lib/supabaseClient';
 import { fetchHubSpotBlogPosts, type AppBlogPost } from '../../lib/hubspotBlog';
 import { AppFooter } from '../../components/AppFooter';
 import { HelpCenterModal } from '../../components/HelpCenterModal';
+import ThemedAlert from '../../components/ThemedAlert';
 import { useFocusEffect } from '@react-navigation/native';
 
 type ProfileStackParamList = {
@@ -74,6 +74,7 @@ export default function ListerPortfolioScreen() {
   const [venueListing, setVenueListing] = useState<VenueListing | null>(null);
   const [loading, setLoading] = useState(true);
   const [helpVisible, setHelpVisible] = useState(false);
+  const [alertState, setAlertState] = useState<{visible: boolean; title: string; message: string; buttons?: any[]} | null>(null);
 
   const getUsername = () => {
     if (!user) return 'Lister';
@@ -132,7 +133,7 @@ export default function ListerPortfolioScreen() {
   const handleLogout = async () => {
     const { error } = await signOut();
     if (error) {
-      Alert.alert('Sign out failed', error.message);
+      setAlertState({ visible: true, title: 'Sign out failed', message: error.message });
     }
   };
 
@@ -150,17 +151,22 @@ export default function ListerPortfolioScreen() {
       action: () => {
         const parentNav = (navigation as any).getParent?.();
         if (vendorListing && venueListing) {
-          Alert.alert('View Portfolio', 'Which portfolio would you like to view?', [
-            { text: 'Vendor', onPress: () => parentNav?.navigate?.('Main', { screen: 'Home', params: { screen: 'VendorProfile', params: { vendorId: vendorListing.id } } }) },
-            { text: 'Venue', onPress: () => parentNav?.navigate?.('Main', { screen: 'Home', params: { screen: 'VenueProfile', params: { venueId: venueListing.id } } }) },
-            { text: 'Cancel', style: 'cancel' },
-          ]);
+          setAlertState({
+            visible: true,
+            title: 'View Portfolio',
+            message: 'Which portfolio would you like to view?',
+            buttons: [
+              { text: 'Vendor', style: 'default', onPress: () => { setAlertState(null); parentNav?.navigate?.('Main', { screen: 'Home', params: { screen: 'VendorProfile', params: { vendorId: vendorListing.id } } }); } },
+              { text: 'Venue', style: 'default', onPress: () => { setAlertState(null); parentNav?.navigate?.('Main', { screen: 'Home', params: { screen: 'VenueProfile', params: { venueId: venueListing.id } } }); } },
+              { text: 'Cancel', style: 'cancel', onPress: () => setAlertState(null) },
+            ],
+          });
         } else if (vendorListing) {
           parentNav?.navigate?.('Main', { screen: 'Home', params: { screen: 'VendorProfile', params: { vendorId: vendorListing.id } } });
         } else if (venueListing) {
           parentNav?.navigate?.('Main', { screen: 'Home', params: { screen: 'VenueProfile', params: { venueId: venueListing.id } } });
         } else {
-          Alert.alert('No portfolio found', 'You do not have an active portfolio yet. Create one first.');
+          setAlertState({ visible: true, title: 'No portfolio found', message: 'You do not have an active portfolio yet. Create one first.' });
         }
       },
     },
@@ -170,17 +176,22 @@ export default function ListerPortfolioScreen() {
       icon: 'edit',
       action: () => {
         if (vendorListing && venueListing) {
-          Alert.alert('Edit Portfolio', 'Which portfolio would you like to edit?', [
-            { text: 'Vendor', onPress: () => navigation.navigate('UpdateVendorPortfolio') },
-            { text: 'Venue', onPress: () => navigation.navigate('UpdateVenuePortfolio') },
-            { text: 'Cancel', style: 'cancel' },
-          ]);
+          setAlertState({
+            visible: true,
+            title: 'Edit Portfolio',
+            message: 'Which portfolio would you like to edit?',
+            buttons: [
+              { text: 'Vendor', style: 'default', onPress: () => { setAlertState(null); navigation.navigate('UpdateVendorPortfolio'); } },
+              { text: 'Venue', style: 'default', onPress: () => { setAlertState(null); navigation.navigate('UpdateVenuePortfolio'); } },
+              { text: 'Cancel', style: 'cancel', onPress: () => setAlertState(null) },
+            ],
+          });
         } else if (vendorListing) {
           navigation.navigate('UpdateVendorPortfolio');
         } else if (venueListing) {
           navigation.navigate('UpdateVenuePortfolio');
         } else {
-          Alert.alert('No portfolio found', 'You do not have an active portfolio yet. Create one first.');
+          setAlertState({ visible: true, title: 'No portfolio found', message: 'You do not have an active portfolio yet. Create one first.' });
         }
       },
     },
@@ -190,17 +201,22 @@ export default function ListerPortfolioScreen() {
       icon: 'list',
       action: () => {
         if (vendorListing && venueListing) {
-          Alert.alert('Edit Catalogue', 'Which catalogue would you like to edit?', [
-            { text: 'Vendor', onPress: () => navigation.navigate('VendorCatalogue') },
-            { text: 'Venue', onPress: () => navigation.navigate('VenueCatalogue') },
-            { text: 'Cancel', style: 'cancel' },
-          ]);
+          setAlertState({
+            visible: true,
+            title: 'Edit Catalogue',
+            message: 'Which catalogue would you like to edit?',
+            buttons: [
+              { text: 'Vendor', style: 'default', onPress: () => { setAlertState(null); navigation.navigate('VendorCatalogue'); } },
+              { text: 'Venue', style: 'default', onPress: () => { setAlertState(null); navigation.navigate('VenueCatalogue'); } },
+              { text: 'Cancel', style: 'cancel', onPress: () => setAlertState(null) },
+            ],
+          });
         } else if (vendorListing) {
           navigation.navigate('VendorCatalogue');
         } else if (venueListing) {
           navigation.navigate('VenueCatalogue');
         } else {
-          Alert.alert('No portfolio found', 'You do not have an active portfolio yet. Create one first.');
+          setAlertState({ visible: true, title: 'No portfolio found', message: 'You do not have an active portfolio yet. Create one first.' });
         }
       },
     },
@@ -210,17 +226,22 @@ export default function ListerPortfolioScreen() {
       icon: 'photo-library',
       action: () => {
         if (vendorListing && venueListing) {
-          Alert.alert('Update Photos', 'Which portfolio would you like to update?', [
-            { text: 'Vendor', onPress: () => navigation.navigate('UpdateVendorPortfolio') },
-            { text: 'Venue', onPress: () => navigation.navigate('UpdateVenuePortfolio') },
-            { text: 'Cancel', style: 'cancel' },
-          ]);
+          setAlertState({
+            visible: true,
+            title: 'Update Photos',
+            message: 'Which portfolio would you like to update?',
+            buttons: [
+              { text: 'Vendor', style: 'default', onPress: () => { setAlertState(null); navigation.navigate('UpdateVendorPortfolio'); } },
+              { text: 'Venue', style: 'default', onPress: () => { setAlertState(null); navigation.navigate('UpdateVenuePortfolio'); } },
+              { text: 'Cancel', style: 'cancel', onPress: () => setAlertState(null) },
+            ],
+          });
         } else if (vendorListing) {
           navigation.navigate('UpdateVendorPortfolio');
         } else if (venueListing) {
           navigation.navigate('UpdateVenuePortfolio');
         } else {
-          Alert.alert('No portfolio found', 'You do not have an active portfolio yet. Create one first.');
+          setAlertState({ visible: true, title: 'No portfolio found', message: 'You do not have an active portfolio yet. Create one first.' });
         }
       },
     },
@@ -262,19 +283,20 @@ export default function ListerPortfolioScreen() {
       label: 'Delete Account',
       icon: 'delete-forever',
       action: () => {
-        Alert.alert(
-          'Delete Account',
-          'This will permanently delete your account and all associated data. Are you absolutely sure?',
-          [
-            { text: 'Cancel', style: 'cancel' },
+        setAlertState({
+          visible: true,
+          title: 'Delete Account',
+          message: 'This will permanently delete your account and all associated data. Are you absolutely sure?',
+          buttons: [
+            { text: 'Cancel', style: 'cancel', onPress: () => setAlertState(null) },
             {
               text: 'Delete Forever',
               style: 'destructive',
               onPress: () =>
-                Alert.alert('Feature Coming Soon', 'Account deletion will be available soon. For now, please contact support to delete your account.'),
+                setAlertState({ visible: true, title: 'Feature Coming Soon', message: 'Account deletion will be available soon. For now, please contact support to delete your account.' }),
             },
-          ]
-        );
+          ],
+        });
       },
     },
   ];
@@ -410,7 +432,7 @@ export default function ListerPortfolioScreen() {
             } else if (venueListing) {
               parentNav?.navigate?.('Main', { screen: 'Home', params: { screen: 'CreateReview', params: { type: 'venue', targetId: venueListing.id, targetName: venueListing.name } } });
             } else {
-              Alert.alert('No portfolio found', 'Create a portfolio first before submitting a review.');
+              setAlertState({ visible: true, title: 'No portfolio found', message: 'Create a portfolio first before submitting a review.' });
             }
           }}
         >
@@ -515,6 +537,16 @@ export default function ListerPortfolioScreen() {
           navigation.navigate('PortfolioAssistance');
         }}
       />
+
+      {alertState && (
+        <ThemedAlert
+          visible={alertState.visible}
+          title={alertState.title}
+          message={alertState.message}
+          buttons={alertState.buttons ?? [{ text: 'OK', style: 'default', onPress: () => setAlertState(null) }]}
+          onDismiss={() => setAlertState(null)}
+        />
+      )}
     </ScrollView>
   );
 }

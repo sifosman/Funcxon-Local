@@ -5,7 +5,6 @@ import {
   StyleSheet,
   Modal,
   TouchableOpacity,
-  Alert,
   ActivityIndicator,
   Platform
 } from 'react-native';
@@ -13,6 +12,7 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { colors, spacing, radii, typography } from '../theme';
 import * as ExpoLocation from 'expo-location';
 import { WebView } from 'react-native-webview';
+import ThemedAlert from './ThemedAlert';
 
 interface LatLng {
   latitude: number;
@@ -39,6 +39,7 @@ export default function MapRadiusSelector({
   const [selectedLocation, setSelectedLocation] = useState<LatLng>(initialLocation);
   const [radiusKm, setRadiusKm] = useState(initialRadius);
   const [isLoading, setIsLoading] = useState(false);
+  const [alertState, setAlertState] = useState<{visible: boolean; title: string; message: string} | null>(null);
   const webViewRef = useRef<any>(null);
   const hasAutoDetected = useRef(false);
 
@@ -78,7 +79,7 @@ export default function MapRadiusSelector({
     try {
       const { status } = await ExpoLocation.requestForegroundPermissionsAsync();
       if (status !== 'granted') {
-        Alert.alert('Permission Denied', 'Location permission is needed to detect your position.');
+        setAlertState({ visible: true, title: 'Permission Denied', message: 'Location permission is needed to detect your position.' });
         return;
       }
       const loc = await ExpoLocation.getCurrentPositionAsync({ accuracy: ExpoLocation.Accuracy.Balanced });
@@ -86,7 +87,7 @@ export default function MapRadiusSelector({
       setSelectedLocation(currentLocation);
       
     } catch (error) {
-      Alert.alert('Error', 'Unable to get your current location. Please try again.');
+      setAlertState({ visible: true, title: 'Error', message: 'Unable to get your current location. Please try again.' });
     } finally {
       setIsLoading(false);
     }
@@ -276,6 +277,16 @@ export default function MapRadiusSelector({
             <Text style={styles.applyButtonText}>Apply Search Area</Text>
           </TouchableOpacity>
         </View>
+
+        {alertState && (
+          <ThemedAlert
+            visible={alertState.visible}
+            title={alertState.title}
+            message={alertState.message}
+            buttons={[{ text: 'OK', style: 'default', onPress: () => setAlertState(null) }]}
+            onDismiss={() => setAlertState(null)}
+          />
+        )}
       </View>
     </Modal>
   );

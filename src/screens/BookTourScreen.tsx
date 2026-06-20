@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Alert, KeyboardAvoidingView, Platform, ScrollView, Text, View, TouchableOpacity } from 'react-native';
+import { KeyboardAvoidingView, Platform, ScrollView, Text, View, TouchableOpacity } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import DateTimePicker from '@react-native-community/datetimepicker';
@@ -9,6 +9,7 @@ import type { AttendeeStackParamList } from '../navigation/AttendeeNavigator';
 import { colors, spacing, typography, radii } from '../theme';
 import { PrimaryButton, ThemedInput } from '../components/ui';
 import { useAuth } from '../auth/AuthContext';
+import ThemedAlert from '../components/ThemedAlert';
 
 type Props = NativeStackScreenProps<AttendeeStackParamList, 'BookTour'>;
 
@@ -23,6 +24,7 @@ export default function BookTourScreen({ route, navigation }: Props) {
   const [date, setDate] = useState(new Date());
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [alertState, setAlertState] = useState<{visible: boolean; title: string; message: string; buttons?: any[]} | null>(null);
 
   const onDateChange = (event: any, selectedDate?: Date) => {
     setShowDatePicker(false);
@@ -33,7 +35,7 @@ export default function BookTourScreen({ route, navigation }: Props) {
 
   async function handleSubmit() {
     if (!name.trim() || !email.trim() || !phone.trim()) {
-      Alert.alert('Missing details', 'Please provide your name, email, and phone number.');
+      setAlertState({ visible: true, title: 'Missing details', message: 'Please provide your name, email, and phone number.' });
       return;
     }
 
@@ -57,10 +59,9 @@ export default function BookTourScreen({ route, navigation }: Props) {
 
       // TODO: Send admin/venue owner notification
 
-      Alert.alert('Tour Requested', 'Your tour request has been sent. The venue will confirm with you shortly.');
-      navigation.goBack();
+      setAlertState({ visible: true, title: 'Tour Requested', message: 'Your tour request has been sent. The venue will confirm with you shortly.', buttons: [{ text: 'OK', style: 'default', onPress: () => { setAlertState(null); navigation.goBack(); } }] });
     } catch (err: any) {
-      Alert.alert('Error', err?.message ?? 'Failed to submit tour request.');
+      setAlertState({ visible: true, title: 'Error', message: err?.message ?? 'Failed to submit tour request.' });
     } finally {
       setSubmitting(false);
     }
@@ -204,6 +205,16 @@ export default function BookTourScreen({ route, navigation }: Props) {
           />
         </View>
       </ScrollView>
+
+      {alertState && (
+        <ThemedAlert
+          visible={alertState.visible}
+          title={alertState.title}
+          message={alertState.message}
+          buttons={alertState.buttons ?? [{ text: 'OK', style: 'default', onPress: () => setAlertState(null) }]}
+          onDismiss={() => setAlertState(null)}
+        />
+      )}
     </KeyboardAvoidingView>
   );
 }

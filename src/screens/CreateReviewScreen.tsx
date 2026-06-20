@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView, Text, TouchableOpacity, View } from 'react-native';
-import { showAlert } from '../utils/alert';
+import ThemedAlert from '../components/ThemedAlert';
 import { MaterialIcons } from '@expo/vector-icons';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 
@@ -20,6 +20,7 @@ export default function CreateReviewScreen({ route, navigation }: Props) {
   const [title, setTitle] = useState('');
   const [reviewText, setReviewText] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [alertState, setAlertState] = useState<{visible: boolean; title: string; message: string} | null>(null);
 
   const isFormValid = useMemo(() => rating >= 1 && rating <= 5, [rating]);
 
@@ -71,12 +72,12 @@ export default function CreateReviewScreen({ route, navigation }: Props) {
 
   const handleSubmit = async () => {
     if (!user?.id) {
-      showAlert('Sign in required', 'Please sign in to leave a review.');
+      setAlertState({ visible: true, title: 'Sign in required', message: 'Please sign in to leave a review.' });
       return;
     }
 
     if (!isFormValid) {
-      showAlert('Missing rating', 'Please select a star rating.');
+      setAlertState({ visible: true, title: 'Missing rating', message: 'Please select a star rating.' });
       return;
     }
 
@@ -84,14 +85,14 @@ export default function CreateReviewScreen({ route, navigation }: Props) {
     try {
       const eligible = await checkEligibility();
       if (!eligible) {
-        showAlert('Not eligible', 'You can only leave a review after you have used this service.');
+        setAlertState({ visible: true, title: 'Not eligible', message: 'You can only leave a review after you have used this service.' });
         return;
       }
 
       if (type === 'vendor') {
         const internalUserId = await resolveInternalUserId();
         if (!internalUserId) {
-          showAlert('Missing profile', 'We could not find your user profile. Please sign in again.');
+          setAlertState({ visible: true, title: 'Missing profile', message: 'We could not find your user profile. Please sign in again.' });
           return;
         }
 
@@ -120,10 +121,10 @@ export default function CreateReviewScreen({ route, navigation }: Props) {
         if (error) throw error;
       }
 
-      showAlert('Review submitted', 'Thanks! Your review is pending approval.');
+      setAlertState({ visible: true, title: 'Review submitted', message: 'Thanks! Your review is pending approval.' });
       navigation.goBack();
     } catch (err: any) {
-      showAlert('Error', err?.message ?? 'Failed to submit review.');
+      setAlertState({ visible: true, title: 'Error', message: err?.message ?? 'Failed to submit review.' });
     } finally {
       setSubmitting(false);
     }
@@ -215,6 +216,16 @@ export default function CreateReviewScreen({ route, navigation }: Props) {
           ) : null}
         </View>
       </ScrollView>
+
+      {alertState && (
+        <ThemedAlert
+          visible={alertState.visible}
+          title={alertState.title}
+          message={alertState.message}
+          buttons={[{ text: 'OK', style: 'default', onPress: () => setAlertState(null) }]}
+          onDismiss={() => setAlertState(null)}
+        />
+      )}
     </KeyboardAvoidingView>
   );
 }

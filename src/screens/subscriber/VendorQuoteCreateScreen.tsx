@@ -1,6 +1,5 @@
 import { useState, useCallback, useEffect } from 'react';
 import {
-  Alert,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -17,6 +16,7 @@ import { supabase } from '../../lib/supabaseClient';
 import { colors, spacing, radii, typography } from '../../theme';
 import { OutlineButton, PrimaryButton, ThemedInput } from '../../components/ui';
 import { useAuth } from '../../auth/AuthContext';
+import ThemedAlert from '../../components/ThemedAlert';
 
 type SubscriberStackParamList = {
   VendorQuoteCreate: {
@@ -68,6 +68,7 @@ export default function VendorQuoteCreateScreen() {
   const [saving, setSaving] = useState(false);
   const [quoteRequest, setQuoteRequest] = useState<QuoteRequest | null>(null);
   const [existingRevisions, setExistingRevisions] = useState<QuoteRevision[]>([]);
+  const [alertState, setAlertState] = useState<{visible: boolean; title: string; message: string; buttons?: any[]} | null>(null);
 
   // Form state
   const [amount, setAmount] = useState('');
@@ -89,7 +90,7 @@ export default function VendorQuoteCreateScreen() {
         .maybeSingle();
 
       if (!vendor) {
-        Alert.alert('Error', 'Vendor profile not found');
+        setAlertState({ visible: true, title: 'Error', message: 'Vendor profile not found', buttons: [{ text: 'OK', style: 'default', onPress: () => setAlertState(null) }] });
         return;
       }
 
@@ -102,7 +103,7 @@ export default function VendorQuoteCreateScreen() {
         .maybeSingle();
 
       if (!qr) {
-        Alert.alert('Error', 'Quote request not found or not assigned to you');
+        setAlertState({ visible: true, title: 'Error', message: 'Quote request not found or not assigned to you', buttons: [{ text: 'OK', style: 'default', onPress: () => setAlertState(null) }] });
         return;
       }
 
@@ -127,7 +128,7 @@ export default function VendorQuoteCreateScreen() {
       }
     } catch (err) {
       console.error('Error loading quote request:', err);
-      Alert.alert('Error', 'Failed to load quote request');
+      setAlertState({ visible: true, title: 'Error', message: 'Failed to load quote request', buttons: [{ text: 'OK', style: 'default', onPress: () => setAlertState(null) }] });
     } finally {
       setLoading(false);
     }
@@ -139,11 +140,11 @@ export default function VendorQuoteCreateScreen() {
 
   const validateForm = (): boolean => {
     if (!amount.trim() || isNaN(Number(amount)) || Number(amount) <= 0) {
-      Alert.alert('Invalid Amount', 'Please enter a valid quote amount');
+      setAlertState({ visible: true, title: 'Invalid Amount', message: 'Please enter a valid quote amount', buttons: [{ text: 'OK', style: 'default', onPress: () => setAlertState(null) }] });
       return false;
     }
     if (!description.trim()) {
-      Alert.alert('Missing Description', 'Please provide a description of what the quote includes');
+      setAlertState({ visible: true, title: 'Missing Description', message: 'Please provide a description of what the quote includes', buttons: [{ text: 'OK', style: 'default', onPress: () => setAlertState(null) }] });
       return false;
     }
     return true;
@@ -161,7 +162,7 @@ export default function VendorQuoteCreateScreen() {
         .maybeSingle();
 
       if (!vendor) {
-        Alert.alert('Error', 'Vendor not found');
+        setAlertState({ visible: true, title: 'Error', message: 'Vendor not found', buttons: [{ text: 'OK', style: 'default', onPress: () => setAlertState(null) }] });
         return;
       }
 
@@ -193,9 +194,9 @@ export default function VendorQuoteCreateScreen() {
         if (error) throw error;
       }
 
-      Alert.alert('Draft Saved', 'Your quote has been saved as a draft');
+      setAlertState({ visible: true, title: 'Draft Saved', message: 'Your quote has been saved as a draft', buttons: [{ text: 'OK', style: 'default', onPress: () => setAlertState(null) }] });
     } catch (err: any) {
-      Alert.alert('Error', err?.message || 'Failed to save draft');
+      setAlertState({ visible: true, title: 'Error', message: err?.message || 'Failed to save draft', buttons: [{ text: 'OK', style: 'default', onPress: () => setAlertState(null) }] });
     } finally {
       setSaving(false);
     }
@@ -213,7 +214,7 @@ export default function VendorQuoteCreateScreen() {
         .maybeSingle();
 
       if (!vendor) {
-        Alert.alert('Error', 'Vendor not found');
+        setAlertState({ visible: true, title: 'Error', message: 'Vendor not found', buttons: [{ text: 'OK', style: 'default', onPress: () => setAlertState(null) }] });
         return;
       }
 
@@ -274,11 +275,9 @@ export default function VendorQuoteCreateScreen() {
       // Send notification to client
       await sendClientNotification(revisionId, vendor.name);
 
-      Alert.alert('Quote Sent', 'Your quote has been sent to the client', [
-        { text: 'OK', onPress: () => navigation.goBack() },
-      ]);
+      setAlertState({ visible: true, title: 'Quote Sent', message: 'Your quote has been sent to the client', buttons: [{ text: 'OK', style: 'default', onPress: () => { setAlertState(null); navigation.goBack(); } }] });
     } catch (err: any) {
-      Alert.alert('Error', err?.message || 'Failed to send quote');
+      setAlertState({ visible: true, title: 'Error', message: err?.message || 'Failed to send quote', buttons: [{ text: 'OK', style: 'default', onPress: () => setAlertState(null) }] });
     } finally {
       setSaving(false);
     }
@@ -482,6 +481,16 @@ export default function VendorQuoteCreateScreen() {
           />
         </View>
       </ScrollView>
+
+      {alertState && (
+        <ThemedAlert
+          visible={alertState.visible}
+          title={alertState.title}
+          message={alertState.message}
+          buttons={alertState.buttons ?? [{ text: 'OK', style: 'default', onPress: () => setAlertState(null) }]}
+          onDismiss={() => setAlertState(null)}
+        />
+      )}
     </KeyboardAvoidingView>
   );
 }

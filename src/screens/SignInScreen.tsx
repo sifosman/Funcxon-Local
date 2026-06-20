@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Platform, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
-import { showAlert } from '../utils/alert';
+import ThemedAlert from '../components/ThemedAlert';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { AuthStackParamList } from '../navigation/AuthNavigator';
 import { useAuth } from '../auth/AuthContext';
@@ -20,6 +20,7 @@ export default function SignInScreen({ navigation }: Props) {
   const [loading, setLoading] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [formSuccess, setFormSuccess] = useState<string | null>(null);
+  const [alertState, setAlertState] = useState<{visible: boolean; title: string; message: string} | null>(null);
 
   const redirectAfterSignIn = async () => {
     const pendingCheckout = await getPendingSubscriptionCheckout();
@@ -42,7 +43,7 @@ export default function SignInScreen({ navigation }: Props) {
     setFormSuccess(null);
 
     if (!email || !password) {
-      showAlert('Missing details', 'Please enter both email and password.');
+      setAlertState({ visible: true, title: 'Missing details', message: 'Please enter both email and password.' });
       setFormError('Please enter both email and password.');
       return;
     }
@@ -50,13 +51,13 @@ export default function SignInScreen({ navigation }: Props) {
     const trimmedEmail = email.trim();
     const emailRegex = /[^@]+@[^.]+\..+/;
     if (!emailRegex.test(trimmedEmail)) {
-      showAlert('Invalid email', 'Please enter a valid email address.');
+      setAlertState({ visible: true, title: 'Invalid email', message: 'Please enter a valid email address.' });
       setFormError('Please enter a valid email address.');
       return;
     }
 
     if (password.length < 6) {
-      showAlert('Weak password', 'Password should be at least 6 characters long.');
+      setAlertState({ visible: true, title: 'Weak password', message: 'Password should be at least 6 characters long.' });
       setFormError('Password should be at least 6 characters long.');
       return;
     }
@@ -66,7 +67,7 @@ export default function SignInScreen({ navigation }: Props) {
     setLoading(false);
 
     if (error) {
-      showAlert('Sign in failed', error.message);
+      setAlertState({ visible: true, title: 'Sign in failed', message: error.message });
       setFormError(error.message);
       return;
     }
@@ -79,7 +80,7 @@ export default function SignInScreen({ navigation }: Props) {
 
   const handleForgotPassword = async () => {
     if (!email) {
-      showAlert('Enter email', 'Please enter your email address first.');
+      setAlertState({ visible: true, title: 'Enter email', message: 'Please enter your email address first.' });
       return;
     }
 
@@ -88,19 +89,16 @@ export default function SignInScreen({ navigation }: Props) {
     });
 
     if (error) {
-      showAlert('Reset failed', error.message);
+      setAlertState({ visible: true, title: 'Reset failed', message: error.message });
       return;
     }
 
-    showAlert(
-      'Check your email',
-      'If an account exists for this email, a password reset link has been sent.',
-    );
+    setAlertState({ visible: true, title: 'Check your email', message: 'If an account exists for this email, a password reset link has been sent.' });
   };
   const handleGoogleSignIn = async () => {
     const { error } = await signInWithProvider('google');
     if (error) {
-      showAlert('Google sign in failed', error.message);
+      setAlertState({ visible: true, title: 'Google sign in failed', message: error.message });
     } else {
       redirectAfterSignIn();
     }
@@ -109,7 +107,7 @@ export default function SignInScreen({ navigation }: Props) {
   const handleFacebookSignIn = async () => {
     const { error } = await signInWithProvider('facebook');
     if (error) {
-      showAlert('Facebook sign in failed', error.message);
+      setAlertState({ visible: true, title: 'Facebook sign in failed', message: error.message });
     } else {
       redirectAfterSignIn();
     }
@@ -351,6 +349,16 @@ export default function SignInScreen({ navigation }: Props) {
           </View>
         </View>
       </ScrollView>
+
+      {alertState && (
+        <ThemedAlert
+          visible={alertState.visible}
+          title={alertState.title}
+          message={alertState.message}
+          buttons={[{ text: 'OK', style: 'default', onPress: () => setAlertState(null) }]}
+          onDismiss={() => setAlertState(null)}
+        />
+      )}
     </View>
   );
 }

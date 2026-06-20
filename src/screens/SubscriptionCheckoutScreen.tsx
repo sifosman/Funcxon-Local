@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Alert, Image, Modal, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Image, Modal, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -9,6 +9,7 @@ import type { ProfileStackParamList } from '../navigation/ProfileNavigator';
 import { useApplicationForm } from '../context/ApplicationFormContext';
 import { buildPayFastPaymentData, getPayFastCheckoutUrl } from '../config/payfast';
 import { supabase } from '../lib/supabaseClient';
+import ThemedAlert from '../components/ThemedAlert';
 
 const payfastLogo = require('../../assets/payfast.webp');
 
@@ -219,6 +220,7 @@ export default function SubscriptionCheckoutScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<ProfileStackParamList>>();
   const route = useRoute();
   const { updateStep4, setPortfolioType } = useApplicationForm();
+  const [alertState, setAlertState] = useState<{visible: boolean; title: string; message: string; buttons?: any[]} | null>(null);
 
   const { tierName, billing, priceLabel, isFree, productType, planKey } = (route.params ?? {}) as RouteParams;
 
@@ -379,7 +381,7 @@ export default function SubscriptionCheckoutScreen() {
 
     const priceNum = parseFloat((priceLabel || '0').replace(/[^0-9.]/g, ''));
     if (!priceNum || isNaN(priceNum)) {
-      Alert.alert('Invalid price', 'Could not determine the plan price.');
+      setAlertState({ visible: true, title: 'Invalid price', message: 'Could not determine the plan price.' });
       return;
     }
 
@@ -472,7 +474,7 @@ export default function SubscriptionCheckoutScreen() {
         routes: [{ name: nextRoute }],
       });
     } catch (err) {
-      Alert.alert('Payment Error', 'Could not open PayFast checkout. Please try again.');
+      setAlertState({ visible: true, title: 'Payment Error', message: 'Could not open PayFast checkout. Please try again.' });
     }
   };
 
@@ -778,6 +780,16 @@ export default function SubscriptionCheckoutScreen() {
           </TouchableOpacity>
         </View>
       </ScrollView>
+
+      {alertState && (
+        <ThemedAlert
+          visible={alertState.visible}
+          title={alertState.title}
+          message={alertState.message}
+          buttons={alertState.buttons ?? [{ text: 'OK', style: 'default', onPress: () => setAlertState(null) }]}
+          onDismiss={() => setAlertState(null)}
+        />
+      )}
     </View>
   );
 }

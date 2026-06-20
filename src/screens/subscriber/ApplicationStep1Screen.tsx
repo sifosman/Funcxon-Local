@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, TextInput, Alert, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView, TextInput, KeyboardAvoidingView, Platform } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -11,6 +11,7 @@ import { AddressAutocompleteInput } from '../../components/AddressAutocompleteIn
 import { useAuth } from '../../auth/AuthContext';
 import { getLatestUserApplicationByType, isBlockingApplicationStatus } from '../../lib/applicationService';
 import { getMyVenueEntitlement, isVenueFeatureEnabled } from '../../lib/venueSubscription';
+import ThemedAlert from '../../components/ThemedAlert';
 
 type ProfileStackParamList = {
   PortfolioType: undefined;
@@ -25,6 +26,7 @@ export default function ApplicationStep1Screen() {
   const { user } = useAuth();
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [canEditVenueLinks, setCanEditVenueLinks] = useState(true);
+  const [alertState, setAlertState] = useState<{visible: boolean; title: string; message: string; buttons?: any[]} | null>(null);
 
   useEffect(() => {
     async function loadVenueLinkEntitlement() {
@@ -70,11 +72,12 @@ export default function ApplicationStep1Screen() {
       field === 'tiktok';
 
     if (state.portfolioType === 'venues' && isVenueLinksField && !canEditVenueLinks) {
-      Alert.alert(
-        'Upgrade Required',
-        'Website & social media links are available on paid venue plans. Please upgrade to add these links.',
-        [{ text: 'OK' }],
-      );
+      setAlertState({
+        visible: true,
+        title: 'Upgrade Required',
+        message: 'Website & social media links are available on paid venue plans. Please upgrade to add these links.',
+        buttons: [{ text: 'OK', style: 'default', onPress: () => setAlertState(null) }],
+      });
       return;
     }
 
@@ -93,7 +96,7 @@ export default function ApplicationStep1Screen() {
     
     if (!validation.isValid) {
       setErrors(validation.errors);
-      Alert.alert('Validation Error', 'Please fix the errors before continuing');
+      setAlertState({ visible: true, title: 'Validation Error', message: 'Please fix the errors before continuing', buttons: [{ text: 'OK', style: 'default', onPress: () => setAlertState(null) }] });
       return;
     }
 
@@ -588,6 +591,16 @@ export default function ApplicationStep1Screen() {
           </View>
         </View>
       </ScrollView>
+
+      {alertState && (
+        <ThemedAlert
+          visible={alertState.visible}
+          title={alertState.title}
+          message={alertState.message}
+          buttons={alertState.buttons ?? [{ text: 'OK', style: 'default', onPress: () => setAlertState(null) }]}
+          onDismiss={() => setAlertState(null)}
+        />
+      )}
     </KeyboardAvoidingView>
   );
 }

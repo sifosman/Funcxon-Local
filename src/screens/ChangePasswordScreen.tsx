@@ -1,11 +1,12 @@
 import { useState } from 'react';
-import { Alert, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { supabase } from '../lib/supabaseClient';
 import type { ProfileStackParamList } from '../navigation/ProfileNavigator';
 import { colors, spacing, radii, typography } from '../theme';
+import ThemedAlert from '../components/ThemedAlert';
 
 export default function ChangePasswordScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<ProfileStackParamList>>();
@@ -16,26 +17,27 @@ export default function ChangePasswordScreen() {
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [alertState, setAlertState] = useState<{visible: boolean; title: string; message: string; buttons?: any[]} | null>(null);
 
   const handleSave = async () => {
     if (!currentPassword || !newPassword || !confirmPassword) {
-      Alert.alert('Missing details', 'Please complete all password fields.');
+      setAlertState({ visible: true, title: 'Missing details', message: 'Please complete all password fields.' });
       return;
     }
 
     if (newPassword.length < 6) {
-      Alert.alert('Weak password', 'Your new password must be at least 6 characters long.');
+      setAlertState({ visible: true, title: 'Weak password', message: 'Your new password must be at least 6 characters long.' });
       return;
     }
 
     if (newPassword !== confirmPassword) {
-      Alert.alert('Passwords do not match', 'Please make sure the new password fields match.');
+      setAlertState({ visible: true, title: 'Passwords do not match', message: 'Please make sure the new password fields match.' });
       return;
     }
 
     const { data: sessionResult, error: sessionError } = await supabase.auth.getSession();
     if (sessionError || !sessionResult.session?.user?.email) {
-      Alert.alert('Session expired', 'Please sign in again before changing your password.');
+      setAlertState({ visible: true, title: 'Session expired', message: 'Please sign in again before changing your password.' });
       return;
     }
 
@@ -48,7 +50,7 @@ export default function ChangePasswordScreen() {
 
     if (reauthError) {
       setSaving(false);
-      Alert.alert('Current password incorrect', reauthError.message);
+      setAlertState({ visible: true, title: 'Current password incorrect', message: reauthError.message });
       return;
     }
 
@@ -56,16 +58,14 @@ export default function ChangePasswordScreen() {
     setSaving(false);
 
     if (updateError) {
-      Alert.alert('Password update failed', updateError.message);
+      setAlertState({ visible: true, title: 'Password update failed', message: updateError.message });
       return;
     }
 
     setCurrentPassword('');
     setNewPassword('');
     setConfirmPassword('');
-    Alert.alert('Password updated', 'Your password has been changed successfully.', [
-      { text: 'OK', onPress: () => navigation.goBack() },
-    ]);
+    setAlertState({ visible: true, title: 'Password updated', message: 'Your password has been changed successfully.', buttons: [{ text: 'OK', style: 'default', onPress: () => { setAlertState(null); navigation.goBack(); } }] });
   };
 
   const renderPasswordField = (
@@ -142,7 +142,7 @@ export default function ChangePasswordScreen() {
             disabled={saving}
             style={{
               marginTop: spacing.md,
-              backgroundcolor: colors.textPrimary,
+              backgroundColor: colors.textPrimary,
               paddingVertical: spacing.md,
               borderRadius: radii.lg,
               alignItems: 'center',
@@ -154,6 +154,16 @@ export default function ChangePasswordScreen() {
           </TouchableOpacity>
         </View>
       </ScrollView>
+
+      {alertState && (
+        <ThemedAlert
+          visible={alertState.visible}
+          title={alertState.title}
+          message={alertState.message}
+          buttons={alertState.buttons ?? [{ text: 'OK', style: 'default', onPress: () => setAlertState(null) }]}
+          onDismiss={() => setAlertState(null)}
+        />
+      )}
     </View>
   );
 }

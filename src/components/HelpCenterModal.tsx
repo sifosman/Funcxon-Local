@@ -1,7 +1,9 @@
-import { useMemo } from 'react';
-import { Alert, Linking, Modal, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useMemo, useState } from 'react';
+import { Linking, Modal, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { colors, spacing, radii, typography } from '../theme';
+import { SUPPORT_EMAIL, SUPPORT_WHATSAPP } from '../utils/env';
+import ThemedAlert from './ThemedAlert';
 
 type HelpCenterModalProps = {
   visible: boolean;
@@ -10,10 +12,9 @@ type HelpCenterModalProps = {
   onDeleteAccount?: () => void;
 };
 
-const SUPPORT_EMAIL = process.env.EXPO_PUBLIC_SUPPORT_EMAIL || 'support@funxon.com';
-const SUPPORT_WHATSAPP = process.env.EXPO_PUBLIC_SUPPORT_WHATSAPP || '+27000000000';
-
 export function HelpCenterModal({ visible, onClose, onNavigateToHelp, onDeleteAccount }: HelpCenterModalProps) {
+  const [alertVisible, setAlertVisible] = useState(false);
+
   const whatsappLink = useMemo(() => {
     const number = SUPPORT_WHATSAPP.replace(/[^0-9+]/g, '');
     const message = encodeURIComponent('Hi, I need assistance with Funxon.');
@@ -38,18 +39,7 @@ export function HelpCenterModal({ visible, onClose, onNavigateToHelp, onDeleteAc
   };
 
   const handleDeleteAccount = () => {
-    Alert.alert(
-      'Delete Account',
-      'Are you sure you want to delete your account? This action cannot be undone and will permanently remove all your data.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { 
-          text: 'Delete', 
-          style: 'destructive',
-          onPress: onDeleteAccount
-        }
-      ]
-    );
+    setAlertVisible(true);
   };
 
   return (
@@ -140,6 +130,16 @@ export function HelpCenterModal({ visible, onClose, onNavigateToHelp, onDeleteAc
         </View>
       </View>
     </Modal>
+    <ThemedAlert
+      visible={alertVisible}
+      title="Delete Account"
+      message="Are you sure you want to delete your account? This action cannot be undone and will permanently remove all your data."
+      buttons={[
+        { text: 'Cancel', style: 'cancel', onPress: () => setAlertVisible(false) },
+        { text: 'Delete', style: 'destructive', onPress: () => { setAlertVisible(false); onDeleteAccount?.(); } }
+      ]}
+      onDismiss={() => setAlertVisible(false)}
+    />
   );
 }
 

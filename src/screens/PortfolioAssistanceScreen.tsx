@@ -1,10 +1,12 @@
 import { useState } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, TextInput, Alert, Linking } from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView, TextInput, Linking } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { colors, spacing, radii, typography } from '../theme';
 import { supabase } from '../lib/supabaseClient';
+import { SUPPORT_WHATSAPP } from '../utils/env';
+import ThemedAlert from '../components/ThemedAlert';
 
 type ProfileStackParamList = {
   SubscriberSuite: undefined;
@@ -47,6 +49,29 @@ const TIME_SLOTS = [
   '4:00 PM - 5:00 PM'
 ];
 
+const FAQS = [
+  {
+    question: 'How do I create a portfolio?',
+    answer: 'Go to the Subscriber Suite and tap "Update Portfolio." Fill in your business details, upload photos, and set your categories.',
+  },
+  {
+    question: 'What photos should I upload?',
+    answer: 'Upload high-quality images of your best work. Venues should show the space from multiple angles; vendors should showcase their services.',
+  },
+  {
+    question: 'How do I upgrade my plan?',
+    answer: 'Navigate to Subscription Plans from your account screen to view and select a plan that suits your needs.',
+  },
+  {
+    question: 'Can I edit my portfolio after publishing?',
+    answer: 'Yes, you can update your portfolio anytime from the Subscriber Suite.',
+  },
+  {
+    question: 'How do I receive quote requests?',
+    answer: 'Once your portfolio is live and approved, clients can send quote requests directly through your profile.',
+  },
+];
+
 export default function PortfolioAssistanceScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<ProfileStackParamList>>();
   const [showCallbackForm, setShowCallbackForm] = useState(false);
@@ -56,22 +81,22 @@ export default function PortfolioAssistanceScreen() {
     preferredTime: '',
     assistanceType: ''
   });
+  const [alertState, setAlertState] = useState<{visible: boolean; title: string; message: string; buttons?: any[]} | null>(null);
+  const [openFaqIndex, setOpenFaqIndex] = useState<number | null>(null);
+  const [showFaqSection, setShowFaqSection] = useState(false);
 
   const handleLiveChat = () => {
-    const whatsappUrl = 'https://wa.me/27812345678?text=Hi, I need help with my portfolio application.';
-    Alert.alert(
-      'Live Chat Support',
-      'You\'ll be connected to our portfolio specialist via WhatsApp for real-time assistance.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Open WhatsApp',
-          onPress: () => {
-            Linking.openURL(whatsappUrl).catch(() => null);
-          }
-        }
+    const clean = SUPPORT_WHATSAPP.replace(/\D/g, '');
+    const whatsappUrl = `https://wa.me/${clean}?text=Hi, I need help with my portfolio application.`;
+    setAlertState({
+      visible: true,
+      title: 'Live Chat Support',
+      message: "You'll be connected to our portfolio specialist via WhatsApp for real-time assistance.",
+      buttons: [
+        { text: 'Cancel', style: 'cancel', onPress: () => setAlertState(null) },
+        { text: 'Open WhatsApp', style: 'default', onPress: () => { setAlertState(null); Linking.openURL(whatsappUrl).catch(() => null); } }
       ]
-    );
+    });
   };
 
   const handleScheduleCall = () => {
@@ -79,56 +104,32 @@ export default function PortfolioAssistanceScreen() {
   };
 
   const handleVideoTutorials = () => {
-    Alert.alert(
-      'Video Tutorials',
-      'Access our library of step-by-step video guides to help you build the perfect portfolio.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { 
-          text: 'View Tutorials', 
-          onPress: () => {
-            // TODO: Navigate to video tutorials screen
-            Alert.alert('Coming Soon', 'Video tutorials library will be available soon.');
-          }
-        }
-      ]
-    );
+    setAlertState({
+      visible: true,
+      title: 'Video Tutorials',
+      message: 'Video tutorials library will be available soon. In the meantime, contact us via Live Chat for guidance.',
+      buttons: [{ text: 'OK', style: 'default', onPress: () => setAlertState(null) }]
+    });
   };
 
   const handleFAQs = () => {
-    Alert.alert(
-      'Frequently Asked Questions',
-      'Find quick answers to common questions about portfolio creation and management.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { 
-          text: 'View FAQs', 
-          onPress: () => {
-            // TODO: Navigate to FAQs screen
-            Alert.alert('Coming Soon', 'FAQ section will be available soon.');
-          }
-        }
-      ]
-    );
+    setShowFaqSection(true);
   };
 
   const handleCallbackSubmit = async () => {
     if (!formData.phoneNumber || !formData.preferredTime || !formData.assistanceType) {
-      Alert.alert('Missing Information', 'Please fill in all fields to request a callback.');
+      setAlertState({ visible: true, title: 'Missing Information', message: 'Please fill in all fields to request a callback.', buttons: [{ text: 'OK', style: 'default', onPress: () => setAlertState(null) }] });
       return;
     }
 
-    // Send admin notification about callback request
     await sendAdminNotification();
 
-    Alert.alert(
-      'Callback Requested',
-      `Thank you! We'll call you at ${formData.preferredTime} to help with ${formData.assistanceType.toLowerCase()}. You'll receive a confirmation message shortly.`,
-      [{ text: 'OK', onPress: () => {
-        setShowCallbackForm(false);
-        setFormData({ phoneNumber: '', preferredTime: '', assistanceType: '' });
-      }}]
-    );
+    setAlertState({
+      visible: true,
+      title: 'Callback Requested',
+      message: `Thank you! We'll call you at ${formData.preferredTime} to help with ${formData.assistanceType.toLowerCase()}. You'll receive a confirmation message shortly.`,
+      buttons: [{ text: 'OK', style: 'default', onPress: () => { setAlertState(null); setShowCallbackForm(false); setFormData({ phoneNumber: '', preferredTime: '', assistanceType: '' }); } }]
+    });
   };
 
   const sendAdminNotification = async () => {
@@ -480,7 +481,50 @@ export default function PortfolioAssistanceScreen() {
             </View>
           </View>
         )}
+
+        {/* FAQ Accordion */}
+        {showFaqSection && (
+          <View style={{ paddingHorizontal: spacing.lg, marginBottom: spacing.lg }}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.md }}>
+              <Text style={{ ...typography.titleMedium, color: colors.textPrimary }}>Frequently Asked Questions</Text>
+              <TouchableOpacity onPress={() => setShowFaqSection(false)}>
+                <MaterialIcons name="close" size={20} color={colors.textMuted} />
+              </TouchableOpacity>
+            </View>
+            <View style={{ gap: spacing.sm }}>
+              {FAQS.map((faq, index) => {
+                const isOpen = openFaqIndex === index;
+                return (
+                  <View key={index} style={{ backgroundColor: colors.surface, borderRadius: radii.md, borderWidth: 1, borderColor: colors.borderSubtle }}>
+                    <TouchableOpacity
+                      onPress={() => setOpenFaqIndex(isOpen ? null : index)}
+                      style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: spacing.md }}
+                    >
+                      <Text style={{ ...typography.body, color: colors.textPrimary, fontWeight: '600', flex: 1 }}>{faq.question}</Text>
+                      <MaterialIcons name={isOpen ? 'expand-less' : 'expand-more'} size={20} color={colors.textMuted} />
+                    </TouchableOpacity>
+                    {isOpen && (
+                      <View style={{ paddingHorizontal: spacing.md, paddingBottom: spacing.md }}>
+                        <Text style={{ ...typography.body, color: colors.textMuted }}>{faq.answer}</Text>
+                      </View>
+                    )}
+                  </View>
+                );
+              })}
+            </View>
+          </View>
+        )}
       </ScrollView>
+
+      {alertState && (
+        <ThemedAlert
+          visible={alertState.visible}
+          title={alertState.title}
+          message={alertState.message}
+          buttons={alertState.buttons ?? [{ text: 'OK', style: 'default', onPress: () => setAlertState(null) }]}
+          onDismiss={() => setAlertState(null)}
+        />
+      )}
     </View>
   );
 }

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Image, KeyboardAvoidingView, Linking, Platform, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
-import { showAlert } from '../utils/alert';
+import ThemedAlert from '../components/ThemedAlert';
 import { MaterialIcons } from '@expo/vector-icons';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { AttendeeStackParamList } from '../navigation/AttendeeNavigator';
@@ -47,6 +47,7 @@ export default function VenueCatalogueViewScreen({ route, navigation }: Props) {
   const [eventDate, setEventDate] = useState('');
   const [eventDetails, setEventDetails] = useState('');
   const [showQuoteForm, setShowQuoteForm] = useState(false);
+  const [alertState, setAlertState] = useState<{visible: boolean; title: string; message: string} | null>(null);
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -126,21 +127,21 @@ export default function VenueCatalogueViewScreen({ route, navigation }: Props) {
     setTimeout(() => {
       setSaving(false);
       setSaved(true);
-      showAlert('Saved', 'Your selection has been saved.');
+      setAlertState({ visible: true, title: 'Saved', message: 'Your selection has been saved.' });
     }, 400);
   };
 
   const handleSubmitQuotation = async () => {
     if (!user?.id) {
-      showAlert('Sign in required', 'Please sign in to submit a quotation.');
+      setAlertState({ visible: true, title: 'Sign in required', message: 'Please sign in to submit a quotation.' });
       return;
     }
     if (!clientName.trim() || !clientEmail.trim()) {
-      showAlert('Missing details', 'Please provide your name and email.');
+      setAlertState({ visible: true, title: 'Missing details', message: 'Please provide your name and email.' });
       return;
     }
     if (selectedItems.length === 0) {
-      showAlert('No items selected', 'Please select at least one catalogue item.');
+      setAlertState({ visible: true, title: 'No items selected', message: 'Please select at least one catalogue item.' });
       return;
     }
 
@@ -165,10 +166,10 @@ export default function VenueCatalogueViewScreen({ route, navigation }: Props) {
 
       if (insertError) throw insertError;
 
-      showAlert('Quotation Submitted', 'Your catalogue quotation has been sent to the venue. You will be notified when they respond.');
+      setAlertState({ visible: true, title: 'Quotation Submitted', message: 'Your catalogue quotation has been sent to the venue. You will be notified when they respond.' });
       setShowQuoteForm(false);
     } catch (err: any) {
-      showAlert('Error', err?.message ?? 'Failed to submit quotation.');
+      setAlertState({ visible: true, title: 'Error', message: err?.message ?? 'Failed to submit quotation.' });
     } finally {
       setSaving(false);
     }
@@ -584,6 +585,16 @@ export default function VenueCatalogueViewScreen({ route, navigation }: Props) {
           </View>
         )}
       </ScrollView>
+
+      {alertState && (
+        <ThemedAlert
+          visible={alertState.visible}
+          title={alertState.title}
+          message={alertState.message}
+          buttons={[{ text: 'OK', style: 'default', onPress: () => setAlertState(null) }]}
+          onDismiss={() => setAlertState(null)}
+        />
+      )}
     </KeyboardAvoidingView>
   );
 }
