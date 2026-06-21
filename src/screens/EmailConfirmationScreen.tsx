@@ -1,21 +1,21 @@
 import { useState } from 'react';
 import { ScrollView, Text, View, TouchableOpacity } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
+import { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { AuthStackParamList } from '../navigation/AuthNavigator';
 import { colors, spacing, radii, typography } from '../theme';
 import { PrimaryButton } from '../components/ui';
 import { useAuth } from '../auth/AuthContext';
 import ThemedAlert from '../components/ThemedAlert';
 
-type Props = {
-  navigation: { navigate: (screen: 'SignIn') => void };
-  route: { params?: { email?: string; role?: 'attendee' | 'vendor' } };
-};
+type Props = NativeStackScreenProps<AuthStackParamList, 'EmailConfirmation'>;
 
 export default function EmailConfirmationScreen({ route, navigation }: Props) {
   const { resendConfirmationEmail } = useAuth();
   const email = route.params?.email;
-  const role = route.params?.role === 'vendor' ? 'vendor' : 'attendee';
-  const roleLabel = role === 'vendor' ? 'Vendor' : 'Attendee';
+  const role = route.params?.role ?? 'attendee';
+  const roleLabel =
+    role === 'vendor' ? 'Vendor' : role === 'venue' ? 'Venue' : 'Attendee';
   const [isResending, setIsResending] = useState(false);
   const [alertState, setAlertState] = useState<{visible: boolean; title: string; message: string} | null>(null);
 

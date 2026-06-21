@@ -18,7 +18,7 @@ export default function SignUpScreen({ navigation }: Props) {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [name, setName] = useState('');
-  const [role, setRole] = useState<'attendee' | 'vendor'>('attendee');
+  const [role, setRole] = useState<'attendee' | 'vendor' | 'venue'>('attendee');
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [privacyAccepted, setPrivacyAccepted] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -62,7 +62,8 @@ export default function SignUpScreen({ navigation }: Props) {
     }
 
     const redirectBase = process.env.EXPO_PUBLIC_AUTH_REDIRECT_URL || 'funxon://';
-    const emailRedirectTo = `${redirectBase}/auth/callback/${role === 'vendor' ? 'vendor' : 'attendee'}`;
+    const callbackRole = role === 'attendee' ? 'attendee' : 'vendor';
+    const emailRedirectTo = `${redirectBase}/auth/callback/${callbackRole}`;
 
     setLoading(true);
     const { error, session } = await signUp({
@@ -116,7 +117,7 @@ export default function SignUpScreen({ navigation }: Props) {
         contentContainerStyle={{
           flexGrow: 1,
           paddingHorizontal: spacing.lg,
-          paddingTop: spacing.sm,
+          paddingTop: spacing.xs,
           paddingBottom: spacing.xl,
         }}
         keyboardShouldPersistTaps="handled"
@@ -130,25 +131,24 @@ export default function SignUpScreen({ navigation }: Props) {
             borderRadius: radii.lg,
             borderWidth: 1,
             borderColor: colors.borderSubtle,
-            padding: spacing.xl,
+            padding: spacing.lg,
             shadowColor: '#000',
             shadowOpacity: 0.08,
             shadowRadius: 10,
             shadowOffset: { width: 0, height: 4 },
           }}
         >
-          <View style={{ alignItems: 'center', marginBottom: spacing.lg }}>
+          <View style={{ alignItems: 'center', marginBottom: spacing.sm }}>
             <Text
               style={{
                 ...typography.titleLarge,
                 color: colors.textPrimary,
-                marginBottom: spacing.sm,
                 textAlign: 'center',
               }}
             >
               Create Your Account
             </Text>
-            <Text style={{ ...typography.body, color: colors.textMuted, textAlign: 'center' }}>
+            <Text style={{ ...typography.caption, color: colors.textMuted, textAlign: 'center', marginTop: spacing.xs }}>
               Join thousands of event hosts planning their perfect occasions.
             </Text>
           </View>
@@ -295,14 +295,15 @@ export default function SignUpScreen({ navigation }: Props) {
           </View>
 
           {/* Role selection */}
-          <View style={{ marginTop: spacing.sm, marginBottom: spacing.lg }}>
+          <View style={{ marginBottom: spacing.lg }}>
             <Text style={{ ...typography.caption, color: colors.textMuted, marginBottom: spacing.sm }}>
               I am a...
             </Text>
-            <View style={{ flexDirection: 'row', columnGap: spacing.sm }}>
+            <View style={{ gap: spacing.sm }}>
               {[
                 { key: 'attendee' as const, label: 'Attendee' },
-                { key: 'vendor' as const, label: 'Vendor' },
+                { key: 'vendor' as const, label: 'Vendor & Service Provider' },
+                { key: 'venue' as const, label: 'Venue' },
               ].map((option) => {
                 const selected = role === option.key;
                 return (
@@ -310,16 +311,40 @@ export default function SignUpScreen({ navigation }: Props) {
                     key={option.key}
                     onPress={() => setRole(option.key)}
                     style={{
-                      flex: 1,
+                      flexDirection: 'row',
+                      alignItems: 'center',
                       paddingVertical: spacing.md,
+                      paddingHorizontal: spacing.md,
                       borderRadius: radii.lg,
                       borderWidth: 1,
                       borderColor: selected ? colors.primary : colors.borderSubtle,
                       backgroundColor: selected ? colors.primary : colors.surface,
-                      alignItems: 'center',
-                      justifyContent: 'center',
                     }}
                   >
+                    <View
+                      style={{
+                        width: 20,
+                        height: 20,
+                        borderRadius: 10,
+                        borderWidth: 2,
+                        borderColor: selected ? '#FFFFFF' : colors.borderSubtle,
+                        backgroundColor: selected ? '#FFFFFF' : colors.surface,
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        marginRight: spacing.sm,
+                      }}
+                    >
+                      {selected && (
+                        <View
+                          style={{
+                            width: 10,
+                            height: 10,
+                            borderRadius: 5,
+                            backgroundColor: colors.primary,
+                          }}
+                        />
+                      )}
+                    </View>
                     <Text
                       style={{
                         ...typography.body,

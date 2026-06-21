@@ -57,7 +57,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       if (!userError && userRow?.role) {
         const normalizedRole = String(userRow.role).toLowerCase();
-        const isVendorRole = normalizedRole === 'vendor' || normalizedRole === 'subscriber';
+        const isVendorRole = normalizedRole === 'vendor' || normalizedRole === 'subscriber' || normalizedRole === 'venue';
         console.log('[fetchUserRole] users.role =', normalizedRole, 'isVendorRole =', isVendorRole);
         if (isVendorRole) {
           setUserRole('vendor');

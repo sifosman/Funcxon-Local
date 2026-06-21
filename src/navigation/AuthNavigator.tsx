@@ -11,7 +11,7 @@ export type AuthStackParamList = {
   Welcome: undefined;
   SignIn: undefined;
   SignUp: undefined;
-  EmailConfirmation: { email?: string; role?: 'attendee' | 'vendor' };
+  EmailConfirmation: { email?: string; role?: 'attendee' | 'vendor' | 'venue' };
   LegalDocument: { documentId: string };
   GuestPrompt: { label: string };
 };
@@ -35,7 +35,14 @@ export function AuthNavigator() {
     >
       <Stack.Screen name="Welcome" component={WelcomeScreen} options={{ headerShown: false }} />
       <Stack.Screen name="SignIn" component={SignInScreen} options={{ title: 'Sign in' }} />
-      <Stack.Screen name="SignUp" component={SignUpScreen} options={{ title: 'Create account' }} />
+      <Stack.Screen
+        name="SignUp"
+        component={SignUpScreen}
+        options={{
+          title: 'Create account',
+          headerTitleStyle: { ...typography.titleMedium, color: colors.textPrimary },
+        }}
+      />
       <Stack.Screen
         name="EmailConfirmation"
         component={EmailConfirmationScreen}
