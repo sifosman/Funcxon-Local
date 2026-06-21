@@ -151,7 +151,7 @@ export default function AccountScreen() {
 
         const status = String(vendorData?.subscription_status ?? '').toLowerCase();
         const tier = String(vendorData?.subscription_tier ?? '').toLowerCase();
-        const hasActiveSubscription = !!vendorData && (status === 'active' || status === 'trial' || tier === 'basic' || tier === 'premium' || tier === 'enterprise');
+        const hasActiveSubscription = !!vendorData && (status === 'active' || status === 'trial' || tier === 'premium' || tier === 'premium_plus');
 
         if (!hasActiveSubscription) {
             navigation.navigate('SubscriptionPlans');

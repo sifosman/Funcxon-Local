@@ -9,38 +9,25 @@ export interface SubscriptionPlan {
 
 export const subscriptionPlans: SubscriptionPlan[] = [
   {
-    id: "free",
-    name: "Free",
+    id: "get_started",
+    name: "Get Started",
     price: "R0",
     billingPeriod: "forever",
     features: [
       "Basic profile listing",
-      "Up to 8 images",
-      "Contact information display",
-      "Email support"
-    ]
-  },
-  {
-    id: "basic",
-    name: "Basic",
-    price: "TBC",
-    billingPeriod: "per month",
-    features: [
-      "Basic profile listing",
       "Up to 5 images",
       "Contact information display",
-      "Basic search visibility",
       "Email support"
     ]
   },
   {
     id: "premium",
     name: "Premium",
-    price: "TBC",
+    price: "R299",
     billingPeriod: "per month",
     features: [
       "Featured profile listing",
-      "Unlimited images & videos",
+      "Up to 25 images & 5 videos",
       "Priority search ranking",
       "Quote request management",
       "Analytics dashboard",
@@ -50,15 +37,14 @@ export const subscriptionPlans: SubscriptionPlan[] = [
     highlighted: true
   },
   {
-    id: "enterprise",
-    name: "Enterprise",
-    price: "TBC",
+    id: "premium_plus",
+    name: "Premium Plus",
+    price: "R399",
     billingPeriod: "per month",
     features: [
       "Everything in Premium",
-      "Multiple venue/service listings",
-      "Custom branding",
-      "API access",
+      "Up to 50 images & 10 videos",
+      "Featured Listings badge",
       "Dedicated account manager",
       "Advanced analytics",
       "24/7 phone support"

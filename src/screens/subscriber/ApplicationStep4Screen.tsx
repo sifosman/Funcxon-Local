@@ -54,7 +54,7 @@ export default function ApplicationStep4Screen() {
   const normalizeTierKey = (rawTierName: string): string => {
     const t = (rawTierName ?? '').trim().toLowerCase();
     // Vendor tier names
-    if (t === 'get started' || t === 'get_started' || t === 'free') return 'free';
+    if (t === 'get started' || t === 'get_started' || t === 'free') return 'get_started';
     if (t === 'premium plus' || t === 'premium_plus' || t === 'premiumplus') return 'premium_plus';
     if (t === 'premium') return 'premium';
     // Venue plan keys (already normalised in DB, e.g. 'get_started', 'monthly', '6_month', '12_month')
@@ -96,9 +96,9 @@ export default function ApplicationStep4Screen() {
         if (mapped.length === 0) {
           mapped = [
             { id: 1, tier_name: 'get_started', photo_limit: 10, price_monthly: 0, price_yearly: null, features: { video_upload_limit: 1 }, is_active: true },
-            { id: 2, tier_name: 'monthly', photo_limit: 50, price_monthly: 1499, price_yearly: null, features: { video_upload_limit: 5 }, is_active: true },
-            { id: 3, tier_name: '6_month', photo_limit: 50, price_monthly: 9995, price_yearly: null, features: { video_upload_limit: 5 }, is_active: true },
-            { id: 4, tier_name: '12_month', photo_limit: 50, price_monthly: 19990, price_yearly: null, features: { video_upload_limit: 5 }, is_active: true },
+            { id: 2, tier_name: 'monthly', photo_limit: 40, price_monthly: 1750, price_yearly: null, features: { video_upload_limit: 4 }, is_active: true },
+            { id: 3, tier_name: '6_month', photo_limit: 40, price_monthly: 9750, price_yearly: null, features: { video_upload_limit: 4 }, is_active: true },
+            { id: 4, tier_name: '12_month', photo_limit: 40, price_monthly: 18000, price_yearly: null, features: { video_upload_limit: 4 }, is_active: true },
           ];
         }
         setTiers(mapped);

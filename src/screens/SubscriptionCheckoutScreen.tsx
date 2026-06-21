@@ -260,7 +260,7 @@ export default function SubscriptionCheckoutScreen() {
 
   const normalizeVendorTierKey = (rawTierName: string): string => {
     const t = (rawTierName ?? '').trim().toLowerCase();
-    if (t === 'get started' || t === 'get_started' || t === 'free') return 'free';
+    if (t === 'get started' || t === 'get_started' || t === 'free') return 'get_started';
     if (t === 'premium plus' || t === 'premium_plus' || t === 'premiumplus') return 'premium_plus';
     if (t === 'premium') return 'premium';
     return t.replace(/\s+/g, '_');
@@ -354,6 +354,7 @@ export default function SubscriptionCheckoutScreen() {
               billing_name: fullName.trim(),
               billing_phone: normalizedPhone,
               subscription_started_at: new Date().toISOString(),
+              features: { featured: false },
             },
             { onConflict: 'user_id' },
           );
@@ -376,6 +377,7 @@ export default function SubscriptionCheckoutScreen() {
               billing_name: fullName.trim(),
               billing_phone: normalizedPhone,
               subscription_started_at: new Date().toISOString(),
+              featured_listing: false,
             },
             { onConflict: 'user_id' },
           );

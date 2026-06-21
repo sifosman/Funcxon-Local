@@ -144,7 +144,11 @@ export default function ListerPortfolioScreen() {
         throw new Error(error?.message || data?.error || 'Failed to delete account');
       }
 
-      await signOut();
+      try {
+        await signOut();
+      } catch (signOutErr) {
+        console.warn('Sign out after account deletion failed (ignored):', signOutErr);
+      }
       const rootNav = navigation.getParent()?.getParent() as any;
       rootNav?.navigate?.('Auth', { screen: 'SignIn' });
     } catch (err: any) {

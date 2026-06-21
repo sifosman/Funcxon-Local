@@ -27,7 +27,7 @@ export type AuthContextValue = {
   }) => Promise<{ error?: Error; session?: Session }>;
   signOut: () => Promise<{ error?: Error }>;
   signInWithProvider: (provider: OAuthProvider) => Promise<{ error?: Error }>;
-  resendConfirmationEmail: (email: string) => Promise<{ error?: Error }>;
+  resendConfirmationEmail: (email: string, emailRedirectTo?: string) => Promise<{ error?: Error }>;
   checkEmailExists: (email: string) => Promise<{ exists?: boolean; error?: Error }>;
 };
 
@@ -347,10 +347,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return { error: error ?? undefined };
   };
 
-  const resendConfirmationEmail: AuthContextValue['resendConfirmationEmail'] = async (email) => {
+  const resendConfirmationEmail: AuthContextValue['resendConfirmationEmail'] = async (email, emailRedirectTo) => {
     const { error } = await supabase.auth.resend({
       type: 'signup',
       email,
+      options: emailRedirectTo ? { emailRedirectTo } : undefined,
     });
     return { error: error ?? undefined };
   };

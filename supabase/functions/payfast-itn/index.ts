@@ -91,7 +91,7 @@ Deno.serve(async (req: Request) => {
   // Venue activation: match on pending_payment_id
   const { data: venueRow, error: venueErr } = await supabase
     .from('venues')
-    .select('id')
+    .select('id, subscription_plan_key, features')
     .eq('pending_payment_id', mPaymentId)
     .maybeSingle();
 
@@ -100,6 +100,11 @@ Deno.serve(async (req: Request) => {
   }
 
   if (venueRow?.id) {
+    const isPaidVenuePlan = venueRow.subscription_plan_key !== 'get_started';
+    const updatedFeatures = isPaidVenuePlan
+      ? { ...(venueRow.features ?? {}), featured: true, featured_listings: true }
+      : (venueRow.features ?? {});
+
     const { error: updErr } = await supabase
       .from('venues')
       .update({
@@ -107,6 +112,7 @@ Deno.serve(async (req: Request) => {
         subscription_started_at: nowIso,
         last_payment_at: nowIso,
         payfast_payment_id: pfPaymentId,
+        features: updatedFeatures,
       })
       .eq('id', venueRow.id);
 
@@ -118,7 +124,7 @@ Deno.serve(async (req: Request) => {
   // Vendor activation: match on pending_payment_id
   const { data: vendorRow, error: vendorErr } = await supabase
     .from('vendors')
-    .select('id')
+    .select('id, subscription_tier')
     .eq('pending_payment_id', mPaymentId)
     .maybeSingle();
 
@@ -127,6 +133,8 @@ Deno.serve(async (req: Request) => {
   }
 
   if (vendorRow?.id) {
+    const isPaidVendorTier = vendorRow.subscription_tier !== 'get_started';
+
     const { error: updErr } = await supabase
       .from('vendors')
       .update({
@@ -134,6 +142,7 @@ Deno.serve(async (req: Request) => {
         subscription_started_at: nowIso,
         last_payment_at: nowIso,
         payfast_payment_id: pfPaymentId,
+        featured_listing: isPaidVendorTier,
       })
       .eq('id', vendorRow.id);
 

@@ -35,12 +35,12 @@ export async function getVendorPhotoLimit(vendorId: number): Promise<number> {
     .eq('id', vendorId)
     .single();
 
-  if (error) return 8; // fallback to free tier limit
+  if (error) return 5; // fallback to free tier limit
   
   const { data: tier } = await supabase
-    .rpc('get_vendor_photo_limit', { vendor_tier: data.subscription_tier || 'free' });
+    .rpc('get_vendor_photo_limit', { vendor_tier: data.subscription_tier || 'get_started' });
 
-  return tier || 8;
+  return tier || 5;
 }
 
 export async function getVendorPhotoCount(vendorId: number): Promise<number> {

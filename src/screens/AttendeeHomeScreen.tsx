@@ -53,6 +53,7 @@ export type VendorListItem = {
   vendor_tags?: string[] | null;
   capacity?: number | null;
   features?: Record<string, any> | null;
+  featured_listing?: boolean;
   type: 'vendor' | 'venue'; // Discriminator
 };
 
@@ -479,9 +480,17 @@ export default function AttendeeHomeScreen() {
             <Text style={{ ...typography.titleMedium, color: colors.textPrimary }} numberOfLines={1}>
               {item.name ?? 'Untitled'}
             </Text>
-            <Text style={{ ...typography.caption, color: colors.textPrimary, marginTop: 2 }}>
-              {item.type === 'venue' ? 'Venue' : 'Vendor'}
-            </Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 2 }}>
+              <Text style={{ ...typography.caption, color: colors.textPrimary }}>
+                {item.type === 'venue' ? 'Venue' : 'Vendor'}
+              </Text>
+              {item.featured_listing && (
+                <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#FFD700', paddingHorizontal: 6, paddingVertical: 2, borderRadius: radii.sm }}>
+                  <MaterialIcons name="star" size={10} color="#000000" />
+                  <Text style={{ ...typography.caption, color: '#000000', fontWeight: '700', fontSize: 9, marginLeft: 2 }}>FEATURED</Text>
+                </View>
+              )}
+            </View>
 
             <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: spacing.xs }}>
               <MaterialIcons name="star" size={16} color={colors.textPrimary} />
@@ -804,6 +813,7 @@ export default function AttendeeHomeScreen() {
             category_id: null,
             capacity: v.venue_capacity ?? null,
             features: v.features ?? null,
+            featured_listing: true,
             type: 'venue',
           };
         });

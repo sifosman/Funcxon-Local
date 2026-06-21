@@ -7,6 +7,7 @@ import { colors, spacing, radii, typography } from '../theme';
 import { PrimaryButton } from '../components/ui';
 import { useAuth } from '../auth/AuthContext';
 import ThemedAlert from '../components/ThemedAlert';
+import * as Linking from 'expo-linking';
 
 type Props = NativeStackScreenProps<AuthStackParamList, 'EmailConfirmation'>;
 
@@ -28,7 +29,9 @@ export default function EmailConfirmationScreen({ route, navigation }: Props) {
 
     setIsResending(true);
     try {
-      const { error } = await resendConfirmationEmail(email);
+      const callbackRole = role === 'attendee' ? 'attendee' : 'vendor';
+      const emailRedirectTo = Linking.createURL(`auth/callback/${callbackRole}`);
+      const { error } = await resendConfirmationEmail(email, emailRedirectTo);
       if (error) {
         setAlertState({ visible: true, title: 'Error', message: error.message });
       } else {

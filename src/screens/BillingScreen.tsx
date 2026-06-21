@@ -89,13 +89,13 @@ export default function BillingScreen() {
                 const { data: tierData } = await supabase
                     .from('subscription_tiers')
                     .select('price_monthly, price_yearly')
-                    .eq('tier_name', vendorData.subscription_tier || 'free')
+                    .eq('tier_name', vendorData.subscription_tier || 'get_started')
                     .maybeSingle();
 
                 setBilling({
                     vendor_id: vendorData.id,
                     vendor_name: vendorData.name,
-                    subscription_tier: vendorData.subscription_tier || 'free',
+                    subscription_tier: vendorData.subscription_tier || 'get_started',
                     subscription_status: vendorData.subscription_status || 'inactive',
                     billing_period: vendorData.billing_period,
                     billing_email: vendorData.billing_email || vendorData.email,
@@ -166,7 +166,7 @@ export default function BillingScreen() {
 
     const handlePayNow = async () => {
         if (!billing) return;
-        const isFree = billing.subscription_tier === 'free';
+        const isFree = billing.subscription_tier === 'get_started';
         if (isFree) {
             setAlertState({ visible: true, title: 'Free Plan', message: 'Your plan is free and does not require payment. Upgrade to a paid plan for more features.' });
             return;
@@ -244,10 +244,9 @@ export default function BillingScreen() {
 
     const getTierColor = (tier: string) => {
         switch (tier.toLowerCase()) {
-            case 'free': return colors.textMuted;
-            case 'basic': return colors.primary;
+            case 'get_started': return colors.textMuted;
             case 'premium': return '#8B5CF6';
-            case 'enterprise': return '#DC2626';
+            case 'premium_plus': return '#DC2626';
             default: return colors.textPrimary;
         }
     };
@@ -308,7 +307,7 @@ export default function BillingScreen() {
         );
     }
 
-    const isFree = billing ? billing.subscription_tier === 'free' : true;
+    const isFree = billing ? billing.subscription_tier === 'get_started' : true;
     const currentPrice = billing
         ? (billing.billing_period === 'yearly' ? billing.price_yearly : billing.price_monthly)
         : null;

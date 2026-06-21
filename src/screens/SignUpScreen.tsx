@@ -5,6 +5,7 @@ import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { AuthStackParamList } from '../navigation/AuthNavigator';
 import { useAuth } from '../auth/AuthContext';
 import { colors, spacing, radii, typography } from '../theme';
+import * as Linking from 'expo-linking';
 import { PrimaryButton, OutlineButton } from '../components/ui';
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 
@@ -61,9 +62,8 @@ export default function SignUpScreen({ navigation }: Props) {
       return;
     }
 
-    const redirectBase = process.env.EXPO_PUBLIC_AUTH_REDIRECT_URL || 'funxon://';
     const callbackRole = role === 'attendee' ? 'attendee' : 'vendor';
-    const emailRedirectTo = `${redirectBase}/auth/callback/${callbackRole}`;
+    const emailRedirectTo = Linking.createURL(`auth/callback/${callbackRole}`);
 
     setLoading(true);
     const { exists: emailExists, error: checkError } = await checkEmailExists(trimmedEmail);

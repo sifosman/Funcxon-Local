@@ -1,3 +1,5 @@
 {
-  "importMap": "./import_map.json"
+  "name": "delete-user-account",
+  "version": "1.0.0",
+  "description": "Delete the authenticated user and all associated data"
 }

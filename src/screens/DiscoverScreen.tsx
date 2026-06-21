@@ -302,6 +302,7 @@ export default function DiscoverScreen() {
           venue_capacity: venue.venue_capacity,
           amenities: venue.amenities,
           features: venue.features,
+          featured_listing: Boolean(venue.features?.featured),
           type: 'venue',
         };
       });
@@ -491,7 +492,7 @@ export default function DiscoverScreen() {
       const matchesRating = minRating == null || (typeof item.rating === 'number' && item.rating >= minRating);
       const matchesPrice = !onlyWithPrice || !!item.price_range;
       const matchesCategory = category === 'all' || itemCategory === category || (category === 'vendors' && item.type === 'vendor' && itemCategory !== 'services');
-      const matchesFeatured = !featuredOnly || item.type === 'venue' || item.type === 'vendor';
+      const matchesFeatured = !featuredOnly || item.featured_listing === true;
 
       return (
         matchesSearch &&
@@ -565,6 +566,7 @@ export default function DiscoverScreen() {
       if (typeof item.rating === 'number') score += item.rating * 4;
       if (typeof item.review_count === 'number') score += Math.min(item.review_count, 30) / 3;
       if (item.type === 'venue') score += 4;
+      if (item.featured_listing) score += 50;
 
       return score;
     };
@@ -592,6 +594,7 @@ export default function DiscoverScreen() {
 
   const featuredItems = useMemo(() => {
     return [...safeData]
+      .filter((item) => item.featured_listing === true)
       .sort((a, b) => ((b.rating ?? 0) - (a.rating ?? 0)) || ((b.review_count ?? 0) - (a.review_count ?? 0)))
       .slice(0, 6);
   }, [safeData]);
@@ -789,9 +792,17 @@ export default function DiscoverScreen() {
               <Text style={{ ...typography.titleMedium, color: colors.textPrimary }} numberOfLines={1}>
                 {item.name ?? 'Untitled'}
               </Text>
-              <Text style={{ ...typography.caption, color: colors.textPrimary, marginTop: 2 }}>
-                {item.type === 'venue' ? 'Venue' : classifyCategory(item) === 'services' ? 'Service' : 'Vendor'}
-              </Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 2 }}>
+                <Text style={{ ...typography.caption, color: colors.textPrimary }}>
+                  {item.type === 'venue' ? 'Venue' : classifyCategory(item) === 'services' ? 'Service' : 'Vendor'}
+                </Text>
+                {item.featured_listing && (
+                  <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#FFD700', paddingHorizontal: 6, paddingVertical: 2, borderRadius: radii.sm, marginLeft: spacing.xs }}>
+                    <MaterialIcons name="star" size={10} color="#000000" />
+                    <Text style={{ ...typography.caption, color: '#000000', fontWeight: '700', fontSize: 9, marginLeft: 2 }}>FEATURED</Text>
+                  </View>
+                )}
+              </View>
             </View>
             {item.price_range ? (
               <View style={{ backgroundColor: colors.accent, paddingHorizontal: spacing.sm, paddingVertical: 6, borderRadius: radii.full }}>

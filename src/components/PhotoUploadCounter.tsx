@@ -54,11 +54,19 @@ export function PhotoUploadCounter({ vendorId, onUpgradePress }: PhotoUploadCoun
 
   const getTierBadgeColor = (tier: string) => {
     switch (tier?.toLowerCase()) {
-      case 'basic': return colors.primary;
       case 'premium': return '#8B5CF6';
-      case 'enterprise': return '#DC2626';
-      case 'free':
+      case 'premium_plus': return '#FFD700';
+      case 'get_started':
       default: return colors.textMuted;
+    }
+  };
+
+  const getTierDisplayName = (tier: string) => {
+    switch (tier?.toLowerCase()) {
+      case 'get_started': return 'GET STARTED';
+      case 'premium': return 'PREMIUM';
+      case 'premium_plus': return 'PREMIUM PLUS';
+      default: return (tier || 'FREE').toUpperCase();
     }
   };
 
@@ -81,7 +89,7 @@ export function PhotoUploadCounter({ vendorId, onUpgradePress }: PhotoUploadCoun
         
         <View style={[styles.tierBadge, { backgroundColor: getTierBadgeColor(subscription_tier) }]}>
           <Text style={styles.tierText}>
-            {subscription_tier?.toUpperCase() || 'FREE'}
+            {getTierDisplayName(subscription_tier)}
           </Text>
         </View>
       </View>

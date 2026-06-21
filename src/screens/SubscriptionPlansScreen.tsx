@@ -112,7 +112,7 @@ export default function SubscriptionPlansScreen() {
       {
         key: 'get_started',
         title: 'Get Started',
-        subtitle: 'Perfect for trying us out',
+        subtitle: 'Your business is seen',
         badge: 'Free',
         priceMonthly: 'R0',
         priceYearly: 'R0',
@@ -153,12 +153,12 @@ export default function SubscriptionPlansScreen() {
       {
         key: 'premium_plus',
         title: 'Premium Plus',
-        subtitle: 'Maximum Exposure',
+        subtitle: 'Maximum Exposure & Bookings',
         badge: 'Best Value',
         priceMonthly: 'R399',
         priceYearly: 'R4,389',
         saveLabel: '1 Month Free',
-        outcomes: 'Maximum Exposure',
+        outcomes: 'Maximum Exposure & Bookings',
         theme: {
           background: '#000000',
           backgroundLight: '#1a1a5c',
@@ -179,18 +179,19 @@ export default function SubscriptionPlansScreen() {
 
   const features: VendorFeature[] = useMemo(
     () => [
-      { label: 'Photo Uploads', get_started: '10', premium: '40', premium_plus: '60' },
-      { label: 'Video uploads', get_started: false, premium: '5', premium_plus: '10' },
+      { label: 'Photo Uploads', get_started: '5', premium: '25', premium_plus: '50' },
+      { label: 'Video uploads', get_started: '0', premium: '5', premium_plus: '10' },
       { label: 'Catalogue / Pricelist', get_started: 'Up to 10', premium: 'Full', premium_plus: 'Full' },
       { label: 'Portfolio build assistance', get_started: true, premium: true, premium_plus: true },
       { label: 'Calendar availability', get_started: true, premium: true, premium_plus: true },
       { label: 'Online quote requests', get_started: true, premium: true, premium_plus: true },
       { label: 'Full-time helpdesk support', get_started: true, premium: true, premium_plus: true },
-      { label: 'Ratings & reviews', get_started: false, premium: true, premium_plus: true },
+      { label: 'Ratings & reviews', get_started: true, premium: true, premium_plus: true },
       { label: 'Analytics & stats', get_started: false, premium: true, premium_plus: true },
       { label: 'WhatsApp chat', get_started: false, premium: true, premium_plus: true },
       { label: 'Website & social links', get_started: false, premium: true, premium_plus: true },
       { label: 'Edit portfolio anytime', get_started: true, premium: true, premium_plus: true },
+      { label: 'Featured Listings', get_started: false, premium: false, premium_plus: true },
       { label: 'Dedicated Portfolio Manager', get_started: false, premium: false, premium_plus: true },
     ],
     [],

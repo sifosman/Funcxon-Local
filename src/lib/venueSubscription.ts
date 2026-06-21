@@ -16,7 +16,8 @@ export type VenueFeatureKey =
   | 'analytics'
   | 'quote_requests'
   | 'website_social_links'
-  | 'instant_tour_bookings';
+  | 'instant_tour_bookings'
+  | 'featured_listings';
 
 const FALLBACK: VenueSubscriptionEntitlement = {
   planKey: 'get_started',
@@ -101,6 +102,10 @@ export function isVenueFeatureEnabled(ent: VenueSubscriptionEntitlement, feature
     }
     case 'instant_tour_bookings': {
       const flag = readFeatureFlag(ent.features, ['instant_tour_bookings', 'instant_bookings', 'tour_bookings']);
+      return flag ?? planBased;
+    }
+    case 'featured_listings': {
+      const flag = readFeatureFlag(ent.features, ['featured_listings', 'featured']);
       return flag ?? planBased;
     }
     default:

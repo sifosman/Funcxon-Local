@@ -105,7 +105,7 @@ export default function VenueListingPlansScreen() {
       {
         key: 'get_started',
         title: 'Get Started',
-        subtitle: 'Perfect for trying us out',
+        subtitle: '2 months free',
         badge: 'Free',
         priceNow: 'R0',
         outcomes: 'Get Noticed',
@@ -124,10 +124,11 @@ export default function VenueListingPlansScreen() {
       {
         key: 'monthly',
         title: 'Monthly',
-        subtitle: 'Flexible monthly billing',
-        priceWas: 'R1,999',
-        priceNow: 'R1,499',
-        outcomes: 'Maximum Exposure',
+        subtitle: 'Unlock Full Features',
+        priceWas: 'R2,499',
+        priceNow: 'R1,750',
+        saveLabel: 'SAVE 30%',
+        outcomes: 'Unlock Full Features',
         theme: {
           background: '#030255',
           backgroundLight: '#1A1948',
@@ -144,10 +145,10 @@ export default function VenueListingPlansScreen() {
         key: '6_month',
         title: '6-Month',
         subtitle: 'Most popular choice',
-        badge: 'Best Value',
-        priceWas: 'R11,994',
-        priceNow: 'R9,995',
-        saveLabel: 'Save R1,999',
+        badge: 'Most Popular',
+        priceWas: 'R15,000',
+        priceNow: 'R9,750',
+        saveLabel: 'SAVE 35%',
         outcomes: 'Maximum Exposure',
         theme: {
           background: '#1e3a8a',
@@ -165,10 +166,10 @@ export default function VenueListingPlansScreen() {
         key: '12_month',
         title: '12-Month',
         subtitle: 'Maximum savings',
-        badge: 'Super Saver',
-        priceWas: 'R23,988',
-        priceNow: 'R19,990',
-        saveLabel: 'Save R3,998',
+        badge: 'Maximum savings',
+        priceWas: 'R30,000',
+        priceNow: 'R18,000',
+        saveLabel: 'SAVE 40%',
         outcomes: 'Maximum Exposure',
         theme: {
           background: '#000000',
@@ -190,9 +191,9 @@ export default function VenueListingPlansScreen() {
 
   const features: VenueFeature[] = useMemo(
     () => [
-      { label: 'Photo Uploads', get_started: '10', monthly: '50', '6_month': '50', '12_month': '50' },
-      { label: 'Video uploads', get_started: '1', monthly: '5', '6_month': '5', '12_month': '5' },
-      { label: 'Catalogue / Pricelist', get_started: false, monthly: true, '6_month': true, '12_month': true },
+      { label: 'Photo Uploads', get_started: '10', monthly: '40', '6_month': '40', '12_month': '40' },
+      { label: 'Video uploads', get_started: '1', monthly: '4', '6_month': '4', '12_month': '4' },
+      { label: 'Catalogue / Pricelist', get_started: true, monthly: true, '6_month': true, '12_month': true },
       {
         label: 'Portfolio Build & Manage assistance',
         get_started: true,
@@ -208,10 +209,10 @@ export default function VenueListingPlansScreen() {
         '6_month': true,
         '12_month': true,
       },
-      { label: 'Analytics & stats', get_started: false, monthly: true, '6_month': true, '12_month': true },
+      { label: 'Analytics & stats', get_started: true, monthly: true, '6_month': true, '12_month': true },
       {
         label: 'Online quote requests & updates',
-        get_started: false,
+        get_started: true,
         monthly: true,
         '6_month': true,
         '12_month': true,
@@ -227,7 +228,7 @@ export default function VenueListingPlansScreen() {
       {
         label: 'Website & social media links',
         get_started: false,
-        monthly: true,
+        monthly: false,
         '6_month': true,
         '12_month': true,
       },
@@ -240,6 +241,7 @@ export default function VenueListingPlansScreen() {
         '6_month': true,
         '12_month': true,
       },
+      { label: 'Featured Listings', get_started: false, monthly: true, '6_month': true, '12_month': true },
     ],
     [],
   );
