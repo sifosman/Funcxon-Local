@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useState } from 'react';
-import { ActivityIndicator, FlatList, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, FlatList, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useQuery } from '@tanstack/react-query';
@@ -28,6 +28,7 @@ type QuoteRequest = {
   quote_amount?: number | null;
   created_at?: string | null;
   requirements?: string | null;
+  notes?: string | null;
 };
 
 type VendorSeed = {
@@ -47,6 +48,8 @@ export default function QuotesScreen() {
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState<'all' | 'pending' | 'finalised' | 'tours'>('all');
   const [actionLoadingId, setActionLoadingId] = useState<number | string | null>(null);
+  const [editingNotesId, setEditingNotesId] = useState<number | string | null>(null);
+  const [notesDraft, setNotesDraft] = useState('');
   const [alertState, setAlertState] = useState<{visible: boolean; title: string; message: string; buttons?: any[]} | null>(null);
 
   const { data, isLoading, error, refetch } = useQuery<QuoteRequest[]>({
@@ -140,7 +143,7 @@ export default function QuotesScreen() {
 
       const { data: venueQuotes, error: venueError } = await supabase
         .from('venue_quote_requests')
-        .select('id, listing_id, requester_name, requester_email, status, message, event_date, created_at')
+        .select('id, listing_id, requester_name, requester_email, status, message, event_date, created_at, requirements')
         .eq('requester_user_id', user.id) // venue requests use the auth.uid
         .order('id', { ascending: false })
         .limit(50);
@@ -166,6 +169,7 @@ export default function QuotesScreen() {
         quote_amount: q.quote_amount,
         created_at: q.created_at,
         requirements: q.requirements,
+        notes: q.requirements,
       }));
 
       const formattedVenueQuotes: QuoteRequest[] = (venueQuotes ?? []).map(q => ({
@@ -184,7 +188,8 @@ export default function QuotesScreen() {
         budget: null,
         quote_amount: null,
         created_at: q.created_at,
-        requirements: q.message,
+        requirements: q.requirements,
+        notes: q.requirements,
       }));
 
       const allQuotes = [...formattedVendorQuotes, ...formattedVenueQuotes].sort((a, b) => {
@@ -610,6 +615,109 @@ export default function QuotesScreen() {
                   {item.details}
                 </Text>
               )}
+
+              {/* Notes field */}
+              <View style={{ marginTop: spacing.sm }}>
+                {editingNotesId === item.id ? (
+                  <View>
+                    <Text style={{ ...typography.caption, color: colors.textMuted, marginBottom: spacing.xs }}>Notes</Text>
+                    <TextInput
+                      value={notesDraft}
+                      onChangeText={setNotesDraft}
+                      placeholder="Add notes about this quote..."
+                      placeholderTextColor={colors.textMuted}
+                      multiline
+                      style={{
+                        borderWidth: 1,
+                        borderColor: colors.borderSubtle,
+                        borderRadius: radii.md,
+                        paddingHorizontal: spacing.sm,
+                        paddingVertical: spacing.sm,
+                        backgroundColor: colors.surfaceMuted,
+                        color: colors.textPrimary,
+                        minHeight: 60,
+                        textAlignVertical: 'top',
+                      }}
+                    />
+                    <View style={{ flexDirection: 'row', gap: spacing.sm, marginTop: spacing.xs }}>
+                      <TouchableOpacity
+                        onPress={async () => {
+                          try {
+                            setActionLoadingId(item.id);
+                            const tableName = item.is_venue ? 'venue_quote_requests' : 'quote_requests';
+                            const { error } = await supabase
+                              .from(tableName)
+                              .update({ requirements: notesDraft || null })
+                              .eq('id', item.original_id ?? item.id);
+                            if (error) throw error;
+                            await refetch();
+                          } catch (err: any) {
+                            setAlertState({ visible: true, title: 'Error', message: err?.message ?? 'Failed to save notes' });
+                          } finally {
+                            setActionLoadingId(null);
+                            setEditingNotesId(null);
+                          }
+                        }}
+                        disabled={actionLoadingId === item.id}
+                        style={{
+                          flex: 1,
+                          paddingVertical: spacing.xs,
+                          borderRadius: radii.sm,
+                          backgroundColor: colors.primary,
+                          alignItems: 'center',
+                          opacity: actionLoadingId === item.id ? 0.7 : 1,
+                        }}
+                      >
+                        <Text style={{ ...typography.caption, color: '#FFFFFF', fontWeight: '600' }}>
+                          {actionLoadingId === item.id ? 'Saving...' : 'Save'}
+                        </Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        onPress={() => { setEditingNotesId(null); setNotesDraft(''); }}
+                        style={{
+                          flex: 1,
+                          paddingVertical: spacing.xs,
+                          borderRadius: radii.sm,
+                          borderWidth: 1,
+                          borderColor: colors.borderSubtle,
+                          alignItems: 'center',
+                        }}
+                      >
+                        <Text style={{ ...typography.caption, color: colors.textSecondary }}>Cancel</Text>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                ) : (
+                  <View>
+                    {item.notes ? (
+                      <View style={{
+                        padding: spacing.sm,
+                        backgroundColor: colors.surfaceMuted,
+                        borderRadius: radii.md,
+                        borderLeftWidth: 3,
+                        borderLeftColor: colors.textMuted,
+                      }}>
+                        <Text style={{ ...typography.caption, color: colors.textMuted, fontWeight: '600' }}>Notes</Text>
+                        <Text style={{ ...typography.caption, color: colors.textSecondary, marginTop: 2 }}>
+                          {item.notes}
+                        </Text>
+                      </View>
+                    ) : null}
+                    <TouchableOpacity
+                      onPress={() => {
+                        setNotesDraft(item.notes ?? '');
+                        setEditingNotesId(item.id);
+                      }}
+                      style={{ flexDirection: 'row', alignItems: 'center', marginTop: spacing.xs }}
+                    >
+                      <MaterialIcons name="edit-note" size={16} color={colors.primary} />
+                      <Text style={{ ...typography.caption, color: colors.primary, marginLeft: spacing.xs }}>
+                        {item.notes ? 'Edit notes' : 'Add notes'}
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                )}
+              </View>
 
               {item.requirements && item.status === 'tour_requested' && (
                 <View style={{ 

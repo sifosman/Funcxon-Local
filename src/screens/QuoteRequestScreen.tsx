@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { KeyboardAvoidingView, Platform, ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import { KeyboardAvoidingView, Platform, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 
@@ -10,6 +10,13 @@ import { PrimaryButton, ThemedInput } from '../components/ui';
 import { useAuth } from '../auth/AuthContext';
 import ThemedAlert from '../components/ThemedAlert';
 
+type LineItem = {
+  id: number;
+  name: string;
+  quantity: string;
+  price: string;
+};
+
 type Props = NativeStackScreenProps<AttendeeStackParamList, 'QuoteRequest'>;
 
 export default function QuoteRequestScreen({ route, navigation }: Props) {
@@ -19,9 +26,56 @@ export default function QuoteRequestScreen({ route, navigation }: Props) {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [eventDetails, setEventDetails] = useState('');
+  const [lineItems, setLineItems] = useState<LineItem[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [loadingEdit, setLoadingEdit] = useState(false);
   const [alertState, setAlertState] = useState<{visible: boolean; title: string; message: string; buttons?: any[]} | null>(null);
+
+  const addLineItem = () => {
+    setLineItems(prev => [...prev, { id: Date.now(), name: '', quantity: '1', price: '' }]);
+  };
+
+  const updateLineItem = (id: number, field: keyof LineItem, value: string) => {
+    setLineItems(prev => prev.map(item => item.id === id ? { ...item, [field]: value } : item));
+  };
+
+  const removeLineItem = (id: number) => {
+    setLineItems(prev => prev.filter(item => item.id !== id));
+  };
+
+  const lineItemsTotal = lineItems.reduce((sum, item) => {
+    const qty = parseFloat(item.quantity) || 0;
+    const price = parseFloat(item.price) || 0;
+    return sum + (qty * price);
+  }, 0);
+
+  const formatLineItemsForStorage = () => {
+    const validItems = lineItems.filter(item => item.name.trim());
+    if (validItems.length === 0) return null;
+    return JSON.stringify(validItems.map(item => ({
+      name: item.name.trim(),
+      quantity: parseFloat(item.quantity) || 1,
+      price: parseFloat(item.price) || 0,
+    })));
+  };
+
+  const parseLineItemsFromStorage = (raw: string | null): LineItem[] => {
+    if (!raw) return [];
+    try {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) {
+        return parsed.map((item: any, i: number) => ({
+          id: Date.now() + i,
+          name: item.name || '',
+          quantity: String(item.quantity || 1),
+          price: String(item.price || ''),
+        }));
+      }
+    } catch {
+      // Not JSON, it's plain text from older format
+    }
+    return [];
+  };
 
   useEffect(() => {
     if (!editMode || !quoteId) return;
@@ -31,24 +85,28 @@ export default function QuoteRequestScreen({ route, navigation }: Props) {
         if (type === 'venue') {
           const { data } = await supabase
             .from('venue_quote_requests')
-            .select('requester_name, requester_email, message')
+            .select('requester_name, requester_email, message, line_items')
             .eq('id', quoteId)
             .maybeSingle();
           if (data) {
-            setName(data.requester_name ?? '');
-            setEmail(data.requester_email ?? '');
-            setEventDetails(data.message ?? '');
+            const d = data as any;
+            setName(d.requester_name ?? '');
+            setEmail(d.requester_email ?? '');
+            setEventDetails(d.message ?? '');
+            setLineItems(parseLineItemsFromStorage(d.line_items ?? null));
           }
         } else {
           const { data } = await supabase
             .from('quote_requests')
-            .select('name, email, details')
+            .select('name, email, details, line_items')
             .eq('id', quoteId)
             .maybeSingle();
           if (data) {
-            setName(data.name ?? '');
-            setEmail(data.email ?? '');
-            setEventDetails(data.details ?? '');
+            const d = data as any;
+            setName(d.name ?? '');
+            setEmail(d.email ?? '');
+            setEventDetails(d.details ?? '');
+            setLineItems(parseLineItemsFromStorage(d.line_items ?? null));
           }
         }
       } catch (e) {
@@ -73,13 +131,13 @@ export default function QuoteRequestScreen({ route, navigation }: Props) {
         if (type === 'venue') {
           const { error: updateError } = await supabase
             .from('venue_quote_requests')
-            .update({ requester_name: name, requester_email: email, message: eventDetails || null })
+            .update({ requester_name: name, requester_email: email, message: eventDetails || null, line_items: formatLineItemsForStorage() })
             .eq('id', quoteId);
           if (updateError) throw updateError;
         } else {
           const { error: updateError } = await supabase
             .from('quote_requests')
-            .update({ name, email, details: eventDetails || null })
+            .update({ name, email, details: eventDetails || null, line_items: formatLineItemsForStorage() })
             .eq('id', quoteId);
           if (updateError) throw updateError;
         }
@@ -101,6 +159,7 @@ export default function QuoteRequestScreen({ route, navigation }: Props) {
             requester_phone: null,
             event_date: null,
             message: eventDetails || null,
+            line_items: formatLineItemsForStorage(),
             status: 'pending',
           })
           .select('id')
@@ -154,6 +213,7 @@ export default function QuoteRequestScreen({ route, navigation }: Props) {
             email,
             status: 'pending',
             details: eventDetails || null,
+            line_items: formatLineItemsForStorage(),
           })
           .select('id')
           .single();
@@ -204,6 +264,7 @@ export default function QuoteRequestScreen({ route, navigation }: Props) {
           vendorBusinessName: vendorName,
           vendorEmail: vendor.email,
           eventDetails: eventDetails || undefined,
+          lineItems: lineItems.filter(i => i.name.trim()).map(i => ({ name: i.name, quantity: parseFloat(i.quantity) || 1, price: parseFloat(i.price) || 0 })),
         },
       });
 
@@ -241,6 +302,7 @@ export default function QuoteRequestScreen({ route, navigation }: Props) {
           vendorBusinessName: venueName,
           vendorEmail: venue.contact_email,
           eventDetails: eventDetails || undefined,
+          lineItems: lineItems.filter(i => i.name.trim()).map(i => ({ name: i.name, quantity: parseFloat(i.quantity) || 1, price: parseFloat(i.price) || 0 })),
         },
       });
 
@@ -265,6 +327,7 @@ export default function QuoteRequestScreen({ route, navigation }: Props) {
           vendorId: vendorId,
           vendorName: vendorName,
           quoteDetails: eventDetails || undefined,
+          lineItems: lineItems.filter(i => i.name.trim()).map(i => ({ name: i.name, quantity: parseFloat(i.quantity) || 1, price: parseFloat(i.price) || 0 })),
         },
       });
 
@@ -401,6 +464,116 @@ export default function QuoteRequestScreen({ route, navigation }: Props) {
           numberOfLines={4}
           style={{ minHeight: 80, textAlignVertical: 'top' }}
         />
+
+        {/* Requested Items (Catalogue-style line items) */}
+        <View style={{ marginTop: spacing.lg }}>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.sm }}>
+            <Text style={{ ...typography.titleMedium, color: colors.textPrimary }}>
+              Requested Items
+            </Text>
+            <TouchableOpacity onPress={addLineItem} style={{ flexDirection: 'row', alignItems: 'center' }}>
+              <MaterialIcons name="add-circle" size={20} color={colors.primary} />
+              <Text style={{ ...typography.caption, color: colors.primary, marginLeft: spacing.xs, fontWeight: '600' }}>Add Item</Text>
+            </TouchableOpacity>
+          </View>
+
+          {lineItems.map((item) => (
+            <View
+              key={item.id}
+              style={{
+                borderWidth: 1,
+                borderColor: colors.borderSubtle,
+                borderRadius: radii.md,
+                padding: spacing.sm,
+                marginBottom: spacing.sm,
+                backgroundColor: colors.surfaceMuted,
+              }}
+            >
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.xs }}>
+                <Text style={{ ...typography.caption, color: colors.textMuted, fontWeight: '600' }}>Item</Text>
+                <TouchableOpacity onPress={() => removeLineItem(item.id)}>
+                  <MaterialIcons name="close" size={16} color={colors.textMuted} />
+                </TouchableOpacity>
+              </View>
+              <TextInput
+                value={item.name}
+                onChangeText={(v) => updateLineItem(item.id, 'name', v)}
+                placeholder="Item name (e.g. Venue hire, Catering package)"
+                placeholderTextColor={colors.textMuted}
+                style={{
+                  borderWidth: 1,
+                  borderColor: colors.borderSubtle,
+                  borderRadius: radii.sm,
+                  paddingHorizontal: spacing.sm,
+                  paddingVertical: spacing.xs,
+                  backgroundColor: colors.surface,
+                  color: colors.textPrimary,
+                  marginBottom: spacing.xs,
+                }}
+              />
+              <View style={{ flexDirection: 'row', gap: spacing.xs }}>
+                <View style={{ flex: 0.3 }}>
+                  <Text style={{ ...typography.caption, color: colors.textMuted, marginBottom: 2 }}>Qty</Text>
+                  <TextInput
+                    value={item.quantity}
+                    onChangeText={(v) => updateLineItem(item.id, 'quantity', v)}
+                    placeholder="1"
+                    placeholderTextColor={colors.textMuted}
+                    keyboardType="numeric"
+                    style={{
+                      borderWidth: 1,
+                      borderColor: colors.borderSubtle,
+                      borderRadius: radii.sm,
+                      paddingHorizontal: spacing.sm,
+                      paddingVertical: spacing.xs,
+                      backgroundColor: colors.surface,
+                      color: colors.textPrimary,
+                    }}
+                  />
+                </View>
+                <View style={{ flex: 0.7 }}>
+                  <Text style={{ ...typography.caption, color: colors.textMuted, marginBottom: 2 }}>Est. Price (R)</Text>
+                  <TextInput
+                    value={item.price}
+                    onChangeText={(v) => updateLineItem(item.id, 'price', v)}
+                    placeholder="0"
+                    placeholderTextColor={colors.textMuted}
+                    keyboardType="numeric"
+                    style={{
+                      borderWidth: 1,
+                      borderColor: colors.borderSubtle,
+                      borderRadius: radii.sm,
+                      paddingHorizontal: spacing.sm,
+                      paddingVertical: spacing.xs,
+                      backgroundColor: colors.surface,
+                      color: colors.textPrimary,
+                    }}
+                  />
+                </View>
+              </View>
+              {item.name.trim() && (parseFloat(item.quantity) || 0) > 0 && (parseFloat(item.price) || 0) > 0 && (
+                <Text style={{ ...typography.caption, color: colors.textSecondary, marginTop: spacing.xs, textAlign: 'right' }}>
+                  Subtotal: R{((parseFloat(item.quantity) || 0) * (parseFloat(item.price) || 0)).toLocaleString('en-ZA')}
+                </Text>
+              )}
+            </View>
+          ))}
+
+          {lineItems.length > 0 && (
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', paddingVertical: spacing.sm, borderTopWidth: 1, borderTopColor: colors.borderSubtle }}>
+              <Text style={{ ...typography.body, color: colors.textPrimary, fontWeight: '700' }}>Estimated Total:</Text>
+              <Text style={{ ...typography.body, color: colors.primary, fontWeight: '700' }}>
+                R {lineItemsTotal.toLocaleString('en-ZA')}
+              </Text>
+            </View>
+          )}
+
+          {lineItems.length === 0 && (
+            <Text style={{ ...typography.caption, color: colors.textMuted, textAlign: 'center', paddingVertical: spacing.md }}>
+              No items added. Tap "Add Item" to specify catalogue items you'd like quoted.
+            </Text>
+          )}
+        </View>
 
         <PrimaryButton
           title={submitting ? (editMode ? 'Updating...' : 'Submitting...') : (editMode ? 'Update quote request' : 'Submit quote request')}

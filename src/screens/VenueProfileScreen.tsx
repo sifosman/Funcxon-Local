@@ -1051,6 +1051,24 @@ export default function VenueProfileScreen({ route, navigation }: Props) {
               <Text style={{ ...typography.body, color: '#FFFFFF', fontWeight: '700' }}>Request a Quote</Text>
             </TouchableOpacity>
 
+            {canBookTours && (
+              <TouchableOpacity
+                onPress={() => navigation.navigate('BookTour', { venueId: venue.id, venueName: venue.name })}
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  paddingVertical: spacing.md,
+                  borderRadius: radii.lg,
+                  backgroundColor: colors.accent,
+                  gap: spacing.sm,
+                }}
+              >
+                <MaterialIcons name="tour" size={20} color="#FFFFFF" />
+                <Text style={{ ...typography.body, color: '#FFFFFF', fontWeight: '700' }}>Book a Tour</Text>
+              </TouchableOpacity>
+            )}
+
             <TouchableOpacity
               onPress={() => setActiveTab('reviews')}
               style={{

@@ -3,6 +3,7 @@ import { ActivityIndicator, KeyboardAvoidingView, Modal, Platform, ScrollView, T
 import { MaterialIcons } from '@expo/vector-icons';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import DateTimePicker from '@react-native-community/datetimepicker';
+import { WebView } from 'react-native-webview';
 
 import { supabase } from '../lib/supabaseClient';
 import { colors, spacing, radii, typography } from '../theme';
@@ -70,6 +71,7 @@ export default function PlannerScreen() {
     date: '',
   });
   const [showDatePicker, setShowDatePicker] = useState(false);
+  const [showCalendarDatePicker, setShowCalendarDatePicker] = useState(false);
   const [newTask, setNewTask] = useState('');
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [editTaskTitle, setEditTaskTitle] = useState('');
@@ -749,19 +751,56 @@ export default function PlannerScreen() {
           <MaterialIcons name="attach-money" size={20} color={colors.primary} style={{ marginRight: spacing.sm }} />
           <Text style={{ ...typography.titleMedium, color: colors.textPrimary }}>Budget</Text>
         </View>
-        <View style={{ marginBottom: spacing.md }}>
-          <Text style={{ ...typography.caption, color: colors.textMuted }}>Total Budget:</Text>
-          <Text style={{ ...typography.body, color: colors.textPrimary, fontWeight: '600' }}>
-            R {budgetTotals.total.toLocaleString('en-ZA')}
-          </Text>
-          <Text style={{ ...typography.caption, color: colors.textMuted, marginTop: spacing.xs }}>Total Spent:</Text>
-          <Text style={{ ...typography.body, color: colors.textPrimary, fontWeight: '600' }}>
-            R {budgetTotals.spent.toLocaleString('en-ZA')}
-          </Text>
-          <Text style={{ ...typography.caption, color: colors.textMuted, marginTop: spacing.xs }}>Remaining:</Text>
-          <Text style={{ ...typography.body, color: '#16A34A', fontWeight: '600' }}>
-            R {budgetTotals.remaining.toLocaleString('en-ZA')}
-          </Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.md }}>
+          {/* Pie Chart */}
+          {budgetTotals.total > 0 && (() => {
+            const pieColors = ['#0F766E', '#3B82F6', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899', '#14B8A6', '#F97316'];
+            const activeItems = budgetItems.filter(b => b.total > 0);
+            let cumulative = 0;
+            const total = budgetTotals.total;
+            const segments = activeItems.map((item, i) => {
+              const startAngle = (cumulative / total) * 360;
+              cumulative += item.total;
+              const endAngle = (cumulative / total) * 360;
+              const startRad = (startAngle - 90) * Math.PI / 180;
+              const endRad = (endAngle - 90) * Math.PI / 180;
+              const x1 = 50 + 45 * Math.cos(startRad);
+              const y1 = 50 + 45 * Math.sin(startRad);
+              const x2 = 50 + 45 * Math.cos(endRad);
+              const y2 = 50 + 45 * Math.sin(endRad);
+              const largeArc = endAngle - startAngle > 180 ? 1 : 0;
+              const color = pieColors[i % pieColors.length];
+              return { path: `M50,50 L${x1.toFixed(2)},${y1.toFixed(2)} A45,45 0 ${largeArc},1 ${x2.toFixed(2)},${y2.toFixed(2)} Z`, color, name: item.name, value: item.total };
+            });
+            const svgPaths = segments.map(s => `<path d="${s.path}" fill="${s.color}" stroke="white" stroke-width="0.5"/>`).join('');
+            const legend = segments.map(s => `<div style="display:flex;align-items:center;margin-bottom:2px;"><div style="width:8px;height:8px;border-radius:50%;background:${s.color};margin-right:4px;"></div><span style="font-size:7px;color:#444;">${s.name}</span></div>`).join('');
+            const html = `<!DOCTYPE html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"><style>body{margin:0;padding:0;display:flex;align-items:center;}*{box-sizing:border-box;}</style></head><body><svg viewBox="0 0 100 100" width="100" height="100" xmlns="http://www.w3.org/2000/svg">${svgPaths}<circle cx="50" cy="50" r="26" fill="white"/><text x="50" y="48" text-anchor="middle" font-size="7" fill="#888" font-family="sans-serif">Total</text><text x="50" y="57" text-anchor="middle" font-size="8" fill="#333" font-weight="bold" font-family="sans-serif">R${(total / 1000).toFixed(0)}k</text></svg></body></html>`;
+            return (
+              <View style={{ width: 110, height: 110, marginRight: spacing.md }}>
+                {Platform.OS === 'web' ? (
+                  <div dangerouslySetInnerHTML={{ __html: html }} style={{ width: 110, height: 110 }} />
+                ) : (
+                  <WebView source={{ html }} style={{ width: 110, height: 110, backgroundColor: 'transparent' }} scrollEnabled={false} />
+                )}
+              </View>
+            );
+          })()}
+
+          {/* Budget Summary */}
+          <View style={{ flex: 1 }}>
+            <Text style={{ ...typography.caption, color: colors.textMuted }}>Total Budget:</Text>
+            <Text style={{ ...typography.body, color: colors.textPrimary, fontWeight: '600' }}>
+              R {budgetTotals.total.toLocaleString('en-ZA')}
+            </Text>
+            <Text style={{ ...typography.caption, color: colors.textMuted, marginTop: spacing.xs }}>Total Spent:</Text>
+            <Text style={{ ...typography.body, color: colors.textPrimary, fontWeight: '600' }}>
+              R {budgetTotals.spent.toLocaleString('en-ZA')}
+            </Text>
+            <Text style={{ ...typography.caption, color: colors.textMuted, marginTop: spacing.xs }}>Remaining:</Text>
+            <Text style={{ ...typography.body, color: '#16A34A', fontWeight: '600' }}>
+              R {budgetTotals.remaining.toLocaleString('en-ZA')}
+            </Text>
+          </View>
         </View>
 
         {budgetItems.map((item, idx) => {
@@ -1015,12 +1054,9 @@ export default function PlannerScreen() {
               </View>
 
               <View>
-                <Text style={{ ...typography.caption, color: colors.textMuted, marginBottom: spacing.xs }}>Date (YYYY-MM-DD)</Text>
-                <TextInput
-                  value={editForm.date}
-                  onChangeText={(value) => setEditForm((prev) => ({ ...prev, date: value }))}
-                  placeholder="2024-02-15"
-                  placeholderTextColor={colors.textMuted}
+                <Text style={{ ...typography.caption, color: colors.textMuted, marginBottom: spacing.xs }}>Date</Text>
+                <TouchableOpacity
+                  onPress={() => setShowCalendarDatePicker(true)}
                   style={{
                     borderWidth: 1,
                     borderColor: colors.borderSubtle,
@@ -1028,9 +1064,29 @@ export default function PlannerScreen() {
                     paddingHorizontal: spacing.md,
                     paddingVertical: spacing.sm,
                     backgroundColor: colors.surfaceMuted,
-                    color: colors.textPrimary,
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
                   }}
-                />
+                >
+                  <Text style={{ ...typography.body, color: editForm.date ? colors.textPrimary : colors.textMuted }}>
+                    {editForm.date || 'Select date'}
+                  </Text>
+                  <MaterialIcons name="calendar-today" size={18} color={colors.primary} />
+                </TouchableOpacity>
+                {showCalendarDatePicker && (
+                  <DateTimePicker
+                    value={editForm.date ? new Date(editForm.date) : new Date()}
+                    mode="date"
+                    display="default"
+                    onChange={(event, selectedDate) => {
+                      setShowCalendarDatePicker(false);
+                      if (selectedDate) {
+                        setEditForm((prev) => ({ ...prev, date: selectedDate.toISOString().slice(0, 10) }));
+                      }
+                    }}
+                  />
+                )}
               </View>
 
               <View>
