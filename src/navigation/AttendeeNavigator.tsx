@@ -32,7 +32,14 @@ export type AttendeeStackParamList = {
     | undefined;
   VendorProfile: { vendorId: number; from?: 'Favourites' | 'Quotes' };
   VenueProfile: { venueId: number; from?: 'Favourites' | 'Quotes' };
-  QuoteRequest: { vendorId: number; vendorName: string; type?: 'vendor' | 'venue'; editMode?: boolean; quoteId?: number };
+  QuoteRequest: {
+    vendorId: number;
+    vendorName: string;
+    type?: 'vendor' | 'venue';
+    editMode?: boolean;
+    quoteId?: number;
+    initialLineItems?: Array<{ name: string; quantity: string; price: string }>;
+  };
   BookTour: { venueId: number; venueName: string };
   CreateReview: { type: 'vendor' | 'venue'; targetId: number; targetName: string };
   VenueCatalogueView: { venueId: number; venueName: string };
@@ -44,7 +51,7 @@ export type AttendeeStackParamList = {
   VenueListingPlans: undefined;
   TermsAndPolicies: undefined;
   LegalDocument: { documentId: string };
-  PortfolioAssistance: undefined;
+  PortfolioAssistance: { openFaqs?: boolean } | undefined;
 };
 
 const Stack = createNativeStackNavigator<AttendeeStackParamList>();

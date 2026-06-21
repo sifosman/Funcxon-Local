@@ -61,13 +61,11 @@ export default function SignUpScreen({ navigation }: Props) {
       return;
     }
 
-    const redirectBase = process.env.EXPO_PUBLIC_AUTH_REDIRECT_URL;
-    const emailRedirectTo = redirectBase
-      ? `${redirectBase}/auth/callback/${role === 'vendor' ? 'vendor' : 'attendee'}`
-      : undefined;
+    const redirectBase = process.env.EXPO_PUBLIC_AUTH_REDIRECT_URL || 'funxon://';
+    const emailRedirectTo = `${redirectBase}/auth/callback/${role === 'vendor' ? 'vendor' : 'attendee'}`;
 
     setLoading(true);
-    const { error } = await signUp({
+    const { error, session } = await signUp({
       email: trimmedEmail,
       password,
       data: { name, role },
@@ -75,7 +73,7 @@ export default function SignUpScreen({ navigation }: Props) {
     });
     setLoading(false);
 
-    console.log('SignUp: signUp result', { error });
+    console.log('SignUp: signUp result', { error, hasSession: !!session });
 
     if (error) {
       setAlertState({ visible: true, title: 'Sign up failed', message: error.message });
@@ -84,6 +82,11 @@ export default function SignUpScreen({ navigation }: Props) {
     }
 
     setFormError(null);
+    if (session) {
+      // Email confirmation is disabled; Supabase created the session immediately.
+      navigation.getParent()?.navigate('Main');
+      return;
+    }
     navigation.navigate('EmailConfirmation', { email: trimmedEmail, role });
   };
 

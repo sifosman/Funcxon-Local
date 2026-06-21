@@ -37,7 +37,7 @@ type ProfileStackParamList = {
   TermsAndPolicies: undefined;
   SubscriptionPlans: undefined;
   VenueListingPlans: undefined;
-  PortfolioAssistance: undefined;
+  PortfolioAssistance: { openFaqs?: boolean } | undefined;
 };
 
 type NavigationProp = NativeStackNavigationProp<ProfileStackParamList>;
@@ -544,7 +544,7 @@ export default function ListerPortfolioScreen() {
       <View style={{ height: spacing.xl }} />
 
       <AppFooter
-        onNavigateToFAQs={() => setHelpVisible(true)}
+        onNavigateToFAQs={() => navigation.navigate('PortfolioAssistance', { openFaqs: true })}
         onNavigateToHelpDesk={() => setHelpVisible(true)}
         onNavigateToTerms={() => navigation.navigate('TermsAndPolicies')}
       />
@@ -553,7 +553,7 @@ export default function ListerPortfolioScreen() {
         onClose={() => setHelpVisible(false)}
         onNavigateToHelp={() => {
           setHelpVisible(false);
-          navigation.navigate('PortfolioAssistance');
+          navigation.navigate('PortfolioAssistance', { openFaqs: true });
         }}
       />
 

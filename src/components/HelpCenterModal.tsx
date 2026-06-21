@@ -43,6 +43,7 @@ export function HelpCenterModal({ visible, onClose, onNavigateToHelp, onDeleteAc
   };
 
   return (
+    <>
     <Modal animationType="slide" visible={visible} transparent onRequestClose={onClose}>
       <View style={styles.backdrop}>
         <View style={styles.sheet}>
@@ -71,7 +72,7 @@ export function HelpCenterModal({ visible, onClose, onNavigateToHelp, onDeleteAc
                   onNavigateToHelp?.();
                 }}
               >
-                <Text style={styles.chipText}>Get Help</Text>
+                <Text style={styles.chipText}>View FAQs</Text>
               </TouchableOpacity>
             </View>
 
@@ -140,6 +141,7 @@ export function HelpCenterModal({ visible, onClose, onNavigateToHelp, onDeleteAc
       ]}
       onDismiss={() => setAlertVisible(false)}
     />
+    </>
   );
 }
 

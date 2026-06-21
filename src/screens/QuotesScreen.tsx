@@ -227,6 +227,7 @@ export default function QuotesScreen() {
       inProgress: 0,
     };
     data?.forEach((quote) => {
+      if (quote.status === 'cancelled') return;
       const amount = typeof quote.quote_amount === 'number' ? quote.quote_amount : 0;
       totals.total += amount;
       if (quote.status === 'finalised') {
@@ -258,6 +259,8 @@ export default function QuotesScreen() {
         return { backgroundColor: '#FDE68A', color: '#92400E' };
       case 'tour_requested':
         return { backgroundColor: '#E0F2FE', color: '#0369A1' };
+      case 'cancelled':
+        return { backgroundColor: '#F3F4F6', color: '#6B7280' };
       default:
         return { backgroundColor: '#FEF3C7', color: '#92400E' };
     }
@@ -270,6 +273,47 @@ export default function QuotesScreen() {
     pending: data?.filter((item) => item.status === 'pending').length ?? 0,
     finalised: data?.filter((item) => item.status === 'finalised').length ?? 0,
     tours: data?.filter((item) => item.status === 'tour_requested').length ?? 0,
+  };
+
+  const canCancel = (status?: string | null) => {
+    return status === 'pending' || status === 'quoted' || status === 'amended' || status === 'in_progress';
+  };
+
+  const handleCancel = (quote: QuoteRequest) => {
+    if (!canCancel(quote.status)) {
+      setAlertState({ visible: true, title: 'Cannot cancel', message: 'This quote cannot be cancelled.' });
+      return;
+    }
+    setAlertState({
+      visible: true,
+      title: 'Cancel quote request?',
+      message: 'The vendor will be notified that this quote request has been cancelled.',
+      buttons: [
+        { text: 'Keep request', style: 'cancel', onPress: () => setAlertState(null) },
+        {
+          text: 'Cancel request',
+          style: 'destructive',
+          onPress: async () => {
+            setAlertState(null);
+            setActionLoadingId(quote.id);
+            try {
+              const tableName = quote.is_venue ? 'venue_quote_requests' : 'quote_requests';
+              const { error: updateError } = await supabase
+                .from(tableName)
+                .update({ status: 'cancelled' })
+                .eq('id', quote.original_id ?? quote.id);
+
+              if (updateError) throw updateError;
+              await refetch();
+            } catch (err: any) {
+              setAlertState({ visible: true, title: 'Unable to cancel', message: err?.message ?? 'Please try again.' });
+            } finally {
+              setActionLoadingId(null);
+            }
+          },
+        },
+      ],
+    });
   };
 
   const handleSecondaryAction = async (quote: QuoteRequest) => {
@@ -359,6 +403,11 @@ export default function QuotesScreen() {
       } finally {
         setActionLoadingId(null);
       }
+      return;
+    }
+
+    if (quote.status === 'cancelled') {
+      setAlertState({ visible: true, title: 'Quote cancelled', message: 'This quote request has been cancelled.' });
       return;
     }
 
@@ -541,17 +590,19 @@ export default function QuotesScreen() {
           const requestedDate = item.event_date || item.created_at
             ? new Date(item.event_date || item.created_at || '').toLocaleDateString('en-ZA')
             : null;
-          const actionLabel = item.status === 'finalised' || item.status === 'accepted'
-            ? 'Rate and Review'
-            : item.status === 'quoted' || (typeof item.quote_amount === 'number' && item.quote_amount > 0)
-              ? 'Review & Accept'
-              : item.status === 'amended'
-                ? 'Approve'
-                : item.status === 'pending'
-                  ? 'Amend'
-                  : item.status === 'tour_requested'
-                    ? 'Contact Venue'
-                    : 'View Details';
+          const actionLabel = item.status === 'cancelled'
+            ? 'View Details'
+            : item.status === 'finalised' || item.status === 'accepted'
+              ? 'Rate and Review'
+              : item.status === 'quoted' || (typeof item.quote_amount === 'number' && item.quote_amount > 0)
+                ? 'Review & Accept'
+                : item.status === 'amended'
+                  ? 'Approve'
+                  : item.status === 'pending'
+                    ? 'Amend'
+                    : item.status === 'tour_requested'
+                      ? 'Contact Venue'
+                      : 'View Details';
           const actionLoading = actionLoadingId === item.id;
           return (
             <View
@@ -796,6 +847,29 @@ export default function QuotesScreen() {
                   </Text>
                 </TouchableOpacity>
               </View>
+
+              {canCancel(item.status) && (
+                <TouchableOpacity
+                  onPress={() => handleCancel(item)}
+                  disabled={actionLoading}
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    marginTop: spacing.sm,
+                    paddingVertical: spacing.sm,
+                    borderRadius: radii.md,
+                    borderWidth: 1,
+                    borderColor: colors.destructive,
+                    opacity: actionLoading ? 0.7 : 1,
+                  }}
+                >
+                  <MaterialIcons name="cancel" size={16} color={colors.destructive} style={{ marginRight: spacing.xs }} />
+                  <Text style={{ ...typography.caption, color: colors.destructive, fontWeight: '600' }}>
+                    {actionLoading ? 'Cancelling...' : 'Cancel request'}
+                  </Text>
+                </TouchableOpacity>
+              )}
             </View>
           );
         }}

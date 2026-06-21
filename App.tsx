@@ -40,7 +40,7 @@ const navTheme = {
 };
 
 const linking: any = {
-  prefixes: ['vibeventz://'],
+  prefixes: ['funxon://'],
   config: {
     screens: {
       Main: {

@@ -129,7 +129,7 @@ export default function WelcomeScreen({ navigation }: Props) {
               backgroundColor: colors.surface,
             }}
           >
-            <Text style={{ ...typography.titleMedium, color: colors.primary }}>Log in</Text>
+            <Text style={{ ...typography.button, color: colors.primary }}>Log in</Text>
           </TouchableOpacity>
           <TouchableOpacity
             activeOpacity={0.9}
@@ -143,7 +143,7 @@ export default function WelcomeScreen({ navigation }: Props) {
               justifyContent: 'center',
             }}
           >
-            <Text style={{ ...typography.titleMedium, color: '#FFFFFF' }}>Get started</Text>
+            <Text style={{ ...typography.button, color: '#FFFFFF' }}>Get started</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>

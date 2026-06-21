@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -29,6 +29,7 @@ export default function AccountScreen() {
     const [expandedMenus, setExpandedMenus] = useState<Set<string>>(new Set());
     const [helpVisible, setHelpVisible] = useState(false);
     const [deleteAlertVisible, setDeleteAlertVisible] = useState(false);
+    const [isDeleting, setIsDeleting] = useState(false);
     const [logoutAlert, setLogoutAlert] = useState<{visible: boolean; title: string; message: string} | null>(null);
     const [subscriberAlert, setSubscriberAlert] = useState<{visible: boolean; title: string; message: string} | null>(null);
     const [currentPlan, setCurrentPlan] = useState<string | null>(null);
@@ -204,18 +205,29 @@ export default function AccountScreen() {
     const [errorAlert, setErrorAlert] = useState<{visible: boolean; title: string; message: string} | null>(null);
 
     const executeDeleteAccount = async () => {
+        setHelpVisible(false);
+        setIsDeleting(true);
+        setDeleteAlertVisible(false);
         try {
             const { data, error } = await supabase.functions.invoke('delete-user-account', {});
             if (error || !data?.success) {
                 throw new Error(error?.message || data?.error || 'Failed to delete account');
             }
 
-            await signOut();
-            const rootNav = navigation.getParent()?.getParent() as any;
-            rootNav?.navigate?.('Auth', { screen: 'SignIn' });
+            // Switch to the Home tab before signing out so the user lands on the home screen as a guest.
+            const tabNav = navigation.getParent() as any;
+            tabNav?.navigate?.('Home');
+
+            // Sign out locally. The user has already been deleted on the server, so ignore any sign-out errors.
+            try {
+                await signOut();
+            } catch (signOutErr) {
+                console.warn('Sign out after account deletion failed (ignored):', signOutErr);
+            }
         } catch (err: any) {
-            setDeleteAlertVisible(false);
             setErrorAlert({ visible: true, title: 'Deletion Failed', message: err?.message || 'Could not delete account. Please try again or contact support.' });
+        } finally {
+            setIsDeleting(false);
         }
     };
 
@@ -445,9 +457,9 @@ export default function AccountScreen() {
                 onClose={() => setHelpVisible(false)}
                 onNavigateToHelp={() => {
                     setHelpVisible(false);
-                    navigation.navigate('PortfolioAssistance');
+                    navigation.navigate('PortfolioAssistance', { openFaqs: true });
                 }}
-                onDeleteAccount={handleDeleteAccount}
+                onDeleteAccount={executeDeleteAccount}
             />
             <ThemedAlert
                 visible={deleteAlertVisible}
@@ -490,6 +502,25 @@ export default function AccountScreen() {
                     buttons={[{ text: 'OK', style: 'default', onPress: () => setErrorAlert(null) }]}
                     onDismiss={() => setErrorAlert(null)}
                 />
+            )}
+            {isDeleting && (
+                <View
+                    style={{
+                        position: 'absolute',
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        bottom: 0,
+                        backgroundColor: 'rgba(0,0,0,0.4)',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                    }}
+                >
+                    <ActivityIndicator size="large" color={colors.primary} />
+                    <Text style={{ ...typography.body, color: '#FFFFFF', marginTop: spacing.md }}>
+                        Deleting account...
+                    </Text>
+                </View>
             )}
         </View>
     );

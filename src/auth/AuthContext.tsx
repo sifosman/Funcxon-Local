@@ -4,6 +4,7 @@ import ThemedAlert from '../components/ThemedAlert';
 import type { Session } from '@supabase/supabase-js';
 import * as AuthSession from 'expo-auth-session';
 import * as WebBrowser from 'expo-web-browser';
+import * as Linking from 'expo-linking';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { GoogleSignin } from '@react-native-google-signin/google-signin';
 import { supabase, SUPABASE_URL } from '../lib/supabaseClient';
@@ -23,7 +24,7 @@ export type AuthContextValue = {
     password: string;
     data?: Record<string, any>;
     emailRedirectTo?: string;
-  }) => Promise<{ error?: Error }>;
+  }) => Promise<{ error?: Error; session?: Session }>;
   signOut: () => Promise<{ error?: Error }>;
   signInWithProvider: (provider: OAuthProvider) => Promise<{ error?: Error }>;
   resendConfirmationEmail: (email: string) => Promise<{ error?: Error }>;
@@ -218,6 +219,56 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     }
 
+    // Handle deep links on native (email confirmation, magic links, OAuth redirects)
+    const handleDeepLink = async (url: string | null) => {
+      if (!url || Platform.OS === 'web') return;
+
+      console.log('[AuthContext] Deep link received:', url);
+
+      try {
+        const parsedUrl = new URL(url);
+        const hash = parsedUrl.hash;
+        const searchParams = parsedUrl.searchParams;
+
+        let access_token: string | null = null;
+        let refresh_token: string | null = null;
+
+        // Check hash fragment
+        if (hash && hash.includes('access_token=')) {
+          const hashParams = new URLSearchParams(hash.substring(1));
+          access_token = hashParams.get('access_token');
+          refresh_token = hashParams.get('refresh_token');
+        }
+
+        // Check query params
+        if (!access_token) {
+          access_token = searchParams.get('access_token');
+          refresh_token = searchParams.get('refresh_token');
+        }
+
+        if (access_token) {
+          console.log('[AuthContext] Setting session from deep link');
+          const { error } = await supabase.auth.setSession({
+            access_token,
+            refresh_token: refresh_token || '',
+          });
+
+          if (error) {
+            console.error('[AuthContext] Failed to set session from deep link:', error);
+          } else {
+            console.log('[AuthContext] Session set from deep link');
+          }
+        }
+      } catch (e) {
+        console.error('[AuthContext] Error parsing deep link:', e);
+      }
+    };
+
+    Linking.getInitialURL().then(handleDeepLink);
+    const linkingSubscription = Linking.addEventListener('url', (event) => {
+      handleDeepLink(event.url);
+    });
+
     // Get initial session
     let loadingTimeout: ReturnType<typeof setTimeout> | null = null;
 
@@ -269,6 +320,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     return () => {
       data.subscription.unsubscribe();
+      linkingSubscription?.remove();
     };
   }, []);
 
@@ -278,7 +330,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const signUp: AuthContextValue['signUp'] = async ({ email, password, data, emailRedirectTo }) => {
-    const { error } = await supabase.auth.signUp({
+    const { data: signUpData, error } = await supabase.auth.signUp({
       email,
       password,
       options: {
@@ -286,7 +338,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         emailRedirectTo,
       },
     });
-    return { error: error ?? undefined };
+    return { error: error ?? undefined, session: signUpData?.session ?? undefined };
   };
 
   const signOut: AuthContextValue['signOut'] = async () => {

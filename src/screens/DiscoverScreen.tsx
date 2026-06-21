@@ -16,6 +16,7 @@ import type { AttendeeStackParamList } from '../navigation/AttendeeNavigator';
 import { venueTypes, amenitiesList, venueCapacityOptions } from '../config/venueTypes';
 import { provinces } from '../config/locations';
 import MapRadiusSelector from '../components/MapRadiusSelector';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 type CategoryFilter = 'all' | 'venues' | 'vendors' | 'services';
 type SortBy = 'best-match' | 'rating-desc' | 'reviews-desc' | 'price-asc' | 'alphabetical';
@@ -46,8 +47,9 @@ export default function DiscoverScreen() {
   const [categoryTextFilter, setCategoryTextFilter] = useState('');
   const [category, setCategory] = useState<CategoryFilter>(route.params?.category ?? 'all');
   const [sortBy, setSortBy] = useState<SortBy>('best-match');
-  const [showFilters, setShowFilters] = useState(false);
+  const [showFilters, setShowFilters] = useState(route.params?.showFilters ?? false);
   const [showSortOptions, setShowSortOptions] = useState(false);
+  const filterGlowAnim = useRef(new Animated.Value(1)).current;
   const [favouriteIds, setFavouriteIds] = useState<{ vendorIds: number[]; venueIds: number[] }>({
     vendorIds: [],
     venueIds: [],
@@ -65,6 +67,7 @@ export default function DiscoverScreen() {
   const [selectedVendorSubcategories, setSelectedVendorSubcategories] = useState<string[]>([]);
   const [selectedVendorProvinces, setSelectedVendorProvinces] = useState<string[]>([]);
   const [selectedVendorCities, setSelectedVendorCities] = useState<string[]>([]);
+  const [selectedLocationProvince, setSelectedLocationProvince] = useState('');
 
   // Dropdown picker modal
   const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
@@ -75,6 +78,7 @@ export default function DiscoverScreen() {
   const [mapRadius, setMapRadius] = useState(20);
 
   const { user } = useAuth();
+  const insets = useSafeAreaInsets();
   const scrollY = useRef(new Animated.Value(0)).current;
   const headerTranslateY = scrollY.interpolate({
     inputRange: [0, 80],
@@ -319,6 +323,8 @@ export default function DiscoverScreen() {
     setSearch(route.params.initialSearch ?? '');
     setFeaturedOnly(route.params.presetFilter === 'featured');
     setLocationSearch(route.params.presetFilter === 'location' ? route.params.initialSearch ?? '' : '');
+    setShowFilters(route.params.showFilters ?? false);
+    setSelectedLocationProvince(route.params.presetFilter === 'location' ? '' : '');
   }, [route.params]);
 
   // Clear legacy text filters when switching to venues, vendors, or services (dropdowns take over)
@@ -337,6 +343,19 @@ export default function DiscoverScreen() {
       setSelectedVendorCities([]);
     }
   }, [category]);
+
+  useEffect(() => {
+    const pulse = Animated.loop(
+      Animated.sequence([
+        Animated.timing(filterGlowAnim, { toValue: 1.15, duration: 900, useNativeDriver: true }),
+        Animated.timing(filterGlowAnim, { toValue: 1, duration: 900, useNativeDriver: true }),
+      ])
+    );
+    pulse.start();
+    return () => {
+      pulse.stop();
+    };
+  }, [filterGlowAnim]);
 
   useEffect(() => {
     let isMounted = true;
@@ -448,6 +467,11 @@ export default function DiscoverScreen() {
       const matchesVendorProvinceDropdown = selectedVendorProvinces.length === 0 || selectedVendorProvinces.some((p) => itemProvince === p.toLowerCase() || (itemProvince.includes(p.toLowerCase()) && p.length > 3));
       const matchesVendorCityDropdown = selectedVendorCities.length === 0 || selectedVendorCities.some((c) => itemCity === c.toLowerCase() || (itemCity.includes(c.toLowerCase()) && c.length > 2));
 
+      const matchesLocationProvince =
+        !selectedLocationProvince ||
+        itemProvince === selectedLocationProvince.toLowerCase() ||
+        (itemProvince.includes(selectedLocationProvince.toLowerCase()) && selectedLocationProvince.length > 3);
+
       // Fallback free-text filters (used for non-venue mode or when legacy filters still set)
       const citySource = (item.city ?? item.location ?? '').toLowerCase();
       const provinceSource = (item.province ?? '').toLowerCase();
@@ -481,6 +505,7 @@ export default function DiscoverScreen() {
         matchesVendorSubcategory &&
         matchesVendorProvinceDropdown &&
         matchesVendorCityDropdown &&
+        matchesLocationProvince &&
         matchesCityText &&
         matchesProvinceText &&
         matchesAmenitiesText &&
@@ -512,6 +537,7 @@ export default function DiscoverScreen() {
     selectedVendorSubcategories,
     selectedVendorProvinces,
     selectedVendorCities,
+    selectedLocationProvince,
   ]);
 
   const sorted = useMemo(() => {
@@ -835,49 +861,42 @@ export default function DiscoverScreen() {
           marginBottom: spacing.lg,
         }}
       >
-        <Text style={{ ...typography.displayMedium, color: colors.textPrimary, marginBottom: spacing.xs }}>
+        <Text style={{ ...typography.displayMedium, color: colors.textPrimary, marginBottom: spacing.md }}>
           {getDisplayTitle()}
         </Text>
-        <Text style={{ ...typography.body, color: colors.textSecondary, marginBottom: spacing.md }}>
-          Search beautifully curated venues, vendors, and services with fast smart matching and polished filters.
-        </Text>
 
-        <View style={{ flexDirection: 'row', flexWrap: 'wrap', rowGap: spacing.sm, columnGap: spacing.sm, marginBottom: spacing.md }}>
-          <View
-            style={{
-              flexDirection: 'row',
-              alignItems: 'center',
-              backgroundColor: colors.accent,
-              borderRadius: radii.full,
-              paddingHorizontal: spacing.md,
-              paddingVertical: spacing.sm,
-            }}
-          >
-            <MaterialIcons
-              name={isLocationMode ? 'place' : route.params?.presetFilter === 'services' ? 'miscellaneous-services' : route.params?.presetFilter === 'categories' ? 'category' : route.params?.presetFilter === 'amenities' ? 'hotel' : 'travel-explore'}
-              size={16}
-              color={colors.textPrimary}
-            />
-            <Text style={{ ...typography.caption, color: colors.textPrimary, marginLeft: spacing.xs }}>
-              {activeSearchModeLabel}
-            </Text>
+        {isLocationMode ? (
+          <View style={{ marginBottom: spacing.md }}>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+              {['All', ...provinces.map((p) => p.name)].map((province) => {
+                const selected = province === 'All'
+                  ? selectedLocationProvince === ''
+                  : selectedLocationProvince === province;
+                return (
+                  <TouchableOpacity
+                    key={province}
+                    onPress={() => {
+                      setSelectedLocationProvince(province === 'All' ? '' : province);
+                    }}
+                    style={{
+                      paddingHorizontal: spacing.md,
+                      paddingVertical: spacing.sm,
+                      borderRadius: radii.full,
+                      borderWidth: 1.5,
+                      borderColor: selected ? colors.primary : colors.borderSubtle,
+                      backgroundColor: selected ? colors.primary : colors.surface,
+                      marginRight: spacing.sm,
+                    }}
+                  >
+                    <Text style={{ ...typography.caption, color: selected ? colors.primaryForeground : colors.textPrimary, fontWeight: selected ? '600' : '400' }}>
+                      {province}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
           </View>
-          {category !== 'all' ? (
-            <View
-              style={{
-                backgroundColor: colors.surfaceMuted,
-                borderRadius: radii.full,
-                paddingHorizontal: spacing.md,
-                paddingVertical: spacing.sm,
-                borderWidth: 1,
-                borderColor: colors.borderSubtle,
-              }}
-            >
-              <Text style={{ ...typography.caption, color: colors.textPrimary }}>{category}</Text>
-            </View>
-          ) : null}
-        </View>
-
+        ) : null}
 
         <View
           style={{
@@ -936,23 +955,34 @@ export default function DiscoverScreen() {
           </View>
         ) : null}
 
-        <View style={{ flexDirection: 'row', columnGap: spacing.sm }}>
-          <TouchableOpacity
-            onPress={() => setShowFilters((prev) => !prev)}
+        <View style={{ flexDirection: 'row', columnGap: spacing.sm, alignItems: 'center' }}>
+          <Animated.View
             style={{
-              width: 52,
-              height: 52,
-              alignItems: 'center',
-              justifyContent: 'center',
-              backgroundColor: showFilters ? colors.primary : colors.surface,
-              borderColor: showFilters ? colors.primary : colors.borderSubtle,
-              borderWidth: 1,
-              borderRadius: radii.full,
+              transform: [{ scale: filterGlowAnim }],
+              shadowColor: colors.primary,
+              shadowOpacity: 0.45,
+              shadowRadius: 14,
+              shadowOffset: { width: 0, height: 0 },
+              elevation: 10,
             }}
-            accessibilityLabel="Open filters"
           >
-            <MaterialIcons name="tune" size={18} color={showFilters ? colors.primaryForeground : colors.textPrimary} />
-          </TouchableOpacity>
+            <TouchableOpacity
+              onPress={() => setShowFilters((prev) => !prev)}
+              style={{
+                width: 58,
+                height: 58,
+                alignItems: 'center',
+                justifyContent: 'center',
+                backgroundColor: showFilters ? colors.primaryTeal : colors.primary,
+                borderColor: colors.primary,
+                borderWidth: 2,
+                borderRadius: radii.full,
+              }}
+              accessibilityLabel="Open filters"
+            >
+              <MaterialIcons name="tune" size={22} color={colors.primaryForeground} />
+            </TouchableOpacity>
+          </Animated.View>
           <TouchableOpacity
             onPress={() => setShowSortOptions((prev) => !prev)}
             style={{
@@ -1051,6 +1081,7 @@ export default function DiscoverScreen() {
                 borderTopLeftRadius: radii.xl,
                 borderTopRightRadius: radii.xl,
                 padding: spacing.lg,
+                paddingBottom: insets.bottom + spacing.lg,
                 borderTopWidth: 1,
                 borderColor: colors.borderSubtle,
                 maxHeight: '85%',
@@ -1062,7 +1093,7 @@ export default function DiscoverScreen() {
                 </TouchableOpacity>
               </View>
 
-              <ScrollView keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+              <ScrollView keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: spacing.lg }}>
                 <Text style={{ ...typography.caption, color: colors.textMuted, marginBottom: spacing.xs }}>Browse by</Text>
                 <View style={{ flexDirection: 'row', flexWrap: 'wrap', rowGap: spacing.sm, columnGap: spacing.sm, marginBottom: spacing.md }}>
                   {[

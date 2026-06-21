@@ -256,7 +256,7 @@ export default function ListersPortalScreen() {
 
       {/* Footer */}
       <AppFooter
-        onNavigateToFAQs={() => setAlertState({ visible: true, title: 'FAQs', message: 'FAQs page coming soon!' })}
+        onNavigateToFAQs={() => navigation.navigate('PortfolioAssistance', { openFaqs: true })}
         onNavigateToHelpDesk={() => setHelpVisible(true)}
         onNavigateToTerms={() => navigation.navigate('TermsAndPolicies')}
       />
@@ -265,7 +265,7 @@ export default function ListersPortalScreen() {
         onClose={() => setHelpVisible(false)}
         onNavigateToHelp={() => {
           setHelpVisible(false);
-          navigation.navigate('PortfolioAssistance');
+          navigation.navigate('PortfolioAssistance', { openFaqs: true });
         }}
       />
 

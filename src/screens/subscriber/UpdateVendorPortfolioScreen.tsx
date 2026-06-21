@@ -24,6 +24,7 @@ type ProfileStackParamList = {
     UpdateVendorPortfolio: undefined;
     SubscriptionPlans: undefined;
     VendorCatalogue: undefined;
+    VendorAnalytics: undefined;
 };
 
 type VendorListing = {
@@ -396,6 +397,75 @@ export default function UpdateVendorPortfolioScreen() {
                                     </Text>
                                 </TouchableOpacity>
                             </View>
+                        </View>}
+
+                        {/* Analytics & Stats */}
+                        {vendor && <View
+                            style={{
+                                backgroundColor: colors.surface,
+                                borderRadius: radii.lg,
+                                padding: spacing.lg,
+                                borderWidth: 1,
+                                borderColor: colors.borderSubtle,
+                                marginTop: spacing.md,
+                            }}
+                        >
+                            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <View style={{ flex: 1 }}>
+                                    <Text style={{ ...typography.titleMedium, color: colors.textPrimary }}>
+                                        Analytics & Stats
+                                    </Text>
+                                    <Text style={{ ...typography.caption, color: colors.textMuted, marginTop: 2 }}>
+                                        View your vendor activity summary
+                                    </Text>
+                                </View>
+                                <TouchableOpacity
+                                    onPress={() => {
+                                        if (!vendor) {
+                                            setAlertState({ visible: true, title: 'Create profile first', message: 'Please create your vendor profile before viewing analytics.', buttons: [{ text: 'OK', style: 'default', onPress: () => setAlertState(null) }] });
+                                            return;
+                                        }
+                                        navigation.navigate('VendorAnalytics');
+                                    }}
+                                    style={{
+                                        paddingHorizontal: spacing.md,
+                                        paddingVertical: spacing.xs,
+                                        borderRadius: radii.full,
+                                        backgroundColor: canEditLinks ? colors.primary : colors.surfaceMuted,
+                                        borderWidth: canEditLinks ? 0 : 1,
+                                        borderColor: colors.borderSubtle,
+                                    }}
+                                >
+                                    <Text
+                                        style={{
+                                            ...typography.caption,
+                                            color: canEditLinks ? '#FFFFFF' : colors.textMuted,
+                                            fontWeight: '700',
+                                        }}
+                                    >
+                                        {canEditLinks ? 'Open' : 'Upgrade'}
+                                    </Text>
+                                </TouchableOpacity>
+                            </View>
+                            {!canEditLinks && (
+                                <View
+                                    style={{
+                                        marginTop: spacing.md,
+                                        padding: spacing.md,
+                                        borderRadius: radii.md,
+                                        backgroundColor: '#FFF7ED',
+                                        borderWidth: 1,
+                                        borderColor: '#FDBA74',
+                                    }}
+                                >
+                                    <Text style={{ ...typography.caption, color: '#9A3412', fontWeight: '600' }}>
+                                        Upgrade required
+                                    </Text>
+                                    <Text style={{ ...typography.caption, color: '#9A3412', marginTop: 2 }}>
+                                        Analytics & stats are available on paid vendor plans.
+                                    </Text>
+                                </View>
+                            )}
                         </View>}
 
                         {/* Edit Form */}

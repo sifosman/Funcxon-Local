@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { View, Text, TouchableOpacity, ScrollView, TextInput, Linking } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute } from '@react-navigation/native';
+import type { RouteProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { colors, spacing, radii, typography } from '../theme';
 import { supabase } from '../lib/supabaseClient';
@@ -12,6 +13,9 @@ type ProfileStackParamList = {
   SubscriberSuite: undefined;
   PortfolioAssistance: undefined;
 };
+
+type AssistanceRouteParams = { openFaqs?: boolean };
+type AssistanceRouteProp = RouteProp<{ PortfolioAssistance: AssistanceRouteParams }, 'PortfolioAssistance'>;
 
 type AssistanceOption = {
   id: string;
@@ -51,24 +55,84 @@ const TIME_SLOTS = [
 
 const FAQS = [
   {
-    question: 'How do I create a portfolio?',
-    answer: 'Go to the Subscriber Suite and tap "Update Portfolio." Fill in your business details, upload photos, and set your categories.',
+    question: 'What is Funxon and who is it for?',
+    answer: 'Funxon is a South African event marketplace connecting people planning events (attendees) with venues and professional vendors (listers). Whether you are organising a wedding, party, corporate event, or celebration, you can discover, compare, and book suppliers in one place.',
   },
   {
-    question: 'What photos should I upload?',
-    answer: 'Upload high-quality images of your best work. Venues should show the space from multiple angles; vendors should showcase their services.',
+    question: 'How do I create an account or log in?',
+    answer: 'Tap Account from the bottom navigation, then select Sign Up or Log In. You can register with your email address or use supported social sign-in options. A registered account lets you save favourites, request quotes, and manage your portfolio.',
   },
   {
-    question: 'How do I upgrade my plan?',
-    answer: 'Navigate to Subscription Plans from your account screen to view and select a plan that suits your needs.',
+    question: 'How do I search for a venue or vendor?',
+    answer: 'Use the Home or Discover tabs to browse listings. Enter a city or province, select the listing type (venue or vendor), and tap Search. You can also filter by category, capacity, price, and distance.',
   },
   {
-    question: 'Can I edit my portfolio after publishing?',
-    answer: 'Yes, you can update your portfolio anytime from the Subscriber Suite.',
+    question: 'How do the location and capacity filters work?',
+    answer: 'On the Discover screen, tap the Location filter to choose a city or province, or use the radius map to find nearby venues. The Capacity filter lets you pick a guest band so you only see spaces that fit your event size.',
   },
   {
-    question: 'How do I receive quote requests?',
-    answer: 'Once your portfolio is live and approved, clients can send quote requests directly through your profile.',
+    question: 'How do I save a venue or vendor to review later?',
+    answer: 'Open the listing profile and tap the heart icon. Saved items appear in your Favourites section on your Account screen, so you can compare them later.',
+  },
+  {
+    question: 'How do I request a quote from a vendor or venue?',
+    answer: 'From a listing profile, tap Request a Quote or Get a Quote. Fill in the event details such as date, guest count, and requirements, then submit. The lister will receive your request and respond through the app.',
+  },
+  {
+    question: 'How do I book a tour of a venue?',
+    answer: 'On a venue profile, tap Book a Tour. Choose a preferred date and time, add any special requests, and submit. The venue will confirm or propose an alternative time.',
+  },
+  {
+    question: 'How can I contact a venue or vendor directly?',
+    answer: 'Listing profiles show contact buttons for WhatsApp, phone, or email where the lister has provided them. For in-app communication, send a quote request or tour booking first.',
+  },
+  {
+    question: 'What is the Planner and how do I use it?',
+    answer: 'The Planner helps you budget and track spending. Add categories such as venue, catering, decor, and music, set an allocated amount for each, and mark expenses as you pay them. The dashboard shows your total budget versus amount spent.',
+  },
+  {
+    question: 'How do I create a portfolio as a lister?',
+    answer: 'Go to the Subscriber Suite and select Portfolio Profile or Update Portfolio. Choose whether you are a venue or vendor, fill in your business details, add a description, and upload your best photos. Once submitted, your portfolio will be reviewed and approved.',
+  },
+  {
+    question: 'What photos should I upload to my portfolio?',
+    answer: 'Venues should show the space from multiple angles and include exterior, seating, and stage areas. Vendors should showcase recent work, products, or service setups. High-quality, well-lit images attract more enquiries.',
+  },
+  {
+    question: 'How do I set pricing and packages?',
+    answer: 'In your portfolio or catalogue management area, add packages or items with names, descriptions, and prices. Venue listers can also set seasonal pricing and capacity options. Attendees will see these when requesting quotes.',
+  },
+  {
+    question: 'How do I choose the right categories and tags?',
+    answer: 'Pick the category that best matches your main service (e.g., Photography, Catering, Venue). Add relevant tags such as Outdoor, Wheelchair Friendly, or Live Music so your portfolio appears in the right searches.',
+  },
+  {
+    question: 'How do I receive and respond to quote requests?',
+    answer: 'Quote requests appear in your Listers Portal or in the dedicated Quote Requests section. Open a request to review the details, send a revised quote or accept the original, and message the client if needed.',
+  },
+  {
+    question: 'How do I manage bookings and tours?',
+    answer: 'Use the Bookings and Tours sections in your Listers Portal to view upcoming tours, confirm or reschedule bookings, and communicate with attendees. You will also receive notifications for new requests.',
+  },
+  {
+    question: 'How do I upgrade or change my subscription plan?',
+    answer: 'From the Account or Subscriber Suite screen, tap Subscription Plans. Review the available tiers, select the one that suits your business, and complete the checkout. Your new features will be activated once payment is confirmed.',
+  },
+  {
+    question: 'How do I update my account details or password?',
+    answer: 'Tap Account, then Account Settings or Change Password. You can edit your name, email, phone number, and marketing preferences. To change your password, use the Change Password option and follow the prompts.',
+  },
+  {
+    question: 'What payment options are supported?',
+    answer: 'Subscription plans can be paid securely through the app using supported payment methods. For client transactions, quote and booking payments are handled between you and the attendee unless the listing offers direct checkout.',
+  },
+  {
+    question: 'How do I report a problem or get more help?',
+    answer: 'Use the Report a Problem link in the footer, or tap Help Desk in the app footer to chat with our team via WhatsApp. You can also request a callback or browse these FAQs for quick answers.',
+  },
+  {
+    question: 'Is my personal information secure?',
+    answer: 'Yes. We follow privacy best practices and comply with POPIA. Your data is stored securely and only shared with listers when you send a quote request or booking. Read our Terms & Policies for full details.',
   },
 ];
 
@@ -83,7 +147,9 @@ export default function PortfolioAssistanceScreen() {
   });
   const [alertState, setAlertState] = useState<{visible: boolean; title: string; message: string; buttons?: any[]} | null>(null);
   const [openFaqIndex, setOpenFaqIndex] = useState<number | null>(null);
-  const [showFaqSection, setShowFaqSection] = useState(false);
+  const route = useRoute<AssistanceRouteProp>();
+  const isHelpCenter = route.params?.openFaqs ?? false;
+  const [showFaqSection, setShowFaqSection] = useState(isHelpCenter);
 
   const handleLiveChat = () => {
     const clean = SUPPORT_WHATSAPP.replace(/\D/g, '');
@@ -209,7 +275,7 @@ export default function PortfolioAssistanceScreen() {
           >
             <MaterialIcons name="arrow-back" size={20} color={colors.textPrimary} />
             <Text style={{ ...typography.body, color: colors.textPrimary, marginLeft: spacing.sm }}>
-              Back to Subscriber Suite
+              {isHelpCenter ? 'Back' : 'Back to Subscriber Suite'}
             </Text>
           </TouchableOpacity>
 
@@ -226,10 +292,10 @@ export default function PortfolioAssistanceScreen() {
               <MaterialIcons name="support-agent" size={40} color="#FFFFFF" />
             </View>
             <Text style={{ ...typography.displayMedium, color: colors.textPrimary, textAlign: 'center' }}>
-              Portfolio Assistance
+              {isHelpCenter ? 'Help Centre' : 'Portfolio Assistance'}
             </Text>
             <Text style={{ ...typography.body, color: colors.textMuted, textAlign: 'center', marginTop: spacing.sm }}>
-              Get expert help to create and optimize your business portfolio
+              {isHelpCenter ? 'Browse common questions or contact our support team' : 'Get expert help to create and optimize your business portfolio'}
             </Text>
           </View>
         </View>

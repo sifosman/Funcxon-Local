@@ -49,7 +49,8 @@ export default function ThemedAlert({ visible, title, message, buttons, onDismis
 
   return (
     <Modal transparent visible={visible} animationType="none" onRequestClose={onDismiss}>
-      <Pressable style={styles.overlay} onPress={onDismiss}>
+      <View style={styles.overlay}>
+        <Pressable style={StyleSheet.absoluteFill} onPress={onDismiss} />
         <Animated.View
           style={[
             styles.box,
@@ -78,7 +79,6 @@ export default function ThemedAlert({ visible, title, message, buttons, onDismis
                 >
                   <Text
                     style={[
-                      styles.buttonText,
                       isDestructive
                         ? styles.btnTextDestructive
                         : isCancel
@@ -93,7 +93,7 @@ export default function ThemedAlert({ visible, title, message, buttons, onDismis
             })}
           </View>
         </Animated.View>
-      </Pressable>
+      </View>
     </Modal>
   );
 }

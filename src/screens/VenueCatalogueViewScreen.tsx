@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, Image, KeyboardAvoidingView, Linking, Platform, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Image, KeyboardAvoidingView, Linking, Platform, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import ThemedAlert from '../components/ThemedAlert';
 import { MaterialIcons } from '@expo/vector-icons';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -31,22 +31,14 @@ type PdfDocument = {
 
 export default function VenueCatalogueViewScreen({ route, navigation }: Props) {
   const { venueId, venueName } = route.params;
-  const { user } = useAuth();
+  const { session } = useAuth();
 
   const [loading, setLoading] = useState(true);
   const [items, setItems] = useState<CatalogueItem[]>([]);
   const [pdfDocs, setPdfDocs] = useState<PdfDocument[]>([]);
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
   const [quantities, setQuantities] = useState<Record<number, number>>({});
-  const [saving, setSaving] = useState(false);
-  const [saved, setSaved] = useState(false);
 
-  const [clientName, setClientName] = useState('');
-  const [clientEmail, setClientEmail] = useState('');
-  const [clientPhone, setClientPhone] = useState('');
-  const [eventDate, setEventDate] = useState('');
-  const [eventDetails, setEventDetails] = useState('');
-  const [showQuoteForm, setShowQuoteForm] = useState(false);
   const [alertState, setAlertState] = useState<{visible: boolean; title: string; message: string} | null>(null);
 
   const loadData = useCallback(async () => {
@@ -110,7 +102,6 @@ export default function VenueCatalogueViewScreen({ route, navigation }: Props) {
       return next;
     });
     setQuantities((prev) => ({ ...prev, [id]: prev[id] || 1 }));
-    setSaved(false);
   };
 
   const updateQuantity = (id: number, delta: number) => {
@@ -119,60 +110,27 @@ export default function VenueCatalogueViewScreen({ route, navigation }: Props) {
       const next = Math.max(1, current + delta);
       return { ...prev, [id]: next };
     });
-    setSaved(false);
   };
 
-  const handleSave = () => {
-    setSaving(true);
-    setTimeout(() => {
-      setSaving(false);
-      setSaved(true);
-      setAlertState({ visible: true, title: 'Saved', message: 'Your selection has been saved.' });
-    }, 400);
-  };
-
-  const handleSubmitQuotation = async () => {
-    if (!user?.id) {
-      setAlertState({ visible: true, title: 'Sign in required', message: 'Please sign in to submit a quotation.' });
-      return;
-    }
-    if (!clientName.trim() || !clientEmail.trim()) {
-      setAlertState({ visible: true, title: 'Missing details', message: 'Please provide your name and email.' });
-      return;
-    }
+  const handleRequestQuote = () => {
     if (selectedItems.length === 0) {
       setAlertState({ visible: true, title: 'No items selected', message: 'Please select at least one catalogue item.' });
       return;
     }
-
-    const itemsSummary = selectedItems
-      .map((item) => `- ${item.title} x${quantities[item.id] || 1} @ R${Number(item.price ?? 0).toLocaleString()}`)
-      .join('\n');
-    const totalLine = `\nTotal: R${total.toLocaleString()}`;
-    const fullMessage = `Catalogue Quotation Request:\n\n${itemsSummary}${totalLine}\n\nEvent Details:\n${eventDetails || 'N/A'}\nEvent Date: ${eventDate || 'N/A'}\nPhone: ${clientPhone || 'N/A'}`;
-
-    setSaving(true);
-    try {
-      const { error: insertError } = await supabase.from('venue_quote_requests').insert({
-        listing_id: venueId,
-        requester_user_id: user.id,
-        requester_name: clientName,
-        requester_email: clientEmail,
-        requester_phone: clientPhone.trim() || null,
-        event_date: eventDate.trim() || null,
-        message: fullMessage,
-        status: 'pending',
-      });
-
-      if (insertError) throw insertError;
-
-      setAlertState({ visible: true, title: 'Quotation Submitted', message: 'Your catalogue quotation has been sent to the venue. You will be notified when they respond.' });
-      setShowQuoteForm(false);
-    } catch (err: any) {
-      setAlertState({ visible: true, title: 'Error', message: err?.message ?? 'Failed to submit quotation.' });
-    } finally {
-      setSaving(false);
+    if (!session) {
+      (navigation as any).getParent()?.getParent()?.navigate('Auth', { screen: 'SignIn' });
+      return;
     }
+    navigation.navigate('QuoteRequest', {
+      vendorId: venueId,
+      vendorName: venueName,
+      type: 'venue',
+      initialLineItems: selectedItems.map((item) => ({
+        name: item.title,
+        quantity: String(quantities[item.id] || 1),
+        price: item.price != null ? String(item.price) : '',
+      })),
+    });
   };
 
   if (loading) {
@@ -393,195 +351,28 @@ export default function VenueCatalogueViewScreen({ route, navigation }: Props) {
               </View>
             )}
 
-            <View style={{ flexDirection: 'row', gap: spacing.sm }}>
-              <TouchableOpacity
-                onPress={handleSave}
-                disabled={saving}
-                style={{
-                  flex: 1,
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  paddingVertical: spacing.md,
-                  borderRadius: radii.lg,
-                  backgroundColor: saved ? colors.surfaceMuted : colors.surface,
-                  borderWidth: 1,
-                  borderColor: colors.borderSubtle,
-                  gap: spacing.sm,
-                }}
-              >
-                <MaterialIcons name={saved ? 'check' : 'save'} size={20} color={saved ? '#16A34A' : colors.textMuted} />
-                <Text style={{ ...typography.body, color: saved ? '#16A34A' : colors.textPrimary, fontWeight: '600' }}>
-                  {saved ? 'Saved' : 'Save'}
-                </Text>
-              </TouchableOpacity>
-
-              {saved && (
-                <TouchableOpacity
-                  onPress={() => setShowQuoteForm(true)}
-                  disabled={saving || selectedItems.length === 0}
-                  style={{
-                    flex: 1,
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    paddingVertical: spacing.md,
-                    borderRadius: radii.lg,
-                    backgroundColor: selectedItems.length > 0 ? colors.textPrimary : colors.surfaceMuted,
-                    gap: spacing.sm,
-                  }}
-                >
-                  <MaterialIcons name="send" size={20} color="#FFFFFF" />
-                  <Text style={{ ...typography.body, color: '#FFFFFF', fontWeight: '700' }}>Submit Quotation</Text>
-                </TouchableOpacity>
-              )}
-            </View>
-
-            {!saved && selectedItems.length > 0 && (
-              <Text style={{ ...typography.caption, color: colors.textMuted, textAlign: 'center' }}>
-                Save your selection before submitting a quotation.
-              </Text>
-            )}
-          </View>
-        )}
-
-        {/* Quote Form */}
-        {showQuoteForm && (
-          <View
-            style={{
-              marginTop: spacing.lg,
-              padding: spacing.lg,
-              borderRadius: radii.lg,
-              backgroundColor: colors.surface,
-              borderWidth: 1,
-              borderColor: colors.borderSubtle,
-              gap: spacing.md,
-            }}
-          >
-            <Text style={{ ...typography.titleMedium, color: colors.textPrimary, marginBottom: spacing.sm }}>
-              Submit Quotation
-            </Text>
-            <Text style={{ ...typography.caption, color: colors.textMuted, marginBottom: spacing.sm }}>
-              The venue will receive your selected items and contact you.
-            </Text>
-
-            <Text style={{ ...typography.label, color: colors.textSecondary }}>Your Name *</Text>
-            <TextInput
-              value={clientName}
-              onChangeText={setClientName}
-              placeholder="e.g. Thandi M"
-              placeholderTextColor={colors.textMuted}
-              style={{
-                borderWidth: 1,
-                borderColor: colors.borderSubtle,
-                borderRadius: radii.md,
-                paddingHorizontal: spacing.md,
-                paddingVertical: spacing.sm,
-                backgroundColor: colors.surfaceMuted,
-                color: colors.textPrimary,
-              }}
-            />
-
-            <Text style={{ ...typography.label, color: colors.textSecondary }}>Email *</Text>
-            <TextInput
-              value={clientEmail}
-              onChangeText={setClientEmail}
-              placeholder="you@example.com"
-              placeholderTextColor={colors.textMuted}
-              keyboardType="email-address"
-              autoCapitalize="none"
-              style={{
-                borderWidth: 1,
-                borderColor: colors.borderSubtle,
-                borderRadius: radii.md,
-                paddingHorizontal: spacing.md,
-                paddingVertical: spacing.sm,
-                backgroundColor: colors.surfaceMuted,
-                color: colors.textPrimary,
-              }}
-            />
-
-            <Text style={{ ...typography.label, color: colors.textSecondary }}>Phone</Text>
-            <TextInput
-              value={clientPhone}
-              onChangeText={setClientPhone}
-              placeholder="+27 ..."
-              placeholderTextColor={colors.textMuted}
-              keyboardType="phone-pad"
-              style={{
-                borderWidth: 1,
-                borderColor: colors.borderSubtle,
-                borderRadius: radii.md,
-                paddingHorizontal: spacing.md,
-                paddingVertical: spacing.sm,
-                backgroundColor: colors.surfaceMuted,
-                color: colors.textPrimary,
-              }}
-            />
-
-            <Text style={{ ...typography.label, color: colors.textSecondary }}>Event Date</Text>
-            <TextInput
-              value={eventDate}
-              onChangeText={setEventDate}
-              placeholder="e.g. 2026-06-15"
-              placeholderTextColor={colors.textMuted}
-              style={{
-                borderWidth: 1,
-                borderColor: colors.borderSubtle,
-                borderRadius: radii.md,
-                paddingHorizontal: spacing.md,
-                paddingVertical: spacing.sm,
-                backgroundColor: colors.surfaceMuted,
-                color: colors.textPrimary,
-              }}
-            />
-
-            <Text style={{ ...typography.label, color: colors.textSecondary }}>Event Details</Text>
-            <TextInput
-              value={eventDetails}
-              onChangeText={setEventDetails}
-              placeholder="Guest count, type of event, special requests..."
-              placeholderTextColor={colors.textMuted}
-              multiline
-              numberOfLines={4}
-              style={{
-                borderWidth: 1,
-                borderColor: colors.borderSubtle,
-                borderRadius: radii.md,
-                paddingHorizontal: spacing.md,
-                paddingVertical: spacing.sm,
-                backgroundColor: colors.surfaceMuted,
-                color: colors.textPrimary,
-                minHeight: 90,
-                textAlignVertical: 'top',
-              }}
-            />
-
             <TouchableOpacity
-              onPress={handleSubmitQuotation}
-              disabled={saving}
+              onPress={handleRequestQuote}
+              disabled={selectedItems.length === 0}
               style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'center',
                 paddingVertical: spacing.md,
                 borderRadius: radii.lg,
-                backgroundColor: saving ? colors.textMuted : colors.textPrimary,
-                alignItems: 'center',
-                flexDirection: 'row',
-                justifyContent: 'center',
+                backgroundColor: selectedItems.length > 0 ? colors.textPrimary : colors.surfaceMuted,
                 gap: spacing.sm,
               }}
             >
-              <MaterialIcons name="send" size={20} color="#FFFFFF" />
-              <Text style={{ ...typography.body, color: '#FFFFFF', fontWeight: '700' }}>
-                {saving ? 'Submitting...' : 'Submit Quotation'}
-              </Text>
+              <MaterialIcons name="request-quote" size={20} color="#FFFFFF" />
+              <Text style={{ ...typography.body, color: '#FFFFFF', fontWeight: '700' }}>Request Quote</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity
-              onPress={() => setShowQuoteForm(false)}
-              style={{ alignItems: 'center', paddingVertical: spacing.sm }}
-            >
-              <Text style={{ ...typography.body, color: colors.textMuted }}>Cancel</Text>
-            </TouchableOpacity>
+            {selectedItems.length > 0 && (
+              <Text style={{ ...typography.caption, color: colors.textMuted, textAlign: 'center' }}>
+                Selected items will be pre-filled on the quote request screen.
+              </Text>
+            )}
           </View>
         )}
       </ScrollView>

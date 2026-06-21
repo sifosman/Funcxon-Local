@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { Image, KeyboardAvoidingView, Modal, Platform, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useNavigation, useRoute } from '@react-navigation/native';
@@ -240,6 +240,9 @@ export default function SubscriptionCheckoutScreen() {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [touched, setTouched] = useState<Record<string, boolean>>({});
 
+  const scrollViewRef = useRef<ScrollView>(null);
+  const fieldLayouts = useRef<Record<string, number>>({});
+
   const notifyUrl = `${process.env.EXPO_PUBLIC_SUPABASE_URL || 'https://fhlocaqndxawkbztncwo.supabase.co'}/functions/v1/payfast-itn`;
 
   const summary = useMemo(() => {
@@ -286,10 +289,10 @@ export default function SubscriptionCheckoutScreen() {
 
   const validateAll = () => {
     const newErrors: Record<string, string> = {};
-    const fields = ['fullName', 'email', 'phone'] as const;
-    
+    const fields = ['fullName', 'email', 'phone', 'province'] as const;
+
     fields.forEach((field) => {
-      const value = { fullName, email, phone }[field];
+      const value = { fullName, email, phone, province }[field];
       const error = validateField(field, value);
       if (error) newErrors[field] = error;
     });
@@ -299,15 +302,28 @@ export default function SubscriptionCheckoutScreen() {
     }
 
     setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
+    return newErrors;
+  };
+
+  const scrollToFirstError = (errorMap: Record<string, string>) => {
+    const fieldOrder = ['fullName', 'email', 'phone', 'province', 'terms'];
+    for (const field of fieldOrder) {
+      if (errorMap[field] && fieldLayouts.current[field] !== undefined) {
+        scrollViewRef.current?.scrollTo({
+          y: Math.max(0, fieldLayouts.current[field] - 20),
+          animated: true,
+        });
+        return;
+      }
+    }
   };
 
   const handleContinue = async () => {
-    // Mark all required fields as touched
-    setTouched({ fullName: true, email: true, phone: true, terms: true });
-    
-    if (!validateAll()) {
-      // Scroll to top to show errors
+    const newErrors = validateAll();
+
+    if (Object.keys(newErrors).length > 0) {
+      setTouched({ fullName: true, email: true, phone: true, province: true, terms: true });
+      scrollToFirstError(newErrors);
       return;
     }
 
@@ -538,7 +554,7 @@ export default function SubscriptionCheckoutScreen() {
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       keyboardVerticalOffset={Platform.OS === 'ios' ? spacing.lg : 0}
     >
-      <ScrollView contentContainerStyle={{ paddingBottom: 120 }} keyboardShouldPersistTaps="handled">
+      <ScrollView ref={scrollViewRef} contentContainerStyle={{ paddingBottom: 120 }} keyboardShouldPersistTaps="handled">
         <View style={{ paddingHorizontal: spacing.lg, paddingTop: spacing.xl, paddingBottom: spacing.lg }}>
           <TouchableOpacity onPress={() => navigation.goBack()} style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.lg }}>
             <MaterialIcons name="arrow-back" size={20} color={colors.textPrimary} />
@@ -590,44 +606,50 @@ export default function SubscriptionCheckoutScreen() {
             }}
           >
             <Text style={{ ...typography.titleMedium, color: colors.textPrimary, marginBottom: spacing.md }}>Contact Details</Text>
-            <Field
-              label="Full Name *"
-              value={fullName}
-              onChangeText={(text) => {
-                setFullName(text);
-                if (touched.fullName) {
-                  setErrors((prev) => ({ ...prev, fullName: validateField('fullName', text) }));
-                }
-              }}
-              placeholder="Your name"
-              error={touched.fullName ? errors.fullName : undefined}
-            />
-            <Field
-              label="Email *"
-              value={email}
-              onChangeText={(text) => {
-                setEmail(text);
-                if (touched.email) {
-                  setErrors((prev) => ({ ...prev, email: validateField('email', text) }));
-                }
-              }}
-              placeholder="you@email.com"
-              keyboardType="email-address"
-              error={touched.email ? errors.email : undefined}
-            />
-            <Field
-              label="Phone *"
-              value={phone}
-              onChangeText={(text) => {
-                setPhone(text);
-                if (touched.phone) {
-                  setErrors((prev) => ({ ...prev, phone: validateField('phone', text) }));
-                }
-              }}
-              placeholder="+27"
-              keyboardType="phone-pad"
-              error={touched.phone ? errors.phone : undefined}
-            />
+            <View onLayout={(e) => { fieldLayouts.current.fullName = e.nativeEvent.layout.y; }}>
+              <Field
+                label="Full Name *"
+                value={fullName}
+                onChangeText={(text) => {
+                  setFullName(text);
+                  if (touched.fullName) {
+                    setErrors((prev) => ({ ...prev, fullName: validateField('fullName', text) }));
+                  }
+                }}
+                placeholder="Your name"
+                error={touched.fullName ? errors.fullName : undefined}
+              />
+            </View>
+            <View onLayout={(e) => { fieldLayouts.current.email = e.nativeEvent.layout.y; }}>
+              <Field
+                label="Email *"
+                value={email}
+                onChangeText={(text) => {
+                  setEmail(text);
+                  if (touched.email) {
+                    setErrors((prev) => ({ ...prev, email: validateField('email', text) }));
+                  }
+                }}
+                placeholder="you@email.com"
+                keyboardType="email-address"
+                error={touched.email ? errors.email : undefined}
+              />
+            </View>
+            <View onLayout={(e) => { fieldLayouts.current.phone = e.nativeEvent.layout.y; }}>
+              <Field
+                label="Phone *"
+                value={phone}
+                onChangeText={(text) => {
+                  setPhone(text);
+                  if (touched.phone) {
+                    setErrors((prev) => ({ ...prev, phone: validateField('phone', text) }));
+                  }
+                }}
+                placeholder="+27"
+                keyboardType="phone-pad"
+                error={touched.phone ? errors.phone : undefined}
+              />
+            </View>
             <Field label="Business Name" value={businessName} onChangeText={setBusinessName} placeholder="Your business" />
             <Field label="VAT Number" value={vatNumber} onChangeText={setVatNumber} placeholder="Optional" />
           </View>
@@ -646,7 +668,7 @@ export default function SubscriptionCheckoutScreen() {
             <Field label="Address Line 1" value={addressLine1} onChangeText={setAddressLine1} placeholder="Street address" />
             <Field label="Address Line 2" value={addressLine2} onChangeText={setAddressLine2} placeholder="Unit / Complex" />
             <Field label="City" value={city} onChangeText={setCity} placeholder="City" />
-            <View style={{ marginBottom: spacing.md }}>
+            <View style={{ marginBottom: spacing.md }} onLayout={(e) => { fieldLayouts.current.province = e.nativeEvent.layout.y; }}>
               <Text style={{ ...typography.caption, color: touched.province && errors.province ? '#EF4444' : colors.textSecondary, marginBottom: spacing.xs }}>
                 Province
               </Text>
@@ -743,6 +765,7 @@ export default function SubscriptionCheckoutScreen() {
 
           <TouchableOpacity
             onPress={() => setTermsAccepted(!termsAccepted)}
+            onLayout={(e) => { fieldLayouts.current.terms = e.nativeEvent.layout.y; }}
             activeOpacity={0.9}
             style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.lg }}
           >

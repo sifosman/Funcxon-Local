@@ -21,8 +21,8 @@ import { colors, spacing, radii, typography } from '../theme';
 import type { ProfileStackParamList } from '../navigation/ProfileNavigator';
 import ThemedAlert from '../components/ThemedAlert';
 
-const CARD_MARGIN = 4;
-const ACTIVE_SCALE = 1.08;
+const CARD_MARGIN = 8;
+const ACTIVE_SCALE = 1.02;
 const SIDE_SCALE = 0.88;
 const FAR_SCALE = 0.65;
 const ACTIVE_OPACITY = 1;
@@ -77,7 +77,7 @@ export default function SubscriptionPlansScreen() {
 
   const { width: SCREEN_WIDTH, CARD_WIDTH, SNAP_INTERVAL } = useMemo(() => {
     const width = containerWidth || Dimensions.get('window').width;
-    const CARD_WIDTH = width * 0.33;
+    const CARD_WIDTH = width * 0.36;
     const SNAP_INTERVAL = CARD_WIDTH + CARD_MARGIN * 2;
     return { width, CARD_WIDTH, SNAP_INTERVAL };
   }, [containerWidth]);
@@ -347,7 +347,7 @@ export default function SubscriptionPlansScreen() {
         </View>
 
         {/* Horizontal Swipeable Cards */}
-        <View onLayout={(event) => setContainerWidth(event.nativeEvent.layout.width)} style={{ paddingVertical: spacing.xl }}>
+        <View onLayout={(event) => setContainerWidth(event.nativeEvent.layout.width)} style={{ paddingVertical: spacing.xl, overflow: 'visible' }}>
           <Carousel
             ref={carouselRef}
             loop
@@ -359,7 +359,7 @@ export default function SubscriptionPlansScreen() {
             width={SNAP_INTERVAL}
             height={460}
             data={plans}
-            style={{ width: '100%' }}
+            style={{ width: '100%', overflow: 'visible' }}
             customAnimation={customAnimation}
             onSnapToItem={handleSnapToItem}
             renderItem={({ item: plan, animationValue }) => {
@@ -392,7 +392,7 @@ export default function SubscriptionPlansScreen() {
                       scrollToIndex(planIndex);
                     }
                   }}
-                  style={{ width: CARD_WIDTH, marginHorizontal: CARD_MARGIN }}
+                  style={{ width: CARD_WIDTH, marginHorizontal: CARD_MARGIN, overflow: 'visible' }}
                 >
                   <Animated.View
                     style={[

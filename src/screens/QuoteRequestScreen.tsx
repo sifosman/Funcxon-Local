@@ -20,13 +20,21 @@ type LineItem = {
 type Props = NativeStackScreenProps<AttendeeStackParamList, 'QuoteRequest'>;
 
 export default function QuoteRequestScreen({ route, navigation }: Props) {
-  const { vendorId, vendorName, type = 'vendor', editMode = false, quoteId } = route.params;
+  const { vendorId, vendorName, type = 'vendor', editMode = false, quoteId, initialLineItems } = route.params;
   const { user } = useAuth();
 
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [eventDetails, setEventDetails] = useState('');
-  const [lineItems, setLineItems] = useState<LineItem[]>([]);
+  const [lineItems, setLineItems] = useState<LineItem[]>(() => {
+    if (editMode || !initialLineItems) return [];
+    return initialLineItems.map((item, index) => ({
+      id: Date.now() + index,
+      name: item.name || '',
+      quantity: item.quantity || '1',
+      price: item.price || '',
+    }));
+  });
   const [submitting, setSubmitting] = useState(false);
   const [loadingEdit, setLoadingEdit] = useState(false);
   const [alertState, setAlertState] = useState<{visible: boolean; title: string; message: string; buttons?: any[]} | null>(null);
@@ -532,7 +540,7 @@ export default function QuoteRequestScreen({ route, navigation }: Props) {
                   />
                 </View>
                 <View style={{ flex: 0.7 }}>
-                  <Text style={{ ...typography.caption, color: colors.textMuted, marginBottom: 2 }}>Est. Price (R)</Text>
+                  <Text style={{ ...typography.caption, color: colors.textMuted, marginBottom: 2 }}>Budget (R)</Text>
                   <TextInput
                     value={item.price}
                     onChangeText={(v) => updateLineItem(item.id, 'price', v)}
@@ -561,7 +569,7 @@ export default function QuoteRequestScreen({ route, navigation }: Props) {
 
           {lineItems.length > 0 && (
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', paddingVertical: spacing.sm, borderTopWidth: 1, borderTopColor: colors.borderSubtle }}>
-              <Text style={{ ...typography.body, color: colors.textPrimary, fontWeight: '700' }}>Estimated Total:</Text>
+              <Text style={{ ...typography.body, color: colors.textPrimary, fontWeight: '700' }}>Estimated Budget:</Text>
               <Text style={{ ...typography.body, color: colors.primary, fontWeight: '700' }}>
                 R {lineItemsTotal.toLocaleString('en-ZA')}
               </Text>
