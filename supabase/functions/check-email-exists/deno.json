@@ -1,0 +1,5 @@
+{
+  "name": "check-email-exists",
+  "version": "1.0.0",
+  "description": "Check whether an email address is already registered in Supabase Auth"
+}

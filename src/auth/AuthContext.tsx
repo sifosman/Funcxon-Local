@@ -28,6 +28,7 @@ export type AuthContextValue = {
   signOut: () => Promise<{ error?: Error }>;
   signInWithProvider: (provider: OAuthProvider) => Promise<{ error?: Error }>;
   resendConfirmationEmail: (email: string) => Promise<{ error?: Error }>;
+  checkEmailExists: (email: string) => Promise<{ exists?: boolean; error?: Error }>;
 };
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
@@ -354,6 +355,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return { error: error ?? undefined };
   };
 
+  const checkEmailExists: AuthContextValue['checkEmailExists'] = async (email) => {
+    try {
+      const { data, error } = await supabase.functions.invoke('check-email-exists', {
+        body: { email },
+      });
+
+      if (error) {
+        console.error('checkEmailExists function error:', error);
+        return { error: error instanceof Error ? error : new Error(String(error)) };
+      }
+
+      return { exists: data?.exists };
+    } catch (err) {
+      console.error('checkEmailExists unexpected error:', err);
+      return { error: err instanceof Error ? err : new Error(String(err)) };
+    }
+  };
+
   const signInWithProvider: AuthContextValue['signInWithProvider'] = async (provider) => {
     const scopes = provider === 'facebook' ? 'email public_profile' : undefined;
 
@@ -591,6 +610,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         signOut,
         signInWithProvider,
         resendConfirmationEmail,
+        checkEmailExists,
       }}
     >
       {children}

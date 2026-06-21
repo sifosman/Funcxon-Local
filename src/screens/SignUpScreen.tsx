@@ -11,7 +11,7 @@ import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 type Props = NativeStackScreenProps<AuthStackParamList, 'SignUp'>;
 
 export default function SignUpScreen({ navigation }: Props) {
-  const { signUp, signInWithProvider } = useAuth();
+  const { signUp, signInWithProvider, checkEmailExists } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -66,6 +66,18 @@ export default function SignUpScreen({ navigation }: Props) {
     const emailRedirectTo = `${redirectBase}/auth/callback/${callbackRole}`;
 
     setLoading(true);
+    const { exists: emailExists, error: checkError } = await checkEmailExists(trimmedEmail);
+    if (checkError || emailExists) {
+      setLoading(false);
+      if (checkError) {
+        setAlertState({ visible: true, title: 'Check failed', message: checkError.message || 'Unable to verify email. Please try again.' });
+        setFormError(checkError.message || 'Unable to verify email. Please try again.');
+      } else {
+        navigation.navigate('EmailConfirmation', { email: trimmedEmail, role, existingAccount: true });
+      }
+      return;
+    }
+
     const { error, session } = await signUp({
       email: trimmedEmail,
       password,

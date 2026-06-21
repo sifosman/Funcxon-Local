@@ -32,7 +32,7 @@ function base64ToBlob(base64: string, mimeType: string): Blob {
   return new Blob([byteArray], { type: mimeType });
 }
 
-const BLOCKING_APPLICATION_STATUSES: readonly string[] = [];
+const BLOCKING_APPLICATION_STATUSES: readonly string[] = ['approved'];
 const EDITABLE_APPLICATION_STATUSES = ['needs_changes'] as const;
 
 export type ApplicationSubmission = {
@@ -100,6 +100,26 @@ export async function submitApplication(data: ApplicationSubmission) {
     };
 
     const existingApplicationId = data.existing_application_id ?? null;
+
+    // Prevent duplicate approved applications for the same portfolio type
+    if (!existingApplicationId) {
+      const { data: existingApproved, error: existingApprovedError } = await supabase
+        .from('subscriber_applications')
+        .select('id')
+        .eq('user_id', user.id)
+        .eq('portfolio_type', data.portfolio_type)
+        .eq('status', 'approved')
+        .maybeSingle();
+
+      if (existingApprovedError) {
+        console.error('Existing approved application check error:', existingApprovedError);
+        throw new Error('Failed to verify application status');
+      }
+
+      if (existingApproved) {
+        throw new Error(`You already have an approved ${data.portfolio_type} application. You cannot submit another one.`);
+      }
+    }
 
     const query = existingApplicationId
       ? supabase

@@ -440,7 +440,7 @@ export default function PlannerScreen() {
     >
     <ScrollView
       style={{ flex: 1, backgroundColor: colors.background }}
-      contentContainerStyle={{ paddingHorizontal: spacing.lg, paddingVertical: spacing.xl, paddingBottom: 120 }}
+      contentContainerStyle={{ paddingHorizontal: spacing.lg, paddingTop: spacing.sm, paddingBottom: 120 }}
     >
       <View style={{ marginBottom: spacing.lg }}>
         <Text style={{ ...typography.displayMedium, color: colors.textPrimary }}>My Planner</Text>

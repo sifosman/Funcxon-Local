@@ -341,10 +341,10 @@ export default function VenueListingPlansScreen() {
     <View style={{ flex: 1, backgroundColor: colors.background }}>
       <ScrollView contentContainerStyle={{ paddingBottom: spacing.xl }} showsVerticalScrollIndicator={false}>
         {/* Header */}
-        <View style={{ paddingHorizontal: spacing.lg, paddingTop: spacing.lg }}>
+        <View style={{ paddingHorizontal: spacing.lg, paddingTop: spacing.sm }}>
           <TouchableOpacity
             onPress={() => navigation.goBack()}
-            style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.lg }}
+            style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.sm }}
           >
             <MaterialIcons name="arrow-back" size={20} color={colors.textPrimary} />
             <Text style={{ ...typography.body, color: colors.textPrimary, marginLeft: spacing.sm }}>Back</Text>

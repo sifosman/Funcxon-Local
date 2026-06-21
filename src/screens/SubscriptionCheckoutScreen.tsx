@@ -555,8 +555,8 @@ export default function SubscriptionCheckoutScreen() {
       keyboardVerticalOffset={Platform.OS === 'ios' ? spacing.lg : 0}
     >
       <ScrollView ref={scrollViewRef} contentContainerStyle={{ paddingBottom: 120 }} keyboardShouldPersistTaps="handled">
-        <View style={{ paddingHorizontal: spacing.lg, paddingTop: spacing.xl, paddingBottom: spacing.lg }}>
-          <TouchableOpacity onPress={() => navigation.goBack()} style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.lg }}>
+        <View style={{ paddingHorizontal: spacing.lg, paddingTop: spacing.sm, paddingBottom: spacing.lg }}>
+          <TouchableOpacity onPress={() => navigation.goBack()} style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.sm }}>
             <MaterialIcons name="arrow-back" size={20} color={colors.textPrimary} />
             <Text style={{ ...typography.body, color: colors.textPrimary, marginLeft: spacing.sm }}>Back</Text>
           </TouchableOpacity>

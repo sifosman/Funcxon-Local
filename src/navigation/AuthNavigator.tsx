@@ -11,7 +11,7 @@ export type AuthStackParamList = {
   Welcome: undefined;
   SignIn: undefined;
   SignUp: undefined;
-  EmailConfirmation: { email?: string; role?: 'attendee' | 'vendor' | 'venue' };
+  EmailConfirmation: { email?: string; role?: 'attendee' | 'vendor' | 'venue'; existingAccount?: boolean };
   LegalDocument: { documentId: string };
   GuestPrompt: { label: string };
 };

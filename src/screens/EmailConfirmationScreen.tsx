@@ -14,6 +14,7 @@ export default function EmailConfirmationScreen({ route, navigation }: Props) {
   const { resendConfirmationEmail } = useAuth();
   const email = route.params?.email;
   const role = route.params?.role ?? 'attendee';
+  const existingAccount = route.params?.existingAccount ?? false;
   const roleLabel =
     role === 'vendor' ? 'Vendor' : role === 'venue' ? 'Venue' : 'Attendee';
   const [isResending, setIsResending] = useState(false);
@@ -39,6 +40,147 @@ export default function EmailConfirmationScreen({ route, navigation }: Props) {
       setIsResending(false);
     }
   };
+
+  if (existingAccount) {
+    return (
+      <View style={{ flex: 1, backgroundColor: colors.background }}>
+        <ScrollView
+          style={{ flex: 1 }}
+          contentContainerStyle={{
+            flexGrow: 1,
+            paddingHorizontal: spacing.lg,
+            paddingTop: spacing.sm,
+            paddingBottom: spacing.xl,
+          }}
+        >
+          <View style={{ width: '100%', maxWidth: 360, alignSelf: 'center', alignItems: 'center' }}>
+            <View
+              style={{
+                width: 120,
+                height: 120,
+                borderRadius: radii.full,
+                backgroundColor: '#fef3c7',
+                alignItems: 'center',
+                justifyContent: 'center',
+                marginBottom: spacing.lg,
+              }}
+            >
+              <MaterialIcons name="warning" size={56} color="#f59e0b" />
+            </View>
+
+            <Text
+              style={{
+                ...typography.titleLarge,
+                color: colors.textPrimary,
+                marginBottom: spacing.sm,
+                textAlign: 'center',
+                fontWeight: '700',
+              }}
+            >
+              Email already in use
+            </Text>
+
+            <Text
+              style={{
+                ...typography.body,
+                color: colors.textMuted,
+                marginBottom: spacing.lg,
+                textAlign: 'center',
+                lineHeight: 24,
+              }}
+            >
+              An account with this email address already exists. Your account was not created because the email is already in use.
+            </Text>
+
+            {email && (
+              <View
+                style={{
+                  backgroundColor: colors.surface,
+                  borderRadius: radii.md,
+                  paddingVertical: spacing.md,
+                  paddingHorizontal: spacing.lg,
+                  marginBottom: spacing.lg,
+                  borderWidth: 1,
+                  borderColor: colors.borderSubtle,
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  gap: spacing.sm,
+                }}
+              >
+                <MaterialIcons name="email" size={20} color={colors.textPrimary} />
+                <Text
+                  style={{
+                    ...typography.body,
+                    color: colors.textPrimary,
+                    fontWeight: '600',
+                  }}
+                >
+                  {email}
+                </Text>
+              </View>
+            )}
+
+            <View
+              style={{
+                backgroundColor: '#FEF3C7',
+                borderRadius: radii.md,
+                padding: spacing.md,
+                marginBottom: spacing.xl,
+                flexDirection: 'row',
+                alignItems: 'flex-start',
+                gap: spacing.sm,
+              }}
+            >
+              <MaterialIcons name="info" size={20} color="#F59E0B" style={{ marginTop: 2 }} />
+              <Text
+                style={{
+                  ...typography.caption,
+                  color: '#92400E',
+                  flex: 1,
+                  lineHeight: 20,
+                }}
+              >
+                Please log in with your existing credentials instead. If you have forgotten your password, use the reset password option.
+              </Text>
+            </View>
+
+            <PrimaryButton title="Log in" onPress={() => navigation.navigate('SignIn')} />
+
+            <TouchableOpacity
+              onPress={() => navigation.navigate('SignUp')}
+              style={{
+                marginTop: spacing.lg,
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: spacing.xs,
+              }}
+            >
+              <MaterialIcons name="arrow-back" size={16} color={colors.textPrimary} />
+              <Text
+                style={{
+                  ...typography.caption,
+                  color: colors.textPrimary,
+                  fontWeight: '600',
+                }}
+              >
+                Use a different email
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </ScrollView>
+
+        {alertState && (
+          <ThemedAlert
+            visible={alertState.visible}
+            title={alertState.title}
+            message={alertState.message}
+            buttons={[{ text: 'OK', style: 'default', onPress: () => setAlertState(null) }]}
+            onDismiss={() => setAlertState(null)}
+          />
+        )}
+      </View>
+    );
+  }
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>

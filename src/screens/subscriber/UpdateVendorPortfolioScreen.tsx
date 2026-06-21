@@ -1,10 +1,13 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Image, KeyboardAvoidingView, Platform, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import * as ImagePicker from 'expo-image-picker';
 import { colors, spacing, radii, typography } from '../../theme';
 import { supabase } from '../../lib/supabaseClient';
+import { uploadFileToStorage } from '../../lib/applicationService';
+import { getVendorPhotoLimit } from '../../lib/subscription';
 import { useAuth } from '../../auth/AuthContext';
 import ThemedAlert from '../../components/ThemedAlert';
 
@@ -51,6 +54,9 @@ type VendorListing = {
     service_options: string[] | null;
     amenities: string[] | null;
     vendor_tags: string[] | null;
+    image_url: string | null;
+    additional_photos: string[] | null;
+    photo_count: number | null;
 };
 
 export default function UpdateVendorPortfolioScreen() {
@@ -60,6 +66,10 @@ export default function UpdateVendorPortfolioScreen() {
     const [saving, setSaving] = useState(false);
     const [vendor, setVendor] = useState<VendorListing | null>(null);
     const [canEditLinks, setCanEditLinks] = useState(true);
+    const [imageUrl, setImageUrl] = useState<string | null>(null);
+    const [additionalPhotos, setAdditionalPhotos] = useState<string[]>([]);
+    const [photoLimit, setPhotoLimit] = useState<number>(8);
+    const [uploadingImage, setUploadingImage] = useState(false);
     const [alertState, setAlertState] = useState<{visible: boolean; title: string; message: string; buttons?: any[]} | null>(null);
     const [form, setForm] = useState({
         name: '',
@@ -101,7 +111,7 @@ export default function UpdateVendorPortfolioScreen() {
         try {
             const { data: vendorData, error } = await supabase
                 .from('vendors')
-                .select('id, name, description, location, address_line_1, address_line_2, suburb, city, province, postal_code, country, latitude, longitude, price_range, email, whatsapp_number, website_url, instagram_url, subscription_tier, subscription_status, service_options, amenities, vendor_tags')
+                .select('id, name, description, location, address_line_1, address_line_2, suburb, city, province, postal_code, country, latitude, longitude, price_range, email, whatsapp_number, website_url, instagram_url, subscription_tier, subscription_status, service_options, amenities, vendor_tags, image_url, additional_photos, photo_count')
                 .eq('user_id', user.id)
                 .maybeSingle();
 
@@ -115,6 +125,10 @@ export default function UpdateVendorPortfolioScreen() {
                 const tier = String((vendorData as any).subscription_tier ?? '').toLowerCase();
                 const status = String((vendorData as any).subscription_status ?? '').toLowerCase();
                 setCanEditLinks(tier !== 'free' && tier !== '' && status === 'active');
+                setImageUrl((vendorData as VendorListing).image_url || null);
+                setAdditionalPhotos((vendorData as VendorListing).additional_photos || []);
+                const limit = await getVendorPhotoLimit((vendorData as VendorListing).id);
+                setPhotoLimit(limit);
                 setForm({
                     name: vendorData.name || '',
                     description: vendorData.description || '',
@@ -151,6 +165,91 @@ export default function UpdateVendorPortfolioScreen() {
         setForm((prev) => ({ ...prev, [key]: value }));
     };
 
+    const currentPhotoCount = (imageUrl ? 1 : 0) + additionalPhotos.length;
+    const remainingPhotoSlots = Math.max(0, photoLimit - currentPhotoCount);
+
+    const requestImagePermission = async () => {
+        const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+        if (status !== 'granted') {
+            setAlertState({ visible: true, title: 'Permission Required', message: 'Please allow access to your photo library to upload images.', buttons: [{ text: 'OK', style: 'default', onPress: () => setAlertState(null) }] });
+            return false;
+        }
+        return true;
+    };
+
+    const uploadPickedImage = async (asset: ImagePicker.ImagePickerAsset): Promise<string | null> => {
+        if (!user?.id) return null;
+        const file = {
+            uri: asset.uri,
+            name: asset.fileName || `image_${Date.now()}.jpg`,
+            type: asset.mimeType || 'image/jpeg',
+        };
+        const result = await uploadFileToStorage('portfolio-images', file, user.id);
+        if (!result.success || !result.url) {
+            throw new Error(result.error || 'Upload failed');
+        }
+        return result.url;
+    };
+
+    const handlePickMainImage = async () => {
+        const permitted = await requestImagePermission();
+        if (!permitted) return;
+        try {
+            setUploadingImage(true);
+            const result = await ImagePicker.launchImageLibraryAsync({
+                mediaTypes: ['images'],
+                allowsMultipleSelection: false,
+                allowsEditing: true,
+                quality: 0.8,
+            });
+            if (result.canceled || !result.assets?.[0]) return;
+            const url = await uploadPickedImage(result.assets[0]);
+            if (url) setImageUrl(url);
+        } catch (err: any) {
+            setAlertState({ visible: true, title: 'Upload failed', message: err?.message || 'Could not upload image.', buttons: [{ text: 'OK', style: 'default', onPress: () => setAlertState(null) }] });
+        } finally {
+            setUploadingImage(false);
+        }
+    };
+
+    const handlePickAdditionalPhotos = async () => {
+        if (remainingPhotoSlots <= 0) {
+            setAlertState({ visible: true, title: 'Photo limit reached', message: `Your current plan allows up to ${photoLimit} photo(s).`, buttons: [{ text: 'OK', style: 'default', onPress: () => setAlertState(null) }] });
+            return;
+        }
+        const permitted = await requestImagePermission();
+        if (!permitted) return;
+        try {
+            setUploadingImage(true);
+            const result = await ImagePicker.launchImageLibraryAsync({
+                mediaTypes: ['images'],
+                allowsMultipleSelection: true,
+                allowsEditing: false,
+                quality: 0.8,
+                selectionLimit: Math.max(1, Math.min(10, remainingPhotoSlots)),
+            });
+            if (result.canceled || !result.assets?.length) return;
+            const newUrls: string[] = [];
+            for (const asset of result.assets.slice(0, remainingPhotoSlots)) {
+                const url = await uploadPickedImage(asset);
+                if (url) newUrls.push(url);
+            }
+            setAdditionalPhotos((prev) => [...prev, ...newUrls]);
+        } catch (err: any) {
+            setAlertState({ visible: true, title: 'Upload failed', message: err?.message || 'Could not upload images.', buttons: [{ text: 'OK', style: 'default', onPress: () => setAlertState(null) }] });
+        } finally {
+            setUploadingImage(false);
+        }
+    };
+
+    const handleRemoveAdditionalPhoto = (index: number) => {
+        setAdditionalPhotos((prev) => prev.filter((_, i) => i !== index));
+    };
+
+    const handleRemoveMainImage = () => {
+        setImageUrl(null);
+    };
+
     useEffect(() => {
         loadVendor();
     }, [loadVendor]);
@@ -158,6 +257,14 @@ export default function UpdateVendorPortfolioScreen() {
     const handleSave = async () => {
         if (!form.name.trim()) {
             setAlertState({ visible: true, title: 'Required', message: 'Business name is required.', buttons: [{ text: 'OK', style: 'default', onPress: () => setAlertState(null) }] });
+            return;
+        }
+        if (!form.description.trim()) {
+            setAlertState({ visible: true, title: 'Required', message: 'Description is required.', buttons: [{ text: 'OK', style: 'default', onPress: () => setAlertState(null) }] });
+            return;
+        }
+        if (!imageUrl) {
+            setAlertState({ visible: true, title: 'Required', message: 'A main image is required for your vendor portfolio.', buttons: [{ text: 'OK', style: 'default', onPress: () => setAlertState(null) }] });
             return;
         }
         if (!user?.id) {
@@ -190,6 +297,9 @@ export default function UpdateVendorPortfolioScreen() {
                 whatsapp_number: form.whatsapp_number.trim() || null,
                 website_url: form.website_url.trim() || null,
                 instagram_url: form.instagram_url.trim() || null,
+                image_url: imageUrl,
+                additional_photos: additionalPhotos.length > 0 ? additionalPhotos : null,
+                photo_count: currentPhotoCount,
             };
 
             if (vendor) {
@@ -228,6 +338,9 @@ export default function UpdateVendorPortfolioScreen() {
                         service_options: null,
                         amenities: null,
                         vendor_tags: null,
+                        image_url: imageUrl,
+                        additional_photos: additionalPhotos.length > 0 ? additionalPhotos : null,
+                        photo_count: currentPhotoCount,
                     });
                 }
                 setAlertState({ visible: true, title: 'Created', message: 'Your vendor portfolio has been created.', buttons: [{ text: 'OK', style: 'default', onPress: () => setAlertState(null) }] });
@@ -242,10 +355,13 @@ export default function UpdateVendorPortfolioScreen() {
     const renderField = (
         label: string,
         key: keyof typeof form,
-        options?: { multiline?: boolean; placeholder?: string; keyboardType?: any; disabled?: boolean },
+        options?: { multiline?: boolean; placeholder?: string; keyboardType?: any; disabled?: boolean; required?: boolean },
     ) => (
         <View style={{ marginBottom: spacing.md }}>
-            <Text style={{ ...typography.caption, color: colors.textMuted, marginBottom: spacing.xs }}>{label}</Text>
+            <Text style={{ ...typography.caption, color: colors.textMuted, marginBottom: spacing.xs }}>
+                {label}
+                {options?.required ? <Text style={{ color: '#EF4444' }}> *</Text> : null}
+            </Text>
             <TextInput
                 value={form[key]}
                 onChangeText={(v) => handleChange(key, v)}
@@ -287,10 +403,10 @@ export default function UpdateVendorPortfolioScreen() {
         >
             <ScrollView contentContainerStyle={{ paddingBottom: 120 }}>
                 {/* Header */}
-                <View style={{ paddingHorizontal: spacing.lg, paddingTop: spacing.xl, paddingBottom: spacing.md }}>
+                <View style={{ paddingHorizontal: spacing.lg, paddingTop: spacing.sm, paddingBottom: spacing.md }}>
                     <TouchableOpacity
                         onPress={() => navigation.goBack()}
-                        style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.lg }}
+                        style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.sm }}
                     >
                         <MaterialIcons name="arrow-back" size={20} color={colors.textPrimary} />
                         <Text style={{ ...typography.body, color: colors.textPrimary, marginLeft: spacing.sm }}>Back</Text>
@@ -357,6 +473,145 @@ export default function UpdateVendorPortfolioScreen() {
                                 </TouchableOpacity>
                             </View>
                         )}
+
+                        {/* Portfolio Photos - always visible */}
+                        <View
+                            style={{
+                                backgroundColor: colors.surface,
+                                borderRadius: radii.lg,
+                                padding: spacing.lg,
+                                borderWidth: 1,
+                                borderColor: colors.borderSubtle,
+                                marginTop: spacing.md,
+                            }}
+                        >
+                            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.md }}>
+                                <View style={{ flex: 1 }}>
+                                    <Text style={{ ...typography.titleMedium, color: colors.textPrimary }}>
+                                        Portfolio Photos
+                                    </Text>
+                                    <Text style={{ ...typography.caption, color: colors.textMuted, marginTop: 2 }}>
+                                        {currentPhotoCount} of {photoLimit} photos used
+                                    </Text>
+                                </View>
+                                {vendor && (
+                                    <TouchableOpacity
+                                        onPress={() => navigation.navigate('SubscriptionPlans')}
+                                        style={{
+                                            paddingHorizontal: spacing.md,
+                                            paddingVertical: spacing.xs,
+                                            borderRadius: radii.full,
+                                            backgroundColor: colors.primary,
+                                        }}
+                                    >
+                                        <Text style={{ ...typography.caption, color: '#FFFFFF', fontWeight: '600' }}>Upgrade</Text>
+                                    </TouchableOpacity>
+                                )}
+                            </View>
+
+                            {/* Main image */}
+                            <View style={{ marginBottom: spacing.md }}>
+                                <Text style={{ ...typography.caption, color: colors.textMuted, marginBottom: spacing.xs }}>
+                                    Main Image <Text style={{ color: '#EF4444' }}>*</Text>
+                                </Text>
+                                {imageUrl ? (
+                                    <View style={{ position: 'relative' }}>
+                                        <Image
+                                            source={{ uri: imageUrl }}
+                                            style={{ width: '100%', height: 180, borderRadius: radii.md, backgroundColor: colors.surfaceMuted }}
+                                            resizeMode="cover"
+                                        />
+                                        <TouchableOpacity
+                                            onPress={handleRemoveMainImage}
+                                            style={{
+                                                position: 'absolute',
+                                                top: spacing.xs,
+                                                right: spacing.xs,
+                                                backgroundColor: 'rgba(0,0,0,0.6)',
+                                                borderRadius: radii.full,
+                                                padding: spacing.xs,
+                                            }}
+                                        >
+                                            <MaterialIcons name="delete" size={18} color="#FFFFFF" />
+                                        </TouchableOpacity>
+                                    </View>
+                                ) : (
+                                    <TouchableOpacity
+                                        onPress={handlePickMainImage}
+                                        disabled={uploadingImage}
+                                        style={{
+                                            width: '100%',
+                                            height: 180,
+                                            borderRadius: radii.md,
+                                            borderWidth: 1,
+                                            borderColor: colors.borderSubtle,
+                                            borderStyle: 'dashed',
+                                            backgroundColor: colors.surfaceMuted,
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                        }}
+                                    >
+                                        <MaterialIcons name="add-a-photo" size={32} color={colors.textMuted} />
+                                        <Text style={{ ...typography.caption, color: colors.textMuted, marginTop: spacing.xs }}>Add main image</Text>
+                                    </TouchableOpacity>
+                                )}
+                            </View>
+
+                            {/* Additional photos */}
+                            <View>
+                                <Text style={{ ...typography.caption, color: colors.textMuted, marginBottom: spacing.xs }}>Additional Photos</Text>
+                                <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm }}>
+                                    {additionalPhotos.map((url, idx) => (
+                                        <View key={`${url}-${idx}`} style={{ position: 'relative' }}>
+                                            <Image
+                                                source={{ uri: url }}
+                                                style={{ width: 80, height: 80, borderRadius: radii.md, backgroundColor: colors.surfaceMuted }}
+                                                resizeMode="cover"
+                                            />
+                                            <TouchableOpacity
+                                                onPress={() => handleRemoveAdditionalPhoto(idx)}
+                                                style={{
+                                                    position: 'absolute',
+                                                    top: 2,
+                                                    right: 2,
+                                                    backgroundColor: 'rgba(0,0,0,0.6)',
+                                                    borderRadius: radii.full,
+                                                    padding: 2,
+                                                }}
+                                            >
+                                                <MaterialIcons name="delete" size={16} color="#FFFFFF" />
+                                            </TouchableOpacity>
+                                        </View>
+                                    ))}
+                                    {remainingPhotoSlots > 0 && (
+                                        <TouchableOpacity
+                                            onPress={handlePickAdditionalPhotos}
+                                            disabled={uploadingImage}
+                                            style={{
+                                                width: 80,
+                                                height: 80,
+                                                borderRadius: radii.md,
+                                                borderWidth: 1,
+                                                borderColor: colors.borderSubtle,
+                                                borderStyle: 'dashed',
+                                                backgroundColor: colors.surfaceMuted,
+                                                alignItems: 'center',
+                                                justifyContent: 'center',
+                                            }}
+                                        >
+                                            <MaterialIcons name="add" size={28} color={colors.textMuted} />
+                                        </TouchableOpacity>
+                                    )}
+                                </View>
+                            </View>
+
+                            {uploadingImage && (
+                                <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: spacing.md, gap: spacing.sm }}>
+                                    <ActivityIndicator size="small" color={colors.primary} />
+                                    <Text style={{ ...typography.caption, color: colors.textMuted }}>Uploading image...</Text>
+                                </View>
+                            )}
+                        </View>
 
                         {vendor && <View
                             style={{
@@ -478,11 +733,14 @@ export default function UpdateVendorPortfolioScreen() {
                                 borderColor: colors.borderSubtle,
                             }}
                         >
-                            <Text style={{ ...typography.titleMedium, color: colors.textPrimary, marginBottom: spacing.md }}>
+                            <Text style={{ ...typography.titleMedium, color: colors.textPrimary, marginBottom: spacing.xs }}>
                                 Business Details
                             </Text>
-                            {renderField('Business Name', 'name')}
-                            {renderField('Description', 'description', { multiline: true, placeholder: 'Describe your services...' })}
+                            <Text style={{ ...typography.caption, color: colors.textMuted, marginBottom: spacing.lg }}>
+                                Fields marked with <Text style={{ color: '#EF4444' }}>*</Text> are required.
+                            </Text>
+                            {renderField('Business Name', 'name', { required: true })}
+                            {renderField('Description', 'description', { multiline: true, placeholder: 'Describe your services...', required: true })}
                             {renderField('Address Line 1', 'address_line_1', { placeholder: 'Street address' })}
                             {renderField('Address Line 2', 'address_line_2', { placeholder: 'Building, unit, suite (optional)' })}
                             {renderField('Suburb', 'suburb', { placeholder: 'e.g. Gardens' })}

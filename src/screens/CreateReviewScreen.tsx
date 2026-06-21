@@ -134,13 +134,13 @@ export default function CreateReviewScreen({ route, navigation }: Props) {
     <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <ScrollView
         style={{ flex: 1, backgroundColor: colors.background }}
-        contentContainerStyle={{ paddingHorizontal: spacing.lg, paddingVertical: spacing.lg, paddingBottom: 120 }}
+        contentContainerStyle={{ paddingHorizontal: spacing.lg, paddingTop: spacing.sm, paddingBottom: 120 }}
         keyboardShouldPersistTaps="handled"
       >
         {Platform.OS === 'web' && (
           <TouchableOpacity
             onPress={() => navigation.goBack()}
-            style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.md }}
+            style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.sm }}
           >
             <MaterialIcons name="arrow-back" size={20} color={colors.textPrimary} />
             <Text style={{ ...typography.body, color: colors.textPrimary, marginLeft: spacing.xs }}>Back</Text>

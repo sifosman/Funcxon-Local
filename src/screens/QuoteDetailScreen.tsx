@@ -406,14 +406,14 @@ export default function QuoteDetailScreen() {
         style={{ flex: 1 }}
         contentContainerStyle={{
           paddingHorizontal: spacing.lg,
-          paddingVertical: spacing.lg,
+          paddingTop: spacing.sm,
           paddingBottom: spacing.xl,
         }}
         keyboardShouldPersistTaps="handled"
       >
         <TouchableOpacity
           onPress={() => navigation.goBack()}
-          style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.md }}
+          style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.sm }}
         >
           <MaterialIcons name="arrow-back" size={20} color={colors.textPrimary} />
           <Text style={{ ...typography.body, color: colors.textPrimary, marginLeft: spacing.sm }}>

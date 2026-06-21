@@ -48,7 +48,7 @@ export default function GuestPromptScreen(props: Props) {
       </View>
 
       <Text style={{ ...typography.titleLarge, color: colors.textPrimary, marginBottom: spacing.sm, textAlign: 'center' }}>
-        Sign in to access {label}
+        Sign in to access {label.toLowerCase()}
       </Text>
       <Text style={{ ...typography.body, color: colors.textSecondary, marginBottom: spacing.xl, textAlign: 'center', maxWidth: 320 }}>
         Create a free account or sign in to unlock all features and save your preferences.
@@ -68,7 +68,7 @@ export default function GuestPromptScreen(props: Props) {
           marginBottom: spacing.md,
         }}
       >
-        <Text style={{ ...typography.titleMedium, color: '#FFFFFF' }}>Log in</Text>
+        <Text style={{ ...typography.button, color: '#FFFFFF' }}>Log in</Text>
       </TouchableOpacity>
 
       <TouchableOpacity
@@ -86,7 +86,7 @@ export default function GuestPromptScreen(props: Props) {
           justifyContent: 'center',
         }}
       >
-        <Text style={{ ...typography.titleMedium, color: colors.primary }}>Get started</Text>
+        <Text style={{ ...typography.button, color: colors.primary }}>Get started</Text>
       </TouchableOpacity>
 
       <TouchableOpacity

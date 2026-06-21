@@ -14,6 +14,7 @@ import { supabase } from '../../lib/supabaseClient';
 import ThemedAlert from '../../components/ThemedAlert';
 
 type ProfileStackParamList = {
+  AccountMain: undefined;
   ApplicationStep3: undefined;
   ApplicationStep4: undefined;
   ApplicationStatus: undefined;
@@ -388,12 +389,11 @@ export default function ApplicationStep4Screen() {
           setAlertState({ visible: true, title: 'Portfolio Created', message: 'Your application was submitted successfully, but we had a minor issue setting up your portfolio. You can retry from your account screen.', buttons: [{ text: 'OK', style: 'default', onPress: () => setAlertState(null) }] });
         }
 
-        // Reset form and navigate to portfolio management
+        // Reset form and navigate to the account screen (lister dashboard options are available there)
         resetForm();
-        const nextRoute = state.portfolioType === 'venues' ? 'UpdateVenuePortfolio' : 'UpdateVendorPortfolio';
         navigation.reset({
           index: 0,
-          routes: [{ name: nextRoute }],
+          routes: [{ name: 'AccountMain' }],
         });
       } else {
         setAlertState({ visible: true, title: 'Submission Failed', message: result.error || 'Failed to submit application. Please try again.' });
@@ -496,10 +496,10 @@ export default function ApplicationStep4Screen() {
         keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
         contentContainerStyle={{ paddingBottom: spacing.xxl * 6 }}
       >
-        <View style={{ paddingHorizontal: spacing.lg, paddingTop: spacing.xl }}>
+        <View style={{ paddingHorizontal: spacing.lg, paddingTop: spacing.sm }}>
           <TouchableOpacity
             onPress={() => navigation.goBack()}
-            style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.lg }}
+            style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.sm }}
           >
             <MaterialIcons name="arrow-back" size={20} color={colors.textPrimary} />
             <Text style={{ ...typography.body, color: colors.textPrimary, marginLeft: spacing.sm }}>

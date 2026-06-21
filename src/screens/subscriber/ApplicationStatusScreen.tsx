@@ -238,10 +238,10 @@ export default function ApplicationStatusScreen() {
         contentContainerStyle={{ paddingBottom: spacing.xl }}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={colors.textPrimary} />}
       >
-        <View style={{ paddingHorizontal: spacing.lg, paddingTop: spacing.xl }}>
+        <View style={{ paddingHorizontal: spacing.lg, paddingTop: spacing.sm }}>
           <TouchableOpacity
             onPress={() => navigation.navigate('AccountMain')}
-            style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.lg }}
+            style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.sm }}
           >
             <MaterialIcons name="arrow-back" size={20} color={colors.textPrimary} />
             <Text style={{ ...typography.body, color: colors.textPrimary, marginLeft: spacing.sm }}>

@@ -151,12 +151,12 @@ export default function VenueCatalogueViewScreen({ route, navigation }: Props) {
     >
       <ScrollView
         style={{ flex: 1 }}
-        contentContainerStyle={{ paddingHorizontal: spacing.lg, paddingVertical: spacing.lg, paddingBottom: 140 }}
+        contentContainerStyle={{ paddingHorizontal: spacing.lg, paddingTop: spacing.sm, paddingBottom: 140 }}
         keyboardShouldPersistTaps="handled"
       >
         <TouchableOpacity
           onPress={() => navigation.goBack()}
-          style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.lg }}
+          style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.sm }}
         >
           <MaterialIcons name="arrow-back" size={20} color={colors.textPrimary} />
           <Text style={{ ...typography.body, color: colors.textPrimary, marginLeft: spacing.sm }}>Back</Text>

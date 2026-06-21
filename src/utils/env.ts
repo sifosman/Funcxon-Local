@@ -10,7 +10,7 @@ function getEnv(key: string, fallback: string): string {
   if (val) return val;
 
   // Fallback to Constants extra config
-  const extra = Constants.expoConfig?.extra ?? Constants.manifest?.extra ?? {};
+  const extra = Constants.expoConfig?.extra ?? (Constants.manifest as any)?.extra ?? {};
   if (extra[key]) return String(extra[key]);
 
   return fallback;

@@ -125,7 +125,7 @@ export default function FavouritesScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
-      <ScrollView contentContainerStyle={{ flexGrow: 1, paddingHorizontal: spacing.lg, paddingVertical: spacing.xl }}>
+      <ScrollView contentContainerStyle={{ flexGrow: 1, paddingHorizontal: spacing.lg, paddingTop: spacing.sm, paddingBottom: spacing.xl }}>
         <Text style={{ ...typography.displayMedium, color: colors.textPrimary, marginBottom: spacing.lg }}>
           My Favourites
         </Text>

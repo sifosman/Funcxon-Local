@@ -31,7 +31,7 @@ export default function PortfolioProfileScreen() {
       title: 'Create New Portfolio',
       description: 'Start your application to create a new venue or vendor portfolio',
       icon: 'add-business',
-      iconcolor: colors.textPrimary,
+      iconColor: colors.textPrimary,
       iconBg: '#f2f7ff',
       route: 'PortfolioType',
     },
@@ -65,10 +65,10 @@ export default function PortfolioProfileScreen() {
     <View style={{ flex: 1, backgroundColor: colors.background }}>
       <ScrollView contentContainerStyle={{ paddingBottom: spacing.xl }}>
         {/* Header */}
-        <View style={{ paddingHorizontal: spacing.lg, paddingTop: spacing.xl, paddingBottom: spacing.md }}>
+        <View style={{ paddingHorizontal: spacing.lg, paddingTop: spacing.sm, paddingBottom: spacing.md }}>
           <TouchableOpacity
             onPress={() => navigation.goBack()}
-            style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.lg }}
+            style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.sm }}
           >
             <MaterialIcons name="arrow-back" size={20} color={colors.textPrimary} />
             <Text style={{ ...typography.body, color: colors.textPrimary, marginLeft: spacing.sm }}>

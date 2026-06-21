@@ -34,7 +34,7 @@ export default function SubscriberSuiteScreen() {
             description: 'Access your subscriber portal and manage your listings',
             icon: 'business-center',
             route: 'PortfolioProfile',
-            iconcolor: colors.textPrimary,
+            iconColor: colors.textPrimary,
             iconBg: '#f2f7ff',
         },
         {
@@ -70,10 +70,10 @@ export default function SubscriberSuiteScreen() {
         <View style={{ flex: 1, backgroundColor: colors.background }}>
             <ScrollView contentContainerStyle={{ paddingBottom: spacing.xl }}>
                 {/* Header */}
-                <View style={{ paddingHorizontal: spacing.lg, paddingTop: spacing.xl, paddingBottom: spacing.md }}>
+                <View style={{ paddingHorizontal: spacing.lg, paddingTop: spacing.sm, paddingBottom: spacing.md }}>
                     <TouchableOpacity
                         onPress={() => navigation.goBack()}
-                        style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.lg }}
+                        style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.sm }}
                     >
                         <MaterialIcons name="arrow-back" size={20} color={colors.textPrimary} />
                         <Text style={{ ...typography.body, color: colors.textPrimary, marginLeft: spacing.sm }}>

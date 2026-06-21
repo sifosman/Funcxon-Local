@@ -177,7 +177,7 @@ export default function DataConsentModal({ visible, onAccept }: DataConsentModal
                       </Text>
                       <View
                         style={{
-                          backgroundcolor: colors.textPrimary,
+                          backgroundColor: colors.textPrimary,
                           paddingHorizontal: spacing.sm,
                           paddingVertical: 2,
                           borderRadius: radii.sm,
