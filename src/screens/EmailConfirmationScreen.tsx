@@ -77,7 +77,7 @@ export default function EmailConfirmationScreen({ route, navigation }: Props) {
                 fontWeight: '700',
               }}
             >
-              Email already in use
+              This email already has an account
             </Text>
 
             <Text
@@ -89,7 +89,7 @@ export default function EmailConfirmationScreen({ route, navigation }: Props) {
                 lineHeight: 24,
               }}
             >
-              An account with this email address already exists. Your account was not created because the email is already in use.
+              You can't create a new account with this email address. Please log in to your existing account instead.
             </Text>
 
             {email && (
@@ -140,7 +140,7 @@ export default function EmailConfirmationScreen({ route, navigation }: Props) {
                   lineHeight: 20,
                 }}
               >
-                Please log in with your existing credentials instead. If you have forgotten your password, use the reset password option.
+                If you've forgotten your password, you can reset it from the sign-in screen.
               </Text>
             </View>
 
@@ -163,7 +163,7 @@ export default function EmailConfirmationScreen({ route, navigation }: Props) {
                   fontWeight: '600',
                 }}
               >
-                Use a different email
+                Try another email
               </Text>
             </TouchableOpacity>
           </View>

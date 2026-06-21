@@ -70,8 +70,9 @@ export default function SignUpScreen({ navigation }: Props) {
     if (checkError || emailExists) {
       setLoading(false);
       if (checkError) {
-        setAlertState({ visible: true, title: 'Check failed', message: checkError.message || 'Unable to verify email. Please try again.' });
-        setFormError(checkError.message || 'Unable to verify email. Please try again.');
+        const friendlyMessage = 'We could not verify if this email is already registered. Please check your connection and try again.';
+        setAlertState({ visible: true, title: 'Unable to check email', message: friendlyMessage });
+        setFormError(friendlyMessage);
       } else {
         navigation.navigate('EmailConfirmation', { email: trimmedEmail, role, existingAccount: true });
       }
@@ -129,7 +130,6 @@ export default function SignUpScreen({ navigation }: Props) {
         contentContainerStyle={{
           flexGrow: 1,
           paddingHorizontal: spacing.lg,
-          paddingTop: spacing.xs,
           paddingBottom: spacing.xl,
         }}
         keyboardShouldPersistTaps="handled"
@@ -143,7 +143,9 @@ export default function SignUpScreen({ navigation }: Props) {
             borderRadius: radii.lg,
             borderWidth: 1,
             borderColor: colors.borderSubtle,
-            padding: spacing.lg,
+            paddingHorizontal: spacing.lg,
+            paddingTop: spacing.sm,
+            paddingBottom: spacing.lg,
             shadowColor: '#000',
             shadowOpacity: 0.08,
             shadowRadius: 10,

@@ -357,16 +357,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const checkEmailExists: AuthContextValue['checkEmailExists'] = async (email) => {
     try {
-      const { data, error } = await supabase.functions.invoke('check-email-exists', {
-        body: { email },
+      const { data, error } = await supabase.rpc('check_email_exists', {
+        p_email: email,
       });
 
       if (error) {
-        console.error('checkEmailExists function error:', error);
-        return { error: error instanceof Error ? error : new Error(String(error)) };
+        console.error('checkEmailExists RPC error:', error);
+        return { error: new Error(error.message || 'Unable to verify email. Please try again.') };
       }
 
-      return { exists: data?.exists };
+      return { exists: !!data };
     } catch (err) {
       console.error('checkEmailExists unexpected error:', err);
       return { error: err instanceof Error ? err : new Error(String(err)) };
