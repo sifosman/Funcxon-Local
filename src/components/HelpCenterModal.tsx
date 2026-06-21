@@ -10,10 +10,12 @@ type HelpCenterModalProps = {
   onClose: () => void;
   onNavigateToHelp?: () => void;
   onDeleteAccount?: () => void;
+  userRole?: 'attendee' | 'vendor' | null;
 };
 
-export function HelpCenterModal({ visible, onClose, onNavigateToHelp, onDeleteAccount }: HelpCenterModalProps) {
+export function HelpCenterModal({ visible, onClose, onNavigateToHelp, onDeleteAccount, userRole }: HelpCenterModalProps) {
   const [alertVisible, setAlertVisible] = useState(false);
+  const isAttendee = userRole === 'attendee';
 
   const whatsappLink = useMemo(() => {
     const number = SUPPORT_WHATSAPP.replace(/[^0-9+]/g, '');
@@ -104,7 +106,9 @@ export function HelpCenterModal({ visible, onClose, onNavigateToHelp, onDeleteAc
                 <Text style={styles.cardTitle}>Dedicated Portfolio Manager</Text>
               </View>
               <Text style={styles.cardBody}>
-                Get personalised guidance on portfolio setup, profile edits, ad placements, and troubleshooting.
+                {isAttendee
+                  ? "Need help planning your event? Request a dedicated portfolio manager to help you find the perfect venues and vendors."
+                  : "Get personalised guidance on portfolio setup, profile edits, ad placements, and troubleshooting."}
               </Text>
               <TouchableOpacity style={styles.secondaryBtn} onPress={handleRequestManager}>
                 <MaterialIcons name="arrow-forward" size={18} color={colors.textPrimary} />

@@ -42,9 +42,9 @@ const getEmailTemplate = (status: string): EmailTemplate => {
       return {
         subject: 'Your Funxons application has been approved',
         heading: 'Application Approved',
-        intro: 'Great news. Your application has been approved successfully.',
-        nextSteps: 'You can now open the app to view your application status and continue with your Funxons account.',
-        buttonLabel: 'Open Application Status',
+        intro: 'Great news. Your application has been approved automatically.',
+        nextSteps: 'You now have full access to manage your portfolio. Open the app to update your profile, add listings, and start receiving enquiries.',
+        buttonLabel: 'Open Application',
       };
     case 'needs_changes':
       return {
@@ -72,11 +72,11 @@ const getEmailTemplate = (status: string): EmailTemplate => {
       };
     case 'under_review':
       return {
-        subject: 'Your Funxons application is under review',
-        heading: 'Application Under Review',
-        intro: 'Your application is currently under review by the Funxons team.',
-        nextSteps: 'You can open your application status at any time to check for the latest progress.',
-        buttonLabel: 'View Application Status',
+        subject: 'Your Funxons application has been submitted',
+        heading: 'Application Submitted',
+        intro: 'Your application has been submitted successfully.',
+        nextSteps: 'Applications are approved automatically, so you now have full access to manage your portfolio. Open the app to update your profile, add listings, and start receiving enquiries.',
+        buttonLabel: 'Open Application',
       };
     case 'submitted':
     case 'pending':
@@ -84,7 +84,7 @@ const getEmailTemplate = (status: string): EmailTemplate => {
       return {
         subject: 'Your Funxons application has been submitted',
         heading: 'Application Submitted',
-        intro: 'Your application has been submitted successfully.',
+        intro: 'Your application has been submitted successfully and approved automatically.',
         nextSteps: 'You now have full access to manage your portfolio. Open the app to update your profile, add listings, and start receiving enquiries.',
         buttonLabel: 'Open Application',
       };

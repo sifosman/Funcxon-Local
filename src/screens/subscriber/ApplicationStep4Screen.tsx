@@ -8,7 +8,7 @@ import { useApplicationForm } from '../../context/ApplicationFormContext';
 import { validateStep4 } from '../../utils/formValidation';
 import { ApplicationProgress } from '../../components/ApplicationProgress';
 import { getSubscriptionTiers } from '../../lib/subscription';
-import { submitApplication, uploadFileToStorage } from '../../lib/applicationService';
+import { submitApplication, uploadFileToStorage, updateUserRoleToVendor } from '../../lib/applicationService';
 import { useAuth } from '../../auth/AuthContext';
 import { supabase } from '../../lib/supabaseClient';
 import ThemedAlert from '../../components/ThemedAlert';
@@ -307,6 +307,7 @@ export default function ApplicationStep4Screen() {
         await sendApplicationConfirmationEmail(submission);
 
         // Create vendor/venue record directly (for both free and paid plans)
+        let portfolioCreated = false;
         try {
           if (state.portfolioType === 'venues' && user?.id) {
             const venueListingName =
@@ -335,6 +336,7 @@ export default function ApplicationStep4Screen() {
               console.error('Venues table upsert error:', venueRecordError);
               throw venueRecordError;
             }
+            portfolioCreated = true;
           } else if (user?.id) {
             // Build rich vendor record from application data
             const listingName =
@@ -383,17 +385,26 @@ export default function ApplicationStep4Screen() {
                 .insert(vendorPayload);
               if (insertError) throw insertError;
             }
+            portfolioCreated = true;
           }
         } catch (e: any) {
           console.error('Failed to create portfolio record:', e);
           setAlertState({ visible: true, title: 'Portfolio Created', message: 'Your application was submitted successfully, but we had a minor issue setting up your portfolio. You can retry from your account screen.', buttons: [{ text: 'OK', style: 'default', onPress: () => setAlertState(null) }] });
         }
 
-        // Reset form and navigate to the account screen (lister dashboard options are available there)
+        if (portfolioCreated) {
+          try {
+            await updateUserRoleToVendor();
+          } catch (e) {
+            console.error('Failed to update user role after portfolio creation:', e);
+          }
+        }
+
+        // Reset form and navigate to the application status screen to show the success confirmation
         resetForm();
         navigation.reset({
           index: 0,
-          routes: [{ name: 'AccountMain' }],
+          routes: [{ name: 'ApplicationStatus' }],
         });
       } else {
         setAlertState({ visible: true, title: 'Submission Failed', message: result.error || 'Failed to submit application. Please try again.' });
@@ -443,6 +454,7 @@ export default function ApplicationStep4Screen() {
           businessName: businessName || undefined,
           tierName: submission.subscription_tier || (state.portfolioType === 'venues' ? 'Venue' : 'Vendor'),
           applicationUrl: 'funxon://application-status',
+          status: 'approved',
         },
       });
 

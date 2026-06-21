@@ -460,6 +460,7 @@ export default function AccountScreen() {
                     navigation.navigate('PortfolioAssistance', { openFaqs: true });
                 }}
                 onDeleteAccount={executeDeleteAccount}
+                userRole={userRole}
             />
             <ThemedAlert
                 visible={deleteAlertVisible}

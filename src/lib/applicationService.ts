@@ -354,6 +354,42 @@ export async function getLatestUserApplicationByType(portfolioType: 'venue' | 'v
   }
 }
 
+export async function updateUserRoleToVendor() {
+  try {
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    if (authError || !user) {
+      throw new Error('User not authenticated');
+    }
+
+    const { error: dbError } = await supabase
+      .from('users')
+      .update({ role: 'vendor' })
+      .eq('auth_user_id', user.id);
+
+    if (dbError) {
+      console.error('Update users role error:', dbError);
+      throw dbError;
+    }
+
+    const { error: metadataError } = await supabase.auth.updateUser({
+      data: { role: 'vendor' },
+    });
+
+    if (metadataError) {
+      console.error('Update auth metadata error:', metadataError);
+      throw metadataError;
+    }
+
+    return { success: true };
+  } catch (error) {
+    console.error('Update user role to vendor error:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to update user role',
+    };
+  }
+}
+
 export function isBlockingApplicationStatus(status?: string | null) {
   const normalized = String(status ?? '').toLowerCase();
   return BLOCKING_APPLICATION_STATUSES.includes(normalized as (typeof BLOCKING_APPLICATION_STATUSES)[number]);

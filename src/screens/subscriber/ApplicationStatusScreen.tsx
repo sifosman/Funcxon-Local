@@ -5,42 +5,19 @@ import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { colors, radii, spacing, typography } from '../../theme';
 import type { ProfileStackParamList } from '../../navigation/ProfileNavigator';
-import { supabase } from '../../lib/supabaseClient';
-import { useAuth } from '../../auth/AuthContext';
-import { cancelApplication, getLatestUserApplication, isBlockingApplicationStatus, type SubscriberApplication } from '../../lib/applicationService';
-import { useApplicationForm, type ApplicationFormState } from '../../context/ApplicationFormContext';
-import ThemedAlert from '../../components/ThemedAlert';
+import { getLatestUserApplication, type SubscriberApplication } from '../../lib/applicationService';
 
 const formatStatusLabel = (status?: string | null) => {
   const normalized = String(status ?? 'pending').replace(/_/g, ' ').trim();
   return normalized.charAt(0).toUpperCase() + normalized.slice(1);
 };
 
-const getStatusTone = (status?: string | null) => {
-  const normalized = String(status ?? 'pending').toLowerCase();
-  if (normalized === 'approved') {
-    return {
-      bg: '#DCFCE7',
-      border: '#86EFAC',
-      text: '#166534',
-      icon: 'check-circle' as const,
-    };
-  }
-
-  if (normalized === 'rejected') {
-    return {
-      bg: '#FEE2E2',
-      border: '#FCA5A5',
-      text: '#991B1B',
-      icon: 'cancel' as const,
-    };
-  }
-
+const getSuccessTone = () => {
   return {
-    bg: '#FEF3C7',
-    border: '#FCD34D',
-    text: '#92400E',
-    icon: 'schedule' as const,
+    bg: '#DCFCE7',
+    border: '#86EFAC',
+    text: '#166534',
+    icon: 'check-circle' as const,
   };
 };
 
@@ -57,14 +34,9 @@ const formatDate = (value?: string | null) => {
 
 export default function ApplicationStatusScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<ProfileStackParamList>>();
-  const { hydrateForm } = useApplicationForm();
-  const { user } = useAuth();
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [cancelling, setCancelling] = useState(false);
-  const [alertState, setAlertState] = useState<{visible: boolean; title: string; message: string; buttons?: any[]} | null>(null);
   const [application, setApplication] = useState<SubscriberApplication | null>(null);
-  const [portfolioExists, setPortfolioExists] = useState(false);
 
   const loadApplication = useCallback(async () => {
     const result = await getLatestUserApplication();
@@ -72,25 +44,6 @@ export default function ApplicationStatusScreen() {
     setApplication(app);
     return app;
   }, []);
-
-  const checkPortfolioExists = useCallback(async (portfolioType?: string | null) => {
-    if (!user?.id) {
-      setPortfolioExists(false);
-      return;
-    }
-    try {
-      const table = portfolioType === 'venue' ? 'venue_listings' : 'vendors';
-      const { data, error } = await supabase
-        .from(table)
-        .select('id')
-        .eq('user_id', user.id)
-        .maybeSingle();
-      if (error) throw error;
-      setPortfolioExists(!!data);
-    } catch {
-      setPortfolioExists(false);
-    }
-  }, [user?.id]);
 
   useFocusEffect(
     useCallback(() => {
@@ -101,7 +54,6 @@ export default function ApplicationStatusScreen() {
         const app = await loadApplication();
         if (isActive) {
           setLoading(false);
-          await checkPortfolioExists(app?.portfolio_type);
         }
       }
 
@@ -110,126 +62,22 @@ export default function ApplicationStatusScreen() {
       return () => {
         isActive = false;
       };
-    }, [loadApplication, checkPortfolioExists]),
+    }, [loadApplication]),
   );
 
   const handleRefresh = async () => {
     setRefreshing(true);
-    const app = await loadApplication();
-    await checkPortfolioExists(app?.portfolio_type);
+    await loadApplication();
     setRefreshing(false);
   };
 
-  const statusTone = getStatusTone(application?.status);
+  const statusTone = getSuccessTone();
   const tradingName = application?.company_details?.tradingName || application?.company_details?.registeredBusinessName || 'Your application';
   const packageName = application?.subscription_tier ? application.subscription_tier.replace(/_/g, ' ') : 'Not available';
   const statusLabel = formatStatusLabel(application?.status);
-  const hasBlockingApplication = isBlockingApplicationStatus(application?.status);
-  const needsChanges = String(application?.status ?? '').toLowerCase() === 'needs_changes';
-  const adminNotes = typeof (application as { admin_notes?: string | null } | null)?.admin_notes === 'string'
-    ? (application as { admin_notes?: string | null }).admin_notes ?? ''
-    : '';
 
-  const handleCancelApplication = () => {
-    if (!application?.id || !hasBlockingApplication || cancelling) {
-      return;
-    }
-
-    setAlertState({
-      visible: true,
-      title: 'Cancel Application',
-      message: 'Are you sure you want to cancel your application?',
-      buttons: [
-        { text: 'Keep Application', style: 'cancel', onPress: () => setAlertState(null) },
-        {
-          text: 'Cancel Application',
-          style: 'destructive',
-          onPress: async () => {
-            setAlertState(null);
-            setCancelling(true);
-            const result = await cancelApplication(application.id);
-            setCancelling(false);
-
-            if (!result.success) {
-              setAlertState({ visible: true, title: 'Cancellation failed', message: result.error || 'We could not cancel your application right now.' });
-              return;
-            }
-
-            await loadApplication();
-            setAlertState({ visible: true, title: 'Application cancelled', message: 'Your application has been cancelled. You can now create a new application.' });
-          },
-        },
-      ],
-    });
-  };
-
-  const handleManagePortfolio = () => {
-    if (application?.portfolio_type === 'venue') {
-      navigation.navigate('UpdateVenuePortfolio');
-    } else {
-      navigation.navigate('UpdateVendorPortfolio');
-    }
-  };
-
-  const handleUpdateApplication = () => {
-    if (!application || !needsChanges) {
-      return;
-    }
-
-    const nextState: ApplicationFormState = {
-      editingApplicationId: application.id,
-      portfolioType: application.portfolio_type === 'venue' ? 'venues' : 'vendors',
-      step1: {
-        registeredBusinessName: application.company_details?.registeredBusinessName ?? '',
-        tradingName: application.company_details?.tradingName ?? '',
-        funcxonUserName: application.company_details?.funcxonUserName ?? '',
-        userWhatsapp: application.company_details?.userWhatsapp ?? '',
-        userEmail: application.company_details?.userEmail ?? '',
-        ownersName: application.company_details?.ownersName ?? '',
-        companyRegNumber: application.company_details?.companyRegNumber ?? '',
-        vatNumber: application.company_details?.vatNumber ?? '',
-        businessPhysicalAddress: application.company_details?.businessPhysicalAddress ?? '',
-        billingAddress: application.company_details?.billingAddress ?? '',
-        contactPhoneNumber: application.company_details?.contactPhoneNumber ?? '',
-        alternatePhone1: application.company_details?.alternatePhone1 ?? '',
-        alternatePhone2: application.company_details?.alternatePhone2 ?? '',
-        email: application.company_details?.email ?? '',
-        alternateEmail: application.company_details?.alternateEmail ?? '',
-        instagram: application.company_details?.instagram ?? '',
-        facebook: application.company_details?.facebook ?? '',
-        tiktok: application.company_details?.tiktok ?? '',
-      },
-      step2: {
-        venueType: application.service_categories?.venueType ?? [],
-        venueCapacity: application.service_categories?.venueCapacity ?? '',
-        amenities: application.service_categories?.amenities ?? [],
-        eventTypes: application.service_categories?.eventTypes ?? [],
-        awardsAndNominations: application.service_categories?.awardsAndNominations ?? '',
-        halls: application.service_categories?.halls ?? Array.from({ length: 5 }, () => ({ name: '', capacity: '' })),
-        paymentTermsAndConditions: application.service_categories?.paymentTermsAndConditions ?? '',
-        serviceCategories: application.service_categories?.serviceCategories ?? [],
-        serviceSubcategories: application.service_categories?.serviceSubcategories ?? [],
-        provinces: application.coverage_provinces ?? application.service_categories?.provinces ?? [],
-        cities: application.coverage_cities ?? application.service_categories?.cities ?? [],
-        specialFeatures: application.service_categories?.specialFeatures ?? [],
-        description: application.business_description ?? application.service_categories?.description ?? '',
-      },
-      step3: {
-        documents: [],
-        images: [],
-        videos: [],
-      },
-      step4: {
-        subscriptionPlan: application.subscription_tier ?? '',
-        billingPeriod: 'monthly',
-        termsAccepted: Boolean(application.terms_accepted),
-        privacyAccepted: Boolean(application.privacy_accepted),
-        marketingConsent: Boolean(application.marketing_consent),
-      },
-    };
-
-    hydrateForm(nextState);
-    navigation.navigate('ApplicationStep1');
+  const handleGoToListerPortfolio = () => {
+    navigation.navigate('ListerPortfolio');
   };
 
   return (
@@ -248,15 +96,6 @@ export default function ApplicationStatusScreen() {
               Back to My Account
             </Text>
           </TouchableOpacity>
-
-          <View style={{ marginBottom: spacing.lg }}>
-            <Text style={{ ...typography.displayMedium, color: colors.textPrimary, marginBottom: spacing.xs }}>
-              Application Status
-            </Text>
-            <Text style={{ ...typography.body, color: colors.textMuted }}>
-              Track your latest portfolio application and manage your portfolio details.
-            </Text>
-          </View>
 
           {loading ? (
             <View style={{ paddingVertical: spacing.xxl, alignItems: 'center' }}>
@@ -298,40 +137,27 @@ export default function ApplicationStatusScreen() {
             </View>
           ) : (
             <>
-              {hasBlockingApplication ? (
+              <View style={{ marginBottom: spacing.lg, alignItems: 'center' }}>
                 <View
                   style={{
-                    backgroundColor: '#FFF7ED',
-                    borderRadius: radii.lg,
-                    padding: spacing.lg,
-                    borderWidth: 1,
-                    borderColor: '#FDBA74',
+                    width: 80,
+                    height: 80,
+                    borderRadius: 40,
+                    backgroundColor: colors.primary,
+                    alignItems: 'center',
+                    justifyContent: 'center',
                     marginBottom: spacing.lg,
                   }}
                 >
-                  <Text style={{ ...typography.titleMedium, color: colors.textPrimary, marginBottom: spacing.xs }}>
-                    Existing application in progress
-                  </Text>
-                  <Text style={{ ...typography.body, color: colors.textPrimary }}>
-                    You already have an existing application. You can manage your portfolio or cancel it below if you want to submit a new one.
-                  </Text>
-                  <TouchableOpacity
-                    onPress={handleCancelApplication}
-                    disabled={cancelling}
-                    style={{
-                      alignSelf: 'flex-start',
-                      backgroundColor: cancelling ? colors.textMuted : colors.textPrimary,
-                      paddingHorizontal: spacing.lg,
-                      paddingVertical: spacing.md,
-                      borderRadius: radii.md,
-                    }}
-                  >
-                    <Text style={{ ...typography.body, color: '#FFFFFF', fontWeight: '600' }}>
-                      {cancelling ? 'Cancelling...' : 'Cancel Application'}
-                    </Text>
-                  </TouchableOpacity>
+                  <MaterialIcons name="check" size={40} color={colors.primaryForeground} />
                 </View>
-              ) : null}
+                <Text style={{ ...typography.displayMedium, color: colors.textPrimary, textAlign: 'center', marginBottom: spacing.sm }}>
+                  Congratulations!
+                </Text>
+                <Text style={{ ...typography.body, color: colors.textMuted, textAlign: 'center' }}>
+                  Your application has been successfully submitted.
+                </Text>
+              </View>
 
               <View
                 style={{
@@ -350,75 +176,30 @@ export default function ApplicationStatusScreen() {
                   </Text>
                 </View>
                 <Text style={{ ...typography.body, color: colors.textPrimary }}>
-                  {needsChanges
-                    ? 'Your application needs a few updates before it can be approved. Review the admin notes below, update your details, and resubmit the application.'
-                    : String(application.status ?? '').toLowerCase() === 'approved'
-                      ? 'Your application has been approved. You now have full access to manage your portfolio.'
-                      : String(application.status ?? '').toLowerCase() === 'cancelled'
-                        ? 'This application has been cancelled and will no longer be processed by the Funxon team. You can start a new application when you are ready.'
-                        : String(application.status ?? '').toLowerCase() === 'pending' || String(application.status ?? '').toLowerCase() === 'under_review'
-                          ? 'Your application has been received. You now have full access to manage your portfolio.'
-                          : 'Your application has been reviewed. Please wait for further guidance from the Funxon team.'}
+                  {String(application.status ?? '').toLowerCase() === 'approved'
+                    ? 'Your application has been approved. You now have full access to manage your portfolio.'
+                    : 'Your application has been received. Our team is reviewing it and will notify you once it is approved. You can already start managing your portfolio.'}
                 </Text>
               </View>
 
-              {needsChanges && adminNotes ? (
-                <View
-                  style={{
-                    backgroundColor: '#FFF7ED',
-                    borderRadius: radii.lg,
-                    padding: spacing.lg,
-                    borderWidth: 1,
-                    borderColor: '#FDBA74',
-                    marginBottom: spacing.lg,
-                  }}
-                >
-                  <Text style={{ ...typography.titleMedium, color: colors.textPrimary, marginBottom: spacing.sm }}>
-                    Admin notes
-                  </Text>
-                  <Text style={{ ...typography.body, color: colors.textPrimary }}>
-                    {adminNotes}
-                  </Text>
-                </View>
-              ) : null}
-
-              {needsChanges ? (
-                <TouchableOpacity
-                  onPress={handleUpdateApplication}
-                  style={{
-                    backgroundColor: colors.textPrimary,
-                    borderRadius: radii.lg,
-                    paddingVertical: spacing.md,
-                    alignItems: 'center',
-                    marginBottom: spacing.lg,
-                  }}
-                >
-                  <Text style={{ ...typography.body, color: '#FFFFFF', fontWeight: '700' }}>
-                    Update Application
-                  </Text>
-                </TouchableOpacity>
-              ) : null}
-
-              {portfolioExists ? (
-                <TouchableOpacity
-                  onPress={handleManagePortfolio}
-                  style={{
-                    backgroundColor: colors.textPrimary,
-                    borderRadius: radii.lg,
-                    paddingVertical: spacing.md,
-                    alignItems: 'center',
-                    marginBottom: spacing.lg,
-                    flexDirection: 'row',
-                    justifyContent: 'center',
-                    gap: spacing.sm,
-                  }}
-                >
-                  <MaterialIcons name="storefront" size={20} color="#FFFFFF" />
-                  <Text style={{ ...typography.body, color: '#FFFFFF', fontWeight: '700' }}>
-                    Manage Portfolio
-                  </Text>
-                </TouchableOpacity>
-              ) : null}
+              <TouchableOpacity
+                onPress={handleGoToListerPortfolio}
+                style={{
+                  backgroundColor: colors.primary,
+                  borderRadius: radii.lg,
+                  paddingVertical: spacing.md,
+                  alignItems: 'center',
+                  marginBottom: spacing.lg,
+                  flexDirection: 'row',
+                  justifyContent: 'center',
+                  gap: spacing.sm,
+                }}
+              >
+                <MaterialIcons name="storefront" size={20} color={colors.primaryForeground} />
+                <Text style={{ ...typography.body, color: colors.primaryForeground, fontWeight: '700' }}>
+                  Go to My Portfolio
+                </Text>
+              </TouchableOpacity>
 
               <View
                 style={{
@@ -458,34 +239,10 @@ export default function ApplicationStatusScreen() {
                   </View>
                 </View>
               </View>
-
-              <View
-                style={{
-                  backgroundColor: '#f2f7ff',
-                  borderRadius: radii.lg,
-                  padding: spacing.lg,
-                  borderWidth: 1,
-                  borderColor: '#f2f7ff',
-                }}
-              >
-                <Text style={{ ...typography.body, color: colors.textPrimary }}>
-                  You can return here any time to check your application details and manage your portfolio.
-                </Text>
-              </View>
             </>
           )}
         </View>
       </ScrollView>
-
-      {alertState && (
-        <ThemedAlert
-          visible={alertState.visible}
-          title={alertState.title}
-          message={alertState.message}
-          buttons={alertState.buttons ?? [{ text: 'OK', style: 'default', onPress: () => setAlertState(null) }]}
-          onDismiss={() => setAlertState(null)}
-        />
-      )}
     </View>
   );
 }
