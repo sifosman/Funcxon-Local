@@ -37,16 +37,16 @@ export default function VendorSignupSuccessScreen() {
         return;
       }
 
-      // Get the edge function URL
-      const { data: { session } } = await supabase.auth.getSession();
-      
-      // Call the Supabase Edge Function
-      const { data, error } = await supabase.functions.invoke('send-vendor-welcome-email', {
+      const isVenue = productType === 'venue';
+      const functionName = isVenue ? 'send-venue-welcome-email' : 'send-vendor-welcome-email';
+      const applicationUrl = isVenue ? 'https://funxon.com/venue-application' : 'https://funxon.com/vendor-application';
+
+      const { data, error } = await supabase.functions.invoke(functionName, {
         body: {
           email,
           fullName,
           tierName,
-          applicationUrl: 'https://funxon.com/vendor-application',
+          applicationUrl,
         },
       });
 

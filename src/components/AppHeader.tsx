@@ -55,7 +55,7 @@ export default function AppHeader() {
         <View style={styles.rightContainer}>
           {/* SA Flag */}
           <Image
-            source={require('../../assets/sa-icon.jpg')}
+            source={require('../../assets/sa-icon.png')}
             style={styles.flagImage as any}
             resizeMode="contain"
           />
