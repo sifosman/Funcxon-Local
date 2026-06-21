@@ -36,6 +36,9 @@ interface NotificationPayload {
   // Response details
   clientNotes?: string;
   revisionNumber?: number;
+
+  // Attachments
+  attachments?: { url?: string; name?: string }[];
 }
 
 interface BrevoEmailPayload {
@@ -228,8 +231,10 @@ funxons://vendor/quotes
 }
 
 function generateQuoteCreatedToClientEmail(payload: NotificationPayload) {
-  const { clientName, vendorBusinessName, quoteAmount, quoteDescription, revisionNumber } = payload;
+  const { clientName, vendorBusinessName, quoteAmount, quoteDescription, revisionNumber, attachments } = payload;
   const subject = `Quote Received from ${vendorBusinessName || 'your vendor'}`;
+  const attachmentLinks = (attachments || []).filter((a) => a.url).map((a) => `<a href="${a.url}" style="color: #2B9EB3; text-decoration: underline;">${a.name || 'Attachment'}</a>`).join('<br>');
+  const attachmentText = (attachments || []).filter((a) => a.url).map((a) => `- ${a.name || 'Attachment'}: ${a.url}`).join('\n');
 
   const htmlContent = `
     <!DOCTYPE html>
@@ -257,6 +262,13 @@ function generateQuoteCreatedToClientEmail(payload: NotificationPayload) {
           ${quoteDescription ? `<p style="color: #2B3840;">${quoteDescription}</p>` : ''}
         </div>
         
+        ${attachmentLinks ? `
+        <div style="background: #F5F1E8; padding: 20px; border-radius: 8px; margin: 25px 0; border: 1px solid #D4CFBD;">
+          <h3 style="margin-top: 0; color: #2B9EB3;">Attachments</h3>
+          ${attachmentLinks}
+        </div>
+        ` : ''}
+        
         <div style="text-align: center; margin: 30px 0;">
           <a href="funxons://quotes" 
              style="background: #2B9EB3; color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; font-weight: bold; display: inline-block; margin-right: 10px;">
@@ -282,6 +294,7 @@ ${vendorBusinessName || 'Your vendor'} has sent you a quote${revisionNumber && r
 Quote Summary:
 ${quoteAmount ? `Amount: R${quoteAmount.toLocaleString()}\n` : ''}
 ${quoteDescription ? `Description: ${quoteDescription}\n` : ''}
+${attachmentText ? `\nAttachments:\n${attachmentText}\n` : ''}
 
 View and respond to your quote:
 funxons://quotes
@@ -414,8 +427,10 @@ View quotes: funxons://vendor/quotes
 
 function generateQuoteRevisedToClientEmail(payload: NotificationPayload) {
   // Similar to quote-created but mentions it's a revision
-  const { clientName, vendorBusinessName, quoteAmount, quoteDescription, revisionNumber } = payload;
+  const { clientName, vendorBusinessName, quoteAmount, quoteDescription, revisionNumber, attachments } = payload;
   const subject = `Revised Quote from ${vendorBusinessName || 'your vendor'}`;
+  const attachmentLinks = (attachments || []).filter((a) => a.url).map((a) => `<a href="${a.url}" style="color: #2B9EB3; text-decoration: underline;">${a.name || 'Attachment'}</a>`).join('<br>');
+  const attachmentText = (attachments || []).filter((a) => a.url).map((a) => `- ${a.name || 'Attachment'}: ${a.url}`).join('\n');
 
   const htmlContent = `
     <!DOCTYPE html>
@@ -443,6 +458,13 @@ function generateQuoteRevisedToClientEmail(payload: NotificationPayload) {
           ${quoteDescription ? `<p style="color: #2B3840;">${quoteDescription}</p>` : ''}
         </div>
         
+        ${attachmentLinks ? `
+        <div style="background: #F5F1E8; padding: 20px; border-radius: 8px; margin: 25px 0; border: 1px solid #D4CFBD;">
+          <h3 style="margin-top: 0; color: #2B9EB3;">Attachments</h3>
+          ${attachmentLinks}
+        </div>
+        ` : ''}
+        
         <div style="text-align: center; margin: 30px 0;">
           <a href="funxons://quotes" 
              style="background: #2B9EB3; color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; font-weight: bold; display: inline-block;">
@@ -464,6 +486,7 @@ ${vendorBusinessName || 'Your vendor'} has submitted a revised quote (Revision #
 Updated Quote:
 ${quoteAmount ? `Amount: R${quoteAmount.toLocaleString()}\n` : ''}
 ${quoteDescription ? `Description: ${quoteDescription}\n` : ''}
+${attachmentText ? `\nAttachments:\n${attachmentText}\n` : ''}
 
 Review and respond:
 funxons://quotes

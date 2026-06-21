@@ -13,7 +13,8 @@ type NotificationType =
   | 'vendor-free-signup'
   | 'quote-requested'
   | 'portfolio-callback-requested'
-  | 'new-user-registered';
+  | 'new-user-registered'
+  | 'venue-tour-requested';
 
 interface NotificationPayload {
   type: NotificationType;
@@ -32,6 +33,8 @@ interface NotificationPayload {
   eventDetails?: string;
   vendorId?: string;
   quoteDetails?: string;
+  adminEmail?: string;
+  adminName?: string;
 }
 
 interface BrevoEmailPayload {
@@ -60,8 +63,8 @@ Deno.serve(async (req: Request) => {
     const brevoApiKey = Deno.env.get('BREVO_API_KEY');
     const fromEmail = Deno.env.get('FROM_EMAIL') || 'noreply@funcxon.com';
     const fromName = Deno.env.get('FROM_NAME') || 'Funcxon Platform';
-    const adminEmail = Deno.env.get('ADMIN_EMAIL') || 'admin@funcxon.com';
-    const adminName = Deno.env.get('ADMIN_NAME') || 'Funcxon Admin';
+    const defaultAdminEmail = Deno.env.get('ADMIN_EMAIL') || 'admin@funcxon.com';
+    const defaultAdminName = Deno.env.get('ADMIN_NAME') || 'Funcxon Admin';
 
     if (!brevoApiKey) {
       throw new Error('BREVO_API_KEY environment variable is not set');
@@ -76,6 +79,10 @@ Deno.serve(async (req: Request) => {
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
+
+    // Allow caller to override recipient email/name
+    const adminEmail = payload.adminEmail || defaultAdminEmail;
+    const adminName = payload.adminName || defaultAdminName;
 
     // Generate email content based on notification type
     const { subject, htmlContent, textContent } = generateEmailContent(payload);
@@ -149,6 +156,8 @@ function generateEmailContent(payload: NotificationPayload): { subject: string; 
       return generateQuoteRequestedEmail(payload);
     case 'portfolio-callback-requested':
       return generateCallbackRequestedEmail(payload);
+    case 'venue-tour-requested':
+      return generateVenueTourRequestedEmail(payload);
     case 'new-user-registered':
       return generateNewUserEmail(payload);
     default:
@@ -458,6 +467,67 @@ Callback Request:
 Manage in admin panel: https://funcxon.com/admin/callbacks
 
 Reminder: Response time is within 2 hours during business hours.
+  `;
+
+  return { subject, htmlContent, textContent };
+}
+
+function generateVenueTourRequestedEmail(payload: NotificationPayload) {
+  const { customerName, customerEmail, vendorName, vendorEmail, eventDetails } = payload;
+  const subject = `New Tour Request: ${customerName} → ${vendorName}`;
+
+  const htmlContent = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>New Tour Request</title>
+    </head>
+    <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #2B3840; max-width: 600px; margin: 0 auto; padding: 20px; background: #F8F6F0;">
+      <div style="background: linear-gradient(135deg, #2B9EB3 0%, #9DCFDB 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
+        <h1 style="color: white; margin: 0; font-size: 24px;">New Venue Tour Request</h1>
+      </div>
+      
+      <div style="background: #ffffff; padding: 30px; border: 1px solid #D4CFBD; border-top: none; border-radius: 0 0 10px 10px;">
+        <p style="font-size: 16px; margin-bottom: 20px; color: #2B3840;">A customer has requested a tour of <strong>${vendorName || 'your venue'}</strong>.</p>
+        
+        <div style="background: #F5F1E8; padding: 20px; border-radius: 8px; margin: 25px 0; border: 1px solid #D4CFBD;">
+          <h3 style="margin-top: 0; color: #2B9EB3;">Customer Details</h3>
+          <p style="color: #2B3840;"><strong>Name:</strong> ${customerName || 'N/A'}</p>
+          <p style="color: #2B3840;"><strong>Email:</strong> ${customerEmail || 'N/A'}</p>
+        </div>
+        
+        ${eventDetails ? `
+        <div style="background: #F5F1E8; padding: 20px; border-radius: 8px; margin: 25px 0; border: 1px solid #D4CFBD;">
+          <h3 style="margin-top: 0; color: #2B9EB3;">Tour Details</h3>
+          <p style="color: #2B3840; white-space: pre-wrap;">${eventDetails}</p>
+        </div>
+        ` : ''}
+        
+        <div style="text-align: center; margin: 30px 0;">
+          <a href="https://funcxon.com/admin/tours" 
+             style="background: #2B9EB3; color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; font-weight: bold; display: inline-block;">
+            Manage Tour Requests
+          </a>
+        </div>
+      </div>
+    </body>
+    </html>
+  `;
+
+  const textContent = `
+New Venue Tour Request
+
+A customer has requested a tour of ${vendorName || 'your venue'}.
+
+Customer Details:
+- Name: ${customerName || 'N/A'}
+- Email: ${customerEmail || 'N/A'}
+
+${eventDetails ? `Tour Details:\n${eventDetails}\n\n` : ''}
+
+Manage in admin panel: https://funcxon.com/admin/tours
   `;
 
   return { subject, htmlContent, textContent };

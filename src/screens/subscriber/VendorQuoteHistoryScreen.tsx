@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Linking, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -12,6 +12,12 @@ import ThemedAlert from '../../components/ThemedAlert';
 type SubscriberStackParamList = {
   VendorQuoteHistory: { quoteRequestId: number };
   VendorQuoteCreate: { quoteRequestId: number };
+};
+
+type QuoteAttachment = {
+  url: string;
+  name: string;
+  type?: string;
 };
 
 type QuoteRevision = {
@@ -28,6 +34,7 @@ type QuoteRevision = {
   responded_at: string | null;
   created_at: string;
   created_by: string;
+  attachments: QuoteAttachment[] | null;
 };
 
 type QuoteComment = {
@@ -323,6 +330,50 @@ export default function VendorQuoteHistoryScreen() {
                             {formatDate(rev.responded_at)}
                           </Text>
                         )}
+                      </View>
+                    )}
+
+                    {rev.attachments && rev.attachments.length > 0 && (
+                      <View style={{ marginBottom: spacing.md }}>
+                        <Text style={{ ...typography.caption, color: colors.textMuted, marginBottom: spacing.sm }}>
+                          Attachments ({rev.attachments.length})
+                        </Text>
+                        {rev.attachments.map((attachment, idx) => (
+                          <TouchableOpacity
+                            key={idx}
+                            onPress={() => {
+                              if (attachment.url) {
+                                Linking.openURL(attachment.url).catch(() => {
+                                  setAlertState({ visible: true, title: 'Error', message: 'Could not open attachment' });
+                                });
+                              }
+                            }}
+                            style={{
+                              flexDirection: 'row',
+                              alignItems: 'center',
+                              padding: spacing.sm,
+                              backgroundColor: '#FEE2E2',
+                              borderRadius: radii.md,
+                              marginBottom: spacing.xs,
+                              borderLeftWidth: 3,
+                              borderLeftColor: '#DC2626',
+                            }}
+                          >
+                            <MaterialIcons name="picture-as-pdf" size={18} color="#DC2626" />
+                            <Text
+                              style={{
+                                ...typography.body,
+                                color: colors.textPrimary,
+                                marginLeft: spacing.sm,
+                                flex: 1,
+                              }}
+                              numberOfLines={1}
+                            >
+                              {attachment.name || 'Attachment'}
+                            </Text>
+                            <MaterialIcons name="open-in-new" size={16} color={colors.textMuted} />
+                          </TouchableOpacity>
+                        ))}
                       </View>
                     )}
 

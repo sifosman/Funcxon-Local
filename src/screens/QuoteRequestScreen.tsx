@@ -88,19 +88,26 @@ export default function QuoteRequestScreen({ route, navigation }: Props) {
         return;
       }
 
+      let quoteRequestId: number | null = null;
+
       if (type === 'venue') {
-        const { error: insertError } = await supabase.from('venue_quote_requests').insert({
-          listing_id: vendorId,
-          requester_user_id: user?.id ?? null,
-          requester_name: name,
-          requester_email: email,
-          requester_phone: null,
-          event_date: null,
-          message: eventDetails || null,
-          status: 'pending',
-        });
+        const { data: inserted, error: insertError } = await supabase
+          .from('venue_quote_requests')
+          .insert({
+            listing_id: vendorId,
+            requester_user_id: user?.id ?? null,
+            requester_name: name,
+            requester_email: email,
+            requester_phone: null,
+            event_date: null,
+            message: eventDetails || null,
+            status: 'pending',
+          })
+          .select('id')
+          .single();
 
         if (insertError) throw insertError;
+        quoteRequestId = inserted?.id ?? null;
       } else {
         // Resolve the internal user id from the authenticated user
         let userId: number | null = null;
@@ -138,24 +145,31 @@ export default function QuoteRequestScreen({ route, navigation }: Props) {
           }
         }
 
-        const { error: insertError } = await supabase.from('quote_requests').insert({
-          vendor_id: vendorId,
-          user_id: userId,
-          name,
-          email,
-          status: 'pending',
-          details: eventDetails || null,
-        });
+        const { data: inserted, error: insertError } = await supabase
+          .from('quote_requests')
+          .insert({
+            vendor_id: vendorId,
+            user_id: userId,
+            name,
+            email,
+            status: 'pending',
+            details: eventDetails || null,
+          })
+          .select('id')
+          .single();
 
         if (insertError) throw insertError;
+        quoteRequestId = inserted?.id ?? null;
       }
 
       // Send admin notification about new quote request
       await sendAdminNotification();
 
-      // Send vendor notification about new quote request
+      // Send vendor/venue notification about new quote request
       if (type === 'vendor') {
-        await sendVendorNotification(vendorId, vendorName);
+        await sendVendorNotification(vendorId, vendorName, quoteRequestId);
+      } else {
+        await sendVenueNotification(vendorId, vendorName, quoteRequestId);
       }
 
       setAlertState({ visible: true, title: 'Quote requested', message: 'Your quote request has been sent successfully.', buttons: [{ text: 'OK', style: 'default', onPress: () => { setAlertState(null); navigation.goBack(); } }] });
@@ -167,7 +181,7 @@ export default function QuoteRequestScreen({ route, navigation }: Props) {
     }
   }
 
-  async function sendVendorNotification(vendorId: number, vendorName: string) {
+  async function sendVendorNotification(vendorId: number, vendorName: string, quoteRequestId: number | null) {
     try {
       // Get vendor email from database
       const { data: vendor, error: vendorError } = await supabase
@@ -184,7 +198,7 @@ export default function QuoteRequestScreen({ route, navigation }: Props) {
       const { data, error } = await supabase.functions.invoke('send-quote-notifications', {
         body: {
           type: 'quote-requested-vendor',
-          quoteRequestId: vendorId,
+          quoteRequestId: quoteRequestId ?? vendorId,
           clientName: name,
           clientEmail: email,
           vendorBusinessName: vendorName,
@@ -201,6 +215,43 @@ export default function QuoteRequestScreen({ route, navigation }: Props) {
       console.log('Vendor notification sent successfully:', data);
     } catch (err) {
       console.error('Failed to send vendor notification:', err);
+    }
+  }
+
+  async function sendVenueNotification(venueId: number, venueName: string, quoteRequestId: number | null) {
+    try {
+      // Get venue email from database
+      const { data: venue, error: venueError } = await supabase
+        .from('venue_listings')
+        .select('contact_email, name')
+        .eq('id', venueId)
+        .maybeSingle();
+
+      if (venueError || !venue?.contact_email) {
+        console.log('Venue contact email not found, skipping venue notification');
+        return;
+      }
+
+      const { data, error } = await supabase.functions.invoke('send-quote-notifications', {
+        body: {
+          type: 'quote-requested-vendor',
+          quoteRequestId: quoteRequestId ?? venueId,
+          clientName: name,
+          clientEmail: email,
+          vendorBusinessName: venueName,
+          vendorEmail: venue.contact_email,
+          eventDetails: eventDetails || undefined,
+        },
+      });
+
+      if (error) {
+        console.error('Error sending venue notification:', error);
+        return;
+      }
+
+      console.log('Venue notification sent successfully:', data);
+    } catch (err) {
+      console.error('Failed to send venue notification:', err);
     }
   }
 

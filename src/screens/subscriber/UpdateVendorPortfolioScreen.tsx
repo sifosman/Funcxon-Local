@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -144,15 +144,6 @@ export default function UpdateVendorPortfolioScreen() {
     const handleChange = (key: keyof typeof form, value: string) => {
         const isLinksField = key === 'website_url' || key === 'instagram_url';
         if (isLinksField && !canEditLinks) {
-            setAlertState({
-                visible: true,
-                title: 'Upgrade Required',
-                message: 'Website & social media links are available on paid vendor plans. Please upgrade to add these links.',
-                buttons: [
-                    { text: 'Not now', style: 'cancel', onPress: () => setAlertState(null) },
-                    { text: 'View Plans', style: 'default', onPress: () => { setAlertState(null); navigation.navigate('SubscriptionPlans'); } },
-                ],
-            });
             return;
         }
 
@@ -250,26 +241,28 @@ export default function UpdateVendorPortfolioScreen() {
     const renderField = (
         label: string,
         key: keyof typeof form,
-        options?: { multiline?: boolean; placeholder?: string; keyboardType?: any },
+        options?: { multiline?: boolean; placeholder?: string; keyboardType?: any; disabled?: boolean },
     ) => (
         <View style={{ marginBottom: spacing.md }}>
             <Text style={{ ...typography.caption, color: colors.textMuted, marginBottom: spacing.xs }}>{label}</Text>
             <TextInput
                 value={form[key]}
                 onChangeText={(v) => handleChange(key, v)}
-                placeholder={options?.placeholder || `Enter ${label.toLowerCase()}`}
+                placeholder={options?.disabled ? 'Upgrade to add this link' : (options?.placeholder || `Enter ${label.toLowerCase()}`)}
                 placeholderTextColor={colors.textMuted}
                 multiline={options?.multiline}
                 numberOfLines={options?.multiline ? 4 : 1}
                 keyboardType={options?.keyboardType}
+                editable={!options?.disabled}
                 style={{
                     borderWidth: 1,
-                    borderColor: colors.borderSubtle,
+                    borderColor: options?.disabled ? colors.borderSubtle : colors.borderSubtle,
                     borderRadius: radii.md,
                     paddingHorizontal: spacing.md,
                     paddingVertical: spacing.sm,
-                    backgroundColor: colors.surfaceMuted,
-                    color: colors.textPrimary,
+                    backgroundColor: options?.disabled ? colors.surfaceMuted : colors.surfaceMuted,
+                    color: options?.disabled ? colors.textMuted : colors.textPrimary,
+                    opacity: options?.disabled ? 0.7 : 1,
                     ...(options?.multiline ? { minHeight: 80, textAlignVertical: 'top' as const } : {}),
                 }}
             />
@@ -286,8 +279,12 @@ export default function UpdateVendorPortfolioScreen() {
     }
 
     return (
-        <View style={{ flex: 1, backgroundColor: colors.background }}>
-            <ScrollView contentContainerStyle={{ paddingBottom: spacing.xl }}>
+        <KeyboardAvoidingView
+            style={{ flex: 1, backgroundColor: colors.background }}
+            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+            keyboardVerticalOffset={Platform.OS === 'ios' ? spacing.lg : 0}
+        >
+            <ScrollView contentContainerStyle={{ paddingBottom: 120 }}>
                 {/* Header */}
                 <View style={{ paddingHorizontal: spacing.lg, paddingTop: spacing.xl, paddingBottom: spacing.md }}>
                     <TouchableOpacity
@@ -460,8 +457,31 @@ export default function UpdateVendorPortfolioScreen() {
                             </Text>
                             {renderField('Email', 'email', { keyboardType: 'email-address', placeholder: 'business@example.com' })}
                             {renderField('WhatsApp Number', 'whatsapp_number', { keyboardType: 'phone-pad', placeholder: '+27...' })}
-                            {renderField('Website URL', 'website_url', { keyboardType: 'url', placeholder: 'https://...' })}
-                            {renderField('Instagram URL', 'instagram_url', { keyboardType: 'url', placeholder: 'https://instagram.com/...' })}
+                            {!canEditLinks && (
+                                <TouchableOpacity
+                                    onPress={() => navigation.navigate('SubscriptionPlans')}
+                                    style={{
+                                        flexDirection: 'row',
+                                        alignItems: 'center',
+                                        backgroundColor: '#FEF3C7',
+                                        borderRadius: radii.md,
+                                        paddingHorizontal: spacing.md,
+                                        paddingVertical: spacing.sm,
+                                        marginBottom: spacing.md,
+                                        gap: spacing.sm,
+                                    }}
+                                >
+                                    <MaterialIcons name="lock" size={16} color="#B45309" />
+                                    <Text style={{ ...typography.caption, color: '#B45309', flex: 1 }}>
+                                        Upgrade to add website and social media links.
+                                    </Text>
+                                    <Text style={{ ...typography.caption, color: colors.primary, fontWeight: '600' }}>
+                                        View Plans
+                                    </Text>
+                                </TouchableOpacity>
+                            )}
+                            {renderField('Website URL', 'website_url', { keyboardType: 'url', placeholder: 'https://...', disabled: !canEditLinks })}
+                            {renderField('Instagram URL', 'instagram_url', { keyboardType: 'url', placeholder: 'https://instagram.com/...', disabled: !canEditLinks })}
                         </View>
 
                         {/* Tags display */}
@@ -558,6 +578,6 @@ export default function UpdateVendorPortfolioScreen() {
                     onDismiss={() => setAlertState(null)}
                 />
             )}
-        </View>
+        </KeyboardAvoidingView>
     );
 }

@@ -137,6 +137,26 @@ export default function ListerPortfolioScreen() {
     }
   };
 
+  const handleDeleteAccount = async () => {
+    try {
+      const { data, error } = await supabase.functions.invoke('delete-user-account', {});
+      if (error || !data?.success) {
+        throw new Error(error?.message || data?.error || 'Failed to delete account');
+      }
+
+      await signOut();
+      const rootNav = navigation.getParent()?.getParent() as any;
+      rootNav?.navigate?.('Auth', { screen: 'SignIn' });
+    } catch (err: any) {
+      setAlertState({
+        visible: true,
+        title: 'Deletion Failed',
+        message: err?.message || 'Could not delete account. Please try again or contact support.',
+        buttons: [{ text: 'OK', style: 'default', onPress: () => setAlertState(null) }],
+      });
+    }
+  };
+
   const portfolioActions: ActionItem[] = [
     {
       id: 'new-application',
@@ -292,8 +312,7 @@ export default function ListerPortfolioScreen() {
             {
               text: 'Delete Forever',
               style: 'destructive',
-              onPress: () =>
-                setAlertState({ visible: true, title: 'Feature Coming Soon', message: 'Account deletion will be available soon. For now, please contact support to delete your account.' }),
+              onPress: () => { setAlertState(null); handleDeleteAccount(); },
             },
           ],
         });

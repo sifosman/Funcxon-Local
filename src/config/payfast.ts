@@ -1,11 +1,13 @@
 // PayFast Payment Gateway Configuration
 // Docs: https://developers.payfast.co.za/docs
 
+import { PAYFAST_SANDBOX, PAYFAST_MERCHANT_ID, PAYFAST_MERCHANT_KEY } from '../utils/env';
+
 export const payfastConfig = {
-  merchantId: process.env.EXPO_PUBLIC_PAYFAST_MERCHANT_ID || '',
-  merchantKey: process.env.EXPO_PUBLIC_PAYFAST_MERCHANT_KEY || '',
+  merchantId: PAYFAST_MERCHANT_ID,
+  merchantKey: PAYFAST_MERCHANT_KEY,
   // Passphrase should only be used server-side; kept here for signature generation reference
-  sandbox: process.env.EXPO_PUBLIC_PAYFAST_SANDBOX === 'true',
+  sandbox: PAYFAST_SANDBOX,
 };
 
 export const PAYFAST_BASE_URL = payfastConfig.sandbox

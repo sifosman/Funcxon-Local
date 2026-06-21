@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { ActivityIndicator, Modal, Platform, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, KeyboardAvoidingView, Modal, Platform, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import DateTimePicker from '@react-native-community/datetimepicker';
@@ -66,6 +66,7 @@ export default function PlannerScreen() {
     name: '',
     theme: '',
     type: '',
+    otherType: '',
     date: '',
   });
   const [showDatePicker, setShowDatePicker] = useState(false);
@@ -430,9 +431,14 @@ export default function PlannerScreen() {
   }
 
   return (
+    <KeyboardAvoidingView
+      style={{ flex: 1, backgroundColor: colors.background }}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? spacing.lg : 0}
+    >
     <ScrollView
       style={{ flex: 1, backgroundColor: colors.background }}
-      contentContainerStyle={{ paddingHorizontal: spacing.lg, paddingVertical: spacing.xl }}
+      contentContainerStyle={{ paddingHorizontal: spacing.lg, paddingVertical: spacing.xl, paddingBottom: 120 }}
     >
       <View style={{ marginBottom: spacing.lg }}>
         <Text style={{ ...typography.displayMedium, color: colors.textPrimary }}>My Planner</Text>
@@ -516,10 +522,28 @@ export default function PlannerScreen() {
               }}
             >
               <Text style={{ color: eventDetails.type ? colors.textPrimary : colors.textMuted }}>
-                {eventDetails.type || 'Select event type'}
+                {eventDetails.type === 'Other' && eventDetails.otherType ? `Other - ${eventDetails.otherType}` : (eventDetails.type || 'Select event type')}
               </Text>
               <MaterialIcons name="arrow-drop-down" size={20} color={colors.textMuted} />
             </TouchableOpacity>
+            {eventDetails.type === 'Other' && (
+              <TextInput
+                value={eventDetails.otherType}
+                onChangeText={(value) => setEventDetails((prev) => ({ ...prev, otherType: value }))}
+                placeholder="Please specify the event type"
+                placeholderTextColor={colors.textMuted}
+                style={{
+                  marginTop: spacing.sm,
+                  borderWidth: 1,
+                  borderColor: colors.borderSubtle,
+                  borderRadius: radii.md,
+                  paddingHorizontal: spacing.md,
+                  paddingVertical: spacing.sm,
+                  backgroundColor: colors.surfaceMuted,
+                  color: colors.textPrimary,
+                }}
+              />
+            )}
           </View>
           <View>
             <Text style={{ ...typography.caption, color: colors.textMuted }}>My Event Date</Text>
@@ -1119,5 +1143,6 @@ export default function PlannerScreen() {
         />
       )}
     </ScrollView>
+    </KeyboardAvoidingView>
   );
 }

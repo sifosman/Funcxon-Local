@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Image, Modal, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Image, KeyboardAvoidingView, Modal, Platform, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -7,7 +7,7 @@ import * as WebBrowser from 'expo-web-browser';
 import { colors, radii, spacing, typography } from '../theme';
 import type { ProfileStackParamList } from '../navigation/ProfileNavigator';
 import { useApplicationForm } from '../context/ApplicationFormContext';
-import { buildPayFastPaymentData, getPayFastCheckoutUrl } from '../config/payfast';
+import { buildPayFastPaymentData, getPayFastCheckoutUrl, payfastConfig } from '../config/payfast';
 import { supabase } from '../lib/supabaseClient';
 import ThemedAlert from '../components/ThemedAlert';
 
@@ -533,8 +533,12 @@ export default function SubscriptionCheckoutScreen() {
   };
 
   return (
-    <View style={{ flex: 1, backgroundColor: colors.background }}>
-      <ScrollView contentContainerStyle={{ paddingBottom: spacing.xl }} keyboardShouldPersistTaps="handled">
+    <KeyboardAvoidingView
+      style={{ flex: 1, backgroundColor: colors.background }}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? spacing.lg : 0}
+    >
+      <ScrollView contentContainerStyle={{ paddingBottom: 120 }} keyboardShouldPersistTaps="handled">
         <View style={{ paddingHorizontal: spacing.lg, paddingTop: spacing.xl, paddingBottom: spacing.lg }}>
           <TouchableOpacity onPress={() => navigation.goBack()} style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.lg }}>
             <MaterialIcons name="arrow-back" size={20} color={colors.textPrimary} />
@@ -709,7 +713,25 @@ export default function SubscriptionCheckoutScreen() {
                   />
                 </View>
                 <View style={{ flex: 1 }}>
-                  <Text style={{ ...typography.body, color: colors.textPrimary, fontWeight: '600' }}>PayFast</Text>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
+                    <Text style={{ ...typography.body, color: colors.textPrimary, fontWeight: '600' }}>PayFast</Text>
+                    {payfastConfig.sandbox && (
+                      <View
+                        style={{
+                          backgroundColor: '#FEF3C7',
+                          borderRadius: radii.full,
+                          paddingHorizontal: spacing.sm,
+                          paddingVertical: 2,
+                          borderWidth: 1,
+                          borderColor: '#F59E0B',
+                        }}
+                      >
+                        <Text style={{ ...typography.caption, color: '#B45309', fontWeight: '600', fontSize: 10 }}>
+                          SANDBOX TEST MODE
+                        </Text>
+                      </View>
+                    )}
+                  </View>
                   <Text style={{ ...typography.caption, color: colors.textMuted }}>
                     Secure checkout powered by PayFast
                   </Text>
@@ -790,6 +812,6 @@ export default function SubscriptionCheckoutScreen() {
           onDismiss={() => setAlertState(null)}
         />
       )}
-    </View>
+    </KeyboardAvoidingView>
   );
 }

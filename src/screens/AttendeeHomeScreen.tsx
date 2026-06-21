@@ -496,7 +496,7 @@ export default function AttendeeHomeScreen() {
             <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: spacing.xs }}>
               <MaterialIcons name="place" size={16} color={colors.textSecondary} />
               <Text style={{ ...typography.caption, color: colors.textSecondary, marginLeft: spacing.xs, flex: 1 }} numberOfLines={2}>
-                {item.location || [item.city, item.province].filter(Boolean).join(', ') || 'Location available on profile'}
+                {[item.city, item.province].filter(Boolean).join(', ') || item.location || 'Location available on profile'}
               </Text>
             </View>
 

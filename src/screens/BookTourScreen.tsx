@@ -57,13 +57,60 @@ export default function BookTourScreen({ route, navigation }: Props) {
         throw insertError;
       }
 
-      // TODO: Send admin/venue owner notification
+      // Send admin/venue owner notification about the tour request
+      await sendTourNotification();
 
       setAlertState({ visible: true, title: 'Tour Requested', message: 'Your tour request has been sent. The venue will confirm with you shortly.', buttons: [{ text: 'OK', style: 'default', onPress: () => { setAlertState(null); navigation.goBack(); } }] });
     } catch (err: any) {
       setAlertState({ visible: true, title: 'Error', message: err?.message ?? 'Failed to submit tour request.' });
     } finally {
       setSubmitting(false);
+    }
+  }
+
+  async function sendTourNotification() {
+    try {
+      // Get venue contact email for owner notification
+      const { data: venue, error: venueError } = await supabase
+        .from('venue_listings')
+        .select('contact_email, name')
+        .eq('id', venueId)
+        .maybeSingle();
+
+      if (venueError) {
+        console.log('Could not load venue email for tour notification');
+      }
+
+      const tourDetails = `Requested date: ${date.toLocaleDateString('en-ZA')}\nPhone: ${phone}\n${message ? `Message: ${message}` : ''}`;
+
+      // Notify admin
+      await supabase.functions.invoke('send-admin-notification', {
+        body: {
+          type: 'venue-tour-requested',
+          customerName: name,
+          customerEmail: email,
+          vendorName: venueName,
+          vendorEmail: venue?.contact_email || undefined,
+          eventDetails: tourDetails,
+        },
+      });
+
+      // Notify venue owner if email exists
+      if (venue?.contact_email) {
+        await supabase.functions.invoke('send-admin-notification', {
+          body: {
+            type: 'venue-tour-requested',
+            customerName: name,
+            customerEmail: email,
+            vendorName: venueName,
+            vendorEmail: venue.contact_email,
+            eventDetails: tourDetails,
+            adminEmail: venue.contact_email,
+          },
+        });
+      }
+    } catch (err) {
+      console.error('Failed to send tour notification:', err);
     }
   }
 

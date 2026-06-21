@@ -9,10 +9,12 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
+import * as DocumentPicker from 'expo-document-picker';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import { supabase } from '../../lib/supabaseClient';
+import { uploadFileToStorage } from '../../lib/applicationService';
 import { colors, spacing, radii, typography } from '../../theme';
 import { OutlineButton, PrimaryButton, ThemedInput } from '../../components/ui';
 import { useAuth } from '../../auth/AuthContext';
@@ -76,6 +78,8 @@ export default function VendorQuoteCreateScreen() {
   const [terms, setTerms] = useState('');
   const [validityDays, setValidityDays] = useState('7');
   const [internalNotes, setInternalNotes] = useState('');
+  const [attachments, setAttachments] = useState<{ uri: string; name: string; type: string; url?: string; uploading?: boolean }[]>([]);
+  const [uploadingAttachment, setUploadingAttachment] = useState(false);
 
   // Load quote request details
   const loadQuoteRequest = useCallback(async () => {
@@ -138,6 +142,59 @@ export default function VendorQuoteCreateScreen() {
     loadQuoteRequest();
   }, [loadQuoteRequest]);
 
+  const pickAttachment = async () => {
+    try {
+      const result = await DocumentPicker.getDocumentAsync({
+        type: 'application/pdf',
+        copyToCacheDirectory: true,
+        multiple: false,
+      });
+
+      if (result.canceled) return;
+      if (!result.assets?.[0]) return;
+
+      const file = result.assets[0];
+      setAttachments((prev) => [
+        ...prev,
+        { uri: file.uri, name: file.name || 'attachment.pdf', type: 'application/pdf', uploading: true },
+      ]);
+      setUploadingAttachment(true);
+
+      const { url, error } = await uploadFileToStorage(
+        'quote-attachments',
+        { uri: file.uri, name: file.name || 'attachment.pdf', type: 'application/pdf' },
+        user?.id || 'anonymous'
+      );
+
+      setAttachments((prev) => {
+        const next = [...prev];
+        const idx = next.findIndex((a) => a.uri === file.uri);
+        if (idx >= 0) {
+          if (url) {
+            next[idx] = { ...next[idx], url, uploading: false };
+          } else {
+            next.splice(idx, 1);
+          }
+        }
+        return next;
+      });
+
+      if (error) {
+        console.error('Attachment upload failed:', error);
+        setAlertState({ visible: true, title: 'Upload Failed', message: error, buttons: [{ text: 'OK', style: 'default', onPress: () => setAlertState(null) }] });
+      }
+    } catch (err: any) {
+      console.error('Attachment pick error:', err);
+      setAlertState({ visible: true, title: 'Upload Failed', message: err?.message || 'Failed to attach PDF', buttons: [{ text: 'OK', style: 'default', onPress: () => setAlertState(null) }] });
+    } finally {
+      setUploadingAttachment(false);
+    }
+  };
+
+  const removeAttachment = (uri: string) => {
+    setAttachments((prev) => prev.filter((a) => a.uri !== uri));
+  };
+
   const validateForm = (): boolean => {
     if (!amount.trim() || isNaN(Number(amount)) || Number(amount) <= 0) {
       setAlertState({ visible: true, title: 'Invalid Amount', message: 'Please enter a valid quote amount', buttons: [{ text: 'OK', style: 'default', onPress: () => setAlertState(null) }] });
@@ -178,6 +235,7 @@ export default function VendorQuoteCreateScreen() {
         validity_days: parseInt(validityDays) || 7,
         status: 'draft',
         notes: internalNotes.trim() || null,
+        attachments: attachments.map((a) => ({ url: a.url, name: a.name, type: a.type })).filter((a) => a.url),
       };
 
       if (existingDraft) {
@@ -234,6 +292,7 @@ export default function VendorQuoteCreateScreen() {
             validity_days: parseInt(validityDays) || 7,
             status: 'sent',
             notes: internalNotes.trim() || null,
+            attachments: attachments.map((a) => ({ url: a.url, name: a.name, type: a.type })).filter((a) => a.url),
             updated_at: new Date().toISOString(),
           })
           .eq('id', existingDraft.id)
@@ -255,6 +314,7 @@ export default function VendorQuoteCreateScreen() {
             validity_days: parseInt(validityDays) || 7,
             status: 'sent',
             notes: internalNotes.trim() || null,
+            attachments: attachments.map((a) => ({ url: a.url, name: a.name, type: a.type })).filter((a) => a.url),
           })
           .select('id')
           .single();
@@ -287,6 +347,9 @@ export default function VendorQuoteCreateScreen() {
     try {
       const revisionNumber = existingRevisions.filter((r) => r.status === 'sent').length + 1;
       const isRevision = revisionNumber > 1;
+      const attachmentUrls = attachments
+        .filter((a) => a.url)
+        .map((a) => ({ url: a.url, name: a.name }));
 
       await supabase.functions.invoke('send-quote-notifications', {
         body: {
@@ -299,6 +362,7 @@ export default function VendorQuoteCreateScreen() {
           quoteAmount: Number(amount),
           quoteDescription: description.trim(),
           revisionNumber,
+          attachments: attachmentUrls,
         },
       });
     } catch (err) {
@@ -440,6 +504,69 @@ export default function VendorQuoteCreateScreen() {
               numberOfLines={2}
               style={{ minHeight: 60, textAlignVertical: 'top', backgroundColor: colors.surfaceMuted }}
             />
+
+            {/* Attachments */}
+            <Text style={{ ...typography.body, color: colors.textSecondary, marginBottom: spacing.xs, marginTop: spacing.md }}>
+              Attachments (PDF)
+            </Text>
+            {attachments.map((attachment) => (
+              <View
+                key={attachment.uri}
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  padding: spacing.sm,
+                  backgroundColor: colors.surfaceMuted,
+                  borderRadius: radii.md,
+                  marginBottom: spacing.xs,
+                  borderWidth: 1,
+                  borderColor: colors.borderSubtle,
+                }}
+              >
+                <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
+                  <MaterialIcons name="picture-as-pdf" size={20} color={attachment.uploading ? colors.textMuted : '#DC2626'} />
+                  <Text
+                    style={{
+                      ...typography.body,
+                      color: attachment.uploading ? colors.textMuted : colors.textPrimary,
+                      marginLeft: spacing.sm,
+                      flex: 1,
+                    }}
+                    numberOfLines={1}
+                  >
+                    {attachment.name}
+                    {attachment.uploading ? ' (uploading...)' : ''}
+                  </Text>
+                </View>
+                {!attachment.uploading && (
+                  <TouchableOpacity onPress={() => removeAttachment(attachment.uri)} style={{ padding: spacing.xs }}>
+                    <MaterialIcons name="close" size={18} color={colors.textMuted} />
+                  </TouchableOpacity>
+                )}
+              </View>
+            ))}
+            <TouchableOpacity
+              onPress={pickAttachment}
+              disabled={uploadingAttachment}
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'center',
+                padding: spacing.sm,
+                borderWidth: 1,
+                borderColor: colors.borderSubtle,
+                borderRadius: radii.md,
+                borderStyle: 'dashed',
+                marginTop: spacing.xs,
+                opacity: uploadingAttachment ? 0.6 : 1,
+              }}
+            >
+              <MaterialIcons name="add" size={18} color={colors.primary} />
+              <Text style={{ ...typography.body, color: colors.primary, marginLeft: spacing.xs }}>
+                {uploadingAttachment ? 'Uploading PDF...' : 'Add PDF Attachment'}
+              </Text>
+            </TouchableOpacity>
           </View>
         </View>
 

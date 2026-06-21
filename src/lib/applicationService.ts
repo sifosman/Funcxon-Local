@@ -138,7 +138,7 @@ export async function submitApplication(data: ApplicationSubmission) {
 }
 
 export async function uploadFileToStorage(
-  bucket: 'portfolio-images' | 'portfolio-videos' | 'business-documents',
+  bucket: 'portfolio-images' | 'portfolio-videos' | 'business-documents' | 'quote-attachments',
   file: { uri: string; name: string; type: string },
   userId: string
 ) {

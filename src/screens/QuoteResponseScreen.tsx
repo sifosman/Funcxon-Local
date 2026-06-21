@@ -1,6 +1,7 @@
 import { useState, useCallback, useEffect } from 'react';
 import {
   KeyboardAvoidingView,
+  Linking,
   Platform,
   ScrollView,
   Text,
@@ -31,6 +32,12 @@ type QuotesStackParamList = {
   };
 };
 
+type QuoteAttachment = {
+  url: string;
+  name: string;
+  type?: string;
+};
+
 type QuoteRevision = {
   id: number;
   quote_request_id: number;
@@ -44,6 +51,7 @@ type QuoteRevision = {
   created_at: string;
   client_notes?: string | null;
   responded_at?: string | null;
+  attachments?: QuoteAttachment[] | null;
 };
 
 type VendorInfo = {
@@ -300,6 +308,51 @@ export default function QuoteResponseScreen() {
                 >
                   {expired ? 'Quote Expired' : `Valid for ${revision.validity_days} days`}
                 </Text>
+              </View>
+            )}
+
+            {/* Attachments */}
+            {revision?.attachments && revision.attachments.length > 0 && (
+              <View style={{ marginTop: spacing.md }}>
+                <Text style={{ ...typography.caption, color: colors.textMuted, marginBottom: spacing.sm }}>
+                  Attachments ({revision.attachments.length})
+                </Text>
+                {revision.attachments.map((attachment, idx) => (
+                  <TouchableOpacity
+                    key={idx}
+                    onPress={() => {
+                      if (attachment.url) {
+                        Linking.openURL(attachment.url).catch(() => {
+                          setAlertState({ visible: true, title: 'Error', message: 'Could not open attachment', buttons: [{ text: 'OK', style: 'default', onPress: () => setAlertState(null) }] });
+                        });
+                      }
+                    }}
+                    style={{
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      padding: spacing.sm,
+                      backgroundColor: '#FEE2E2',
+                      borderRadius: radii.md,
+                      marginBottom: spacing.xs,
+                      borderLeftWidth: 3,
+                      borderLeftColor: '#DC2626',
+                    }}
+                  >
+                    <MaterialIcons name="picture-as-pdf" size={18} color="#DC2626" />
+                    <Text
+                      style={{
+                        ...typography.body,
+                        color: colors.textPrimary,
+                        marginLeft: spacing.sm,
+                        flex: 1,
+                      }}
+                      numberOfLines={1}
+                    >
+                      {attachment.name || 'Attachment'}
+                    </Text>
+                    <MaterialIcons name="open-in-new" size={16} color={colors.textMuted} />
+                  </TouchableOpacity>
+                ))}
               </View>
             )}
           </View>
