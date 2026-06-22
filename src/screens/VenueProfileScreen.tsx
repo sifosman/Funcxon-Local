@@ -3,6 +3,7 @@ import { ActivityIndicator, BackHandler, Dimensions, Image, Linking, Modal, Plat
 import Carousel from 'react-native-reanimated-carousel';
 import type { ICarouselInstance } from 'react-native-reanimated-carousel';
 import ThemedAlert from '../components/ThemedAlert';
+import NetworkImage from '../components/NetworkImage';
 import { useQuery } from '@tanstack/react-query';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { WebView } from 'react-native-webview';
@@ -252,21 +253,25 @@ export default function VenueProfileScreen({ route, navigation }: Props) {
   }, [venue?.location, venue?.city, venue?.province]);
 
   const physicalAddress = useMemo(() => {
-    const structured = [
-      venue?.address_line_1,
-      venue?.address_line_2,
-      venue?.suburb,
-      venue?.city,
-      venue?.province,
-      venue?.postal_code,
-      venue?.country,
-    ]
-      .map((part) => part?.trim() ?? '')
-      .filter(Boolean)
-      .join(', ');
+    const hasStreetAddress = Boolean(venue?.address_line_1?.trim());
 
-    if (structured) {
-      return structured;
+    if (hasStreetAddress) {
+      const structured = [
+        venue?.address_line_1,
+        venue?.address_line_2,
+        venue?.suburb,
+        venue?.city,
+        venue?.province,
+        venue?.postal_code,
+        venue?.country,
+      ]
+        .map((part) => part?.trim() ?? '')
+        .filter(Boolean)
+        .join(', ');
+
+      if (structured) {
+        return structured;
+      }
     }
 
     if (venue?.location?.trim()) {
@@ -293,7 +298,7 @@ export default function VenueProfileScreen({ route, navigation }: Props) {
     return { latitude, longitude };
   }, [venue?.latitude, venue?.longitude]);
 
-  const mapSearchTarget = physicalAddress ?? mapQuery;
+  const mapSearchTarget = mapQuery || physicalAddress;
 
   useEffect(() => {
     setMapImageFailed(false);
@@ -721,7 +726,7 @@ export default function VenueProfileScreen({ route, navigation }: Props) {
                     }}
                     style={{ width: '100%', height: '100%' }}
                   >
-                    <Image source={{ uri: item }} style={{ width: '100%', height: '100%' }} resizeMode="cover" />
+                    <NetworkImage uri={item} style={{ width: '100%', height: '100%' }} resizeMode="cover" />
                   </TouchableOpacity>
                 )}
               />
@@ -813,8 +818,8 @@ export default function VenueProfileScreen({ route, navigation }: Props) {
                 }}
                 style={{ marginRight: spacing.sm }}
               >
-                <Image
-                  source={{ uri: imageUrl }}
+                <NetworkImage
+                  uri={imageUrl}
                   style={{
                     width: 80,
                     height: 80,

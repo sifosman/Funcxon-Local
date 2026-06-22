@@ -3,6 +3,8 @@ import { Image, View, ActivityIndicator, ImageResizeMode } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { colors } from '../theme';
 
+const LOGO_FALLBACK = require('../../assets/logo.png');
+
 type NetworkImageProps = {
   uri: string | null | undefined;
   style: any;
@@ -11,6 +13,7 @@ type NetworkImageProps = {
   placeholderIconSize?: number;
   placeholderBg?: string;
   showLoader?: boolean;
+  useLogoFallback?: boolean;
 };
 
 export default function NetworkImage({
@@ -21,6 +24,7 @@ export default function NetworkImage({
   placeholderIconSize = 28,
   placeholderBg,
   showLoader = false,
+  useLogoFallback = true,
 }: NetworkImageProps) {
   const [errored, setErrored] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -31,6 +35,27 @@ export default function NetworkImage({
   }, [uri]);
 
   if (!uri || errored) {
+    if (useLogoFallback) {
+      const w = typeof style?.width === 'number' ? style.width : undefined;
+      const h = typeof style?.height === 'number' ? style.height : undefined;
+      const logoSize = Math.min(w ?? 80, h ?? 80) * 0.5;
+      return (
+        <View
+          style={{
+            ...style,
+            backgroundColor: placeholderBg ?? '#FAFAF7',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+        >
+          <Image
+            source={LOGO_FALLBACK}
+            style={{ width: logoSize, height: logoSize }}
+            resizeMode="contain"
+          />
+        </View>
+      );
+    }
     return (
       <View
         style={{

@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Image, KeyboardAvoidingView, Linking, Platform, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import ThemedAlert from '../components/ThemedAlert';
-import { MaterialIcons } from '@expo/vector-icons';
+import NetworkImage from '../components/NetworkImage';
+import { MaterialIcons} from '@expo/vector-icons';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { AttendeeStackParamList } from '../navigation/AttendeeNavigator';
 import { colors, spacing, radii, typography } from '../theme';
@@ -240,8 +241,8 @@ export default function VenueCatalogueViewScreen({ route, navigation }: Props) {
                   }}
                 >
                   {item.image_url ? (
-                    <Image
-                      source={{ uri: item.image_url }}
+                    <NetworkImage
+                      uri={item.image_url}
                       style={{ width: 100, height: 100 }}
                       resizeMode="cover"
                     />

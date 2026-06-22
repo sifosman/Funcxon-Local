@@ -1,12 +1,10 @@
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import { Platform } from 'react-native';
 import WelcomeScreen from '../screens/WelcomeScreen';
 import SignInScreen from '../screens/SignInScreen';
 import SignUpScreen from '../screens/SignUpScreen';
 import EmailConfirmationScreen from '../screens/EmailConfirmationScreen';
 import LegalDocumentScreen from '../screens/LegalDocumentScreen';
 import GuestPromptScreen from '../screens/GuestPromptScreen';
-import { colors, typography } from '../theme';
 
 export type AuthStackParamList = {
   Welcome: undefined;
@@ -24,25 +22,16 @@ export function AuthNavigator() {
     <Stack.Navigator
       initialRouteName="Welcome"
       screenOptions={{
-        headerStyle: {
-          backgroundColor: colors.surface,
-        },
-        headerTitleStyle: {
-          ...typography.titleMedium,
-          color: colors.textPrimary,
-        },
-        headerTintColor: colors.textPrimary,
+        headerShown: false,
       }}
     >
       <Stack.Screen name="Welcome" component={WelcomeScreen} options={{ headerShown: false }} />
-      <Stack.Screen name="SignIn" component={SignInScreen} options={{ title: 'Sign in', headerShown: Platform.OS !== 'web' }} />
+      <Stack.Screen name="SignIn" component={SignInScreen} options={{ headerShown: false }} />
       <Stack.Screen
         name="SignUp"
         component={SignUpScreen}
         options={{
-          title: 'Create account',
-          headerShown: Platform.OS !== 'web',
-          headerTitleStyle: { ...typography.titleMedium, color: colors.textPrimary },
+          headerShown: false,
         }}
       />
       <Stack.Screen

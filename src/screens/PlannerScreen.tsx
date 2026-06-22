@@ -759,7 +759,7 @@ export default function PlannerScreen({ navigation }: PlannerProps) {
         }}
       >
         <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.md }}>
-          <MaterialIcons name="attach-money" size={20} color={colors.primary} style={{ marginRight: spacing.sm }} />
+          <MaterialIcons name="savings" size={20} color={colors.primary} style={{ marginRight: spacing.sm }} />
           <Text style={{ ...typography.titleMedium, color: colors.textPrimary }}>Budget</Text>
         </View>
         <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.md }}>

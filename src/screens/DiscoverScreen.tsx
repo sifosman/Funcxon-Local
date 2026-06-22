@@ -845,6 +845,30 @@ export default function DiscoverScreen() {
     </TouchableOpacity>
   );
 
+  const clearFilters = () => {
+    setSearch('');
+    setMinRating(null);
+    setOnlyWithPrice(false);
+    setFeaturedOnly(false);
+    setLocationSearch('');
+    setCityFilter('');
+    setProvinceFilter('');
+    setAmenitiesFilter('');
+    setCategoryTextFilter('');
+    setCategory('all');
+    setSortBy('best-match');
+    setSelectedVenueType(null);
+    setSelectedVenueAmenities([]);
+    setSelectedCapacity(null);
+    setSelectedProvinces([]);
+    setSelectedCities([]);
+    setSelectedVendorCategories([]);
+    setSelectedVendorSubcategories([]);
+    setSelectedVendorProvinces([]);
+    setSelectedVendorCities([]);
+    setSelectedLocationProvince('');
+  };
+
   return (
     <Animated.ScrollView
       style={{ flex: 1, backgroundColor: colors.background }}
@@ -1069,7 +1093,8 @@ export default function DiscoverScreen() {
                 borderTopLeftRadius: radii.xl,
                 borderTopRightRadius: radii.xl,
                 padding: spacing.lg,
-                paddingBottom: insets.bottom + spacing.lg,
+                paddingBottom: insets.bottom + spacing.xxl + 60,
+                marginBottom: 56,
                 borderTopWidth: 1,
                 borderColor: colors.borderSubtle,
                 maxHeight: '85%',
@@ -1431,6 +1456,39 @@ export default function DiscoverScreen() {
                   </TouchableOpacity>
                 </View>
               </ScrollView>
+
+              <View style={{ flexDirection: 'row', columnGap: spacing.md, marginTop: spacing.md }}>
+                <TouchableOpacity
+                  onPress={clearFilters}
+                  style={{
+                    flex: 1,
+                    paddingVertical: spacing.md,
+                    borderRadius: radii.full,
+                    borderWidth: 1.5,
+                    borderColor: colors.borderSubtle,
+                    backgroundColor: colors.surface,
+                    alignItems: 'center',
+                  }}
+                  accessibilityLabel="Clear filters"
+                >
+                  <Text style={{ ...typography.buttonMedium, color: colors.textPrimary }}>Clear Filters</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={() => setShowFilters(false)}
+                  style={{
+                    flex: 1,
+                    paddingVertical: spacing.md,
+                    borderRadius: radii.full,
+                    borderWidth: 1.5,
+                    borderColor: colors.primary,
+                    backgroundColor: colors.primary,
+                    alignItems: 'center',
+                  }}
+                  accessibilityLabel="Confirm filters"
+                >
+                  <Text style={{ ...typography.buttonMedium, color: colors.primaryForeground }}>Confirm</Text>
+                </TouchableOpacity>
+              </View>
             </View>
           </View>
         </KeyboardAvoidingView>

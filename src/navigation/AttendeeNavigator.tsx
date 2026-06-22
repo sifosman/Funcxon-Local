@@ -1,5 +1,4 @@
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import { Image, Platform, Text, TouchableOpacity, View } from 'react-native';
 import AttendeeHomeScreen from '../screens/AttendeeHomeScreen';
 import DiscoverScreen from '../screens/DiscoverScreen';
 import VendorProfileScreen from '../screens/VendorProfileScreen';
@@ -17,7 +16,6 @@ import VenueCatalogueViewScreen from '../screens/VenueCatalogueViewScreen';
 import TermsAndPoliciesScreen from '../screens/TermsAndPoliciesScreen';
 import LegalDocumentScreen from '../screens/LegalDocumentScreen';
 import PortfolioAssistanceScreen from '../screens/PortfolioAssistanceScreen';
-import { colors, typography } from '../theme';
 
 export type AttendeeStackParamList = {
   VendorList: undefined;
@@ -60,15 +58,7 @@ export function AttendeeNavigator() {
   return (
     <Stack.Navigator
       screenOptions={{
-        headerShown: Platform.OS !== 'web',
-        headerStyle: {
-          backgroundColor: colors.surface,
-        },
-        headerTitleStyle: {
-          color: colors.textPrimary,
-          fontWeight: '600',
-        },
-        headerTintColor: colors.textPrimary,
+        headerShown: false,
       }}
     >
       <Stack.Screen

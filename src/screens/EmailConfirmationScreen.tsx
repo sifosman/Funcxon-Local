@@ -56,6 +56,13 @@ export default function EmailConfirmationScreen({ route, navigation }: Props) {
             paddingBottom: spacing.xl,
           }}
         >
+          <TouchableOpacity
+            onPress={() => navigation.goBack()}
+            style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.sm, alignSelf: 'flex-start' }}
+          >
+            <MaterialIcons name="arrow-back" size={20} color={colors.textPrimary} />
+            <Text style={{ ...typography.body, color: colors.textPrimary, marginLeft: spacing.xs }}>Back</Text>
+          </TouchableOpacity>
           <View style={{ width: '100%', maxWidth: 360, alignSelf: 'center', alignItems: 'center' }}>
             <View
               style={{
@@ -196,6 +203,13 @@ export default function EmailConfirmationScreen({ route, navigation }: Props) {
           paddingBottom: spacing.xl,
         }}
       >
+        <TouchableOpacity
+          onPress={() => navigation.goBack()}
+          style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.sm, alignSelf: 'flex-start' }}
+        >
+          <MaterialIcons name="arrow-back" size={20} color={colors.textPrimary} />
+          <Text style={{ ...typography.body, color: colors.textPrimary, marginLeft: spacing.xs }}>Back</Text>
+        </TouchableOpacity>
         <View style={{ width: '100%', maxWidth: 360, alignSelf: 'center', alignItems: 'center' }}>
           {/* Icon Container */}
           <View

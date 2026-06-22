@@ -36,7 +36,6 @@ import AccountSettingsScreen from '../screens/AccountSettingsScreen';
 import ChangePasswordScreen from '../screens/ChangePasswordScreen';
 import MarketingPermissionsScreen from '../screens/MarketingPermissionsScreen';
 import DebugUserScreen from '../screens/DebugUserScreen';
-import { colors, typography } from '../theme';
 
 export type ProfileStackParamList = {
     AccountMain: undefined;
@@ -96,14 +95,7 @@ export function ProfileNavigator() {
     return (
         <Stack.Navigator
             screenOptions={{
-                headerStyle: {
-                    backgroundColor: colors.surface,
-                },
-                headerTitleStyle: {
-                    ...typography.titleMedium,
-                    color: colors.textPrimary,
-                },
-                headerTintColor: colors.textPrimary,
+                headerShown: false,
             }}
         >
             <Stack.Screen

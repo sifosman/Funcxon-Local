@@ -143,7 +143,7 @@ export default function QuotesScreen() {
 
       const { data: venueQuotes, error: venueError } = await supabase
         .from('venue_quote_requests')
-        .select('id, listing_id, requester_name, requester_email, status, message, event_date, created_at, requirements')
+        .select('id, listing_id, requester_name, requester_email, status, message, event_date, created_at, line_items')
         .eq('requester_user_id', user.id) // venue requests use the auth.uid
         .order('id', { ascending: false })
         .limit(50);
@@ -151,7 +151,7 @@ export default function QuotesScreen() {
       console.log('[QuotesScreen] Venue quotes result:', { count: venueQuotes?.length, venueError });
 
       if (venueError) {
-        console.error('Error fetching venue quotes:', venueError);
+        throw venueError;
       }
 
       const formattedVendorQuotes: QuoteRequest[] = (vendorQuotes ?? []).map(q => ({
@@ -188,8 +188,8 @@ export default function QuotesScreen() {
         budget: null,
         quote_amount: null,
         created_at: q.created_at,
-        requirements: q.requirements,
-        notes: q.requirements,
+        requirements: null,
+        notes: null,
       }));
 
       const allQuotes = [...formattedVendorQuotes, ...formattedVenueQuotes].sort((a, b) => {
@@ -380,7 +380,7 @@ export default function QuotesScreen() {
         vendorName: quote.target_name ?? 'Vendor',
         type: quote.is_venue ? 'venue' : 'vendor',
         editMode: true,
-        quoteId: quote.id,
+        quoteId: quote.original_id ?? quote.id,
       });
       return;
     }
