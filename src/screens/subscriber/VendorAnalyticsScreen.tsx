@@ -147,7 +147,7 @@ export default function VendorAnalyticsScreen() {
                   alignItems: 'center',
                 }}
               >
-                <Text style={{ ...typography.body, color: '#FFFFFF', fontWeight: '700' }}>View Plans</Text>
+                <Text style={{ ...typography.bodyBold, color: '#FFFFFF' }}>View Plans</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -201,7 +201,7 @@ export default function VendorAnalyticsScreen() {
                   alignItems: 'center',
                 }}
               >
-                <Text style={{ ...typography.body, color: colors.primary, fontWeight: '700' }}>Go to Update Vendor Portfolio</Text>
+                <Text style={{ ...typography.bodyBold, color: colors.primary }}>Go to Update Vendor Portfolio</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -254,7 +254,7 @@ export default function VendorAnalyticsScreen() {
                 }}
               >
                 <Text style={{ ...typography.caption, color: colors.textMuted }}>Catalogue Items</Text>
-                <Text style={{ ...typography.displayLarge, color: colors.textPrimary, fontWeight: '700' }}>
+                <Text style={{ ...typography.displayLarge, color: colors.textPrimary }}>
                   {counts.catalogueItems}
                 </Text>
               </View>
@@ -270,7 +270,7 @@ export default function VendorAnalyticsScreen() {
                 }}
               >
                 <Text style={{ ...typography.caption, color: colors.textMuted }}>Quote Requests</Text>
-                <Text style={{ ...typography.displayLarge, color: colors.textPrimary, fontWeight: '700' }}>
+                <Text style={{ ...typography.displayLarge, color: colors.textPrimary }}>
                   {counts.quoteRequests}
                 </Text>
               </View>
@@ -287,7 +287,7 @@ export default function VendorAnalyticsScreen() {
                 }}
               >
                 <Text style={{ ...typography.caption, color: colors.textMuted }}>Reviews</Text>
-                <Text style={{ ...typography.displayLarge, color: colors.textPrimary, fontWeight: '700' }}>
+                <Text style={{ ...typography.displayLarge, color: colors.textPrimary }}>
                   {counts.reviews}
                 </Text>
               </View>

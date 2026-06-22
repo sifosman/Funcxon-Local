@@ -515,7 +515,7 @@ export default function VendorProfileScreen({ route, navigation }: Props) {
     if (!items || items.length === 0) return null;
     return (
       <View style={{ marginBottom: spacing.md }}>
-        <Text style={{ ...typography.body, color: colors.textPrimary, fontWeight: '600', marginBottom: spacing.xs }}>
+        <Text style={{ ...typography.bodySemiBold, color: colors.textPrimary, marginBottom: spacing.xs }}>
           {title}
         </Text>
         {items.map((item) => (
@@ -1006,7 +1006,7 @@ export default function VendorProfileScreen({ route, navigation }: Props) {
                     }}
                   >
                     <MaterialIcons name="chat" size={18} color="#FFFFFF" />
-                    <Text style={{ color: '#FFFFFF', fontWeight: '600', marginLeft: spacing.sm }}>Contact via WhatsApp</Text>
+                    <Text style={{ ...typography.bodySemiBold, color: '#FFFFFF', marginLeft: spacing.sm }}>Contact via WhatsApp</Text>
                   </TouchableOpacity>
                 )}
                 {emailUrl && (
@@ -1022,7 +1022,7 @@ export default function VendorProfileScreen({ route, navigation }: Props) {
                     }}
                   >
                     <MaterialIcons name="email" size={18} color="#FFFFFF" />
-                    <Text style={{ color: '#FFFFFF', fontWeight: '600', marginLeft: spacing.sm }}>Contact via Email</Text>
+                    <Text style={{ ...typography.bodySemiBold, color: '#FFFFFF', marginLeft: spacing.sm }}>Contact via Email</Text>
                   </TouchableOpacity>
                 )}
               </View>
@@ -1123,7 +1123,7 @@ export default function VendorProfileScreen({ route, navigation }: Props) {
                 }}
               >
                 <MaterialIcons name="map" size={16} color={colors.textPrimary} />
-                <Text style={{ color: colors.textPrimary, marginLeft: spacing.sm, fontWeight: '600' }}>
+                <Text style={{ ...typography.bodySemiBold, color: colors.textPrimary, marginLeft: spacing.sm }}>
                   Open in Google Maps
                 </Text>
               </TouchableOpacity>
@@ -1158,7 +1158,7 @@ export default function VendorProfileScreen({ route, navigation }: Props) {
                 backgroundColor: colors.surfaceMuted,
               }}
             >
-              <Text style={{ ...typography.body, color: colors.textPrimary, fontWeight: '600', marginBottom: spacing.xs }}>
+              <Text style={{ ...typography.bodySemiBold, color: colors.textPrimary, marginBottom: spacing.xs }}>
                 Your catalog is empty
               </Text>
               <Text style={{ ...typography.caption, color: colors.textMuted, textAlign: 'center' }}>
@@ -1190,7 +1190,7 @@ export default function VendorProfileScreen({ route, navigation }: Props) {
                 marginBottom: spacing.sm,
               }}
             >
-              <Text style={{ color: '#FFFFFF', fontWeight: '600' }}>Request Quote</Text>
+              <Text style={{ ...typography.bodySemiBold, color: '#FFFFFF' }}>Request Quote</Text>
             </TouchableOpacity>
             <TouchableOpacity
               onPress={() => setAlertState({ visible: true, title: 'Coming soon', message: 'Amend quote functionality will be available soon.' })}
@@ -1202,7 +1202,7 @@ export default function VendorProfileScreen({ route, navigation }: Props) {
                 alignItems: 'center',
               }}
             >
-              <Text style={{ color: colors.textPrimary, fontWeight: '600' }}>Amend Quote</Text>
+              <Text style={{ ...typography.bodySemiBold, color: colors.textPrimary }}>Amend Quote</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -1394,10 +1394,10 @@ export default function VendorProfileScreen({ route, navigation }: Props) {
                     }}
                   >
                     <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: spacing.md }}>
-                      <Text style={{ ...typography.body, color: colors.textPrimary, fontWeight: '600', flex: 1 }}>
+                      <Text style={{ ...typography.bodySemiBold, color: colors.textPrimary, flex: 1 }}>
                         {formatAvailabilityDate(entry.date)}
                       </Text>
-                      <Text style={{ ...typography.caption, color: isAvailable ? '#166534' : '#991B1B', fontWeight: '700' }}>
+                      <Text style={{ ...typography.captionBold, color: isAvailable ? '#166534' : '#991B1B' }}>
                         {isAvailable ? 'Available' : 'Unavailable'}
                       </Text>
                     </View>
@@ -1423,7 +1423,7 @@ export default function VendorProfileScreen({ route, navigation }: Props) {
           ) : (
             <View style={{ alignItems: 'center', paddingVertical: spacing.lg }}>
               <MaterialIcons name="event-busy" size={48} color={colors.textMuted} />
-              <Text style={{ ...typography.body, color: colors.textPrimary, marginTop: spacing.md, fontWeight: '600' }}>
+              <Text style={{ ...typography.bodySemiBold, color: colors.textPrimary, marginTop: spacing.md }}>
                 Availability will be updated soon
               </Text>
               <Text style={{ ...typography.caption, color: colors.textMuted, textAlign: 'center', marginTop: spacing.xs }}>
@@ -1450,7 +1450,7 @@ export default function VendorProfileScreen({ route, navigation }: Props) {
             }}
           >
             <MaterialIcons name="calendar-today" size={16} color="#FFFFFF" />
-            <Text style={{ color: '#FFFFFF', fontWeight: '600', marginLeft: spacing.sm }}>
+            <Text style={{ ...typography.bodySemiBold, color: '#FFFFFF', marginLeft: spacing.sm }}>
               Contact for Availability
             </Text>
           </TouchableOpacity>

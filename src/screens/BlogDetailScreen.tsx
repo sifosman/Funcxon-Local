@@ -125,7 +125,7 @@ export default function BlogDetailScreen() {
       } else if (trimmedLine.match(/^\d+\.\s/)) {
         elements.push(
           <View key={index} style={{ flexDirection: 'row', marginBottom: spacing.sm }}>
-            <Text style={{ ...typography.body, color: colors.primary, fontWeight: '600', marginRight: spacing.sm }}>
+            <Text style={{ ...typography.bodySemiBold, color: colors.primary, marginRight: spacing.sm }}>
               {trimmedLine.split('.')[0]}.
             </Text>
             <Text style={{ ...typography.body, color: colors.textPrimary, flex: 1, lineHeight: 22 }}>
@@ -190,7 +190,7 @@ export default function BlogDetailScreen() {
           }}
           onPress={() => navigation.goBack()}
         >
-          <Text style={{ ...typography.body, color: colors.primaryForeground, fontWeight: '600' }}>
+          <Text style={{ ...typography.bodySemiBold, color: colors.primaryForeground }}>
             Go Back
           </Text>
         </TouchableOpacity>
@@ -297,7 +297,7 @@ export default function BlogDetailScreen() {
                 </View>
               )}
               <View>
-                <Text style={{ ...typography.body, color: colors.textPrimary, fontWeight: '600' }}>
+                <Text style={{ ...typography.bodySemiBold, color: colors.textPrimary }}>
                   {post.author_name}
                 </Text>
                 <Text style={{ ...typography.caption, color: colors.textMuted }}>
@@ -416,7 +416,7 @@ export default function BlogDetailScreen() {
                 <MaterialIcons name="arrow-back" size={20} color={colors.textPrimary} />
                 <View style={{ marginLeft: spacing.sm, flex: 1 }}>
                   <Text style={{ ...typography.caption, color: colors.textMuted }}>Previous</Text>
-                  <Text style={{ ...typography.body, color: colors.textPrimary, fontWeight: '600' }} numberOfLines={1}>
+                  <Text style={{ ...typography.bodySemiBold, color: colors.textPrimary }} numberOfLines={1}>
                     {prevPost.title}
                   </Text>
                 </View>
@@ -441,7 +441,7 @@ export default function BlogDetailScreen() {
               >
                 <View style={{ marginRight: spacing.sm, flex: 1, alignItems: 'flex-end' }}>
                   <Text style={{ ...typography.caption, color: colors.primaryForeground, opacity: 0.8 }}>Next</Text>
-                  <Text style={{ ...typography.body, color: colors.primaryForeground, fontWeight: '600' }} numberOfLines={1}>
+                  <Text style={{ ...typography.bodySemiBold, color: colors.primaryForeground }} numberOfLines={1}>
                     {nextPost.title}
                   </Text>
                 </View>

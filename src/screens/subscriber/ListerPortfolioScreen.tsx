@@ -72,6 +72,7 @@ export default function ListerPortfolioScreen() {
   const { user, userRole, signOut } = useAuth();
   const [vendorListing, setVendorListing] = useState<VendorListing | null>(null);
   const [venueListing, setVenueListing] = useState<VenueListing | null>(null);
+  const [venueListingNeedsSetup, setVenueListingNeedsSetup] = useState(false);
   const [loading, setLoading] = useState(true);
   const [helpVisible, setHelpVisible] = useState(false);
   const [alertState, setAlertState] = useState<{visible: boolean; title: string; message: string; buttons?: any[]} | null>(null);
@@ -98,13 +99,28 @@ export default function ListerPortfolioScreen() {
 
       const listingUserId = userRow?.auth_user_id ?? user.id;
 
-      const [{ data: vendorData }, { data: venueData }] = await Promise.all([
+      const [{ data: vendorData }, { data: venueData }, { data: venuesData }] = await Promise.all([
         supabase.from('vendors').select('id, name, subscription_tier, subscription_status, subscription_expires_at').eq('user_id', listingUserId).maybeSingle(),
         supabase.from('venue_listings').select('id, name, subscription_plan, subscription_status, subscription_expires_at').eq('user_id', listingUserId).maybeSingle(),
+        supabase.from('venues').select('id, name, subscription_plan_key, subscription_status, subscription_expires_at').eq('user_id', listingUserId).maybeSingle(),
       ]);
 
       if (vendorData) setVendorListing(vendorData);
-      if (venueData) setVenueListing(venueData);
+      if (venueData) {
+        setVenueListing(venueData);
+        setVenueListingNeedsSetup(false);
+      } else if (venuesData) {
+        setVenueListing({
+          id: venuesData.id,
+          name: venuesData.name,
+          subscription_plan: venuesData.subscription_plan_key,
+          subscription_status: venuesData.subscription_status,
+          subscription_expires_at: venuesData.subscription_expires_at,
+        });
+        setVenueListingNeedsSetup(true);
+      } else {
+        setVenueListingNeedsSetup(false);
+      }
     } catch {
       // silently fail
     } finally {
@@ -164,7 +180,7 @@ export default function ListerPortfolioScreen() {
   const portfolioActions: ActionItem[] = [
     {
       id: 'new-application',
-      label: 'Capture your new portfolio application',
+      label: 'Capture new portfolio application',
       icon: 'add-business',
       action: () => navigation.navigate('PortfolioType'),
     },
@@ -181,14 +197,25 @@ export default function ListerPortfolioScreen() {
             message: 'Which portfolio would you like to view?',
             buttons: [
               { text: 'Vendor', style: 'default', onPress: () => { setAlertState(null); parentNav?.navigate?.('Main', { screen: 'Home', params: { screen: 'VendorProfile', params: { vendorId: vendorListing.id } } }); } },
-              { text: 'Venue', style: 'default', onPress: () => { setAlertState(null); parentNav?.navigate?.('Main', { screen: 'Home', params: { screen: 'VenueProfile', params: { venueId: venueListing.id } } }); } },
+              { text: 'Venue', style: 'default', onPress: () => {
+                setAlertState(null);
+                if (venueListingNeedsSetup) {
+                  setAlertState({ visible: true, title: 'Venue Listing Setup', message: 'Your venue listing needs to be completed before it can be viewed publicly. Tap "Edit your portfolio details" to finish setting it up.', buttons: [{ text: 'OK', style: 'default', onPress: () => setAlertState(null) }] });
+                } else {
+                  parentNav?.navigate?.('Main', { screen: 'Home', params: { screen: 'VenueProfile', params: { venueId: venueListing.id } } });
+                }
+              } },
               { text: 'Cancel', style: 'cancel', onPress: () => setAlertState(null) },
             ],
           });
         } else if (vendorListing) {
           parentNav?.navigate?.('Main', { screen: 'Home', params: { screen: 'VendorProfile', params: { vendorId: vendorListing.id } } });
         } else if (venueListing) {
-          parentNav?.navigate?.('Main', { screen: 'Home', params: { screen: 'VenueProfile', params: { venueId: venueListing.id } } });
+          if (venueListingNeedsSetup) {
+            setAlertState({ visible: true, title: 'Venue Listing Setup', message: 'Your venue listing needs to be completed before it can be viewed publicly. Tap "Edit your portfolio details" to finish setting it up.', buttons: [{ text: 'OK', style: 'default', onPress: () => setAlertState(null) }] });
+          } else {
+            parentNav?.navigate?.('Main', { screen: 'Home', params: { screen: 'VenueProfile', params: { venueId: venueListing.id } } });
+          }
         } else {
           setAlertState({ visible: true, title: 'No portfolio found', message: 'You do not have an active portfolio yet. Create one first.' });
         }
@@ -336,7 +363,7 @@ export default function ListerPortfolioScreen() {
     >
       <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
         <MaterialIcons name={item.icon} size={22} color={colors.textPrimary} style={{ marginRight: spacing.md }} />
-        <Text style={{ ...typography.body, fontWeight: '500', color: colors.textPrimary }}>
+        <Text style={{ ...typography.bodyMedium, color: colors.textPrimary }}>
           {item.label}
         </Text>
       </View>
@@ -367,7 +394,7 @@ export default function ListerPortfolioScreen() {
             <Text style={{ ...typography.titleMedium, color: colors.textPrimary, marginBottom: spacing.sm }}>Vendor Plan</Text>
             <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.xs }}>
               <Text style={{ ...typography.body, color: colors.textMuted, width: 110 }}>Plan:</Text>
-              <Text style={{ ...typography.body, color: colors.textPrimary, fontWeight: '600' }}>
+              <Text style={{ ...typography.bodySemiBold, color: colors.textPrimary }}>
                 {vendorListing.subscription_tier ? vendorListing.subscription_tier.charAt(0).toUpperCase() + vendorListing.subscription_tier.slice(1) : 'Free'}
               </Text>
             </View>
@@ -384,13 +411,13 @@ export default function ListerPortfolioScreen() {
                 onPress={() => navigation.navigate('SubscriptionPlans')}
                 style={{ flex: 1, borderWidth: 1, borderColor: colors.primary, borderRadius: radii.md, paddingVertical: spacing.sm, alignItems: 'center' }}
               >
-                <Text style={{ ...typography.body, color: colors.primary, fontWeight: '600' }}>Renew</Text>
+                <Text style={{ ...typography.bodySemiBold, color: colors.primary }}>Renew</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 onPress={() => navigation.navigate('SubscriptionPlans')}
                 style={{ flex: 1, backgroundColor: colors.primary, borderRadius: radii.md, paddingVertical: spacing.sm, alignItems: 'center' }}
               >
-                <Text style={{ ...typography.body, color: '#FFFFFF', fontWeight: '600' }}>Upgrade</Text>
+                <Text style={{ ...typography.bodySemiBold, color: '#FFFFFF' }}>Upgrade</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -402,7 +429,7 @@ export default function ListerPortfolioScreen() {
             <Text style={{ ...typography.titleMedium, color: colors.textPrimary, marginBottom: spacing.sm }}>Venue Plan</Text>
             <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.xs }}>
               <Text style={{ ...typography.body, color: colors.textMuted, width: 110 }}>Plan:</Text>
-              <Text style={{ ...typography.body, color: colors.textPrimary, fontWeight: '600' }}>
+              <Text style={{ ...typography.bodySemiBold, color: colors.textPrimary }}>
                 {venueListing.subscription_plan ? venueListing.subscription_plan.charAt(0).toUpperCase() + venueListing.subscription_plan.slice(1) : 'Free'}
               </Text>
             </View>
@@ -419,13 +446,13 @@ export default function ListerPortfolioScreen() {
                 onPress={() => navigation.navigate('SubscriptionPlans')}
                 style={{ flex: 1, borderWidth: 1, borderColor: colors.primary, borderRadius: radii.md, paddingVertical: spacing.sm, alignItems: 'center' }}
               >
-                <Text style={{ ...typography.body, color: colors.primary, fontWeight: '600' }}>Renew</Text>
+                <Text style={{ ...typography.bodySemiBold, color: colors.primary }}>Renew</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 onPress={() => navigation.navigate('VenueListingPlans')}
                 style={{ flex: 1, backgroundColor: colors.primary, borderRadius: radii.md, paddingVertical: spacing.sm, alignItems: 'center' }}
               >
-                <Text style={{ ...typography.body, color: '#FFFFFF', fontWeight: '600' }}>Upgrade</Text>
+                <Text style={{ ...typography.bodySemiBold, color: '#FFFFFF' }}>Upgrade</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -609,9 +636,8 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   cardTitle: {
-    ...typography.titleMedium,
+    ...typography.titleLarge,
     color: colors.textPrimary,
-    fontWeight: '700',
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.lg,
     paddingBottom: spacing.md,
@@ -641,8 +667,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   ctaButtonText: {
+    ...typography.bodySemiBold,
     color: colors.surface,
-    fontWeight: '600',
     fontSize: 15,
   },
   featuredCard: {
@@ -654,9 +680,8 @@ const styles = StyleSheet.create({
     borderLeftColor: colors.textPrimary,
   },
   featuredLabel: {
-    ...typography.body,
+    ...typography.bodySemiBold,
     color: colors.textPrimary,
-    fontWeight: '600',
     marginBottom: spacing.md,
   },
   featuredButton: {
@@ -667,8 +692,8 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
   },
   featuredButtonText: {
+    ...typography.bodyBold,
     color: colors.surface,
-    fontWeight: '700',
     fontSize: 14,
   },
   featuredNote: {
@@ -681,7 +706,6 @@ const styles = StyleSheet.create({
     ...typography.titleLarge,
     color: colors.textPrimary,
     marginBottom: spacing.md,
-    fontWeight: '700',
   },
   blogHeader: {
     flexDirection: 'row',
@@ -690,9 +714,8 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
   },
   viewAllText: {
-    ...typography.body,
+    ...typography.bodySemiBold,
     color: colors.textPrimary,
-    fontWeight: '600',
   },
   blogScrollContainer: {
     paddingRight: spacing.lg,
@@ -734,9 +757,9 @@ const styles = StyleSheet.create({
     marginBottom: spacing.sm,
   },
   blogCategoryText: {
+    ...typography.captionSemiBold,
     color: colors.textPrimary,
     fontSize: 10,
-    fontWeight: '600',
   },
   blogCardTitle: {
     ...typography.titleMedium,

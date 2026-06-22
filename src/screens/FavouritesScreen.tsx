@@ -259,7 +259,7 @@ export default function FavouritesScreen() {
                         backgroundColor: colors.surfaceMuted,
                       }}
                     >
-                      <Text style={{ ...typography.caption, color: colors.textSecondary, fontWeight: '600' }}>
+                      <Text style={{ ...typography.captionSemiBold, color: colors.textSecondary }}>
                         Your Notes:
                       </Text>
                       <TextInput
@@ -316,7 +316,7 @@ export default function FavouritesScreen() {
                       backgroundColor: colors.surface,
                     }}
                   >
-                    <Text style={{ ...typography.body, color: colors.textPrimary, fontWeight: '600' }}>
+                    <Text style={{ ...typography.bodySemiBold, color: colors.textPrimary }}>
                       View Details
                     </Text>
                   </TouchableOpacity>

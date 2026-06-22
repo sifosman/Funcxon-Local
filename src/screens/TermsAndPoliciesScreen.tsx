@@ -53,7 +53,7 @@ export default function TermsAndPoliciesScreen() {
               style={{ marginRight: spacing.md, marginTop: 2 }}
             />
             <View style={{ flex: 1 }}>
-              <Text style={{ ...typography.body, fontWeight: '600', color: colors.textPrimary, marginBottom: spacing.xs }}>
+              <Text style={{ ...typography.bodySemiBold, color: colors.textPrimary, marginBottom: spacing.xs }}>
                 POPIA Compliant
               </Text>
               <Text style={{ ...typography.caption, color: colors.textSecondary, lineHeight: 18 }}>
@@ -117,7 +117,7 @@ export default function TermsAndPoliciesScreen() {
                     </View>
                     <View style={{ flex: 1 }}>
                       <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                        <Text style={{ ...typography.body, fontWeight: '500', color: colors.textPrimary }}>
+                        <Text style={{ ...typography.bodyMedium, color: colors.textPrimary }}>
                           {doc.title}
                         </Text>
                         {isComingSoon && (
@@ -130,7 +130,7 @@ export default function TermsAndPoliciesScreen() {
                               marginLeft: spacing.sm,
                             }}
                           >
-                            <Text style={{ fontSize: 9, fontWeight: '700', color: colors.textMuted }}>
+                            <Text style={{ ...typography.captionBold, fontSize: 9, color: colors.textMuted }}>
                               COMING SOON
                             </Text>
                           </View>
@@ -161,7 +161,7 @@ export default function TermsAndPoliciesScreen() {
               borderColor: colors.borderSubtle,
             }}
           >
-            <Text style={{ ...typography.body, fontWeight: '600', color: colors.textPrimary, marginBottom: spacing.sm }}>
+            <Text style={{ ...typography.bodySemiBold, color: colors.textPrimary, marginBottom: spacing.sm }}>
               Information Officer
             </Text>
             <Text style={{ ...typography.caption, color: colors.textSecondary, lineHeight: 20 }}>

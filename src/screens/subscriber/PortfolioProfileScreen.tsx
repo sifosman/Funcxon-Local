@@ -187,7 +187,7 @@ export default function PortfolioProfileScreen() {
                     <MaterialIcons name={action.icon} size={24} color={action.iconColor} />
                   </View>
                   <View style={{ flex: 1 }}>
-                    <Text style={{ ...typography.body, fontWeight: '600', color: colors.textPrimary }}>
+                    <Text style={{ ...typography.bodySemiBold, color: colors.textPrimary }}>
                       {action.title}
                     </Text>
                     <Text style={{ ...typography.caption, color: colors.textMuted, marginTop: 2 }}>
@@ -213,7 +213,7 @@ export default function PortfolioProfileScreen() {
           >
             <MaterialIcons name="info" size={24} color={colors.textPrimary} style={{ marginRight: spacing.md }} />
             <View style={{ flex: 1 }}>
-              <Text style={{ ...typography.body, fontWeight: '600', color: colors.textPrimary, marginBottom: spacing.xs }}>
+              <Text style={{ ...typography.bodySemiBold, color: colors.textPrimary, marginBottom: spacing.xs }}>
                 Welcome to Your Portfolio Dashboard
               </Text>
               <Text style={{ ...typography.caption, color: colors.textPrimary }}>

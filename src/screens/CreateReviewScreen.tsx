@@ -157,7 +157,7 @@ export default function CreateReviewScreen({ route, navigation }: Props) {
           }}
         >
           <Text style={{ ...typography.titleMedium, color: colors.textPrimary }}>Leave a review for</Text>
-          <Text style={{ ...typography.body, color: colors.textSecondary, marginTop: spacing.xs, fontWeight: '600' }}>
+          <Text style={{ ...typography.bodySemiBold, color: colors.textSecondary, marginTop: spacing.xs }}>
             {targetName}
           </Text>
         </View>

@@ -191,7 +191,7 @@ export default function VenueTourBookingsScreen() {
                   alignItems: 'center',
                 }}
               >
-                <Text style={{ ...typography.body, color: '#FFFFFF', fontWeight: '700' }}>View Venue Plans</Text>
+                <Text style={{ ...typography.bodyBold, color: '#FFFFFF' }}>View Venue Plans</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -245,7 +245,7 @@ export default function VenueTourBookingsScreen() {
                   alignItems: 'center',
                 }}
               >
-                <Text style={{ ...typography.body, color: colors.primary, fontWeight: '700' }}>Go to Update Venue Portfolio</Text>
+                <Text style={{ ...typography.bodyBold, color: colors.primary }}>Go to Update Venue Portfolio</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -334,9 +334,8 @@ export default function VenueTourBookingsScreen() {
                   >
                     <Text
                       style={{
-                        ...typography.caption,
+                        ...typography.captionBold,
                         color: statusColor(b.status),
-                        fontWeight: '700',
                         textTransform: 'uppercase',
                       }}
                     >
@@ -382,7 +381,7 @@ export default function VenueTourBookingsScreen() {
                     opacity: saving ? 0.6 : 1,
                   }}
                 >
-                  <Text style={{ ...typography.body, color: colors.primary, fontWeight: '700' }}>
+                  <Text style={{ ...typography.bodyBold, color: colors.primary }}>
                     Change status
                   </Text>
                 </TouchableOpacity>

@@ -150,7 +150,7 @@ export default function ChangePasswordScreen() {
             }}
             activeOpacity={0.8}
           >
-            <Text style={{ ...typography.body, fontWeight: '600', color: '#FFFFFF' }}>{saving ? 'Saving...' : 'Update Password'}</Text>
+            <Text style={{ ...typography.bodySemiBold, color: '#FFFFFF' }}>{saving ? 'Saving...' : 'Update Password'}</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>

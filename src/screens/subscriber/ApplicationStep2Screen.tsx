@@ -69,7 +69,7 @@ export default function ApplicationStep2Screen() {
         >
           {opts.isSelected && <MaterialIcons name="check" size={16} color="#FFFFFF" />}
         </View>
-        <Text style={{ ...typography.body, color: colors.textPrimary, fontWeight: '500' }}>{opts.label}</Text>
+        <Text style={{ ...typography.bodyMedium, color: colors.textPrimary }}>{opts.label}</Text>
       </TouchableOpacity>
     );
   };
@@ -115,9 +115,8 @@ export default function ApplicationStep2Screen() {
         </View>
         <Text
           style={{
-            ...typography.body,
+            ...typography.bodyMedium,
             color: colors.textPrimary,
-            fontWeight: '500',
             flex: 1,
           }}
         >
@@ -450,7 +449,7 @@ export default function ApplicationStep2Screen() {
                     >
                       <View style={{ flexDirection: 'row', gap: spacing.md }}>
                         <View style={{ flex: 1 }}>
-                          <Text style={{ ...typography.body, fontWeight: '600', color: colors.textPrimary, marginBottom: spacing.xs }}>
+                          <Text style={{ ...typography.bodySemiBold, color: colors.textPrimary, marginBottom: spacing.xs }}>
                             Hall {hallNumber} Name
                           </Text>
                           <TextInput
@@ -471,7 +470,7 @@ export default function ApplicationStep2Screen() {
                         </View>
 
                         <View style={{ flex: 1 }}>
-                          <Text style={{ ...typography.body, fontWeight: '600', color: colors.textPrimary, marginBottom: spacing.xs }}>
+                          <Text style={{ ...typography.bodySemiBold, color: colors.textPrimary, marginBottom: spacing.xs }}>
                             Hall {hallNumber} Capacity
                           </Text>
                           <TextInput
@@ -581,7 +580,7 @@ export default function ApplicationStep2Screen() {
                       }}
                     >
                       <View style={{ flex: 1 }}>
-                        <Text style={{ ...typography.body, fontWeight: '500', color: colors.textPrimary }}>
+                        <Text style={{ ...typography.bodyMedium, color: colors.textPrimary }}>
                           {category.name}
                         </Text>
                         <Text style={{ ...typography.caption, color: colors.textMuted, marginTop: 2 }}>
@@ -624,7 +623,7 @@ export default function ApplicationStep2Screen() {
                     if (!category) return null;
                     return (
                       <View key={catId} style={{ marginBottom: spacing.lg }}>
-                        <Text style={{ ...typography.body, fontWeight: '600', color: colors.textPrimary, marginBottom: spacing.sm }}>
+                        <Text style={{ ...typography.bodySemiBold, color: colors.textPrimary, marginBottom: spacing.sm }}>
                           {category.name}
                         </Text>
                         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm }}>
@@ -862,7 +861,7 @@ export default function ApplicationStep2Screen() {
                 alignItems: 'center',
               }}
             >
-              <Text style={{ color: colors.textPrimary, fontSize: 16, fontWeight: '600' }}>
+              <Text style={{ ...typography.bodySemiBold, color: colors.textPrimary, fontSize: 16 }}>
                 Back
               </Text>
             </TouchableOpacity>
@@ -879,7 +878,7 @@ export default function ApplicationStep2Screen() {
               }}
               activeOpacity={0.8}
             >
-              <Text style={{ color: '#FFFFFF', fontSize: 16, fontWeight: '600', marginRight: spacing.sm }}>
+              <Text style={{ ...typography.bodySemiBold, color: '#FFFFFF', fontSize: 16, marginRight: spacing.sm }}>
                 Next
               </Text>
               <MaterialIcons name="arrow-forward" size={16} color="#FFFFFF" />

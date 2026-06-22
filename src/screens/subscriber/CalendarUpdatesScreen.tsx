@@ -210,7 +210,7 @@ export default function CalendarUpdatesScreen() {
                                             backgroundColor: '#f2f7ff', alignItems: 'center', justifyContent: 'center',
                                             marginRight: spacing.md,
                                         }}>
-                                            <Text style={{ ...typography.titleMedium, color: colors.textPrimary, fontWeight: '700' }}>
+                                            <Text style={{ ...typography.titleLarge, color: colors.textPrimary }}>
                                                 {dayNum}
                                             </Text>
                                             <Text style={{ ...typography.caption, color: colors.textPrimary, fontSize: 10 }}>
@@ -218,7 +218,7 @@ export default function CalendarUpdatesScreen() {
                                             </Text>
                                         </View>
                                         <View style={{ flex: 1 }}>
-                                            <Text style={{ ...typography.body, color: colors.textPrimary, fontWeight: '500' }}>
+                                            <Text style={{ ...typography.bodyMedium, color: colors.textPrimary }}>
                                                 {event.title}
                                             </Text>
                                             <Text style={{ ...typography.caption, color: colors.textMuted, marginTop: 2 }}>
@@ -296,7 +296,7 @@ export default function CalendarUpdatesScreen() {
                                 disabled={saving}
                                 style={{ flex: 1, paddingVertical: spacing.sm, borderRadius: radii.md, backgroundColor: colors.primary, alignItems: 'center' }}
                             >
-                                <Text style={{ ...typography.body, color: '#FFFFFF', fontWeight: '600' }}>
+                                <Text style={{ ...typography.bodySemiBold, color: '#FFFFFF' }}>
                                     {saving ? 'Adding...' : 'Add Event'}
                                 </Text>
                             </TouchableOpacity>

@@ -14,6 +14,7 @@ import {
   Montserrat_400Regular,
   Montserrat_500Medium,
   Montserrat_600SemiBold,
+  Montserrat_700Bold,
 } from '@expo-google-fonts/montserrat';
 import {
   PlayfairDisplay_600SemiBold,
@@ -87,13 +88,9 @@ export default function App() {
     Montserrat_400Regular,
     Montserrat_500Medium,
     Montserrat_600SemiBold,
+    Montserrat_700Bold,
     PlayfairDisplay_600SemiBold,
     PlayfairDisplay_700Bold,
-    ...(Platform.OS !== 'web'
-      ? {
-          'TAN-Grandeur': require('./assets/TAN-Grandeur/TAN-Grandeur/TAN Grandeur/TANGRANDEUR.ttf'),
-        }
-      : {}),
   });
 
   // On web, don't wait for fonts - use system fonts as fallback

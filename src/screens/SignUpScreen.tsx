@@ -130,10 +130,22 @@ export default function SignUpScreen({ navigation }: Props) {
         contentContainerStyle={{
           flexGrow: 1,
           paddingHorizontal: spacing.lg,
+          paddingTop: spacing.sm,
           paddingBottom: spacing.xl,
         }}
         keyboardShouldPersistTaps="handled"
       >
+        {Platform.OS === 'web' && (
+          <TouchableOpacity
+            onPress={() => navigation.goBack()}
+            style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.sm }}
+          >
+            <MaterialIcons name="arrow-back" size={20} color={colors.textPrimary} />
+            <Text style={{ ...typography.body, color: colors.textPrimary, marginLeft: spacing.xs }}>
+              Back
+            </Text>
+          </TouchableOpacity>
+        )}
         <View
           style={{
             width: '100%',
@@ -489,7 +501,7 @@ export default function SignUpScreen({ navigation }: Props) {
                   borderLeftColor: '#FBBC05',
                 }}
               >
-                <Text style={{ ...typography.caption, color: '#4285F4', fontWeight: '800' }}>G</Text>
+                <Text style={{ ...typography.captionBold, color: '#4285F4' }}>G</Text>
               </View>
               <Text style={{ ...typography.body, color: colors.textPrimary }}>Sign up with Google</Text>
             </TouchableOpacity>
@@ -522,7 +534,7 @@ export default function SignUpScreen({ navigation }: Props) {
                   marginRight: spacing.sm,
                 }}
               >
-                <Text style={{ ...typography.caption, color: '#FFFFFF', fontWeight: 'bold' }}>f</Text>
+                <Text style={{ ...typography.captionBold, color: '#FFFFFF' }}>f</Text>
               </View>
               <Text style={{ ...typography.body, color: colors.textPrimary }}>Sign up with Facebook</Text>
             </TouchableOpacity>

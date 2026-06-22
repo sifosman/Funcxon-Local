@@ -491,7 +491,7 @@ export default function DiscoverScreen() {
 
       const matchesRating = minRating == null || (typeof item.rating === 'number' && item.rating >= minRating);
       const matchesPrice = !onlyWithPrice || !!item.price_range;
-      const matchesCategory = category === 'all' || itemCategory === category || (category === 'vendors' && item.type === 'vendor' && itemCategory !== 'services');
+      const matchesCategory = category === 'all' || itemCategory === category || (category === 'vendors' && item.type === 'vendor');
       const matchesFeatured = !featuredOnly || item.featured_listing === true;
 
       return (
@@ -799,7 +799,7 @@ export default function DiscoverScreen() {
                 {item.featured_listing && (
                   <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#FFD700', paddingHorizontal: 6, paddingVertical: 2, borderRadius: radii.sm, marginLeft: spacing.xs }}>
                     <MaterialIcons name="star" size={10} color="#000000" />
-                    <Text style={{ ...typography.caption, color: '#000000', fontWeight: '700', fontSize: 9, marginLeft: 2 }}>FEATURED</Text>
+                    <Text style={{ ...typography.captionBold, color: '#000000', fontSize: 9, marginLeft: 2 }}>FEATURED</Text>
                   </View>
                 )}
               </View>
@@ -966,7 +966,7 @@ export default function DiscoverScreen() {
           </View>
         ) : null}
 
-        <View style={{ flexDirection: 'row', columnGap: spacing.sm, alignItems: 'center' }}>
+        <View style={{ flexDirection: 'row', columnGap: spacing.md, alignItems: 'center', justifyContent: 'center' }}>
           <Animated.View
             style={{
               transform: [{ scale: filterGlowAnim }],
@@ -980,10 +980,11 @@ export default function DiscoverScreen() {
             <TouchableOpacity
               onPress={() => setShowFilters((prev) => !prev)}
               style={{
-                width: 58,
-                height: 58,
+                flexDirection: 'row',
                 alignItems: 'center',
-                justifyContent: 'center',
+                columnGap: spacing.xs,
+                paddingVertical: spacing.sm,
+                paddingHorizontal: spacing.lg,
                 backgroundColor: showFilters ? colors.primaryTeal : colors.primary,
                 borderColor: colors.primary,
                 borderWidth: 2,
@@ -991,16 +992,18 @@ export default function DiscoverScreen() {
               }}
               accessibilityLabel="Open filters"
             >
-              <MaterialIcons name="tune" size={22} color={colors.primaryForeground} />
+              <MaterialIcons name="tune" size={20} color={colors.primaryForeground} />
+              <Text style={{ ...typography.buttonMedium, color: colors.primaryForeground }}>Filters</Text>
             </TouchableOpacity>
           </Animated.View>
           <TouchableOpacity
             onPress={() => setShowSortOptions((prev) => !prev)}
             style={{
-              width: 52,
-              height: 52,
+              flexDirection: 'row',
               alignItems: 'center',
-              justifyContent: 'center',
+              columnGap: spacing.xs,
+              paddingVertical: spacing.sm,
+              paddingHorizontal: spacing.lg,
               backgroundColor: showSortOptions ? colors.primary : colors.surface,
               borderColor: showSortOptions ? colors.primary : colors.borderSubtle,
               borderWidth: 1,
@@ -1009,22 +1012,8 @@ export default function DiscoverScreen() {
             accessibilityLabel="Open sort options"
           >
             <MaterialIcons name="swap-vert" size={18} color={showSortOptions ? colors.primaryForeground : colors.textPrimary} />
+            <Text style={{ ...typography.buttonMedium, color: showSortOptions ? colors.primaryForeground : colors.textPrimary }}>Sort by</Text>
           </TouchableOpacity>
-          <View
-            style={{
-              flex: 1,
-              backgroundColor: colors.surfaceMuted,
-              borderRadius: radii.full,
-              borderWidth: 1,
-              borderColor: colors.borderSubtle,
-              justifyContent: 'center',
-              paddingHorizontal: spacing.md,
-            }}
-          >
-            <Text style={{ ...typography.caption, color: colors.textSecondary }} numberOfLines={1}>
-              {showFilters ? 'Filters open' : showSortOptions ? 'Sort options open' : activeSearchModeLabel}
-            </Text>
-          </View>
         </View>
       </View>
 
@@ -1110,8 +1099,7 @@ export default function DiscoverScreen() {
                   {[
                     { key: 'all' as CategoryFilter, label: 'All' },
                     { key: 'venues' as CategoryFilter, label: 'Venues' },
-                    { key: 'vendors' as CategoryFilter, label: 'Vendors' },
-                    { key: 'services' as CategoryFilter, label: 'Services' },
+                    { key: 'vendors' as CategoryFilter, label: 'Vendors & Services' },
                   ].map((option) => {
                     const selected = category === option.key;
                     return (
@@ -1269,7 +1257,7 @@ export default function DiscoverScreen() {
                       }}
                     >
                       <MaterialIcons name="map" size={18} color={colors.primary} style={{ marginRight: spacing.xs }} />
-                      <Text style={{ ...typography.body, color: colors.primary, fontWeight: '600' }}>
+                      <Text style={{ ...typography.bodySemiBold, color: colors.primary }}>
                         Select search area by map radius
                       </Text>
                     </TouchableOpacity>
@@ -1385,7 +1373,7 @@ export default function DiscoverScreen() {
                       }}
                     >
                       <MaterialIcons name="map" size={18} color={colors.primary} style={{ marginRight: spacing.xs }} />
-                      <Text style={{ ...typography.body, color: colors.primary, fontWeight: '600' }}>
+                      <Text style={{ ...typography.bodySemiBold, color: colors.primary }}>
                         Select search area by map radius
                       </Text>
                     </TouchableOpacity>

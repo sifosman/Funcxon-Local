@@ -456,7 +456,7 @@ export default function UpdateVendorPortfolioScreen() {
                                 <MaterialIcons name="verified" size={20} color={colors.textPrimary} style={{ marginRight: spacing.sm }} />
                                 <View style={{ flex: 1 }}>
                                     <Text style={{ ...typography.caption, color: colors.textMuted }}>Current Plan</Text>
-                                    <Text style={{ ...typography.body, color: colors.textPrimary, fontWeight: '600' }}>
+                                    <Text style={{ ...typography.bodySemiBold, color: colors.textPrimary }}>
                                         {(vendor.subscription_tier || 'Free').charAt(0).toUpperCase() + (vendor.subscription_tier || 'free').slice(1)}
                                     </Text>
                                 </View>
@@ -469,7 +469,7 @@ export default function UpdateVendorPortfolioScreen() {
                                         backgroundColor: colors.primary,
                                     }}
                                 >
-                                    <Text style={{ ...typography.caption, color: '#FFFFFF', fontWeight: '600' }}>Upgrade</Text>
+                                    <Text style={{ ...typography.captionSemiBold, color: '#FFFFFF' }}>Upgrade</Text>
                                 </TouchableOpacity>
                             </View>
                         )}
@@ -504,7 +504,7 @@ export default function UpdateVendorPortfolioScreen() {
                                             backgroundColor: colors.primary,
                                         }}
                                     >
-                                        <Text style={{ ...typography.caption, color: '#FFFFFF', fontWeight: '600' }}>Upgrade</Text>
+                                        <Text style={{ ...typography.captionSemiBold, color: '#FFFFFF' }}>Upgrade</Text>
                                     </TouchableOpacity>
                                 )}
                             </View>
@@ -647,7 +647,7 @@ export default function UpdateVendorPortfolioScreen() {
                                         backgroundColor: colors.primary,
                                     }}
                                 >
-                                    <Text style={{ ...typography.caption, color: '#FFFFFF', fontWeight: '700' }}>
+                                    <Text style={{ ...typography.captionBold, color: '#FFFFFF' }}>
                                         Manage
                                     </Text>
                                 </TouchableOpacity>
@@ -693,9 +693,8 @@ export default function UpdateVendorPortfolioScreen() {
                                 >
                                     <Text
                                         style={{
-                                            ...typography.caption,
+                                            ...typography.captionBold,
                                             color: canEditLinks ? '#FFFFFF' : colors.textMuted,
-                                            fontWeight: '700',
                                         }}
                                     >
                                         {canEditLinks ? 'Open' : 'Upgrade'}
@@ -713,7 +712,7 @@ export default function UpdateVendorPortfolioScreen() {
                                         borderColor: '#FDBA74',
                                     }}
                                 >
-                                    <Text style={{ ...typography.caption, color: '#9A3412', fontWeight: '600' }}>
+                                    <Text style={{ ...typography.captionSemiBold, color: '#9A3412' }}>
                                         Upgrade required
                                     </Text>
                                     <Text style={{ ...typography.caption, color: '#9A3412', marginTop: 2 }}>
@@ -803,7 +802,7 @@ export default function UpdateVendorPortfolioScreen() {
                                     <Text style={{ ...typography.caption, color: '#B45309', flex: 1 }}>
                                         Upgrade to add website and social media links.
                                     </Text>
-                                    <Text style={{ ...typography.caption, color: colors.primary, fontWeight: '600' }}>
+                                    <Text style={{ ...typography.captionSemiBold, color: colors.primary }}>
                                         View Plans
                                     </Text>
                                 </TouchableOpacity>
@@ -890,7 +889,7 @@ export default function UpdateVendorPortfolioScreen() {
                                 alignItems: 'center',
                             }}
                         >
-                            <Text style={{ ...typography.body, color: '#FFFFFF', fontWeight: '600' }}>
+                            <Text style={{ ...typography.bodySemiBold, color: '#FFFFFF' }}>
                                 {saving ? 'Saving...' : (vendor ? 'Save Changes' : 'Create Portfolio')}
                             </Text>
                         </TouchableOpacity>

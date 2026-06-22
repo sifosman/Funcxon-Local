@@ -132,7 +132,7 @@ export function AddressAutocompleteInput({
 
   return (
     <View>
-      <Text style={{ ...typography.body, fontWeight: '500', color: colors.textPrimary, marginBottom: spacing.xs }}>
+      <Text style={{ ...typography.bodyMedium, color: colors.textPrimary, marginBottom: spacing.xs }}>
         {label}
         {required ? ' *' : ''}
       </Text>

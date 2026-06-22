@@ -97,7 +97,7 @@ export default function MarketingPermissionsScreen() {
             }}
           >
             <View style={{ flex: 1, paddingRight: spacing.md }}>
-              <Text style={{ ...typography.body, color: colors.textPrimary, fontWeight: '600' }}>Email marketing</Text>
+              <Text style={{ ...typography.bodySemiBold, color: colors.textPrimary }}>Email marketing</Text>
               <Text style={{ ...typography.caption, color: colors.textMuted, marginTop: spacing.xs }}>
                 Receive occasional news, feature updates, offers, and relevant product communications.
               </Text>
@@ -123,7 +123,7 @@ export default function MarketingPermissionsScreen() {
             }}
             activeOpacity={0.8}
           >
-            <Text style={{ ...typography.body, fontWeight: '600', color: '#FFFFFF' }}>
+            <Text style={{ ...typography.bodySemiBold, color: '#FFFFFF' }}>
               {loading ? 'Loading...' : saving ? 'Saving...' : 'Save Preferences'}
             </Text>
           </TouchableOpacity>

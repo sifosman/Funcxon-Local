@@ -167,7 +167,7 @@ export default function ApplicationStep1Screen() {
 
             <View style={{ gap: spacing.md }}>
               <View>
-                <Text style={{ ...typography.body, fontWeight: '500', color: colors.textPrimary, marginBottom: spacing.xs }}>
+                <Text style={{ ...typography.bodyMedium, color: colors.textPrimary, marginBottom: spacing.xs }}>
                   Registered Business Name *
                 </Text>
                 <TextInput
@@ -193,7 +193,7 @@ export default function ApplicationStep1Screen() {
               </View>
 
               <View>
-                <Text style={{ ...typography.body, fontWeight: '500', color: colors.textPrimary, marginBottom: spacing.xs }}>
+                <Text style={{ ...typography.bodyMedium, color: colors.textPrimary, marginBottom: spacing.xs }}>
                   Trading Name
                 </Text>
                 <TextInput
@@ -214,7 +214,7 @@ export default function ApplicationStep1Screen() {
               </View>
 
               <View>
-                <Text style={{ ...typography.body, fontWeight: '500', color: colors.textPrimary, marginBottom: spacing.xs }}>
+                <Text style={{ ...typography.bodyMedium, color: colors.textPrimary, marginBottom: spacing.xs }}>
                   Owner's Name *
                 </Text>
                 <TextInput
@@ -240,7 +240,7 @@ export default function ApplicationStep1Screen() {
               </View>
 
               <View>
-                <Text style={{ ...typography.body, fontWeight: '500', color: colors.textPrimary, marginBottom: spacing.xs }}>
+                <Text style={{ ...typography.bodyMedium, color: colors.textPrimary, marginBottom: spacing.xs }}>
                   Company Reg/ID Number
                 </Text>
                 <TextInput
@@ -261,7 +261,7 @@ export default function ApplicationStep1Screen() {
               </View>
 
               <View>
-                <Text style={{ ...typography.body, fontWeight: '500', color: colors.textPrimary, marginBottom: spacing.xs }}>
+                <Text style={{ ...typography.bodyMedium, color: colors.textPrimary, marginBottom: spacing.xs }}>
                   VAT Number
                 </Text>
                 <TextInput
@@ -302,7 +302,7 @@ export default function ApplicationStep1Screen() {
               </View>
 
               <View>
-                <Text style={{ ...typography.body, fontWeight: '500', color: colors.textPrimary, marginBottom: spacing.xs }}>
+                <Text style={{ ...typography.bodyMedium, color: colors.textPrimary, marginBottom: spacing.xs }}>
                   Contact Phone Number *
                 </Text>
                 <TextInput
@@ -329,7 +329,7 @@ export default function ApplicationStep1Screen() {
               </View>
 
               <View>
-                <Text style={{ ...typography.body, fontWeight: '500', color: colors.textPrimary, marginBottom: spacing.xs }}>
+                <Text style={{ ...typography.bodyMedium, color: colors.textPrimary, marginBottom: spacing.xs }}>
                   Alternate Phone 1
                 </Text>
                 <TextInput
@@ -356,7 +356,7 @@ export default function ApplicationStep1Screen() {
               </View>
 
               <View>
-                <Text style={{ ...typography.body, fontWeight: '500', color: colors.textPrimary, marginBottom: spacing.xs }}>
+                <Text style={{ ...typography.bodyMedium, color: colors.textPrimary, marginBottom: spacing.xs }}>
                   Alternate Phone 2
                 </Text>
                 <TextInput
@@ -383,7 +383,7 @@ export default function ApplicationStep1Screen() {
               </View>
 
               <View>
-                <Text style={{ ...typography.body, fontWeight: '500', color: colors.textPrimary, marginBottom: spacing.xs }}>
+                <Text style={{ ...typography.bodyMedium, color: colors.textPrimary, marginBottom: spacing.xs }}>
                   Email *
                 </Text>
                 <TextInput
@@ -411,7 +411,7 @@ export default function ApplicationStep1Screen() {
               </View>
 
               <View>
-                <Text style={{ ...typography.body, fontWeight: '500', color: colors.textPrimary, marginBottom: spacing.xs }}>
+                <Text style={{ ...typography.bodyMedium, color: colors.textPrimary, marginBottom: spacing.xs }}>
                   Alternate Email
                 </Text>
                 <TextInput
@@ -439,7 +439,7 @@ export default function ApplicationStep1Screen() {
               </View>
 
               <View>
-                <Text style={{ ...typography.body, fontWeight: '500', color: colors.textPrimary, marginBottom: spacing.xs }}>
+                <Text style={{ ...typography.bodyMedium, color: colors.textPrimary, marginBottom: spacing.xs }}>
                   Instagram
                 </Text>
                 <TextInput
@@ -464,7 +464,7 @@ export default function ApplicationStep1Screen() {
               </View>
 
               <View>
-                <Text style={{ ...typography.body, fontWeight: '500', color: colors.textPrimary, marginBottom: spacing.xs }}>
+                <Text style={{ ...typography.bodyMedium, color: colors.textPrimary, marginBottom: spacing.xs }}>
                   Facebook
                 </Text>
                 <TextInput
@@ -489,7 +489,7 @@ export default function ApplicationStep1Screen() {
               </View>
 
               <View>
-                <Text style={{ ...typography.body, fontWeight: '500', color: colors.textPrimary, marginBottom: spacing.xs }}>
+                <Text style={{ ...typography.bodyMedium, color: colors.textPrimary, marginBottom: spacing.xs }}>
                   TikTok
                 </Text>
                 <TextInput
@@ -529,7 +529,7 @@ export default function ApplicationStep1Screen() {
                   }}
                 >
                   <View style={{ flex: 1 }}>
-                    <Text style={{ ...typography.caption, color: '#9A3412', fontWeight: '600' }}>
+                    <Text style={{ ...typography.captionSemiBold, color: '#9A3412' }}>
                       Upgrade required
                     </Text>
                     <Text style={{ ...typography.caption, color: '#9A3412', marginTop: 2 }}>
@@ -545,7 +545,7 @@ export default function ApplicationStep1Screen() {
                       backgroundColor: colors.primary,
                     }}
                   >
-                    <Text style={{ ...typography.caption, color: '#FFFFFF', fontWeight: '600' }}>Upgrade</Text>
+                    <Text style={{ ...typography.captionSemiBold, color: '#FFFFFF' }}>Upgrade</Text>
                   </TouchableOpacity>
                 </View>
               )}
@@ -566,7 +566,7 @@ export default function ApplicationStep1Screen() {
                 alignItems: 'center',
               }}
             >
-              <Text style={{ color: colors.textPrimary, fontSize: 16, fontWeight: '600' }}>
+              <Text style={{ ...typography.bodySemiBold, color: colors.textPrimary, fontSize: 16 }}>
                 Back
               </Text>
             </TouchableOpacity>
@@ -583,7 +583,7 @@ export default function ApplicationStep1Screen() {
               }}
               activeOpacity={0.8}
             >
-              <Text style={{ color: '#FFFFFF', fontSize: 16, fontWeight: '600', marginRight: spacing.sm }}>
+              <Text style={{ ...typography.bodySemiBold, color: '#FFFFFF', fontSize: 16, marginRight: spacing.sm }}>
                 Next
               </Text>
               <MaterialIcons name="arrow-forward" size={16} color="#FFFFFF" />

@@ -512,7 +512,7 @@ export default function UpdateVenuePortfolioScreen() {
                     backgroundColor: colors.primary,
                   }}
                 >
-                  <Text style={{ ...typography.caption, color: '#FFFFFF', fontWeight: '600' }}>Upgrade</Text>
+                  <Text style={{ ...typography.captionSemiBold, color: '#FFFFFF' }}>Upgrade</Text>
                 </TouchableOpacity>
               )}
             </View>
@@ -663,7 +663,7 @@ export default function UpdateVenuePortfolioScreen() {
                   borderColor: colors.borderSubtle,
                 }}
               >
-                <Text style={{ ...typography.caption, color: canUseCatalogue ? '#FFFFFF' : colors.textMuted, fontWeight: '700' }}>
+                <Text style={{ ...typography.captionBold, color: canUseCatalogue ? '#FFFFFF' : colors.textMuted }}>
                   {canUseCatalogue ? 'Manage' : 'Upgrade'}
                 </Text>
               </TouchableOpacity>
@@ -680,7 +680,7 @@ export default function UpdateVenuePortfolioScreen() {
                   borderColor: '#FDBA74',
                 }}
               >
-                <Text style={{ ...typography.caption, color: '#9A3412', fontWeight: '600' }}>
+                <Text style={{ ...typography.captionSemiBold, color: '#9A3412' }}>
                   Upgrade required
                 </Text>
                 <Text style={{ ...typography.caption, color: '#9A3412', marginTop: 2 }}>
@@ -734,9 +734,8 @@ export default function UpdateVenuePortfolioScreen() {
               >
                 <Text
                   style={{
-                    ...typography.caption,
+                    ...typography.captionBold,
                     color: canUseAnalytics ? '#FFFFFF' : colors.textMuted,
-                    fontWeight: '700',
                   }}
                 >
                   {canUseAnalytics ? 'Open' : 'Upgrade'}
@@ -755,7 +754,7 @@ export default function UpdateVenuePortfolioScreen() {
                   borderColor: '#FDBA74',
                 }}
               >
-                <Text style={{ ...typography.caption, color: '#9A3412', fontWeight: '600' }}>
+                <Text style={{ ...typography.captionSemiBold, color: '#9A3412' }}>
                   Upgrade required
                 </Text>
                 <Text style={{ ...typography.caption, color: '#9A3412', marginTop: 2 }}>
@@ -809,9 +808,8 @@ export default function UpdateVenuePortfolioScreen() {
               >
                 <Text
                   style={{
-                    ...typography.caption,
+                    ...typography.captionBold,
                     color: canUseTourBookings ? '#FFFFFF' : colors.textMuted,
-                    fontWeight: '700',
                   }}
                 >
                   {canUseTourBookings ? 'Open' : 'Upgrade'}
@@ -830,7 +828,7 @@ export default function UpdateVenuePortfolioScreen() {
                   borderColor: '#FDBA74',
                 }}
               >
-                <Text style={{ ...typography.caption, color: '#9A3412', fontWeight: '600' }}>
+                <Text style={{ ...typography.captionSemiBold, color: '#9A3412' }}>
                   Upgrade required
                 </Text>
                 <Text style={{ ...typography.caption, color: '#9A3412', marginTop: 2 }}>
@@ -884,9 +882,8 @@ export default function UpdateVenuePortfolioScreen() {
               >
                 <Text
                   style={{
-                    ...typography.caption,
+                    ...typography.captionBold,
                     color: canUseQuoteRequests ? '#FFFFFF' : colors.textMuted,
-                    fontWeight: '700',
                   }}
                 >
                   {canUseQuoteRequests ? 'Open' : 'Upgrade'}
@@ -905,7 +902,7 @@ export default function UpdateVenuePortfolioScreen() {
                   borderColor: '#FDBA74',
                 }}
               >
-                <Text style={{ ...typography.caption, color: '#9A3412', fontWeight: '600' }}>
+                <Text style={{ ...typography.captionSemiBold, color: '#9A3412' }}>
                   Upgrade required
                 </Text>
                 <Text style={{ ...typography.caption, color: '#9A3412', marginTop: 2 }}>
@@ -953,7 +950,7 @@ export default function UpdateVenuePortfolioScreen() {
                 }}
               >
                 <View style={{ flex: 1 }}>
-                  <Text style={{ ...typography.caption, color: '#9A3412', fontWeight: '600' }}>
+                  <Text style={{ ...typography.captionSemiBold, color: '#9A3412' }}>
                     Upgrade required
                   </Text>
                   <Text style={{ ...typography.caption, color: '#9A3412', marginTop: 2 }}>
@@ -969,7 +966,7 @@ export default function UpdateVenuePortfolioScreen() {
                     backgroundColor: colors.primary,
                   }}
                 >
-                  <Text style={{ ...typography.caption, color: '#FFFFFF', fontWeight: '600' }}>Upgrade</Text>
+                  <Text style={{ ...typography.captionSemiBold, color: '#FFFFFF' }}>Upgrade</Text>
                 </TouchableOpacity>
               </View>
             )}
@@ -986,7 +983,7 @@ export default function UpdateVenuePortfolioScreen() {
               alignItems: 'center',
             }}
           >
-            <Text style={{ ...typography.body, color: '#FFFFFF', fontWeight: '600' }}>
+            <Text style={{ ...typography.bodySemiBold, color: '#FFFFFF' }}>
               {saving ? 'Saving...' : listing ? 'Save Changes' : 'Create Listing'}
             </Text>
           </TouchableOpacity>

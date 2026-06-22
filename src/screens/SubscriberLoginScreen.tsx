@@ -216,7 +216,7 @@ export default function SubscriberLoginScreen() {
                         }}
                         activeOpacity={0.8}
                     >
-                        <Text style={{ ...typography.body, fontWeight: '600', color: '#FFFFFF' }}>
+                        <Text style={{ ...typography.bodySemiBold, color: '#FFFFFF' }}>
                             {loading ? 'Logging in...' : 'Login'}
                         </Text>
                     </TouchableOpacity>
@@ -234,7 +234,7 @@ export default function SubscriberLoginScreen() {
                             }}
                             activeOpacity={0.8}
                         >
-                            <Text style={{ ...typography.body, fontWeight: '600', color: colors.textPrimary }}>
+                            <Text style={{ ...typography.bodySemiBold, color: colors.textPrimary }}>
                                 Register your venue
                             </Text>
                         </TouchableOpacity>
@@ -252,7 +252,7 @@ export default function SubscriberLoginScreen() {
                             }}
                             activeOpacity={0.8}
                         >
-                            <Text style={{ ...typography.body, fontWeight: '600', color: colors.textPrimary }}>
+                            <Text style={{ ...typography.bodySemiBold, color: colors.textPrimary }}>
                                 Register your vendor/service business
                             </Text>
                         </TouchableOpacity>
@@ -272,7 +272,7 @@ export default function SubscriberLoginScreen() {
                             }}
                             activeOpacity={0.8}
                         >
-                            <Text style={{ ...typography.body, fontWeight: '600', color: colors.textPrimary }}>
+                            <Text style={{ ...typography.bodySemiBold, color: colors.textPrimary }}>
                                 View Plans / Become a Vendor
                             </Text>
                         </TouchableOpacity>
@@ -288,7 +288,7 @@ export default function SubscriberLoginScreen() {
                             }}
                             activeOpacity={0.8}
                         >
-                            <Text style={{ ...typography.body, fontWeight: '600', color: colors.textPrimary }}>
+                            <Text style={{ ...typography.bodySemiBold, color: colors.textPrimary }}>
                                 Start Vendor Application
                             </Text>
                         </TouchableOpacity>

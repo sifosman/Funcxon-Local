@@ -120,7 +120,7 @@ export default function DataConsentModal({ visible, onAccept }: DataConsentModal
                   borderColor: colors.borderSubtle,
                 }}
               >
-                <Text style={{ ...typography.body, fontWeight: '600', color: colors.textPrimary, marginBottom: spacing.md }}>
+                <Text style={{ ...typography.bodySemiBold, color: colors.textPrimary, marginBottom: spacing.md }}>
                   We collect and process your data for:
                 </Text>
                 {[
@@ -172,7 +172,7 @@ export default function DataConsentModal({ visible, onAccept }: DataConsentModal
                   </View>
                   <View style={{ flex: 1 }}>
                     <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.xs }}>
-                      <Text style={{ ...typography.body, fontWeight: '600', color: colors.textPrimary }}>
+                      <Text style={{ ...typography.bodySemiBold, color: colors.textPrimary }}>
                         Essential Data Processing
                       </Text>
                       <View
@@ -223,7 +223,7 @@ export default function DataConsentModal({ visible, onAccept }: DataConsentModal
                   </View>
                   <View style={{ flex: 1 }}>
                     <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.xs }}>
-                      <Text style={{ ...typography.body, fontWeight: '600', color: colors.textPrimary }}>
+                      <Text style={{ ...typography.bodySemiBold, color: colors.textPrimary }}>
                         Analytics & Improvement
                       </Text>
                       <View

@@ -550,7 +550,7 @@ export default function ApplicationStep3Screen() {
                 marginBottom: spacing.md,
               }}
             >
-              <Text style={{ ...typography.caption, color: colors.textPrimary, fontWeight: '600', marginBottom: spacing.sm }}>
+              <Text style={{ ...typography.captionSemiBold, color: colors.textPrimary, marginBottom: spacing.sm }}>
                 Uploads limited to subscription plan
               </Text>
               {/* Photos */}
@@ -687,7 +687,7 @@ export default function ApplicationStep3Screen() {
               }}
             >
               <MaterialIcons name="add-photo-alternate" size={48} color={colors.textPrimary} />
-              <Text style={{ ...typography.body, color: colors.textPrimary, marginTop: spacing.sm, fontWeight: '600' }}>
+              <Text style={{ ...typography.bodySemiBold, color: colors.textPrimary, marginTop: spacing.sm }}>
                 Upload Images
               </Text>
               <Text style={{ ...typography.caption, color: colors.textMuted, marginTop: 4 }}>
@@ -824,7 +824,7 @@ export default function ApplicationStep3Screen() {
                     >
                       <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.md }}>
                         <View style={{ flex: 1 }}>
-                          <Text style={{ ...typography.body, color: colors.textPrimary, fontWeight: '600' }}>{d.label}</Text>
+                          <Text style={{ ...typography.bodySemiBold, color: colors.textPrimary }}>{d.label}</Text>
                           <Text style={{ ...typography.caption, color: colors.textMuted, marginTop: 2 }}>
                             {uploaded ? uploaded.name.split('__').slice(1).join('__') : requiredTag}
                           </Text>
@@ -847,7 +847,7 @@ export default function ApplicationStep3Screen() {
                               activeOpacity={0.8}
                             >
                               <MaterialIcons name="download" size={16} color={colors.textPrimary} />
-                              <Text style={{ ...typography.caption, color: colors.textPrimary, fontWeight: '700' }}>Download</Text>
+                              <Text style={{ ...typography.captionBold, color: colors.textPrimary }}>Download</Text>
                             </TouchableOpacity>
                           </View>
                         ) : (
@@ -859,7 +859,7 @@ export default function ApplicationStep3Screen() {
                               backgroundColor: d.required ? '#FEE2E2' : '#FEF3C7',
                             }}
                           >
-                            <Text style={{ ...typography.caption, color: d.required ? '#991B1B' : '#92400E', fontWeight: '700' }}>
+                            <Text style={{ ...typography.captionBold, color: d.required ? '#991B1B' : '#92400E' }}>
                               {requiredTag}
                             </Text>
                           </View>
@@ -890,7 +890,7 @@ export default function ApplicationStep3Screen() {
                           activeOpacity={0.8}
                         >
                           <MaterialIcons name="upload-file" size={18} color={colors.textPrimary} />
-                          <Text style={{ color: colors.textPrimary, fontWeight: '700' }}>
+                          <Text style={{ ...typography.bodyBold, color: colors.textPrimary }}>
                             {uploaded ? 'Replace' : 'Upload'}
                           </Text>
                         </TouchableOpacity>
@@ -913,7 +913,7 @@ export default function ApplicationStep3Screen() {
                             activeOpacity={0.8}
                           >
                             <MaterialIcons name="delete" size={18} color="#EF4444" />
-                            <Text style={{ color: '#EF4444', fontWeight: '700' }}>Remove</Text>
+                            <Text style={{ ...typography.bodyBold, color: '#EF4444' }}>Remove</Text>
                           </TouchableOpacity>
                         )}
                       </View>
@@ -966,7 +966,7 @@ export default function ApplicationStep3Screen() {
                 alignItems: 'center',
               }}
             >
-              <Text style={{ color: colors.textPrimary, fontSize: 16, fontWeight: '600' }}>
+              <Text style={{ ...typography.bodySemiBold, color: colors.textPrimary, fontSize: 16 }}>
                 Back
               </Text>
             </TouchableOpacity>
@@ -983,7 +983,7 @@ export default function ApplicationStep3Screen() {
               }}
               activeOpacity={0.8}
             >
-              <Text style={{ color: '#FFFFFF', fontSize: 16, fontWeight: '600', marginRight: spacing.sm }}>
+              <Text style={{ ...typography.bodySemiBold, color: '#FFFFFF', fontSize: 16, marginRight: spacing.sm }}>
                 Next
               </Text>
               <MaterialIcons name="arrow-forward" size={16} color="#FFFFFF" />

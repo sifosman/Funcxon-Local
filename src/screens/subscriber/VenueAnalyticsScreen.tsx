@@ -137,7 +137,7 @@ export default function VenueAnalyticsScreen() {
                   alignItems: 'center',
                 }}
               >
-                <Text style={{ ...typography.body, color: '#FFFFFF', fontWeight: '700' }}>View Venue Plans</Text>
+                <Text style={{ ...typography.bodyBold, color: '#FFFFFF' }}>View Venue Plans</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -191,7 +191,7 @@ export default function VenueAnalyticsScreen() {
                   alignItems: 'center',
                 }}
               >
-                <Text style={{ ...typography.body, color: colors.primary, fontWeight: '700' }}>Go to Update Venue Portfolio</Text>
+                <Text style={{ ...typography.bodyBold, color: colors.primary }}>Go to Update Venue Portfolio</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -244,7 +244,7 @@ export default function VenueAnalyticsScreen() {
                 }}
               >
                 <Text style={{ ...typography.caption, color: colors.textMuted }}>Catalogue Items</Text>
-                <Text style={{ ...typography.displayLarge, color: colors.textPrimary, fontWeight: '700' }}>
+                <Text style={{ ...typography.displayLarge, color: colors.textPrimary }}>
                   {counts.catalogueItems}
                 </Text>
               </View>
@@ -260,7 +260,7 @@ export default function VenueAnalyticsScreen() {
                 }}
               >
                 <Text style={{ ...typography.caption, color: colors.textMuted }}>Quote Requests</Text>
-                <Text style={{ ...typography.displayLarge, color: colors.textPrimary, fontWeight: '700' }}>
+                <Text style={{ ...typography.displayLarge, color: colors.textPrimary }}>
                   {counts.quoteRequests}
                 </Text>
               </View>
@@ -277,7 +277,7 @@ export default function VenueAnalyticsScreen() {
                 }}
               >
                 <Text style={{ ...typography.caption, color: colors.textMuted }}>Tour Bookings</Text>
-                <Text style={{ ...typography.displayLarge, color: colors.textPrimary, fontWeight: '700' }}>
+                <Text style={{ ...typography.displayLarge, color: colors.textPrimary }}>
                   {counts.tourBookings}
                 </Text>
               </View>

@@ -183,9 +183,8 @@ export default function VendorDashboardScreen() {
         >
           <Text
             style={{
-              ...typography.body,
+              ...typography.bodySemiBold,
               color: colors.textPrimary,
-              fontWeight: '600',
             }}
           >
             You have {pendingCount} pending quote request{pendingCount === 1 ? '' : 's'}.
@@ -245,7 +244,7 @@ export default function VendorDashboardScreen() {
                 borderBottomColor: colors.borderSubtle,
               }}
             >
-              <Text style={{ ...typography.body, color: colors.textPrimary, fontWeight: '600' }}>
+              <Text style={{ ...typography.bodySemiBold, color: colors.textPrimary }}>
                 Rating: {item.rating} / 5
               </Text>
               {item.status && (
@@ -310,7 +309,7 @@ export default function VendorDashboardScreen() {
                 borderBottomColor: colors.borderSubtle,
               }}
             >
-              <Text style={{ ...typography.body, color: colors.textPrimary, fontWeight: '600' }}>
+              <Text style={{ ...typography.bodySemiBold, color: colors.textPrimary }}>
                 {item.name ?? 'Unnamed enquiry'}
               </Text>
               {item.email && (

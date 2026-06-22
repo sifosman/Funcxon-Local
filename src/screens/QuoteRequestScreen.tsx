@@ -481,7 +481,7 @@ export default function QuoteRequestScreen({ route, navigation }: Props) {
             </Text>
             <TouchableOpacity onPress={addLineItem} style={{ flexDirection: 'row', alignItems: 'center' }}>
               <MaterialIcons name="add-circle" size={20} color={colors.primary} />
-              <Text style={{ ...typography.caption, color: colors.primary, marginLeft: spacing.xs, fontWeight: '600' }}>Add Item</Text>
+              <Text style={{ ...typography.captionSemiBold, color: colors.primary, marginLeft: spacing.xs }}>Add Item</Text>
             </TouchableOpacity>
           </View>
 
@@ -498,7 +498,7 @@ export default function QuoteRequestScreen({ route, navigation }: Props) {
               }}
             >
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.xs }}>
-                <Text style={{ ...typography.caption, color: colors.textMuted, fontWeight: '600' }}>Item</Text>
+                <Text style={{ ...typography.captionSemiBold, color: colors.textMuted }}>Item</Text>
                 <TouchableOpacity onPress={() => removeLineItem(item.id)}>
                   <MaterialIcons name="close" size={16} color={colors.textMuted} />
                 </TouchableOpacity>
@@ -569,8 +569,8 @@ export default function QuoteRequestScreen({ route, navigation }: Props) {
 
           {lineItems.length > 0 && (
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', paddingVertical: spacing.sm, borderTopWidth: 1, borderTopColor: colors.borderSubtle }}>
-              <Text style={{ ...typography.body, color: colors.textPrimary, fontWeight: '700' }}>Estimated Budget:</Text>
-              <Text style={{ ...typography.body, color: colors.primary, fontWeight: '700' }}>
+              <Text style={{ ...typography.bodyBold, color: colors.textPrimary }}>Estimated Budget:</Text>
+              <Text style={{ ...typography.bodyBold, color: colors.primary }}>
                 R {lineItemsTotal.toLocaleString('en-ZA')}
               </Text>
             </View>

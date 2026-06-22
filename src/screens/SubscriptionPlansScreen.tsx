@@ -26,8 +26,8 @@ const ACTIVE_SCALE = 1.02;
 const SIDE_SCALE = 0.88;
 const FAR_SCALE = 0.65;
 const ACTIVE_OPACITY = 1;
-const SIDE_OPACITY = 0.65;
-const FAR_OPACITY = 0.25;
+const SIDE_OPACITY = 0.92;
+const FAR_OPACITY = 0.7;
 
 type BillingPeriod = 'monthly' | 'yearly';
 type PlanKey = 'get_started' | 'premium' | 'premium_plus';
@@ -111,9 +111,9 @@ export default function SubscriptionPlansScreen() {
     () => [
       {
         key: 'get_started',
-        title: 'Get Started',
+        title: 'Basic Package',
         subtitle: 'Your business is seen',
-        badge: 'Free',
+        badge: 'Get Noticed',
         priceMonthly: 'R0',
         priceYearly: 'R0',
         outcomes: 'Get Noticed',
@@ -153,7 +153,7 @@ export default function SubscriptionPlansScreen() {
       {
         key: 'premium_plus',
         title: 'Premium Plus',
-        subtitle: 'Maximum Exposure & Bookings',
+        subtitle: 'Maximum Exposure',
         badge: 'Best Value',
         priceMonthly: 'R399',
         priceYearly: 'R4,389',
@@ -181,18 +181,17 @@ export default function SubscriptionPlansScreen() {
     () => [
       { label: 'Photo Uploads', get_started: '5', premium: '25', premium_plus: '50' },
       { label: 'Video uploads', get_started: '0', premium: '5', premium_plus: '10' },
-      { label: 'Catalogue / Pricelist', get_started: 'Up to 10', premium: 'Full', premium_plus: 'Full' },
-      { label: 'Portfolio build assistance', get_started: true, premium: true, premium_plus: true },
-      { label: 'Calendar availability', get_started: true, premium: true, premium_plus: true },
+      { label: 'Catalogue / Pricelist', get_started: 'Limited', premium: 'Full', premium_plus: 'Full' },
       { label: 'Online quote requests', get_started: true, premium: true, premium_plus: true },
-      { label: 'Full-time helpdesk support', get_started: true, premium: true, premium_plus: true },
-      { label: 'Ratings & reviews', get_started: true, premium: true, premium_plus: true },
-      { label: 'Analytics & stats', get_started: false, premium: true, premium_plus: true },
       { label: 'WhatsApp chat', get_started: false, premium: true, premium_plus: true },
       { label: 'Website & social links', get_started: false, premium: true, premium_plus: true },
-      { label: 'Edit portfolio anytime', get_started: true, premium: true, premium_plus: true },
+      { label: 'Map location display', get_started: true, premium: true, premium_plus: true },
+      { label: 'Ratings & reviews', get_started: 'Limited', premium: true, premium_plus: true },
+      { label: 'Self edit portfolio anytime', get_started: true, premium: true, premium_plus: true },
+      { label: 'Portfolio Performance Analytics & Stats', get_started: false, premium: 'Limited', premium_plus: true },
       { label: 'Featured Listings', get_started: false, premium: false, premium_plus: true },
-      { label: 'Dedicated Portfolio Manager', get_started: false, premium: false, premium_plus: true },
+      { label: 'Funxon Portfolio Build Assistance', get_started: true, premium: true, premium_plus: true },
+      { label: 'Dedicated Funxon Portfolio Manager', get_started: false, premium: false, premium_plus: true },
     ],
     [],
   );
@@ -317,9 +316,8 @@ export default function SubscriptionPlansScreen() {
           >
             <Text
               style={{
-                ...typography.caption,
+                ...typography.captionSemiBold,
                 color: selectedBilling === 'monthly' ? colors.primaryForeground : colors.textMuted,
-                fontWeight: '500',
               }}
             >
               Monthly
@@ -337,9 +335,8 @@ export default function SubscriptionPlansScreen() {
           >
             <Text
               style={{
-                ...typography.caption,
+                ...typography.captionSemiBold,
                 color: selectedBilling === 'yearly' ? colors.primaryForeground : colors.textMuted,
-                fontWeight: '500',
               }}
             >
               Yearly (Save 20%)
@@ -398,6 +395,7 @@ export default function SubscriptionPlansScreen() {
                   <Animated.View
                     style={[
                       {
+                        height: 440,
                         borderRadius: radii.xl,
                         backgroundColor: plan.theme.background,
                         padding: spacing.md,
@@ -424,9 +422,8 @@ export default function SubscriptionPlansScreen() {
                       >
                         <Text
                           style={{
-                            ...typography.caption,
+                            ...typography.captionBold,
                             color: plan.theme.buttonText,
-                            fontWeight: '700',
                             fontSize: 9,
                           }}
                         >
@@ -451,9 +448,8 @@ export default function SubscriptionPlansScreen() {
                       >
                         <Text
                           style={{
-                            ...typography.caption,
+                            ...typography.captionBold,
                             color: plan.theme.buttonText,
-                            fontWeight: '700',
                             fontSize: 9,
                           }}
                         >
@@ -507,9 +503,8 @@ export default function SubscriptionPlansScreen() {
                       {plan.saveLabel && selectedBilling === 'yearly' ? (
                         <Text
                           style={{
-                            ...typography.caption,
+                            ...typography.captionBold,
                             color: plan.theme.accent,
-                            fontWeight: '700',
                             marginTop: 1,
                             fontSize: 10,
                           }}
@@ -529,7 +524,7 @@ export default function SubscriptionPlansScreen() {
                     />
 
                     {/* Features */}
-                    <View style={{ marginBottom: spacing.sm }}>
+                    <View style={{ flex: 1, marginBottom: spacing.sm }}>
                       {features.slice(0, 6).map((feature) => {
                         const value = feature[plan.key];
                         return (
@@ -548,7 +543,7 @@ export default function SubscriptionPlansScreen() {
                                 color={value ? plan.theme.checkColor : plan.theme.textMuted}
                               />
                             ) : (
-                              <Text style={{ ...typography.caption, color: plan.theme.text, fontWeight: '600', fontSize: 10 }}>
+                              <Text style={{ ...typography.captionSemiBold, color: plan.theme.text, fontSize: 10 }}>
                                 {value}
                               </Text>
                             )}
@@ -587,9 +582,8 @@ export default function SubscriptionPlansScreen() {
                     >
                       <Text
                         style={{
-                          ...typography.caption,
+                          ...typography.captionBold,
                           color: isCurrentPlan ? plan.theme.text : plan.theme.buttonText,
-                          fontWeight: '700',
                           fontSize: 11,
                         }}
                       >
@@ -684,9 +678,8 @@ export default function SubscriptionPlansScreen() {
                       ) : (
                         <Text
                           style={{
-                            ...typography.caption,
+                            ...typography.captionSemiBold,
                             color: colors.textPrimary,
-                            fontWeight: '600',
                           }}
                         >
                           {value}
@@ -715,9 +708,8 @@ export default function SubscriptionPlansScreen() {
           >
             <Text
               style={{
-                ...typography.body,
+                ...typography.bodyBold,
                 color: colors.primaryForeground,
-                fontWeight: '700',
               }}
             >
               {selectedPlan === 'get_started'

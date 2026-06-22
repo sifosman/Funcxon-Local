@@ -726,7 +726,7 @@ export default function PlannerScreen() {
                 onPress={handleSaveTaskEdit}
                 style={{ flex: 1, paddingVertical: spacing.sm, borderRadius: radii.md, backgroundColor: colors.primary, alignItems: 'center' }}
               >
-                <Text style={{ ...typography.body, color: '#FFFFFF', fontWeight: '600' }}>Save</Text>
+                <Text style={{ ...typography.bodySemiBold, color: '#FFFFFF' }}>Save</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -789,15 +789,15 @@ export default function PlannerScreen() {
           {/* Budget Summary */}
           <View style={{ flex: 1 }}>
             <Text style={{ ...typography.caption, color: colors.textMuted }}>Total Budget:</Text>
-            <Text style={{ ...typography.body, color: colors.textPrimary, fontWeight: '600' }}>
+            <Text style={{ ...typography.bodySemiBold, color: colors.textPrimary }}>
               R {budgetTotals.total.toLocaleString('en-ZA')}
             </Text>
             <Text style={{ ...typography.caption, color: colors.textMuted, marginTop: spacing.xs }}>Total Spent:</Text>
-            <Text style={{ ...typography.body, color: colors.textPrimary, fontWeight: '600' }}>
+            <Text style={{ ...typography.bodySemiBold, color: colors.textPrimary }}>
               R {budgetTotals.spent.toLocaleString('en-ZA')}
             </Text>
             <Text style={{ ...typography.caption, color: colors.textMuted, marginTop: spacing.xs }}>Remaining:</Text>
-            <Text style={{ ...typography.body, color: '#16A34A', fontWeight: '600' }}>
+            <Text style={{ ...typography.bodySemiBold, color: '#16A34A' }}>
               R {budgetTotals.remaining.toLocaleString('en-ZA')}
             </Text>
           </View>
@@ -857,7 +857,7 @@ export default function PlannerScreen() {
             backgroundColor: colors.surface,
           }}
         >
-          <Text style={{ ...typography.body, color: colors.textPrimary, fontWeight: '600' }}>+ Add Budget Item</Text>
+          <Text style={{ ...typography.bodySemiBold, color: colors.textPrimary }}>+ Add Budget Item</Text>
         </TouchableOpacity>
       </View>
 
@@ -915,7 +915,7 @@ export default function PlannerScreen() {
                 onPress={handleSaveBudget}
                 style={{ flex: 1, paddingVertical: spacing.sm, borderRadius: radii.md, backgroundColor: colors.primary, alignItems: 'center' }}
               >
-                <Text style={{ ...typography.body, color: '#FFFFFF', fontWeight: '600' }}>Save</Text>
+                <Text style={{ ...typography.bodySemiBold, color: '#FFFFFF' }}>Save</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -955,7 +955,7 @@ export default function PlannerScreen() {
           >
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
               <View style={{ flex: 1 }}>
-                <Text style={{ ...typography.body, color: colors.textPrimary, fontWeight: '600' }}>{item.title}</Text>
+                <Text style={{ ...typography.bodySemiBold, color: colors.textPrimary }}>{item.title}</Text>
                 <Text style={{ ...typography.caption, color: colors.textMuted, marginTop: spacing.xs }}>{item.date}</Text>
               </View>
               <View style={{ flexDirection: 'row', alignItems: 'center' }}>
@@ -975,7 +975,7 @@ export default function PlannerScreen() {
                 backgroundColor: `${item.tagColor}22`,
               }}
             >
-              <Text style={{ ...typography.caption, color: item.tagColor, fontWeight: '600' }}>{item.tag}</Text>
+              <Text style={{ ...typography.captionSemiBold, color: item.tagColor }}>{item.tag}</Text>
             </View>
           </TouchableOpacity>
         ))}
@@ -992,7 +992,7 @@ export default function PlannerScreen() {
             backgroundColor: colors.surface,
           }}
         >
-          <Text style={{ ...typography.body, color: colors.textPrimary, fontWeight: '600' }}>+ Add Event</Text>
+          <Text style={{ ...typography.bodySemiBold, color: colors.textPrimary }}>+ Add Event</Text>
         </TouchableOpacity>
       </View>
 
@@ -1149,7 +1149,7 @@ export default function PlannerScreen() {
                 alignItems: 'center',
               }}
             >
-              <Text style={{ color: '#FFFFFF', ...typography.body, fontWeight: '600' }}>Save Changes</Text>
+              <Text style={{ ...typography.bodySemiBold, color: '#FFFFFF' }}>Save Changes</Text>
             </TouchableOpacity>
           </View>
         </View>

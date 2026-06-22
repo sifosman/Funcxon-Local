@@ -467,7 +467,7 @@ export default function QuoteDetailScreen() {
               borderColor: colors.borderSubtle,
             }}
           >
-            <Text style={{ ...typography.body, color: colors.textPrimary, fontWeight: '600' }}>
+            <Text style={{ ...typography.bodySemiBold, color: colors.textPrimary }}>
               {linkedName}
             </Text>
             <Text style={{ ...typography.caption, color: colors.textSecondary, marginTop: spacing.xs }}>
@@ -490,7 +490,7 @@ export default function QuoteDetailScreen() {
                 justifyContent: 'center',
               }}
             >
-              <Text style={{ ...typography.body, color: colors.textPrimary, fontWeight: '600' }}>
+              <Text style={{ ...typography.bodySemiBold, color: colors.textPrimary }}>
                 View Full {quote!.is_venue ? 'Venue' : 'Vendor'} Profile
               </Text>
             </TouchableOpacity>
@@ -559,14 +559,14 @@ export default function QuoteDetailScreen() {
                   }}
                 >
                   <View style={{ flex: 1, paddingRight: spacing.sm }}>
-                    <Text style={{ ...typography.body, color: colors.textPrimary, fontWeight: '600' }}>
+                    <Text style={{ ...typography.bodySemiBold, color: colors.textPrimary }}>
                       {item.name}
                     </Text>
                     <Text style={{ ...typography.caption, color: colors.textMuted }}>
                       Qty: {item.quantity}
                     </Text>
                   </View>
-                  <Text style={{ ...typography.body, color: colors.textPrimary, fontWeight: '700' }}>
+                  <Text style={{ ...typography.bodyBold, color: colors.textPrimary }}>
                     R{(item.quantity * item.price).toLocaleString('en-ZA')}
                   </Text>
                 </View>
@@ -580,8 +580,8 @@ export default function QuoteDetailScreen() {
                   borderTopColor: colors.borderSubtle,
                 }}
               >
-                <Text style={{ ...typography.body, color: colors.textPrimary, fontWeight: '700' }}>Estimated Budget</Text>
-                <Text style={{ ...typography.body, color: colors.primary, fontWeight: '700' }}>
+                <Text style={{ ...typography.bodyBold, color: colors.textPrimary }}>Estimated Budget</Text>
+                <Text style={{ ...typography.bodyBold, color: colors.primary }}>
                   R{lineItemsTotal.toLocaleString('en-ZA')}
                 </Text>
               </View>
@@ -606,7 +606,7 @@ export default function QuoteDetailScreen() {
           >
             <MaterialIcons name="tour" size={24} color={colors.primary} />
             <View style={{ flex: 1 }}>
-              <Text style={{ ...typography.body, color: colors.textPrimary, fontWeight: '600' }}>
+              <Text style={{ ...typography.bodySemiBold, color: colors.textPrimary }}>
                 {tourCount} {tourCount === 1 ? 'tour' : 'tours'} booked
               </Text>
               <Text style={{ ...typography.caption, color: colors.textMuted }}>
@@ -674,7 +674,7 @@ export default function QuoteDetailScreen() {
                     </View>
                   )}
                   <View style={{ flex: 1, padding: spacing.sm, justifyContent: 'center' }}>
-                    <Text style={{ ...typography.body, color: colors.textPrimary, fontWeight: '600' }} numberOfLines={1}>
+                    <Text style={{ ...typography.bodySemiBold, color: colors.textPrimary }} numberOfLines={1}>
                       {item.title}
                     </Text>
                     {item.description ? (
@@ -682,7 +682,7 @@ export default function QuoteDetailScreen() {
                         {item.description}
                       </Text>
                     ) : null}
-                    <Text style={{ ...typography.body, color: colors.textPrimary, fontWeight: '700', marginTop: spacing.xs }}>
+                    <Text style={{ ...typography.bodyBold, color: colors.textPrimary, marginTop: spacing.xs }}>
                       R{Number(item.price ?? 0).toLocaleString()}
                     </Text>
                   </View>
@@ -740,7 +740,7 @@ export default function QuoteDetailScreen() {
                     alignItems: 'center',
                   }}
                 >
-                  <Text style={{ ...typography.body, color: '#FFFFFF', fontWeight: '600' }}>
+                  <Text style={{ ...typography.bodySemiBold, color: '#FFFFFF' }}>
                     {savingNotes ? 'Saving...' : 'Save'}
                   </Text>
                 </TouchableOpacity>
@@ -771,7 +771,7 @@ export default function QuoteDetailScreen() {
                     borderLeftColor: colors.textMuted,
                   }}
                 >
-                  <Text style={{ ...typography.caption, color: colors.textMuted, fontWeight: '600' }}>Notes</Text>
+                  <Text style={{ ...typography.captionSemiBold, color: colors.textMuted }}>Notes</Text>
                   <Text style={{ ...typography.caption, color: colors.textSecondary, marginTop: 2 }}>
                     {notes}
                   </Text>
@@ -806,7 +806,7 @@ export default function QuoteDetailScreen() {
             }}
           >
             <MaterialIcons name="cancel" size={20} color={colors.destructive} style={{ marginRight: spacing.sm }} />
-            <Text style={{ ...typography.body, color: colors.destructive, fontWeight: '700' }}>
+            <Text style={{ ...typography.bodyBold, color: colors.destructive }}>
               {cancelling ? 'Cancelling...' : 'Cancel quote request'}
             </Text>
           </TouchableOpacity>

@@ -229,7 +229,7 @@ export default function AccountSettingsScreen({ navigation }: Props) {
             }}
             activeOpacity={0.8}
           >
-            <Text style={{ ...typography.body, color: '#FFFFFF', fontWeight: '600' }}>
+            <Text style={{ ...typography.bodySemiBold, color: '#FFFFFF' }}>
               Change Password
             </Text>
           </TouchableOpacity>

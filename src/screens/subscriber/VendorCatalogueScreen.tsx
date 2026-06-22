@@ -435,7 +435,7 @@ export default function VendorCatalogueScreen() {
                   alignItems: 'center',
                 }}
               >
-                <Text style={{ ...typography.body, color: colors.primary, fontWeight: '700' }}>Go to Update Vendor Portfolio</Text>
+                <Text style={{ ...typography.bodyBold, color: colors.primary }}>Go to Update Vendor Portfolio</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -470,7 +470,7 @@ export default function VendorCatalogueScreen() {
             <Text style={{ ...typography.titleMedium, color: colors.textPrimary, marginBottom: spacing.sm }}>Current Plan</Text>
             <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.xs }}>
               <Text style={{ ...typography.body, color: colors.textMuted, width: 110 }}>Plan:</Text>
-              <Text style={{ ...typography.body, color: colors.textPrimary, fontWeight: '600' }}>
+              <Text style={{ ...typography.bodySemiBold, color: colors.textPrimary }}>
                 {vendor.subscription_tier ? vendor.subscription_tier.charAt(0).toUpperCase() + vendor.subscription_tier.slice(1) : 'Free'}
               </Text>
             </View>
@@ -487,14 +487,14 @@ export default function VendorCatalogueScreen() {
                 onPress={() => navigation.navigate('SubscriptionPlans')}
                 style={{ flex: 1, borderWidth: 1, borderColor: colors.primary, borderRadius: radii.md, paddingVertical: spacing.sm, alignItems: 'center' }}
               >
-                <Text style={{ ...typography.body, color: colors.primary, fontWeight: '600' }}>Renew</Text>
+                <Text style={{ ...typography.bodySemiBold, color: colors.primary }}>Renew</Text>
               </TouchableOpacity>
               {!isFreeTier && (
                 <TouchableOpacity
                   onPress={() => navigation.navigate('SubscriptionPlans')}
                   style={{ flex: 1, backgroundColor: colors.primary, borderRadius: radii.md, paddingVertical: spacing.sm, alignItems: 'center' }}
                 >
-                  <Text style={{ ...typography.body, color: '#FFFFFF', fontWeight: '600' }}>Upgrade</Text>
+                  <Text style={{ ...typography.bodySemiBold, color: '#FFFFFF' }}>Upgrade</Text>
                 </TouchableOpacity>
               )}
             </View>
@@ -522,7 +522,7 @@ export default function VendorCatalogueScreen() {
               style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginTop: spacing.md, paddingVertical: spacing.sm, borderWidth: 1, borderColor: colors.borderSubtle, borderRadius: radii.md, borderStyle: 'dashed' }}
             >
               <MaterialIcons name="upload-file" size={18} color={colors.textPrimary} style={{ marginRight: spacing.sm }} />
-              <Text style={{ ...typography.body, color: colors.textPrimary, fontWeight: '600' }}>
+              <Text style={{ ...typography.bodySemiBold, color: colors.textPrimary }}>
                 {uploadingPdf ? 'Uploading...' : 'Add PDF Catalogue'}
               </Text>
             </TouchableOpacity>
@@ -545,7 +545,7 @@ export default function VendorCatalogueScreen() {
             }}
           >
             <MaterialIcons name="add" size={20} color="#FFFFFF" style={{ marginRight: spacing.sm }} />
-            <Text style={{ ...typography.body, color: '#FFFFFF', fontWeight: '700' }}>
+            <Text style={{ ...typography.bodyBold, color: '#FFFFFF' }}>
               Add Item
             </Text>
           </TouchableOpacity>
@@ -561,7 +561,7 @@ export default function VendorCatalogueScreen() {
                 marginBottom: spacing.md,
               }}
             >
-              <Text style={{ ...typography.caption, color: '#9A3412', fontWeight: '600' }}>
+              <Text style={{ ...typography.captionSemiBold, color: '#9A3412' }}>
                 Free plan limit
               </Text>
               <Text style={{ ...typography.caption, color: '#9A3412', marginTop: 2 }}>
@@ -622,7 +622,7 @@ export default function VendorCatalogueScreen() {
                         {item.description}
                       </Text>
                     ) : null}
-                    <Text style={{ ...typography.body, color: colors.textPrimary, fontWeight: '700', marginTop: spacing.sm }}>
+                    <Text style={{ ...typography.bodyBold, color: colors.textPrimary, marginTop: spacing.sm }}>
                       {item.price === null || item.price === undefined ? '—' : `R${Number(item.price).toLocaleString()}`}
                     </Text>
                     {!item.is_active && (
@@ -749,7 +749,7 @@ export default function VendorCatalogueScreen() {
                 alignItems: 'center',
               }}
             >
-              <Text style={{ ...typography.body, color: '#FFFFFF', fontWeight: '700' }}>
+              <Text style={{ ...typography.bodyBold, color: '#FFFFFF' }}>
                 {saving ? 'Saving...' : 'Save'}
               </Text>
             </TouchableOpacity>

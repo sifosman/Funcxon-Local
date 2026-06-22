@@ -539,7 +539,7 @@ export default function PortfolioAssistanceScreen() {
                     alignItems: 'center'
                   }}
                 >
-                  <Text style={{ ...typography.body, color: colors.primaryForeground, fontWeight: '600' }}>
+                  <Text style={{ ...typography.bodySemiBold, color: colors.primaryForeground }}>
                     Request Callback
                   </Text>
                 </TouchableOpacity>
@@ -566,7 +566,7 @@ export default function PortfolioAssistanceScreen() {
                       onPress={() => setOpenFaqIndex(isOpen ? null : index)}
                       style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: spacing.md }}
                     >
-                      <Text style={{ ...typography.body, color: colors.textPrimary, fontWeight: '600', flex: 1 }}>{faq.question}</Text>
+                      <Text style={{ ...typography.bodySemiBold, color: colors.textPrimary, flex: 1 }}>{faq.question}</Text>
                       <MaterialIcons name={isOpen ? 'expand-less' : 'expand-more'} size={20} color={colors.textMuted} />
                     </TouchableOpacity>
                     {isOpen && (

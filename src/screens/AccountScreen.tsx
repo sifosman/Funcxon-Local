@@ -408,7 +408,7 @@ export default function AccountScreen() {
                                             backgroundColor: currentPlan === 'free' ? '#9CA3AF' : currentPlan === 'premium' ? '#8B5CF6' : currentPlan === 'enterprise' ? '#DC2626' : colors.primary,
                                         }}
                                     >
-                                        <Text style={{ ...typography.caption, fontWeight: '700', color: '#FFFFFF' }}>
+                                        <Text style={{ ...typography.captionBold, color: '#FFFFFF' }}>
                                             {currentPlan.charAt(0).toUpperCase() + currentPlan.slice(1)} Plan
                                         </Text>
                                     </View>
@@ -424,7 +424,7 @@ export default function AccountScreen() {
                                             borderColor: colors.textPrimary,
                                         }}
                                     >
-                                        <Text style={{ ...typography.caption, color: colors.textPrimary, fontWeight: '600', fontSize: 10 }}>Upgrade</Text>
+                                        <Text style={{ ...typography.captionSemiBold, color: colors.textPrimary, fontSize: 10 }}>Upgrade</Text>
                                     </TouchableOpacity>
                                 )}
                             </View>

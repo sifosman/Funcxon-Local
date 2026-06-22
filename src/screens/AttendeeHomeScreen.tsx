@@ -487,7 +487,7 @@ export default function AttendeeHomeScreen() {
               {item.featured_listing && (
                 <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#FFD700', paddingHorizontal: 6, paddingVertical: 2, borderRadius: radii.sm }}>
                   <MaterialIcons name="star" size={10} color="#000000" />
-                  <Text style={{ ...typography.caption, color: '#000000', fontWeight: '700', fontSize: 9, marginLeft: 2 }}>FEATURED</Text>
+                  <Text style={{ ...typography.captionBold, color: '#000000', fontSize: 9, marginLeft: 2 }}>FEATURED</Text>
                 </View>
               )}
             </View>
@@ -1391,9 +1391,9 @@ export default function AttendeeHomeScreen() {
       {/* Featured Venues - Horizontal Scroll */}
       <View style={{ marginTop: spacing.xl }}>
         <View style={{ paddingHorizontal: spacing.lg, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.md }}>
-          <Text style={{ ...typography.titleLarge, color: colors.textPrimary, fontWeight: '700' }}>Featured Venues</Text>
+          <Text style={{ ...typography.titleLarge, color: colors.textPrimary }}>Featured Venues</Text>
           <TouchableOpacity onPress={() => navigation.navigate('Discover', { category: 'venues', searchTitle: 'Featured Venues' })}>
-            <Text style={{ ...typography.body, color: colors.primary, fontWeight: '600' }}>Find more →</Text>
+            <Text style={{ ...typography.bodySemiBold, color: colors.primary }}>Find more →</Text>
           </TouchableOpacity>
         </View>
         <ScrollView
@@ -1415,9 +1415,9 @@ export default function AttendeeHomeScreen() {
       {/* Featured Vendors & Services - Horizontal Scroll */}
       <View style={{ marginTop: spacing.xl }}>
         <View style={{ paddingHorizontal: spacing.lg, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.md }}>
-          <Text style={{ ...typography.titleLarge, color: colors.textPrimary, fontWeight: '700' }}>Featured Vendors & Services</Text>
+          <Text style={{ ...typography.titleLarge, color: colors.textPrimary }}>Featured Vendors & Services</Text>
           <TouchableOpacity onPress={() => navigation.navigate('Discover', { category: 'vendors', searchTitle: 'Featured Vendors & Services' })}>
-            <Text style={{ ...typography.body, color: colors.primary, fontWeight: '600' }}>Find more →</Text>
+            <Text style={{ ...typography.bodySemiBold, color: colors.primary }}>Find more →</Text>
           </TouchableOpacity>
         </View>
         <ScrollView
@@ -1560,7 +1560,7 @@ export default function AttendeeHomeScreen() {
               alignItems: 'center',
             }}
           >
-            <Text style={{ ...typography.body, color: colors.primary, fontWeight: '600' }}>View all</Text>
+            <Text style={{ ...typography.bodySemiBold, color: colors.primary }}>View all</Text>
             <MaterialIcons name="arrow-forward" size={18} color={colors.primary} />
           </TouchableOpacity>
         </View>
@@ -1675,7 +1675,7 @@ export default function AttendeeHomeScreen() {
       {/* Get Listed CTA Section */}
       <View style={{ marginTop: spacing.xl }}>
         <View style={{ paddingHorizontal: spacing.lg, marginBottom: spacing.xs }}>
-          <Text style={{ ...typography.titleLarge, color: colors.textPrimary, fontWeight: '700' }}>
+          <Text style={{ ...typography.titleLarge, color: colors.textPrimary }}>
             Get Listed!
           </Text>
           <Text style={{ ...typography.body, color: colors.textSecondary, marginTop: spacing.xs }}>
@@ -1721,11 +1721,11 @@ export default function AttendeeHomeScreen() {
               <View style={{ position: 'absolute', top: 0, left: 0, right: 0, height: cardWidth * 0.65, backgroundColor: 'rgba(0,0,0,0.35)' }} />
               <View style={{ position: 'absolute', top: spacing.sm, left: spacing.sm }}>
                 <View style={{ backgroundColor: colors.textPrimary, paddingHorizontal: spacing.sm, paddingVertical: 3, borderRadius: radii.full }}>
-                  <Text style={{ ...typography.caption, color: '#fff', fontSize: 9, fontWeight: '700' }}>VENUE</Text>
+                  <Text style={{ ...typography.captionBold, color: '#fff', fontSize: 9 }}>VENUE</Text>
                 </View>
               </View>
               <View style={{ backgroundColor: colors.surface, padding: spacing.md }}>
-                <Text style={{ ...typography.titleMedium, color: colors.textPrimary, fontWeight: '700' }}>
+                <Text style={{ ...typography.titleLarge, color: colors.textPrimary }}>
                   List Your Venue
                 </Text>
                 <Text style={{ ...typography.caption, color: colors.textSecondary, marginTop: 3 }} numberOfLines={2}>
@@ -1733,7 +1733,7 @@ export default function AttendeeHomeScreen() {
                 </Text>
                 <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: spacing.sm }}>
                   <MaterialIcons name="arrow-forward" size={14} color={colors.textPrimary} />
-                  <Text style={{ ...typography.caption, color: colors.textPrimary, marginLeft: 4, fontWeight: '600' }}>
+                  <Text style={{ ...typography.captionSemiBold, color: colors.textPrimary, marginLeft: 4 }}>
                     {session ? 'Go to portal' : 'Sign in to get started'}
                   </Text>
                 </View>
@@ -1774,11 +1774,11 @@ export default function AttendeeHomeScreen() {
               <View style={{ position: 'absolute', top: 0, left: 0, right: 0, height: cardWidth * 0.65, backgroundColor: 'rgba(0,0,0,0.35)' }} />
               <View style={{ position: 'absolute', top: spacing.sm, left: spacing.sm }}>
                 <View style={{ backgroundColor: colors.primary, paddingHorizontal: spacing.sm, paddingVertical: 3, borderRadius: radii.full }}>
-                  <Text style={{ ...typography.caption, color: '#fff', fontSize: 9, fontWeight: '700' }}>VENDOR</Text>
+                  <Text style={{ ...typography.captionBold, color: '#fff', fontSize: 9 }}>VENDOR</Text>
                 </View>
               </View>
               <View style={{ backgroundColor: colors.surface, padding: spacing.md }}>
-                <Text style={{ ...typography.titleMedium, color: colors.textPrimary, fontWeight: '700' }}>
+                <Text style={{ ...typography.titleLarge, color: colors.textPrimary }}>
                   List Your Services
                 </Text>
                 <Text style={{ ...typography.caption, color: colors.textSecondary, marginTop: 3 }} numberOfLines={2}>
@@ -1786,7 +1786,7 @@ export default function AttendeeHomeScreen() {
                 </Text>
                 <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: spacing.sm }}>
                   <MaterialIcons name="arrow-forward" size={14} color={colors.textPrimary} />
-                  <Text style={{ ...typography.caption, color: colors.textPrimary, marginLeft: 4, fontWeight: '600' }}>
+                  <Text style={{ ...typography.captionSemiBold, color: colors.textPrimary, marginLeft: 4 }}>
                     {session ? 'Go to portal' : 'Sign in to get started'}
                   </Text>
                 </View>
@@ -1827,11 +1827,11 @@ export default function AttendeeHomeScreen() {
               <View style={{ position: 'absolute', top: 0, left: 0, right: 0, height: cardWidth * 0.65, backgroundColor: 'rgba(0,0,0,0.35)' }} />
               <View style={{ position: 'absolute', top: spacing.sm, left: spacing.sm }}>
                 <View style={{ backgroundColor: '#6C47FF', paddingHorizontal: spacing.sm, paddingVertical: 3, borderRadius: radii.full }}>
-                  <Text style={{ ...typography.caption, color: '#fff', fontSize: 9, fontWeight: '700' }}>PORTAL</Text>
+                  <Text style={{ ...typography.captionBold, color: '#fff', fontSize: 9 }}>PORTAL</Text>
                 </View>
               </View>
               <View style={{ backgroundColor: colors.surface, padding: spacing.md }}>
-                <Text style={{ ...typography.titleMedium, color: colors.textPrimary, fontWeight: '700' }}>
+                <Text style={{ ...typography.titleLarge, color: colors.textPrimary }}>
                   Listers Portal
                 </Text>
                 <Text style={{ ...typography.caption, color: colors.textSecondary, marginTop: 3 }} numberOfLines={2}>
@@ -1839,7 +1839,7 @@ export default function AttendeeHomeScreen() {
                 </Text>
                 <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: spacing.sm }}>
                   <MaterialIcons name="arrow-forward" size={14} color={colors.textPrimary} />
-                  <Text style={{ ...typography.caption, color: colors.textPrimary, marginLeft: 4, fontWeight: '600' }}>
+                  <Text style={{ ...typography.captionSemiBold, color: colors.textPrimary, marginLeft: 4 }}>
                     {session ? 'Open portal' : 'Sign in to access'}
                   </Text>
                 </View>
@@ -1939,7 +1939,7 @@ export default function AttendeeHomeScreen() {
                       <View key={option.key}>
                         {showSectionHeader && (
                           <Text
-                            style={{ ...typography.caption, color: colors.textMuted, fontWeight: '700', marginTop: spacing.xs, marginBottom: spacing.sm }}
+                            style={{ ...typography.captionBold, color: colors.textMuted, marginTop: spacing.xs, marginBottom: spacing.sm }}
                           >
                             {option.section}
                           </Text>

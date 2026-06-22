@@ -130,7 +130,7 @@ export default function VendorSignupSuccessScreen() {
 
           <Text style={{ ...typography.body, color: colors.textSecondary, textAlign: 'center' }}>
             You've successfully signed up for the{' '}
-            <Text style={{ fontWeight: '700', color: colors.primary }}>{(tierName || '').toUpperCase()}</Text>
+            <Text style={{ ...typography.bodyBold, color: colors.primary }}>{(tierName || '').toUpperCase()}</Text>
             {' '}plan.
           </Text>
         </View>
@@ -149,7 +149,7 @@ export default function VendorSignupSuccessScreen() {
           <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.md }}>
             <MaterialIcons name="email" size={24} color={colors.primary} style={{ marginRight: spacing.md }} />
             <Text style={{ ...typography.body, color: colors.textPrimary, flex: 1 }}>
-              Check your email at <Text style={{ fontWeight: '600' }}>{email}</Text> for next steps
+              Check your email at <Text style={{ ...typography.bodySemiBold }}>{email}</Text> for next steps
             </Text>
           </View>
 
@@ -173,7 +173,7 @@ export default function VendorSignupSuccessScreen() {
               alignItems: 'center',
             }}
           >
-            <Text style={{ ...typography.body, color: colors.primaryForeground, fontWeight: '700' }}>
+            <Text style={{ ...typography.bodyBold, color: colors.primaryForeground }}>
               Complete Your Application
             </Text>
           </TouchableOpacity>
@@ -190,7 +190,7 @@ export default function VendorSignupSuccessScreen() {
               borderColor: colors.borderSubtle,
             }}
           >
-            <Text style={{ ...typography.body, color: colors.textPrimary, fontWeight: '600' }}>
+            <Text style={{ ...typography.bodySemiBold, color: colors.textPrimary }}>
               Go to Home
             </Text>
           </TouchableOpacity>

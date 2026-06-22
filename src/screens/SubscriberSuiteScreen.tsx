@@ -134,7 +134,7 @@ export default function SubscriberSuiteScreen() {
                                         <MaterialIcons name={item.icon} size={20} color={item.iconColor} />
                                     </View>
                                     <View style={{ flex: 1 }}>
-                                        <Text style={{ ...typography.body, fontWeight: '500', color: colors.textPrimary }}>
+                                        <Text style={{ ...typography.bodyMedium, color: colors.textPrimary }}>
                                             {item.title}
                                         </Text>
                                         <Text style={{ ...typography.caption, color: colors.textMuted, marginTop: 2 }}>

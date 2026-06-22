@@ -121,4 +121,29 @@ export const typography = {
     fontWeight: '500' as const,
     fontFamily: 'Montserrat_500Medium',
   },
+  bodyBold: {
+    fontSize: 14,
+    fontWeight: '700' as const,
+    fontFamily: 'Montserrat_700Bold',
+  },
+  bodySemiBold: {
+    fontSize: 14,
+    fontWeight: '600' as const,
+    fontFamily: 'Montserrat_600SemiBold',
+  },
+  bodyMedium: {
+    fontSize: 14,
+    fontWeight: '500' as const,
+    fontFamily: 'Montserrat_500Medium',
+  },
+  captionBold: {
+    fontSize: 12,
+    fontWeight: '700' as const,
+    fontFamily: 'Montserrat_700Bold',
+  },
+  captionSemiBold: {
+    fontSize: 12,
+    fontWeight: '600' as const,
+    fontFamily: 'Montserrat_600SemiBold',
+  },
 };

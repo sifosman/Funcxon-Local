@@ -152,7 +152,7 @@ export default function SubscriberProfileScreen() {
                                         <MaterialIcons name={option.icon} size={20} color={option.iconColor} />
                                     </View>
                                     <View style={{ flex: 1 }}>
-                                        <Text style={{ ...typography.body, fontWeight: '500', color: colors.textPrimary }}>
+                                        <Text style={{ ...typography.bodyMedium, color: colors.textPrimary }}>
                                             {option.title}
                                         </Text>
                                         <Text style={{ ...typography.caption, color: colors.textMuted, marginTop: 2 }}>

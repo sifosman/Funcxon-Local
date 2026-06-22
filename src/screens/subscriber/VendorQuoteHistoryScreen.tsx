@@ -234,7 +234,7 @@ export default function VendorQuoteHistoryScreen() {
                       backgroundColor: getStatusBg(displayStatus),
                     }}
                   >
-                    <Text style={{ ...typography.caption, color: getStatusColor(displayStatus), fontWeight: '700', textTransform: 'uppercase' }}>
+                    <Text style={{ ...typography.captionBold, color: getStatusColor(displayStatus), textTransform: 'uppercase' }}>
                       {displayStatus}
                     </Text>
                   </View>
@@ -244,7 +244,7 @@ export default function VendorQuoteHistoryScreen() {
                 {rev.quote_amount && (
                   <View style={{ marginBottom: spacing.md }}>
                     <Text style={{ ...typography.caption, color: colors.textMuted }}>Amount</Text>
-                    <Text style={{ ...typography.titleMedium, color: colors.textPrimary, fontWeight: '700' }}>
+                    <Text style={{ ...typography.titleLarge, color: colors.textPrimary }}>
                       R{rev.quote_amount.toLocaleString()}
                     </Text>
                   </View>
@@ -323,7 +323,7 @@ export default function VendorQuoteHistoryScreen() {
                           borderLeftColor: '#D97706',
                         }}
                       >
-                        <Text style={{ ...typography.caption, color: '#92400E', fontWeight: '600' }}>Client Feedback</Text>
+                        <Text style={{ ...typography.captionSemiBold, color: '#92400E' }}>Client Feedback</Text>
                         <Text style={{ ...typography.body, color: colors.textSecondary }}>{rev.client_notes}</Text>
                         {rev.responded_at && (
                           <Text style={{ ...typography.caption, color: colors.textMuted, marginTop: 2 }}>
@@ -396,7 +396,7 @@ export default function VendorQuoteHistoryScreen() {
                             }}
                           >
                             <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-                              <Text style={{ ...typography.caption, color: colors.textSecondary, fontWeight: '600' }}>
+                              <Text style={{ ...typography.captionSemiBold, color: colors.textSecondary }}>
                                 {comment.author_type === 'vendor' ? 'You' : 'Client'}
                                 {comment.is_internal && ' (Internal)'}
                               </Text>
@@ -429,7 +429,7 @@ export default function VendorQuoteHistoryScreen() {
                       alignItems: 'center',
                     }}
                   >
-                    <Text style={{ ...typography.body, color: colors.primary, fontWeight: '700' }}>
+                    <Text style={{ ...typography.bodyBold, color: colors.primary }}>
                       Continue Editing Draft
                     </Text>
                   </TouchableOpacity>
@@ -448,7 +448,7 @@ export default function VendorQuoteHistoryScreen() {
                       alignItems: 'center',
                     }}
                   >
-                    <Text style={{ ...typography.body, color: '#FFFFFF', fontWeight: '700' }}>
+                    <Text style={{ ...typography.bodyBold, color: '#FFFFFF' }}>
                       Submit Revised Quote
                     </Text>
                   </TouchableOpacity>

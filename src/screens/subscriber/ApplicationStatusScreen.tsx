@@ -130,7 +130,7 @@ export default function ApplicationStatusScreen() {
                   borderRadius: radii.md,
                 }}
               >
-                <Text style={{ ...typography.body, color: '#FFFFFF', fontWeight: '600' }}>
+                <Text style={{ ...typography.bodySemiBold, color: '#FFFFFF' }}>
                   Start Application
                 </Text>
               </TouchableOpacity>
@@ -196,7 +196,7 @@ export default function ApplicationStatusScreen() {
                 }}
               >
                 <MaterialIcons name="storefront" size={20} color={colors.primaryForeground} />
-                <Text style={{ ...typography.body, color: colors.primaryForeground, fontWeight: '700' }}>
+                <Text style={{ ...typography.bodyBold, color: colors.primaryForeground }}>
                   Go to My Portfolio
                 </Text>
               </TouchableOpacity>
@@ -217,23 +217,23 @@ export default function ApplicationStatusScreen() {
                 <View style={{ gap: spacing.md }}>
                   <View>
                     <Text style={{ ...typography.caption, color: colors.textMuted }}>Business</Text>
-                    <Text style={{ ...typography.body, color: colors.textPrimary, fontWeight: '600' }}>{tradingName}</Text>
+                    <Text style={{ ...typography.bodySemiBold, color: colors.textPrimary }}>{tradingName}</Text>
                   </View>
                   <View>
                     <Text style={{ ...typography.caption, color: colors.textMuted }}>Portfolio Type</Text>
-                    <Text style={{ ...typography.body, color: colors.textPrimary, fontWeight: '600' }}>
+                    <Text style={{ ...typography.bodySemiBold, color: colors.textPrimary }}>
                       {application.portfolio_type === 'venue' ? 'Venue' : 'Vendor / Service Professional'}
                     </Text>
                   </View>
                   <View>
                     <Text style={{ ...typography.caption, color: colors.textMuted }}>Selected Package</Text>
-                    <Text style={{ ...typography.body, color: colors.textPrimary, fontWeight: '600' }}>
+                    <Text style={{ ...typography.bodySemiBold, color: colors.textPrimary }}>
                       {formatStatusLabel(packageName)}
                     </Text>
                   </View>
                   <View>
                     <Text style={{ ...typography.caption, color: colors.textMuted }}>Submitted</Text>
-                    <Text style={{ ...typography.body, color: colors.textPrimary, fontWeight: '600' }}>
+                    <Text style={{ ...typography.bodySemiBold, color: colors.textPrimary }}>
                       {formatDate(application.created_at)}
                     </Text>
                   </View>

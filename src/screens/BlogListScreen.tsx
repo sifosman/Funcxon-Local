@@ -231,7 +231,7 @@ export default function BlogListScreen() {
           }}
           onPress={() => refetch()}
         >
-          <Text style={{ ...typography.body, color: colors.primaryForeground, fontWeight: '600' }}>
+          <Text style={{ ...typography.bodySemiBold, color: colors.primaryForeground }}>
             Retry
           </Text>
         </TouchableOpacity>

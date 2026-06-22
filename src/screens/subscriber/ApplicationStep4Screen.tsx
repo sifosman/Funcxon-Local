@@ -280,7 +280,6 @@ export default function ApplicationStep4Screen() {
                   tiktok_url: state.step1.tiktok?.trim() || null,
                   venue_type: state.step2.venueType.join(', ') || null,
                   venue_capacity: state.step2.venueCapacity ?? null,
-                  capacity: maxHallCapacity,
                   amenities: state.step2.amenities,
                   event_types: state.step2.eventTypes,
                   provinces: state.step2.provinces,
@@ -574,7 +573,7 @@ export default function ApplicationStep4Screen() {
                   backgroundColor: '#FFFBEB',
                 }}
               >
-                <Text style={{ ...typography.body, color: colors.textPrimary, fontWeight: '600' }}>
+                <Text style={{ ...typography.bodySemiBold, color: colors.textPrimary }}>
                   No plans available
                 </Text>
               </View>
@@ -627,7 +626,7 @@ export default function ApplicationStep4Screen() {
                         {isSelected && <MaterialIcons name="check" size={16} color="#FFFFFF" />}
                       </View>
                       <View style={{ flex: 1 }}>
-                        <Text style={{ ...typography.body, color: colors.textPrimary, fontWeight: '600' }}>
+                        <Text style={{ ...typography.bodySemiBold, color: colors.textPrimary }}>
                           {tier.tier_name.replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase())}
                         </Text>
                         <Text style={{ ...typography.caption, color: colors.textMuted, marginTop: 2 }}>
@@ -696,7 +695,7 @@ export default function ApplicationStep4Screen() {
                 <Text style={{ ...typography.body, color: colors.textPrimary }}>
                   I accept the{' '}
                   <Text
-                    style={{ color: colors.textPrimary, fontWeight: '600', textDecorationLine: 'underline' }}
+                    style={{ ...typography.captionSemiBold, color: colors.textPrimary, textDecorationLine: 'underline' }}
                     onPress={() => navigation.navigate('LegalDocument', { documentId: 'terms-and-conditions' })}
                   >
                     Terms and Conditions
@@ -741,7 +740,7 @@ export default function ApplicationStep4Screen() {
                 <Text style={{ ...typography.body, color: colors.textPrimary }}>
                   I accept the{' '}
                   <Text
-                    style={{ color: colors.textPrimary, fontWeight: '600', textDecorationLine: 'underline' }}
+                    style={{ ...typography.captionSemiBold, color: colors.textPrimary, textDecorationLine: 'underline' }}
                     onPress={() => navigation.navigate('LegalDocument', { documentId: 'privacy-policy' })}
                   >
                     Privacy Policy
@@ -821,7 +820,7 @@ export default function ApplicationStep4Screen() {
                 alignItems: 'center',
               }}
             >
-              <Text style={{ color: colors.textPrimary, fontSize: 16, fontWeight: '600' }}>
+              <Text style={{ ...typography.bodySemiBold, color: colors.textPrimary, fontSize: 16 }}>
                 Back
               </Text>
             </TouchableOpacity>
@@ -842,13 +841,13 @@ export default function ApplicationStep4Screen() {
               {isSubmitting ? (
                 <>
                   <ActivityIndicator size="small" color="#FFFFFF" style={{ marginRight: spacing.sm }} />
-                  <Text style={{ color: '#FFFFFF', fontSize: 16, fontWeight: '600' }}>
+                  <Text style={{ ...typography.bodySemiBold, color: '#FFFFFF', fontSize: 16 }}>
                     {isSelectedTierFree ? 'Submitting...' : 'Processing...'}
                   </Text>
                 </>
               ) : (
                 <>
-                  <Text style={{ color: '#FFFFFF', fontSize: 16, fontWeight: '600', marginRight: spacing.sm }}>
+                  <Text style={{ ...typography.bodySemiBold, color: '#FFFFFF', fontSize: 16, marginRight: spacing.sm }}>
                     {isSelectedTierFree ? 'Submit Application' : 'Checkout'}
                   </Text>
                   <MaterialIcons name={isSelectedTierFree ? 'check-circle' : 'shopping-cart'} size={16} color="#FFFFFF" />

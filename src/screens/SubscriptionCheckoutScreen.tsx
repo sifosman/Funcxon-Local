@@ -585,15 +585,15 @@ export default function SubscriptionCheckoutScreen() {
             <Text style={{ ...typography.titleMedium, color: colors.textPrimary, marginBottom: spacing.sm }}>Order Summary</Text>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: spacing.xs }}>
               <Text style={{ ...typography.body, color: colors.textMuted }}>Plan</Text>
-              <Text style={{ ...typography.body, color: colors.textPrimary, fontWeight: '600' }}>{summary.planLabel}</Text>
+              <Text style={{ ...typography.bodySemiBold, color: colors.textPrimary }}>{summary.planLabel}</Text>
             </View>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: spacing.xs }}>
               <Text style={{ ...typography.body, color: colors.textMuted }}>Billing</Text>
-              <Text style={{ ...typography.body, color: colors.textPrimary, fontWeight: '600' }}>{summary.periodLabel}</Text>
+              <Text style={{ ...typography.bodySemiBold, color: colors.textPrimary }}>{summary.periodLabel}</Text>
             </View>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
               <Text style={{ ...typography.body, color: colors.textMuted }}>Total</Text>
-              <Text style={{ ...typography.body, color: colors.textPrimary, fontWeight: '700' }}>{priceLabel}</Text>
+              <Text style={{ ...typography.bodyBold, color: colors.textPrimary }}>{priceLabel}</Text>
             </View>
           </View>
 
@@ -738,7 +738,7 @@ export default function SubscriptionCheckoutScreen() {
                 </View>
                 <View style={{ flex: 1 }}>
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
-                    <Text style={{ ...typography.body, color: colors.textPrimary, fontWeight: '600' }}>PayFast</Text>
+                    <Text style={{ ...typography.bodySemiBold, color: colors.textPrimary }}>PayFast</Text>
                     {payfastConfig.sandbox && (
                       <View
                         style={{
@@ -750,7 +750,7 @@ export default function SubscriptionCheckoutScreen() {
                           borderColor: '#F59E0B',
                         }}
                       >
-                        <Text style={{ ...typography.caption, color: '#B45309', fontWeight: '600', fontSize: 10 }}>
+                        <Text style={{ ...typography.captionSemiBold, color: '#B45309', fontSize: 10 }}>
                           SANDBOX TEST MODE
                         </Text>
                       </View>
@@ -789,14 +789,14 @@ export default function SubscriptionCheckoutScreen() {
             <Text style={{ ...typography.caption, color: errors.terms ? '#EF4444' : colors.textPrimary, flex: 1 }}>
               I agree to the{' '}
               <Text
-                style={{ color: colors.textPrimary, fontWeight: '600', textDecorationLine: 'underline' }}
+                style={{ ...typography.captionSemiBold, color: colors.textPrimary, textDecorationLine: 'underline' }}
                 onPress={() => navigation.navigate('LegalDocument', { documentId: 'terms-and-conditions' })}
               >
                 Terms and Conditions
               </Text>
               {' '}and{' '}
               <Text
-                style={{ color: colors.textPrimary, fontWeight: '600', textDecorationLine: 'underline' }}
+                style={{ ...typography.captionSemiBold, color: colors.textPrimary, textDecorationLine: 'underline' }}
                 onPress={() => navigation.navigate('LegalDocument', { documentId: 'privacy-policy' })}
               >
                 Privacy Policy
@@ -821,7 +821,7 @@ export default function SubscriptionCheckoutScreen() {
               marginBottom: spacing.xl,
             }}
           >
-            <Text style={{ ...typography.body, color: colors.primaryForeground, fontWeight: '700' }}>
+            <Text style={{ ...typography.bodyBold, color: colors.primaryForeground }}>
               {isFree ? 'Confirm Free Plan & Continue' : 'Proceed to PayFast'}
             </Text>
           </TouchableOpacity>

@@ -26,8 +26,8 @@ const ACTIVE_SCALE = 1.02;
 const SIDE_SCALE = 0.88;
 const FAR_SCALE = 0.65;
 const ACTIVE_OPACITY = 1;
-const SIDE_OPACITY = 0.65;
-const FAR_OPACITY = 0.25;
+const SIDE_OPACITY = 0.92;
+const FAR_OPACITY = 0.7;
 
 type PlanKey = 'get_started' | 'monthly' | '6_month' | '12_month';
 
@@ -193,7 +193,7 @@ export default function VenueListingPlansScreen() {
     () => [
       { label: 'Photo Uploads', get_started: '10', monthly: '40', '6_month': '40', '12_month': '40' },
       { label: 'Video uploads', get_started: '1', monthly: '4', '6_month': '4', '12_month': '4' },
-      { label: 'Catalogue / Pricelist', get_started: true, monthly: true, '6_month': true, '12_month': true },
+      { label: 'Catalogue / Pricelist', get_started: 'Limited', monthly: 'Full', '6_month': 'Full', '12_month': 'Full' },
       {
         label: 'Portfolio Build & Manage assistance',
         get_started: true,
@@ -209,7 +209,7 @@ export default function VenueListingPlansScreen() {
         '6_month': true,
         '12_month': true,
       },
-      { label: 'Analytics & stats', get_started: true, monthly: true, '6_month': true, '12_month': true },
+      { label: 'Analytics & stats', get_started: 'Limited', monthly: 'Full', '6_month': 'Full', '12_month': 'Full' },
       {
         label: 'Online quote requests & updates',
         get_started: true,
@@ -285,7 +285,7 @@ export default function VenueListingPlansScreen() {
       );
     }
     return (
-      <Text style={{ ...typography.caption, color: theme.text, fontWeight: '600' }}>{value}</Text>
+      <Text style={{ ...typography.captionSemiBold, color: theme.text }}>{value}</Text>
     );
   };
 
@@ -410,6 +410,7 @@ export default function VenueListingPlansScreen() {
                   <Animated.View
                     style={[
                       {
+                        height: 440,
                         borderRadius: radii.xl,
                         backgroundColor: plan.theme.background,
                         padding: spacing.md,
@@ -436,9 +437,8 @@ export default function VenueListingPlansScreen() {
                       >
                         <Text
                           style={{
-                            ...typography.caption,
+                            ...typography.captionBold,
                             color: plan.theme.buttonText,
-                            fontWeight: '700',
                             fontSize: 9,
                           }}
                         >
@@ -498,9 +498,8 @@ export default function VenueListingPlansScreen() {
                       {plan.saveLabel ? (
                         <Text
                           style={{
-                            ...typography.caption,
+                            ...typography.captionBold,
                             color: plan.theme.accent,
-                            fontWeight: '700',
                             marginTop: 1,
                             fontSize: 10,
                           }}
@@ -520,7 +519,7 @@ export default function VenueListingPlansScreen() {
                     />
 
                     {/* Features */}
-                    <View style={{ marginBottom: spacing.sm }}>
+                    <View style={{ flex: 1, marginBottom: spacing.sm }}>
                       {features.slice(0, 5).map((feature) => {
                         const value = feature[plan.key];
                         return (
@@ -539,7 +538,7 @@ export default function VenueListingPlansScreen() {
                                 color={value ? plan.theme.checkColor : plan.theme.textMuted}
                               />
                             ) : (
-                              <Text style={{ ...typography.caption, color: plan.theme.text, fontWeight: '600', fontSize: 10 }}>
+                              <Text style={{ ...typography.captionSemiBold, color: plan.theme.text, fontSize: 10 }}>
                                 {value}
                               </Text>
                             )}
@@ -577,9 +576,8 @@ export default function VenueListingPlansScreen() {
                     >
                       <Text
                         style={{
-                          ...typography.caption,
+                          ...typography.captionBold,
                           color: plan.theme.buttonText,
-                          fontWeight: '700',
                           fontSize: 11,
                         }}
                       >
@@ -674,9 +672,8 @@ export default function VenueListingPlansScreen() {
                       ) : (
                         <Text
                           style={{
-                            ...typography.caption,
+                            ...typography.captionSemiBold,
                             color: colors.textPrimary,
-                            fontWeight: '600',
                           }}
                         >
                           {value}
@@ -707,9 +704,8 @@ export default function VenueListingPlansScreen() {
           >
             <Text
               style={{
-                ...typography.body,
+                ...typography.bodyBold,
                 color: colors.primaryForeground,
-                fontWeight: '700',
               }}
             >
               {selectedPlan === 'get_started'

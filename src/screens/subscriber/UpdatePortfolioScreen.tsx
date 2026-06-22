@@ -77,7 +77,7 @@ export default function UpdatePortfolioScreen() {
                                     <MaterialIcons name="store" size={20} color="#2563EB" />
                                 </View>
                                 <View style={{ flex: 1 }}>
-                                    <Text style={{ ...typography.body, fontWeight: '500', color: colors.textPrimary }}>
+                                    <Text style={{ ...typography.bodyMedium, color: colors.textPrimary }}>
                                         Vendor / Service Portfolio
                                     </Text>
                                     <Text style={{ ...typography.caption, color: colors.textMuted, marginTop: 2 }}>
@@ -113,7 +113,7 @@ export default function UpdatePortfolioScreen() {
                                     <MaterialIcons name="location-city" size={20} color="#7C3AED" />
                                 </View>
                                 <View style={{ flex: 1 }}>
-                                    <Text style={{ ...typography.body, fontWeight: '500', color: colors.textPrimary }}>
+                                    <Text style={{ ...typography.bodyMedium, color: colors.textPrimary }}>
                                         Venue Portfolio
                                     </Text>
                                     <Text style={{ ...typography.caption, color: colors.textMuted, marginTop: 2 }}>

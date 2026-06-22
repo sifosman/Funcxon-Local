@@ -259,7 +259,7 @@ export default function VenueCatalogueViewScreen({ route, navigation }: Props) {
                     </View>
                   )}
                   <View style={{ flex: 1, padding: spacing.md, justifyContent: 'center' }}>
-                    <Text style={{ ...typography.body, color: colors.textPrimary, fontWeight: '600' }}>
+                    <Text style={{ ...typography.bodySemiBold, color: colors.textPrimary }}>
                       {item.title}
                     </Text>
                     {item.description ? (
@@ -267,7 +267,7 @@ export default function VenueCatalogueViewScreen({ route, navigation }: Props) {
                         {item.description}
                       </Text>
                     ) : null}
-                    <Text style={{ ...typography.body, color: colors.textPrimary, fontWeight: '700', marginTop: spacing.sm }}>
+                    <Text style={{ ...typography.bodyBold, color: colors.textPrimary, marginTop: spacing.sm }}>
                       R{Number(item.price ?? 0).toLocaleString()}
                     </Text>
                   </View>
@@ -365,7 +365,7 @@ export default function VenueCatalogueViewScreen({ route, navigation }: Props) {
               }}
             >
               <MaterialIcons name="request-quote" size={20} color="#FFFFFF" />
-              <Text style={{ ...typography.body, color: '#FFFFFF', fontWeight: '700' }}>Request Quote</Text>
+              <Text style={{ ...typography.bodyBold, color: '#FFFFFF' }}>Request Quote</Text>
             </TouchableOpacity>
 
             {selectedItems.length > 0 && (

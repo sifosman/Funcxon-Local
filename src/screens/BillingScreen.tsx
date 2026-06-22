@@ -397,7 +397,7 @@ export default function BillingScreen() {
                                 alignItems: 'center',
                             }}
                         >
-                            <Text style={{ ...typography.body, color: colors.primary, fontWeight: '600' }}>
+                            <Text style={{ ...typography.bodySemiBold, color: colors.primary }}>
                                 {isFree ? 'Upgrade Plan' : 'Change Plan'}
                             </Text>
                         </TouchableOpacity>
@@ -448,24 +448,24 @@ export default function BillingScreen() {
                             <View style={{ marginTop: spacing.md }}>
                                 <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.sm }}>
                                     <Text style={{ ...typography.body, color: colors.textMuted }}>Started</Text>
-                                    <Text style={{ ...typography.body, color: colors.textPrimary, fontWeight: '500' }}>
+                                    <Text style={{ ...typography.bodyMedium, color: colors.textPrimary }}>
                                         {formatDate(venueBilling.subscription_started_at)}
                                     </Text>
                                 </View>
                                 <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.sm }}>
                                     <View>
                                         <Text style={{ ...typography.body, color: colors.textMuted }}>Expires</Text>
-                                        <Text style={{ ...typography.caption, color: getExpiryColor(venueBilling.subscription_expires_at), fontWeight: '600' }}>
+                                        <Text style={{ ...typography.captionSemiBold, color: getExpiryColor(venueBilling.subscription_expires_at) }}>
                                             {getExpiryLabel(venueBilling.subscription_expires_at)}
                                         </Text>
                                     </View>
-                                    <Text style={{ ...typography.body, color: colors.textPrimary, fontWeight: '500' }}>
+                                    <Text style={{ ...typography.bodyMedium, color: colors.textPrimary }}>
                                         {formatDate(venueBilling.subscription_expires_at)}
                                     </Text>
                                 </View>
                                 <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
                                     <Text style={{ ...typography.body, color: colors.textMuted }}>Last Payment</Text>
-                                    <Text style={{ ...typography.body, color: colors.textPrimary, fontWeight: '500' }}>
+                                    <Text style={{ ...typography.bodyMedium, color: colors.textPrimary }}>
                                         {formatDate(venueBilling.last_payment_at)}
                                     </Text>
                                 </View>
@@ -482,7 +482,7 @@ export default function BillingScreen() {
                                     alignItems: 'center',
                                 }}
                             >
-                                <Text style={{ ...typography.body, color: colors.primary, fontWeight: '600' }}>
+                                <Text style={{ ...typography.bodySemiBold, color: colors.primary }}>
                                     {venueBilling.subscription_plan_key === 'get_started' ? 'Upgrade Venue Plan' : 'View Venue Plans'}
                                 </Text>
                             </TouchableOpacity>
@@ -511,10 +511,10 @@ export default function BillingScreen() {
                                     <Text style={{ ...typography.body, color: colors.textMuted }}>Expires</Text>
                                 </View>
                                 <View style={{ alignItems: 'flex-end' }}>
-                                    <Text style={{ ...typography.body, color: colors.textPrimary, fontWeight: '500' }}>
+                                    <Text style={{ ...typography.bodyMedium, color: colors.textPrimary }}>
                                         {formatDate(billing.subscription_expires_at)}
                                     </Text>
-                                    <Text style={{ ...typography.caption, color: getExpiryColor(billing.subscription_expires_at), fontWeight: '600' }}>
+                                    <Text style={{ ...typography.captionSemiBold, color: getExpiryColor(billing.subscription_expires_at) }}>
                                         {getExpiryLabel(billing.subscription_expires_at)}
                                     </Text>
                                 </View>
@@ -526,7 +526,7 @@ export default function BillingScreen() {
                                     <MaterialIcons name="payment" size={18} color={colors.textMuted} style={{ marginRight: spacing.sm }} />
                                     <Text style={{ ...typography.body, color: colors.textMuted }}>Next Payment</Text>
                                 </View>
-                                <Text style={{ ...typography.body, color: colors.textPrimary, fontWeight: '500' }}>
+                                <Text style={{ ...typography.bodyMedium, color: colors.textPrimary }}>
                                     {formatDate(billing.next_payment_due)}
                                 </Text>
                             </View>
@@ -537,7 +537,7 @@ export default function BillingScreen() {
                                     <MaterialIcons name="play-circle-outline" size={18} color={colors.textMuted} style={{ marginRight: spacing.sm }} />
                                     <Text style={{ ...typography.body, color: colors.textMuted }}>Started</Text>
                                 </View>
-                                <Text style={{ ...typography.body, color: colors.textPrimary, fontWeight: '500' }}>
+                                <Text style={{ ...typography.bodyMedium, color: colors.textPrimary }}>
                                     {formatDate(billing.subscription_started_at)}
                                 </Text>
                             </View>
@@ -548,7 +548,7 @@ export default function BillingScreen() {
                                     <MaterialIcons name="check-circle-outline" size={18} color={colors.textMuted} style={{ marginRight: spacing.sm }} />
                                     <Text style={{ ...typography.body, color: colors.textMuted }}>Last Payment</Text>
                                 </View>
-                                <Text style={{ ...typography.body, color: colors.textPrimary, fontWeight: '500' }}>
+                                <Text style={{ ...typography.bodyMedium, color: colors.textPrimary }}>
                                     {formatDate(billing.last_payment_at)}
                                 </Text>
                             </View>
@@ -572,7 +572,7 @@ export default function BillingScreen() {
                             }}
                         >
                             <MaterialIcons name="payment" size={20} color="#FFFFFF" style={{ marginRight: spacing.sm }} />
-                            <Text style={{ ...typography.body, color: '#FFFFFF', fontWeight: '700' }}>
+                            <Text style={{ ...typography.bodyBold, color: '#FFFFFF' }}>
                                 {payingNow ? 'Opening PayFast...' : 'Pay Now with PayFast'}
                             </Text>
                         </TouchableOpacity>
@@ -620,7 +620,7 @@ export default function BillingScreen() {
                                 }}
                             >
                                 <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.xs }}>
-                                    <Text style={{ ...typography.body, color: colors.textPrimary, fontWeight: '600' }}>
+                                    <Text style={{ ...typography.bodySemiBold, color: colors.textPrimary }}>
                                         {inv.invoice_number}
                                     </Text>
                                     <View style={{
@@ -649,7 +649,7 @@ export default function BillingScreen() {
                                             {formatDate(inv.period_start)} — {formatDate(inv.period_end)}
                                         </Text>
                                     </View>
-                                    <Text style={{ ...typography.titleMedium, color: colors.textPrimary, fontWeight: '700' }}>
+                                    <Text style={{ ...typography.titleLarge, color: colors.textPrimary }}>
                                         R{Number(inv.amount).toLocaleString()}
                                     </Text>
                                 </View>

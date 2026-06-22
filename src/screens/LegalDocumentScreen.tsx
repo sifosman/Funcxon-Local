@@ -92,7 +92,7 @@ export default function LegalDocumentScreen() {
             borderRadius: radii.md,
           }}
         >
-          <Text style={{ ...typography.body, color: '#FFFFFF', fontWeight: '600' }}>Go Back</Text>
+          <Text style={{ ...typography.bodySemiBold, color: '#FFFFFF' }}>Go Back</Text>
         </TouchableOpacity>
       </View>
     );

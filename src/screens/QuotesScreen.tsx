@@ -525,7 +525,7 @@ export default function QuotesScreen() {
                 shadowOffset: { width: 0, height: 3 },
               }}
             >
-              <Text style={{ ...typography.body, color: colors.textPrimary, fontWeight: '600', marginBottom: spacing.md }}>
+              <Text style={{ ...typography.bodySemiBold, color: colors.textPrimary, marginBottom: spacing.md }}>
                 Quote Summary
               </Text>
               <View style={{ flexDirection: 'row', flexWrap: 'wrap', rowGap: spacing.md }}>
@@ -636,7 +636,7 @@ export default function QuotesScreen() {
                     backgroundColor: statusStyle(item.status).backgroundColor,
                   }}
                 >
-                  <Text style={{ ...typography.caption, color: statusStyle(item.status).color, fontWeight: '600' }}>
+                  <Text style={{ ...typography.captionSemiBold, color: statusStyle(item.status).color }}>
                     {item.status ?? 'requested'}
                   </Text>
                 </View>
@@ -719,7 +719,7 @@ export default function QuotesScreen() {
                           opacity: actionLoadingId === item.id ? 0.7 : 1,
                         }}
                       >
-                        <Text style={{ ...typography.caption, color: '#FFFFFF', fontWeight: '600' }}>
+                        <Text style={{ ...typography.captionSemiBold, color: '#FFFFFF' }}>
                           {actionLoadingId === item.id ? 'Saving...' : 'Save'}
                         </Text>
                       </TouchableOpacity>
@@ -748,7 +748,7 @@ export default function QuotesScreen() {
                         borderLeftWidth: 3,
                         borderLeftColor: colors.textMuted,
                       }}>
-                        <Text style={{ ...typography.caption, color: colors.textMuted, fontWeight: '600' }}>Notes</Text>
+                        <Text style={{ ...typography.captionSemiBold, color: colors.textMuted }}>Notes</Text>
                         <Text style={{ ...typography.caption, color: colors.textSecondary, marginTop: 2 }}>
                           {item.notes}
                         </Text>
@@ -779,7 +779,7 @@ export default function QuotesScreen() {
                   borderLeftWidth: 3,
                   borderLeftColor: colors.primary
                 }}>
-                  <Text style={{ ...typography.caption, color: colors.primary, fontWeight: '600' }}>
+                  <Text style={{ ...typography.captionSemiBold, color: colors.primary }}>
                     Tour Request
                   </Text>
                   <Text style={{ ...typography.caption, color: colors.primary, marginTop: 2 }}>
@@ -865,7 +865,7 @@ export default function QuotesScreen() {
                   }}
                 >
                   <MaterialIcons name="cancel" size={16} color={colors.destructive} style={{ marginRight: spacing.xs }} />
-                  <Text style={{ ...typography.caption, color: colors.destructive, fontWeight: '600' }}>
+                  <Text style={{ ...typography.captionSemiBold, color: colors.destructive }}>
                     {actionLoading ? 'Cancelling...' : 'Cancel request'}
                   </Text>
                 </TouchableOpacity>

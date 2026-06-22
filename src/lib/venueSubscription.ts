@@ -72,6 +72,7 @@ function readFeatureFlag(features: Record<string, any>, keys: string[]): boolean
   for (const key of keys) {
     const value = features?.[key];
     if (typeof value === 'boolean') return value;
+    if (typeof value === 'string' && (value === 'limited' || value === 'full')) return true;
   }
   return undefined;
 }
