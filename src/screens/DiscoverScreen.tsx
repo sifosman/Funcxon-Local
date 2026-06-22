@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, Animated, Image, KeyboardAvoidingView, Modal, Platform, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Animated, KeyboardAvoidingView, Modal, Platform, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RouteProp } from '@react-navigation/native';
@@ -12,6 +12,7 @@ import type { VendorListItem } from './AttendeeHomeScreen';
 import { VENDOR_CATEGORIES } from './AttendeeHomeScreen';
 import { getFavourites, toggleFavourite } from '../lib/favourites';
 import { useAuth } from '../auth/AuthContext';
+import NetworkImage from '../components/NetworkImage';
 import type { AttendeeStackParamList } from '../navigation/AttendeeNavigator';
 import { venueTypes, amenitiesList, venueCapacityOptions } from '../config/venueTypes';
 import { provinces } from '../config/locations';
@@ -599,7 +600,29 @@ export default function DiscoverScreen() {
       .slice(0, 6);
   }, [safeData]);
 
-  const shouldShowFeatured = !hasActiveSearch && !showFilters && !locationQuery && !featuredOnly;
+  const hasActiveFilters =
+    hasActiveSearch ||
+    showFilters ||
+    !!locationQuery ||
+    featuredOnly ||
+    category !== 'all' ||
+    minRating != null ||
+    onlyWithPrice ||
+    !!selectedVenueType ||
+    selectedVenueAmenities.length > 0 ||
+    !!selectedCapacity ||
+    selectedProvinces.length > 0 ||
+    selectedCities.length > 0 ||
+    selectedVendorCategories.length > 0 ||
+    selectedVendorSubcategories.length > 0 ||
+    selectedVendorProvinces.length > 0 ||
+    selectedVendorCities.length > 0 ||
+    !!selectedLocationProvince ||
+    !!cityFilter ||
+    !!provinceFilter ||
+    !!amenitiesFilter ||
+    !!categoryTextFilter;
+  const shouldShowFeatured = !hasActiveFilters;
   const isLocationMode = route.params?.presetFilter === 'location';
   const activeSearchModeLabel = getActiveSearchModeLabel();
 
@@ -730,25 +753,11 @@ export default function DiscoverScreen() {
         }}
       >
         <View>
-          {item.image_url ? (
-            <Image
-              source={{ uri: item.image_url }}
-              style={{ width: '100%', height: featuredCard ? 150 : 190 }}
-              resizeMode="cover"
-            />
-          ) : (
-            <View
-              style={{
-                width: '100%',
-                height: featuredCard ? 150 : 190,
-                backgroundColor: colors.surfaceMuted,
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-            >
-              <MaterialIcons name="image" size={28} color={colors.textMuted} />
-            </View>
-          )}
+          <NetworkImage
+            uri={item.image_url}
+            style={{ width: '100%', height: featuredCard ? 150 : 190 }}
+            resizeMode="cover"
+          />
           <TouchableOpacity
             onPress={(event) => {
               event.stopPropagation();
@@ -944,27 +953,6 @@ export default function DiscoverScreen() {
             {sorted.length} result{sorted.length !== 1 ? 's' : ''} showing
           </Text>
         )}
-
-        {isLocationMode ? (
-          <View
-            style={{
-              borderRadius: radii.md,
-              borderWidth: 1,
-              borderColor: colors.borderSubtle,
-              backgroundColor: colors.surfaceMuted,
-              paddingHorizontal: spacing.md,
-              marginBottom: spacing.md,
-            }}
-          >
-            <TextInput
-              value={locationSearch}
-              onChangeText={setLocationSearch}
-              placeholder="Filter by city or province"
-              placeholderTextColor={colors.textMuted}
-              style={{ paddingVertical: spacing.sm, color: colors.textPrimary }}
-            />
-          </View>
-        ) : null}
 
         <View style={{ flexDirection: 'row', columnGap: spacing.md, alignItems: 'center', justifyContent: 'center' }}>
           <Animated.View

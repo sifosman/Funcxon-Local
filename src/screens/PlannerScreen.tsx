@@ -9,6 +9,10 @@ import { supabase } from '../lib/supabaseClient';
 import { colors, spacing, radii, typography } from '../theme';
 import { useAuth } from '../auth/AuthContext';
 import ThemedAlert from '../components/ThemedAlert';
+import type { NativeStackScreenProps } from '@react-navigation/native-stack';
+import type { AttendeeStackParamList } from '../navigation/AttendeeNavigator';
+
+type PlannerProps = NativeStackScreenProps<AttendeeStackParamList, 'Planner'>;
 
 const fallbackEventTypes = [
   'Wedding',
@@ -60,7 +64,7 @@ type BudgetItem = {
   total: number;
 };
 
-export default function PlannerScreen() {
+export default function PlannerScreen({ navigation }: PlannerProps) {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const [eventDetails, setEventDetails] = useState({
@@ -442,6 +446,13 @@ export default function PlannerScreen() {
       style={{ flex: 1, backgroundColor: colors.background }}
       contentContainerStyle={{ paddingHorizontal: spacing.lg, paddingTop: spacing.sm, paddingBottom: 120 }}
     >
+      <TouchableOpacity
+        onPress={() => navigation.goBack()}
+        style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.sm }}
+      >
+        <MaterialIcons name="arrow-back" size={20} color={colors.textPrimary} />
+        <Text style={{ ...typography.body, color: colors.textPrimary, marginLeft: spacing.xs }}>Back</Text>
+      </TouchableOpacity>
       <View style={{ marginBottom: spacing.lg }}>
         <Text style={{ ...typography.displayMedium, color: colors.textPrimary }}>My Planner</Text>
         <Text style={{ ...typography.body, color: colors.textSecondary, marginTop: spacing.xs }}>

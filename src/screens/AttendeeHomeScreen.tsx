@@ -31,6 +31,7 @@ import { amenitiesList } from '../config/venueTypes';
 import MapRadiusSelector from '../components/MapRadiusSelector';
 import { AppFooter } from '../components/AppFooter';
 import { HelpCenterModal } from '../components/HelpCenterModal';
+import NetworkImage from '../components/NetworkImage';
 import { usePendingSearch } from '../context/PendingSearchContext';
 import type { PendingSearchSnapshot } from '../context/PendingSearchContext';
 
@@ -432,25 +433,11 @@ export default function AttendeeHomeScreen() {
         >
           {/* Image + favourite button */}
           <View>
-            {item.image_url ? (
-              <Image
-                source={{ uri: item.image_url }}
-                style={{ width: '100%', height: 150 }}
-                resizeMode="cover"
-              />
-            ) : (
-              <View
-                style={{
-                  width: '100%',
-                  height: 150,
-                  backgroundColor: colors.surfaceMuted,
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                }}
-              >
-                <MaterialIcons name="image" size={28} color={colors.textMuted} />
-              </View>
-            )}
+            <NetworkImage
+              uri={item.image_url}
+              style={{ width: '100%', height: 150 }}
+              resizeMode="cover"
+            />
             <TouchableOpacity
               onPress={(e) => { e.stopPropagation(); handleToggleFavourite(item.id, item.type); }}
               style={{
@@ -1587,25 +1574,14 @@ export default function AttendeeHomeScreen() {
                   height: screenWidth / 1.9 * 1.4,
                 }}
               >
-                {post.cover_image_url ? (
-                  <Image
-                    source={{ uri: post.cover_image_url }}
-                    style={{ width: '100%', height: screenWidth / 1.9 * 0.55 }}
-                    resizeMode="cover"
-                  />
-                ) : (
-                  <View
-                    style={{
-                      width: '100%',
-                      height: screenWidth / 1.9 * 0.55,
-                      backgroundColor: colors.accent,
-                      justifyContent: 'center',
-                      alignItems: 'center',
-                    }}
-                  >
-                    <MaterialIcons name="article" size={40} color={colors.primary} />
-                  </View>
-                )}
+                <NetworkImage
+                  uri={post.cover_image_url}
+                  style={{ width: '100%', height: screenWidth / 1.9 * 0.55 }}
+                  resizeMode="cover"
+                  placeholderIcon="article"
+                  placeholderIconSize={40}
+                  placeholderBg={colors.accent}
+                />
                 <View style={{ flex: 1, padding: spacing.md, justifyContent: 'space-between' }}>
                   <View>
                     <View
@@ -1713,8 +1689,8 @@ export default function AttendeeHomeScreen() {
                 elevation: 3,
               }}
             >
-              <Image
-                source={{ uri: 'https://images.unsplash.com/photo-1464366400600-7168b8af9bc3?w=800&q=80' }}
+              <NetworkImage
+                uri={'https://images.unsplash.com/photo-1464366400600-7168b8af9bc3?w=800&q=80'}
                 style={{ width: '100%', height: cardWidth * 0.65 }}
                 resizeMode="cover"
               />
@@ -1766,8 +1742,8 @@ export default function AttendeeHomeScreen() {
                 elevation: 3,
               }}
             >
-              <Image
-                source={{ uri: 'https://images.unsplash.com/photo-1621844061203-3f31a2a7d6ad?w=800&q=80' }}
+              <NetworkImage
+                uri={'https://images.unsplash.com/photo-1621844061203-3f31a2a7d6ad?w=800&q=80'}
                 style={{ width: '100%', height: cardWidth * 0.65 }}
                 resizeMode="cover"
               />
@@ -1819,8 +1795,8 @@ export default function AttendeeHomeScreen() {
                 elevation: 3,
               }}
             >
-              <Image
-                source={{ uri: 'https://images.unsplash.com/photo-1559136555-9303baea8ebd?w=800&q=80' }}
+              <NetworkImage
+                uri={'https://images.unsplash.com/photo-1559136555-9303baea8ebd?w=800&q=80'}
                 style={{ width: '100%', height: cardWidth * 0.65 }}
                 resizeMode="cover"
               />

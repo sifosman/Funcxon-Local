@@ -1,5 +1,5 @@
 import { useCallback, useState } from 'react';
-import { ActivityIndicator, Image, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { useQuery } from '@tanstack/react-query';
 import { MaterialIcons } from '@expo/vector-icons';
@@ -8,6 +8,7 @@ import { supabase } from '../lib/supabaseClient';
 import { getFavourites, getShortlists, toggleFavourite, updateShortlistNotes } from '../lib/favourites';
 import type { VendorListItem } from './AttendeeHomeScreen';
 import { useAuth } from '../auth/AuthContext';
+import NetworkImage from '../components/NetworkImage';
 
 export default function FavouritesScreen() {
   const navigation = useNavigation<any>();
@@ -194,21 +195,10 @@ export default function FavouritesScreen() {
                   overflow: 'hidden',
                 }}
               >
-                {item.image_url ? (
-                  <Image source={{ uri: item.image_url }} style={{ width: '100%', height: 160 }} />
-                ) : (
-                  <View
-                    style={{
-                      width: '100%',
-                      height: 160,
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      backgroundColor: colors.surfaceMuted,
-                    }}
-                  >
-                    <Text style={{ ...typography.caption, color: colors.textMuted }}>No image</Text>
-                  </View>
-                )}
+                <NetworkImage
+                  uri={item.image_url}
+                  style={{ width: '100%', height: 160 }}
+                />
                 <TouchableOpacity
                   onPress={() => handleRemove(item.id, item.type)}
                   style={{

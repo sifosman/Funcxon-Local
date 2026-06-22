@@ -94,22 +94,22 @@ export function AttendeeNavigator() {
       <Stack.Screen
         name="QuoteRequest"
         component={QuoteRequestScreen}
-        options={{ title: 'Request a quote' }}
+        options={{ headerShown: false }}
       />
       <Stack.Screen
         name="CreateReview"
         component={CreateReviewScreen}
-        options={{ title: 'Leave a review' }}
+        options={{ headerShown: false }}
       />
       <Stack.Screen
         name="BookTour"
         component={BookTourScreen}
-        options={{ title: 'Book a venue tour' }}
+        options={{ headerShown: false }}
       />
       <Stack.Screen
         name="Planner"
         component={PlannerScreen}
-        options={{ title: 'My planner (demo)' }}
+        options={{ headerShown: false }}
       />
       <Stack.Screen
         name="BlogList"
@@ -139,7 +139,7 @@ export function AttendeeNavigator() {
       <Stack.Screen
         name="VenueCatalogueView"
         component={VenueCatalogueViewScreen}
-        options={{ title: 'Catalogue' }}
+        options={{ headerShown: false }}
       />
       <Stack.Screen
         name="TermsAndPolicies"

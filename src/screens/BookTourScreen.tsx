@@ -125,15 +125,13 @@ export default function BookTourScreen({ route, navigation }: Props) {
         contentContainerStyle={{ paddingHorizontal: spacing.lg, paddingTop: spacing.sm, paddingBottom: 120 }}
         keyboardShouldPersistTaps="handled"
       >
-        {Platform.OS === 'web' && (
-          <TouchableOpacity
-            onPress={() => navigation.goBack()}
-            style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.sm }}
-          >
-            <MaterialIcons name="arrow-back" size={20} color={colors.textPrimary} />
-            <Text style={{ ...typography.body, color: colors.textPrimary, marginLeft: spacing.xs }}>Back</Text>
-          </TouchableOpacity>
-        )}
+        <TouchableOpacity
+          onPress={() => navigation.goBack()}
+          style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.sm }}
+        >
+          <MaterialIcons name="arrow-back" size={20} color={colors.textPrimary} />
+          <Text style={{ ...typography.body, color: colors.textPrimary, marginLeft: spacing.xs }}>Back</Text>
+        </TouchableOpacity>
         <View
           style={{
             marginBottom: spacing.lg,
