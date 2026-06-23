@@ -1092,21 +1092,20 @@ export default function DiscoverScreen() {
                 backgroundColor: colors.surface,
                 borderTopLeftRadius: radii.xl,
                 borderTopRightRadius: radii.xl,
-                padding: spacing.lg,
-                paddingBottom: insets.bottom + spacing.xxl + 60,
-                marginBottom: 56,
                 borderTopWidth: 1,
                 borderColor: colors.borderSubtle,
-                maxHeight: '85%',
+                maxHeight: '92%',
               }}
             >
-              <View style={{ flexDirection: 'row', justifyContent: 'flex-end', alignItems: 'center', marginBottom: spacing.md }}>
-                <TouchableOpacity onPress={() => setShowFilters(false)}>
-                  <MaterialIcons name="close" size={20} color={colors.textSecondary} />
-                </TouchableOpacity>
+              <View style={{ paddingHorizontal: spacing.lg, paddingTop: spacing.lg }}>
+                <View style={{ flexDirection: 'row', justifyContent: 'flex-end', alignItems: 'center', marginBottom: spacing.md }}>
+                  <TouchableOpacity onPress={() => setShowFilters(false)}>
+                    <MaterialIcons name="close" size={20} color={colors.textSecondary} />
+                  </TouchableOpacity>
+                </View>
               </View>
 
-              <ScrollView keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: spacing.lg }}>
+              <ScrollView keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: spacing.lg, paddingBottom: spacing.lg }}>
                 <Text style={{ ...typography.caption, color: colors.textMuted, marginBottom: spacing.xs }}>Browse by</Text>
                 <View style={{ flexDirection: 'row', flexWrap: 'wrap', rowGap: spacing.sm, columnGap: spacing.sm, marginBottom: spacing.md }}>
                   {[
@@ -1457,37 +1456,46 @@ export default function DiscoverScreen() {
                 </View>
               </ScrollView>
 
-              <View style={{ flexDirection: 'row', columnGap: spacing.md, marginTop: spacing.md }}>
-                <TouchableOpacity
-                  onPress={clearFilters}
-                  style={{
-                    flex: 1,
-                    paddingVertical: spacing.md,
-                    borderRadius: radii.full,
-                    borderWidth: 1.5,
-                    borderColor: colors.borderSubtle,
-                    backgroundColor: colors.surface,
-                    alignItems: 'center',
-                  }}
-                  accessibilityLabel="Clear filters"
-                >
-                  <Text style={{ ...typography.buttonMedium, color: colors.textPrimary }}>Clear Filters</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  onPress={() => setShowFilters(false)}
-                  style={{
-                    flex: 1,
-                    paddingVertical: spacing.md,
-                    borderRadius: radii.full,
-                    borderWidth: 1.5,
-                    borderColor: colors.primary,
-                    backgroundColor: colors.primary,
-                    alignItems: 'center',
-                  }}
-                  accessibilityLabel="Confirm filters"
-                >
-                  <Text style={{ ...typography.buttonMedium, color: colors.primaryForeground }}>Confirm</Text>
-                </TouchableOpacity>
+              <View
+                style={{
+                  padding: spacing.lg,
+                  paddingBottom: insets.bottom + spacing.lg,
+                  borderTopWidth: 1,
+                  borderTopColor: colors.borderSubtle,
+                }}
+              >
+                <View style={{ flexDirection: 'row', columnGap: spacing.md }}>
+                  <TouchableOpacity
+                    onPress={clearFilters}
+                    style={{
+                      flex: 1,
+                      paddingVertical: spacing.md,
+                      borderRadius: radii.full,
+                      borderWidth: 1.5,
+                      borderColor: colors.borderSubtle,
+                      backgroundColor: colors.surface,
+                      alignItems: 'center',
+                    }}
+                    accessibilityLabel="Clear filters"
+                  >
+                    <Text style={{ ...typography.buttonMedium, color: colors.textPrimary }}>Clear Filters</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    onPress={() => setShowFilters(false)}
+                    style={{
+                      flex: 1,
+                      paddingVertical: spacing.md,
+                      borderRadius: radii.full,
+                      borderWidth: 1.5,
+                      borderColor: colors.primary,
+                      backgroundColor: colors.primary,
+                      alignItems: 'center',
+                    }}
+                    accessibilityLabel="Confirm filters"
+                  >
+                    <Text style={{ ...typography.buttonMedium, color: colors.primaryForeground }}>Confirm</Text>
+                  </TouchableOpacity>
+                </View>
               </View>
             </View>
           </View>
