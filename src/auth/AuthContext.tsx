@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
+import { createContext, useContext, useEffect, useState, useRef, ReactNode } from 'react';
 import { Platform } from 'react-native';
 import ThemedAlert from '../components/ThemedAlert';
 import type { Session } from '@supabase/supabase-js';
@@ -38,6 +38,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [userRole, setUserRole] = useState<'attendee' | 'vendor' | null | undefined>(undefined);
   const [isLoading, setIsLoading] = useState(true);
   const [alertState, setAlertState] = useState<{visible: boolean; title: string; message: string} | null>(null);
+  const welcomeEmailSentFor = useRef<Set<string>>(new Set());
 
   // Fetch user role from database
   const fetchUserRole = async (userId: string) => {
@@ -159,6 +160,59 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } catch {
       console.warn('[fetchUserRoleWithTimeout] Timed out or errored, defaulting to attendee');
       setUserRole('attendee');
+    }
+  };
+
+  // Send welcome email for OAuth (Google/Facebook) sign-ups.
+  // Detects new users by checking if their auth account was created within the last 5 minutes.
+  const maybeSendOAuthWelcomeEmail = async (user: Session['user']) => {
+    if (!user?.id || !user?.email) return;
+
+    // Prevent duplicate sends within the same app session
+    if (welcomeEmailSentFor.current.has(user.id)) return;
+
+    // Check if this is a newly created user (created within last 5 minutes)
+    const createdAt = user.created_at;
+    if (createdAt) {
+      const createdTime = new Date(createdAt).getTime();
+      const now = Date.now();
+      const fiveMinutes = 5 * 60 * 1000;
+      if (now - createdTime > fiveMinutes) {
+        // Not a new user, skip welcome email
+        welcomeEmailSentFor.current.add(user.id);
+        return;
+      }
+    }
+
+    // Mark as sent early to prevent concurrent duplicate calls
+    welcomeEmailSentFor.current.add(user.id);
+
+    // Determine sign-up method from app metadata
+    const provider = user.app_metadata?.provider as string | undefined;
+    const signUpMethod = provider === 'google' ? 'Google'
+      : provider === 'facebook' ? 'Facebook'
+      : provider === 'apple' ? 'Apple'
+      : provider ? provider.charAt(0).toUpperCase() + provider.slice(1)
+      : undefined;
+
+    // Get full name from user metadata
+    const fullName =
+      user.user_metadata?.full_name ||
+      user.user_metadata?.name ||
+      user.email?.split('@')[0] ||
+      'there';
+
+    try {
+      const { error } = await supabase.functions.invoke('send-attendee-welcome-email', {
+        body: { email: user.email, fullName, signUpMethod },
+      });
+      if (error) {
+        console.warn('[maybeSendOAuthWelcomeEmail] Failed to send welcome email:', error);
+      } else {
+        console.log('[maybeSendOAuthWelcomeEmail] Welcome email sent for', user.email);
+      }
+    } catch (e) {
+      console.warn('[maybeSendOAuthWelcomeEmail] Exception sending welcome email:', e);
     }
   };
 
@@ -311,6 +365,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (newSession?.user) {
         try {
           await fetchUserRoleWithTimeout(newSession.user.id);
+          // Send welcome email for new OAuth sign-ups (Google/Facebook/Apple)
+          maybeSendOAuthWelcomeEmail(newSession.user);
         } catch (e) {
           console.error('[AuthContext] onAuthStateChange fetchUserRole error:', e);
         }

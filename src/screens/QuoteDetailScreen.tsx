@@ -226,12 +226,16 @@ export default function QuoteDetailScreen() {
             setCancelling(true);
             try {
               const tableName = isVenueQuote ? 'venue_quote_requests' : 'quote_requests';
-              const { error: updateError } = await supabase
+              const { data: updatedRows, error: updateError } = await supabase
                 .from(tableName)
                 .update({ status: 'cancelled' })
-                .eq('id', quote.original_id);
+                .eq('id', quote.original_id)
+                .select('id');
 
               if (updateError) throw updateError;
+              if (!updatedRows || updatedRows.length === 0) {
+                throw new Error('Could not cancel this quote request. You may not have permission to modify it.');
+              }
               navigation.goBack();
             } catch (err: any) {
               setAlertState({ visible: true, title: 'Unable to cancel', message: err?.message ?? 'Please try again.' });

@@ -172,9 +172,50 @@ export default function UpdateVenuePortfolioScreen() {
           venue_capacity: data.venue_capacity || '',
         });
       } else {
-        setImageUrl(null);
-        setAdditionalPhotos([]);
-        setListing(null);
+        // Fallback: check legacy venues table for existing data
+        const { data: venuesRow, error: venuesErr } = await supabase
+          .from('venues')
+          .select('id, user_id, name, description, location')
+          .eq('user_id', user.id)
+          .maybeSingle();
+
+        if (venuesErr && (venuesErr as any).code !== 'PGRST116') {
+          console.error('Error loading legacy venue:', venuesErr);
+        }
+
+        if (venuesRow) {
+          // Pre-populate from venues table; listing stays null so user completes setup and saves to venue_listings
+          setImageUrl(null);
+          setAdditionalPhotos([]);
+          setListing(null);
+          setForm({
+            name: venuesRow.name || '',
+            description: venuesRow.description || '',
+            location: venuesRow.location || '',
+            address_line_1: '',
+            address_line_2: '',
+            suburb: '',
+            city: '',
+            province: '',
+            postal_code: '',
+            country: 'South Africa',
+            latitude: '',
+            longitude: '',
+            contact_email: '',
+            whatsapp_number: '',
+            website_url: '',
+            instagram_url: '',
+            facebook_url: '',
+            tiktok_url: '',
+            linkedin_url: '',
+            venue_type: '',
+            venue_capacity: '',
+          });
+        } else {
+          setImageUrl(null);
+          setAdditionalPhotos([]);
+          setListing(null);
+        }
       }
     } catch (err) {
       console.error('Failed to load venue listing:', err);

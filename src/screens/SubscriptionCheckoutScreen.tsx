@@ -422,8 +422,8 @@ export default function SubscriptionCheckoutScreen() {
       frequency: billing === 'yearly' ? '6' : '3',
       recurringAmount: billing === '6_month' || billing === '12_month' ? undefined : priceNum,
       cycles: billing === '6_month' || billing === '12_month' ? undefined : 0,
-      returnUrl: 'https://funxon.com/payment/success',
-      cancelUrl: 'https://funxon.com/payment/cancel',
+      returnUrl: 'https://funxon.co.za/payment/success',
+      cancelUrl: 'https://funxon.co.za/payment/cancel',
       notifyUrl,
     });
 
@@ -506,7 +506,7 @@ export default function SubscriptionCheckoutScreen() {
           fullName: fullName.trim(),
           businessName: businessName.trim() || undefined,
           tierName: tierName,
-          applicationUrl: 'https://funxon.com/vendor-application',
+          applicationUrl: 'https://funxon.co.za/vendor-application',
         },
       });
 

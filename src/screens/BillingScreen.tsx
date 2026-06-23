@@ -192,9 +192,9 @@ export default function BillingScreen() {
                 lastName: nameParts.slice(1).join(' ') || '',
                 email: billing.billing_email || '',
                 phone: billing.billing_phone || '',
-                returnUrl: 'https://funxon.com/payment/success',
-                cancelUrl: 'https://funxon.com/payment/cancel',
-                notifyUrl: 'https://funxon.com/api/payfast/notify',
+                returnUrl: 'https://funxon.co.za/payment/success',
+                cancelUrl: 'https://funxon.co.za/payment/cancel',
+                notifyUrl: 'https://funxon.co.za/api/payfast/notify',
             });
 
             const checkoutUrl = getPayFastCheckoutUrl(paymentData);

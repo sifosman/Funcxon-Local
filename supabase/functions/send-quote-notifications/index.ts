@@ -62,8 +62,8 @@ Deno.serve(async (req: Request) => {
 
   try {
     const brevoApiKey = Deno.env.get('BREVO_API_KEY');
-    const fromEmail = Deno.env.get('FROM_EMAIL') || 'noreply@funcxon.com';
-    const fromName = Deno.env.get('FROM_NAME') || 'Funxons Platform';
+    const fromEmail = Deno.env.get('FROM_EMAIL') || 'noreply@funxon.co.za';
+    const fromName = Deno.env.get('FROM_NAME') || 'Funxon Platform';
 
     if (!brevoApiKey) {
       throw new Error('BREVO_API_KEY environment variable is not set');
@@ -83,7 +83,7 @@ Deno.serve(async (req: Request) => {
 
     // Determine recipient
     const recipientEmail = payload.vendorEmail || payload.clientEmail;
-    const recipientName = payload.vendorName || payload.clientName || 'Funxons User';
+    const recipientName = payload.vendorName || payload.clientName || 'Funxon User';
 
     if (!recipientEmail) {
       return new Response(
@@ -197,14 +197,14 @@ function generateQuoteRequestedToVendorEmail(payload: NotificationPayload) {
         ` : ''}
         
         <div style="text-align: center; margin: 30px 0;">
-          <a href="funxons://vendor/quotes" 
+          <a href="funxon://vendor/quotes" 
              style="background: #2B9EB3; color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; font-weight: bold; display: inline-block;">
             View & Respond to Quote
           </a>
         </div>
         
         <p style="font-size: 14px; color: #5A7A85; margin-top: 20px;">
-          Tap the button above to open the Funxons app and respond to this quote request.
+          Tap the button above to open the Funxon app and respond to this quote request.
         </p>
       </div>
     </body>
@@ -222,9 +222,9 @@ ${eventDetails ? `Event Details:\n${eventDetails}\n\n` : ''}
 ${eventDate ? `Event Date: ${eventDate}\n\n` : ''}
 
 Log in to your vendor dashboard to view and respond:
-funxons://vendor/quotes
+funxon://vendor/quotes
 
-- Funxons Team
+- Funxon Team
   `;
 
   return { subject, htmlContent, textContent };
@@ -270,14 +270,14 @@ function generateQuoteCreatedToClientEmail(payload: NotificationPayload) {
         ` : ''}
         
         <div style="text-align: center; margin: 30px 0;">
-          <a href="funxons://quotes" 
+          <a href="funxon://quotes" 
              style="background: #2B9EB3; color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; font-weight: bold; display: inline-block; margin-right: 10px;">
             View Quote
           </a>
         </div>
         
         <p style="font-size: 14px; color: #5A7A85; margin-top: 20px;">
-          Tap the button above to open the Funxons app and accept or reject this quote.
+          Tap the button above to open the Funxon app and accept or reject this quote.
         </p>
       </div>
     </body>
@@ -297,9 +297,9 @@ ${quoteDescription ? `Description: ${quoteDescription}\n` : ''}
 ${attachmentText ? `\nAttachments:\n${attachmentText}\n` : ''}
 
 View and respond to your quote:
-funxons://quotes
+funxon://quotes
 
-- Funxons Team
+- Funxon Team
   `;
 
   return { subject, htmlContent, textContent };
@@ -334,7 +334,7 @@ function generateQuoteAcceptedToVendorEmail(payload: NotificationPayload) {
         </p>
         
         <div style="text-align: center; margin: 30px 0;">
-          <a href="funxons://vendor/quotes" 
+          <a href="funxon://vendor/quotes" 
              style="background: #16A34A; color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; font-weight: bold; display: inline-block;">
             View Finalized Quote
           </a>
@@ -353,9 +353,9 @@ ${clientName || 'A client'} has accepted your quote${quoteAmount ? ` for R${quot
 
 The quote is now finalized. You should contact the client to confirm next steps.
 
-View finalized quote: funxons://vendor/quotes
+View finalized quote: funxon://vendor/quotes
 
-- Funxons Team
+- Funxon Team
   `;
 
   return { subject, htmlContent, textContent };
@@ -397,7 +397,7 @@ function generateQuoteRejectedToVendorEmail(payload: NotificationPayload) {
         </p>
         
         <div style="text-align: center; margin: 30px 0;">
-          <a href="funxons://vendor/quotes" 
+          <a href="funxon://vendor/quotes" 
              style="background: #2B9EB3; color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; font-weight: bold; display: inline-block;">
             Submit Revised Quote
           </a>
@@ -417,9 +417,9 @@ ${clientName || 'The client'} has decided not to proceed with your quote${quoteA
 ${clientNotes ? `Client Feedback:\n${clientNotes}\n\n` : ''}
 Don't be discouraged! You can submit a revised quote if you'd like to adjust your offer.
 
-View quotes: funxons://vendor/quotes
+View quotes: funxon://vendor/quotes
 
-- Funxons Team
+- Funxon Team
   `;
 
   return { subject, htmlContent, textContent };
@@ -466,7 +466,7 @@ function generateQuoteRevisedToClientEmail(payload: NotificationPayload) {
         ` : ''}
         
         <div style="text-align: center; margin: 30px 0;">
-          <a href="funxons://quotes" 
+          <a href="funxon://quotes" 
              style="background: #2B9EB3; color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; font-weight: bold; display: inline-block;">
             Review Revised Quote
           </a>
@@ -489,9 +489,9 @@ ${quoteDescription ? `Description: ${quoteDescription}\n` : ''}
 ${attachmentText ? `\nAttachments:\n${attachmentText}\n` : ''}
 
 Review and respond:
-funxons://quotes
+funxon://quotes
 
-- Funxons Team
+- Funxon Team
   `;
 
   return { subject, htmlContent, textContent };
@@ -512,7 +512,7 @@ function generateGenericEmail(payload: NotificationPayload) {
         <h2 style="color: #2B9EB3;">Quote Update</h2>
         <p style="color: #2B3840;">There has been an update to your quote request.</p>
         <div style="text-align: center; margin: 30px 0;">
-          <a href="funxons://quotes" 
+          <a href="funxon://quotes" 
              style="background: #2B9EB3; color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; font-weight: bold; display: inline-block;">
             View Quote
           </a>
@@ -527,9 +527,9 @@ Quote Update
 
 There has been an update to your quote request.
 
-View quote: funxons://quotes
+View quote: funxon://quotes
 
-- Funxons Team
+- Funxon Team
   `;
 
   return { subject, htmlContent, textContent };

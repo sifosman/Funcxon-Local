@@ -6,6 +6,22 @@ function toHex(buffer: ArrayBuffer): string {
     .join('');
 }
 
+function calculateExpiryDate(startDate: Date, billingPeriod: string): Date {
+  const expiry = new Date(startDate);
+  switch (billingPeriod) {
+    case '6_month':
+      expiry.setMonth(expiry.getMonth() + 6);
+      break;
+    case '12_month':
+    case 'yearly':
+      expiry.setFullYear(expiry.getFullYear() + 1);
+      break;
+    default: // 'monthly' and anything else
+      expiry.setMonth(expiry.getMonth() + 1);
+  }
+  return expiry;
+}
+
 async function md5Hex(input: string): Promise<string> {
   const data = new TextEncoder().encode(input);
   const hash = await crypto.subtle.digest('MD5', data);
@@ -91,7 +107,7 @@ Deno.serve(async (req: Request) => {
   // Venue activation: match on pending_payment_id
   const { data: venueRow, error: venueErr } = await supabase
     .from('venues')
-    .select('id, subscription_plan_key, features')
+    .select('id, subscription_plan_key, features, billing_period')
     .eq('pending_payment_id', mPaymentId)
     .maybeSingle();
 
@@ -105,11 +121,16 @@ Deno.serve(async (req: Request) => {
       ? { ...(venueRow.features ?? {}), featured: true, featured_listings: true }
       : (venueRow.features ?? {});
 
+    const now = new Date();
+    const venueExpiresAt = calculateExpiryDate(now, venueRow.billing_period || 'monthly');
+
     const { error: updErr } = await supabase
       .from('venues')
       .update({
         subscription_status: 'active',
         subscription_started_at: nowIso,
+        subscription_expires_at: venueExpiresAt.toISOString(),
+        next_payment_due: venueExpiresAt.toISOString(),
         last_payment_at: nowIso,
         payfast_payment_id: pfPaymentId,
         features: updatedFeatures,
@@ -118,13 +139,15 @@ Deno.serve(async (req: Request) => {
 
     if (updErr) {
       console.error('Failed to activate venue subscription', updErr);
+    } else {
+      console.log(`Venue ${venueRow.id} activated. Expires: ${venueExpiresAt.toISOString()}`);
     }
   }
 
   // Vendor activation: match on pending_payment_id
   const { data: vendorRow, error: vendorErr } = await supabase
     .from('vendors')
-    .select('id, subscription_tier')
+    .select('id, subscription_tier, billing_period')
     .eq('pending_payment_id', mPaymentId)
     .maybeSingle();
 
@@ -135,19 +158,28 @@ Deno.serve(async (req: Request) => {
   if (vendorRow?.id) {
     const isPaidVendorTier = vendorRow.subscription_tier !== 'get_started';
 
+    const now = new Date();
+    const vendorExpiresAt = calculateExpiryDate(now, vendorRow.billing_period || 'monthly');
+
     const { error: updErr } = await supabase
       .from('vendors')
       .update({
         subscription_status: 'active',
         subscription_started_at: nowIso,
+        subscription_expires_at: vendorExpiresAt.toISOString(),
+        next_payment_due: vendorExpiresAt.toISOString(),
         last_payment_at: nowIso,
         payfast_payment_id: pfPaymentId,
         featured_listing: isPaidVendorTier,
+        reminder_5day_sent: false,
+        reminder_1day_sent: false,
       })
       .eq('id', vendorRow.id);
 
     if (updErr) {
       console.error('Failed to activate vendor subscription', updErr);
+    } else {
+      console.log(`Vendor ${vendorRow.id} activated. Expires: ${vendorExpiresAt.toISOString()}`);
     }
   }
 

@@ -57,7 +57,7 @@ type VenueListing = {
   name: string;
   subscription_plan: string | null;
   subscription_status: string | null;
-  subscription_expires_at: string | null;
+  subscription_expires_at?: string | null;
 };
 
 type ActionItem = {
@@ -101,7 +101,7 @@ export default function ListerPortfolioScreen() {
 
       const [{ data: vendorData }, { data: venueData }, { data: venuesData }] = await Promise.all([
         supabase.from('vendors').select('id, name, subscription_tier, subscription_status, subscription_expires_at').eq('user_id', listingUserId).maybeSingle(),
-        supabase.from('venue_listings').select('id, name, subscription_plan, subscription_status, subscription_expires_at').eq('user_id', listingUserId).maybeSingle(),
+        supabase.from('venue_listings').select('id, name, subscription_plan, subscription_status').eq('user_id', listingUserId).maybeSingle(),
         supabase.from('venues').select('id, name, subscription_plan_key, subscription_status, subscription_expires_at').eq('user_id', listingUserId).maybeSingle(),
       ]);
 
@@ -565,9 +565,9 @@ export default function ListerPortfolioScreen() {
         {[
           { id: 'faqs', label: "FAQ's", icon: 'help-outline' as keyof typeof MaterialIcons.glyphMap, action: () => setHelpVisible(true) },
           { id: 'helpdesk', label: 'Need app assistance? Contact our helpdesk', icon: 'support-agent' as keyof typeof MaterialIcons.glyphMap, action: () => setHelpVisible(true) },
-          { id: 'report', label: 'Report a problem to Funxon', icon: 'report-problem' as keyof typeof MaterialIcons.glyphMap, action: () => Linking.openURL('mailto:support@funxon.com?subject=Problem%20Report%20-%20Funxon') },
+          { id: 'report', label: 'Report a problem to Funxon', icon: 'report-problem' as keyof typeof MaterialIcons.glyphMap, action: () => Linking.openURL('mailto:support@funxon.co.za?subject=Problem%20Report%20-%20Funxon') },
           { id: 'whatsapp', label: 'Chat with Funxon via WhatsApp', icon: 'chat' as keyof typeof MaterialIcons.glyphMap, action: () => Linking.openURL('https://wa.me/') },
-          { id: 'email', label: 'Chat with Funxon via email', icon: 'email' as keyof typeof MaterialIcons.glyphMap, action: () => Linking.openURL('mailto:support@funxon.com') },
+          { id: 'email', label: 'Chat with Funxon via email', icon: 'email' as keyof typeof MaterialIcons.glyphMap, action: () => Linking.openURL('mailto:support@funxon.co.za') },
           { id: 'terms', label: 'Terms & Policies', icon: 'policy' as keyof typeof MaterialIcons.glyphMap, action: () => navigation.navigate('TermsAndPolicies') },
         ].map((item, i, arr) => renderActionCard(item, i, arr.length))}
       </View>

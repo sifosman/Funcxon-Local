@@ -736,7 +736,7 @@ export default function DiscoverScreen() {
 
         navigation.navigate('VendorProfile', { vendorId: item.id });
       }}
-      style={{ marginRight: featuredCard ? spacing.md : 0, marginBottom: featuredCard ? 0 : spacing.md, width: featuredCard ? 250 : '100%' }}
+      style={{ marginRight: featuredCard ? spacing.md : 0, marginBottom: featuredCard ? 0 : spacing.md, width: featuredCard ? 280 : '100%' }}
     >
       <View
         style={{

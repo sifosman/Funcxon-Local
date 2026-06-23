@@ -39,7 +39,7 @@ export default function VendorSignupSuccessScreen() {
 
       const isVenue = productType === 'venue';
       const functionName = isVenue ? 'send-venue-welcome-email' : 'send-vendor-welcome-email';
-      const applicationUrl = isVenue ? 'https://funxon.com/venue-application' : 'https://funxon.com/vendor-application';
+      const applicationUrl = isVenue ? 'https://funxon.co.za/venue-application' : 'https://funxon.co.za/vendor-application';
 
       const { data, error } = await supabase.functions.invoke(functionName, {
         body: {
@@ -198,7 +198,7 @@ export default function VendorSignupSuccessScreen() {
 
         {/* Email Note */}
         <Text style={{ ...typography.caption, color: colors.textMuted, textAlign: 'center', marginTop: spacing.xl }}>
-          Didn't receive the email? Check your spam folder or contact support@funxon.com
+          Didn't receive the email? Check your spam folder or contact support@funxon.co.za
         </Text>
       </ScrollView>
     </View>

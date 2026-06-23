@@ -163,7 +163,7 @@ export default function PlannerScreen({ navigation }: PlannerProps) {
       let internalUser = userRows ?? null;
 
       if (!internalUser) {
-        const email = user.email ?? 'attendee@funxon.com';
+        const email = user.email ?? 'attendee@funxon.co.za';
         const username = email.split('@')[0] || 'attendee';
         const { data: createdUser, error: createError } = await supabase
           .from('users')

@@ -61,10 +61,10 @@ Deno.serve(async (req: Request) => {
   try {
     // Get environment variables
     const brevoApiKey = Deno.env.get('BREVO_API_KEY');
-    const fromEmail = Deno.env.get('FROM_EMAIL') || 'noreply@funcxon.com';
-    const fromName = Deno.env.get('FROM_NAME') || 'Funcxon Platform';
-    const defaultAdminEmail = Deno.env.get('ADMIN_EMAIL') || 'admin@funcxon.com';
-    const defaultAdminName = Deno.env.get('ADMIN_NAME') || 'Funcxon Admin';
+    const fromEmail = Deno.env.get('FROM_EMAIL') || 'noreply@funxon.co.za';
+    const fromName = Deno.env.get('FROM_NAME') || 'Funxon Platform';
+    const defaultAdminEmail = Deno.env.get('ADMIN_EMAIL') || 'admin@funxon.co.za';
+    const defaultAdminName = Deno.env.get('ADMIN_NAME') || 'Funxon Admin';
 
     if (!brevoApiKey) {
       throw new Error('BREVO_API_KEY environment variable is not set');
@@ -195,7 +195,7 @@ function generateSubscriptionPurchasedEmail(payload: NotificationPayload) {
         </div>
         
         <div style="text-align: center; margin: 30px 0;">
-          <a href="https://funcxon.com/admin/vendors" 
+          <a href="https://funxon.co.za/admin/vendors" 
              style="background: #2B9EB3; color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; font-weight: bold; display: inline-block;">
             View in Admin Panel
           </a>
@@ -215,7 +215,7 @@ Vendor Details:
 - Plan: ${tierName || 'N/A'}
 - Amount: R${amount || '0'}
 
-View in admin panel: https://funcxon.com/admin/vendors
+View in admin panel: https://funxon.co.za/admin/vendors
   `;
 
   return { subject, htmlContent, textContent };
@@ -310,7 +310,7 @@ function generateFreeSignupEmail(payload: NotificationPayload) {
         </div>
         
         <div style="text-align: center; margin: 30px 0;">
-          <a href="https://funcxon.com/admin/vendors" 
+          <a href="https://funxon.co.za/admin/vendors" 
              style="background: #2B9EB3; color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; font-weight: bold; display: inline-block;">
             View in Admin Panel
           </a>
@@ -329,7 +329,7 @@ Vendor Details:
 - Business: ${businessName || 'N/A'}
 - Plan: ${tierName || 'FREE'}
 
-View in admin panel: https://funcxon.com/admin/vendors
+View in admin panel: https://funxon.co.za/admin/vendors
   `;
 
   return { subject, htmlContent, textContent };
@@ -375,7 +375,7 @@ function generateQuoteRequestedEmail(payload: NotificationPayload) {
         ` : ''}
         
         <div style="text-align: center; margin: 30px 0;">
-          <a href="https://funcxon.com/admin/quotes" 
+          <a href="https://funxon.co.za/admin/quotes" 
              style="background: #2B9EB3; color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; font-weight: bold; display: inline-block;">
             View Quote Requests
           </a>
@@ -398,7 +398,7 @@ Vendor Details:
 
 ${quoteDetails ? `Quote Details:\n${quoteDetails}\n` : ''}
 
-View in admin panel: https://funcxon.com/admin/quotes
+View in admin panel: https://funxon.co.za/admin/quotes
   `;
 
   return { subject, htmlContent, textContent };
@@ -438,7 +438,7 @@ function generateCallbackRequestedEmail(payload: NotificationPayload) {
         </div>
         
         <div style="text-align: center; margin: 30px 0;">
-          <a href="https://funcxon.com/admin/callbacks" 
+          <a href="https://funxon.co.za/admin/callbacks" 
              style="background: #2B9EB3; color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; font-weight: bold; display: inline-block;">
             Manage Callbacks
           </a>
@@ -464,7 +464,7 @@ Callback Request:
 - Preferred Time: ${preferredTime || 'N/A'}
 - Assistance Needed: ${assistanceType || 'N/A'}
 
-Manage in admin panel: https://funcxon.com/admin/callbacks
+Manage in admin panel: https://funxon.co.za/admin/callbacks
 
 Reminder: Response time is within 2 hours during business hours.
   `;
@@ -506,7 +506,7 @@ function generateVenueTourRequestedEmail(payload: NotificationPayload) {
         ` : ''}
         
         <div style="text-align: center; margin: 30px 0;">
-          <a href="https://funcxon.com/admin/tours" 
+          <a href="https://funxon.co.za/admin/tours" 
              style="background: #2B9EB3; color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; font-weight: bold; display: inline-block;">
             Manage Tour Requests
           </a>
@@ -527,7 +527,7 @@ Customer Details:
 
 ${eventDetails ? `Tour Details:\n${eventDetails}\n\n` : ''}
 
-Manage in admin panel: https://funcxon.com/admin/tours
+Manage in admin panel: https://funxon.co.za/admin/tours
   `;
 
   return { subject, htmlContent, textContent };
@@ -561,7 +561,7 @@ function generateNewUserEmail(payload: NotificationPayload) {
         </div>
         
         <div style="text-align: center; margin: 30px 0;">
-          <a href="https://funcxon.com/admin/users" 
+          <a href="https://funxon.co.za/admin/users" 
              style="background: #2B9EB3; color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; font-weight: bold; display: inline-block;">
             View Users
           </a>
@@ -579,7 +579,7 @@ User Details:
 - Email: ${vendorEmail || 'N/A'}
 - Registered: ${new Date().toLocaleString()}
 
-View in admin panel: https://funcxon.com/admin/users
+View in admin panel: https://funxon.co.za/admin/users
   `;
 
   return { subject, htmlContent, textContent };

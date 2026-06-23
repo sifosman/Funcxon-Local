@@ -289,9 +289,9 @@ export default function AttendeeHomeScreen() {
   const [search, setSearch] = useState('');
   const [serviceType, setServiceType] = useState<ServiceType>('All');
 
-  // Responsive card width - aim for ~2.5 cards visible
+  // Responsive card width - aim for ~2.2 cards visible
   const [screenWidth, setScreenWidth] = useState(Dimensions.get('window').width);
-  const cardWidth = screenWidth / 2.5;
+  const cardWidth = screenWidth / 2.2;
 
   useEffect(() => {
     const subscription = Dimensions.addEventListener('change', ({ window }) => {

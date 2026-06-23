@@ -8,6 +8,7 @@ import { colors, spacing, radii, typography } from '../theme';
 import * as Linking from 'expo-linking';
 import { PrimaryButton, OutlineButton } from '../components/ui';
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
+import { supabase } from '../lib/supabaseClient';
 
 type Props = NativeStackScreenProps<AuthStackParamList, 'SignUp'>;
 
@@ -96,6 +97,16 @@ export default function SignUpScreen({ navigation }: Props) {
     }
 
     setFormError(null);
+
+    // Send welcome email with app features write-up
+    try {
+      await supabase.functions.invoke('send-attendee-welcome-email', {
+        body: { email: trimmedEmail, fullName: name, signUpMethod: 'email' },
+      });
+    } catch (e) {
+      console.warn('SignUp: Failed to send welcome email:', e);
+    }
+
     if (session) {
       // Email confirmation is disabled; Supabase created the session immediately.
       navigation.getParent()?.navigate('Main');

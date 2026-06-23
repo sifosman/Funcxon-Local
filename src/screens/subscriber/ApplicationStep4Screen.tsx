@@ -820,7 +820,7 @@ export default function ApplicationStep4Screen() {
                 alignItems: 'center',
               }}
             >
-              <Text style={{ ...typography.bodySemiBold, color: colors.textPrimary, fontSize: 16 }}>
+              <Text style={{ ...typography.bodySemiBold, color: colors.textPrimary, fontSize: 13 }}>
                 Back
               </Text>
             </TouchableOpacity>
@@ -841,16 +841,16 @@ export default function ApplicationStep4Screen() {
               {isSubmitting ? (
                 <>
                   <ActivityIndicator size="small" color="#FFFFFF" style={{ marginRight: spacing.sm }} />
-                  <Text style={{ ...typography.bodySemiBold, color: '#FFFFFF', fontSize: 16 }}>
+                  <Text style={{ ...typography.bodySemiBold, color: '#FFFFFF', fontSize: 13 }}>
                     {isSelectedTierFree ? 'Submitting...' : 'Processing...'}
                   </Text>
                 </>
               ) : (
                 <>
-                  <Text style={{ ...typography.bodySemiBold, color: '#FFFFFF', fontSize: 16, marginRight: spacing.sm }}>
+                  <Text style={{ ...typography.bodySemiBold, color: '#FFFFFF', fontSize: 13, marginRight: spacing.xs }}>
                     {isSelectedTierFree ? 'Submit Application' : 'Checkout'}
                   </Text>
-                  <MaterialIcons name={isSelectedTierFree ? 'check-circle' : 'shopping-cart'} size={16} color="#FFFFFF" />
+                  <MaterialIcons name={isSelectedTierFree ? 'check-circle' : 'shopping-cart'} size={14} color="#FFFFFF" />
                 </>
               )}
             </TouchableOpacity>

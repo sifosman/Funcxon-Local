@@ -77,7 +77,7 @@ export default function QuotesScreen() {
       let internalUser = userRows ?? null;
 
       if (!internalUser) {
-        const email = user.email ?? 'attendee@funxon.com';
+        const email = user.email ?? 'attendee@funxon.co.za';
         const username = email.split('@')[0] || 'attendee';
         console.log('[QuotesScreen] Creating new user:', { email, username });
         
@@ -298,12 +298,16 @@ export default function QuotesScreen() {
             setActionLoadingId(quote.id);
             try {
               const tableName = quote.is_venue ? 'venue_quote_requests' : 'quote_requests';
-              const { error: updateError } = await supabase
+              const { data: updatedRows, error: updateError } = await supabase
                 .from(tableName)
                 .update({ status: 'cancelled' })
-                .eq('id', quote.original_id ?? quote.id);
+                .eq('id', quote.original_id ?? quote.id)
+                .select('id');
 
               if (updateError) throw updateError;
+              if (!updatedRows || updatedRows.length === 0) {
+                throw new Error('Could not cancel this quote request. You may not have permission to modify it.');
+              }
               await refetch();
             } catch (err: any) {
               setAlertState({ visible: true, title: 'Unable to cancel', message: err?.message ?? 'Please try again.' });
@@ -375,12 +379,15 @@ export default function QuotesScreen() {
     }
 
     if (quote.status === 'pending') {
-      navigation.navigate('QuoteRequest', {
-        vendorId: targetId ?? 0,
-        vendorName: quote.target_name ?? 'Vendor',
-        type: quote.is_venue ? 'venue' : 'vendor',
-        editMode: true,
-        quoteId: quote.original_id ?? quote.id,
+      navigation.navigate('Home', {
+        screen: 'QuoteRequest',
+        params: {
+          vendorId: targetId ?? 0,
+          vendorName: quote.target_name ?? 'Vendor',
+          type: quote.is_venue ? 'venue' : 'vendor',
+          editMode: true,
+          quoteId: quote.original_id ?? quote.id,
+        },
       });
       return;
     }

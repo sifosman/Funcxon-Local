@@ -1,0 +1,5 @@
+{
+  "name": "send-attendee-welcome-email",
+  "version": "1.0.0",
+  "description": "Send welcome email to new attendees/users via Brevo"
+}

@@ -31,8 +31,8 @@ Deno.serve(async (req: Request) => {
 
   try {
     const brevoApiKey = Deno.env.get('BREVO_API_KEY');
-    const fromEmail = Deno.env.get('FROM_EMAIL') || 'noreply@funcxon.com';
-    const fromName = Deno.env.get('FROM_NAME') || 'Funcxon Team';
+    const fromEmail = Deno.env.get('FROM_EMAIL') || 'noreply@funxon.co.za';
+    const fromName = Deno.env.get('FROM_NAME') || 'Funxon Team';
 
     if (!brevoApiKey) {
       throw new Error('BREVO_API_KEY environment variable is not set');
@@ -47,7 +47,7 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    const subject = `Welcome to Funcxon - Complete Your Venue Application`;
+    const subject = `Welcome to Funxon - Complete Your Venue Application`;
 
     const htmlContent = `
       <!DOCTYPE html>
@@ -55,17 +55,17 @@ Deno.serve(async (req: Request) => {
       <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Welcome to Funcxon</title>
+        <title>Welcome to Funxon</title>
       </head>
       <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
         <div style="background: linear-gradient(135deg, #2D5A4C 0%, #4A7C6F 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
-          <h1 style="color: white; margin: 0; font-size: 28px;">Welcome to Funcxon!</h1>
+          <h1 style="color: white; margin: 0; font-size: 28px;">Welcome to Funxon!</h1>
         </div>
 
         <div style="background: #ffffff; padding: 30px; border: 1px solid #e0e0e0; border-top: none; border-radius: 0 0 10px 10px;">
           <p style="font-size: 18px; margin-bottom: 20px;">Hi ${fullName},</p>
 
-          <p>Congratulations on choosing the <strong>${tierName}</strong> plan! You're now one step closer to listing your venue on Funcxon.</p>
+          <p>Congratulations on choosing the <strong>${tierName}</strong> plan! You're now one step closer to listing your venue on Funxon.</p>
 
           <div style="background: #f5f5f5; padding: 20px; border-radius: 8px; margin: 25px 0;">
             <h3 style="margin-top: 0; color: #2D5A4C;">What's Next?</h3>
@@ -83,28 +83,28 @@ Deno.serve(async (req: Request) => {
 
           <hr style="border: none; border-top: 1px solid #e0e0e0; margin: 30px 0;">
 
-          <p style="font-size: 14px; color: #666; margin-bottom: 5px;">Need help? Contact us at <a href="mailto:support@funcxon.com" style="color: #2D5A4C;">support@funcxon.com</a></p>
-          <p style="font-size: 14px; color: #666; margin-top: 5px;">The Funcxon Team</p>
+          <p style="font-size: 14px; color: #666; margin-bottom: 5px;">Need help? Contact us at <a href="mailto:support@funxon.co.za" style="color: #2D5A4C;">support@funxon.co.za</a></p>
+          <p style="font-size: 14px; color: #666; margin-top: 5px;">The Funxon Team</p>
         </div>
       </body>
       </html>
     `;
 
     const textContent = `
-Welcome to Funcxon!
+Welcome to Funxon!
 
 Hi ${fullName},
 
-Congratulations on choosing the ${tierName} plan! You're now one step closer to listing your venue on Funcxon.
+Congratulations on choosing the ${tierName} plan! You're now one step closer to listing your venue on Funxon.
 
 What's Next?
 Complete your venue application to set up your venue profile, add photos and details, and start receiving bookings.
 
 Complete Your Application: ${applicationUrl}
 
-Need help? Contact us at support@funcxon.com
+Need help? Contact us at support@funxon.co.za
 
-The Funcxon Team
+The Funxon Team
     `;
 
     const brevoPayload: BrevoEmailPayload = {
