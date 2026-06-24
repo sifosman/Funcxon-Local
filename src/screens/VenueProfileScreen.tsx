@@ -17,6 +17,9 @@ import { getFavourites, toggleFavourite } from '../lib/favourites';
 import { useAuth } from '../auth/AuthContext';
 import { PrimaryButton } from '../components/ui';
 
+const headerTitleLarge = { ...typography.titleLarge, fontFamily: 'Montserrat_700Bold' as const };
+const headerTitleMedium = { ...typography.titleMedium, fontFamily: 'Montserrat_600SemiBold' as const };
+
 const GOOGLE_MAPS_API_KEY = 'AIzaSyBjd1KYtTaAzxzdw5ayGwwMu5Sex-gKQLI';
 
 type Props = NativeStackScreenProps<AttendeeStackParamList, 'VenueProfile'>;
@@ -539,7 +542,7 @@ export default function VenueProfileScreen({ route, navigation }: Props) {
           backgroundColor: colors.background,
         }}
       >
-        <Text style={{ ...typography.titleMedium, color: colors.textPrimary }}>Failed to load venue.</Text>
+        <Text style={{ ...headerTitleMedium, color: colors.textPrimary }}>Failed to load venue.</Text>
         <Text style={{ marginTop: spacing.sm, ...typography.body, color: colors.textMuted }}>{venueError.message}</Text>
       </View>
     );
@@ -556,7 +559,7 @@ export default function VenueProfileScreen({ route, navigation }: Props) {
           backgroundColor: colors.background,
         }}
       >
-        <Text style={{ ...typography.titleMedium, color: colors.textPrimary }}>Venue not found.</Text>
+        <Text style={{ ...headerTitleMedium, color: colors.textPrimary }}>Venue not found.</Text>
       </View>
     );
   }
@@ -628,7 +631,7 @@ export default function VenueProfileScreen({ route, navigation }: Props) {
       >
         <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
           <View style={{ flex: 1, paddingRight: spacing.md }}>
-            <Text style={{ ...typography.titleLarge, color: colors.textPrimary }}>{venue.name}</Text>
+            <Text style={{ ...headerTitleLarge, color: colors.textPrimary }}>{venue.name}</Text>
           </View>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
             <TouchableOpacity
@@ -911,7 +914,7 @@ export default function VenueProfileScreen({ route, navigation }: Props) {
             >
               <Text
                 style={{
-                  ...typography.titleMedium,
+                  ...headerTitleMedium,
                   color: colors.textPrimary,
                   marginBottom: spacing.md,
                 }}
@@ -954,7 +957,7 @@ export default function VenueProfileScreen({ route, navigation }: Props) {
             >
               <Text
                 style={{
-                  ...typography.titleMedium,
+                  ...headerTitleMedium,
                   color: colors.textPrimary,
                   marginBottom: spacing.sm,
                 }}
@@ -990,7 +993,7 @@ export default function VenueProfileScreen({ route, navigation }: Props) {
                 borderColor: colors.borderSubtle,
               }}
             >
-              <Text style={{ ...typography.titleMedium, color: colors.textPrimary, marginBottom: spacing.md }}>
+              <Text style={{ ...headerTitleMedium, color: colors.textPrimary, marginBottom: spacing.md }}>
                 Features & Amenities
               </Text>
               <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
@@ -1105,7 +1108,7 @@ export default function VenueProfileScreen({ route, navigation }: Props) {
                 borderColor: colors.borderSubtle,
               }}
             >
-              <Text style={{ ...typography.titleMedium, color: colors.textPrimary, marginBottom: spacing.md }}>
+              <Text style={{ ...headerTitleMedium, color: colors.textPrimary, marginBottom: spacing.md }}>
                 Contact
               </Text>
               <View style={{ gap: spacing.sm }}>
@@ -1159,7 +1162,7 @@ export default function VenueProfileScreen({ route, navigation }: Props) {
             >
               <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.sm }}>
                 <MaterialIcons name="place" size={18} color={colors.textPrimary} />
-                <Text style={{ ...typography.titleMedium, color: colors.textPrimary, marginLeft: spacing.sm }}>
+                <Text style={{ ...headerTitleMedium, color: colors.textPrimary, marginLeft: spacing.sm }}>
                   Location
                 </Text>
               </View>
@@ -1261,7 +1264,7 @@ export default function VenueProfileScreen({ route, navigation }: Props) {
                 borderColor: colors.borderSubtle,
               }}
             >
-              <Text style={{ ...typography.titleMedium, color: colors.textPrimary, marginBottom: spacing.md }}>
+              <Text style={{ ...headerTitleMedium, color: colors.textPrimary, marginBottom: spacing.md }}>
                 Amenities
               </Text>
               {venue.amenities?.map((item) => (
@@ -1324,7 +1327,7 @@ export default function VenueProfileScreen({ route, navigation }: Props) {
                 borderColor: colors.borderSubtle,
               }}
             >
-              <Text style={{ ...typography.titleMedium, color: colors.textPrimary, marginBottom: spacing.sm }}>
+              <Text style={{ ...headerTitleMedium, color: colors.textPrimary, marginBottom: spacing.sm }}>
                 Failed to load reviews
               </Text>
               <Text style={{ ...typography.body, color: colors.textMuted }}>{reviewsError.message}</Text>
@@ -1399,7 +1402,7 @@ export default function VenueProfileScreen({ route, navigation }: Props) {
                   {review.title ? (
                     <Text
                       style={{
-                        ...typography.titleMedium,
+                        ...headerTitleMedium,
                         color: colors.textPrimary,
                         marginTop: spacing.sm,
                       }}
@@ -1439,7 +1442,7 @@ export default function VenueProfileScreen({ route, navigation }: Props) {
               borderColor: colors.borderSubtle,
             }}
           >
-            <Text style={{ ...typography.titleMedium, color: colors.textPrimary, marginBottom: spacing.sm }}>
+            <Text style={{ ...headerTitleMedium, color: colors.textPrimary, marginBottom: spacing.sm }}>
               Ratings System
             </Text>
             <View style={{ gap: spacing.xs }}>
@@ -1487,7 +1490,7 @@ export default function VenueProfileScreen({ route, navigation }: Props) {
                 borderColor: colors.borderSubtle,
               }}
             >
-              <Text style={{ ...typography.titleMedium, color: colors.textPrimary, marginBottom: spacing.sm }}>
+              <Text style={{ ...headerTitleMedium, color: colors.textPrimary, marginBottom: spacing.sm }}>
                 Add a Review
               </Text>
               <Text style={{ ...typography.body, color: colors.textSecondary, marginBottom: spacing.md }}>
@@ -1542,7 +1545,7 @@ export default function VenueProfileScreen({ route, navigation }: Props) {
         >
           <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.md }}>
             <MaterialIcons name="calendar-today" size={18} color={colors.textPrimary} />
-            <Text style={{ ...typography.titleMedium, color: colors.textPrimary, marginLeft: spacing.sm }}>
+            <Text style={{ ...headerTitleMedium, color: colors.textPrimary, marginLeft: spacing.sm }}>
               Availability Calendar
             </Text>
           </View>
@@ -1642,7 +1645,7 @@ export default function VenueProfileScreen({ route, navigation }: Props) {
       >
         <Text
           style={{
-            ...typography.titleMedium,
+            ...headerTitleMedium,
             color: colors.textPrimary,
             marginBottom: spacing.sm,
           }}

@@ -91,7 +91,7 @@ export function isVenueFeatureEnabled(ent: VenueSubscriptionEntitlement, feature
     }
     case 'analytics': {
       const flag = readFeatureFlag(ent.features, ['analytics', 'analytics_stats']);
-      return flag ?? planBased;
+      return flag ?? true;
     }
     case 'quote_requests': {
       const flag = readFeatureFlag(ent.features, ['quote_requests', 'online_quote_requests']);

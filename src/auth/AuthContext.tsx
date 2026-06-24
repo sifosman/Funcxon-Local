@@ -287,22 +287,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
         let access_token: string | null = null;
         let refresh_token: string | null = null;
+        let code: string | null = null;
 
-        // Check hash fragment
+        // Check hash fragment (implicit flow)
         if (hash && hash.includes('access_token=')) {
           const hashParams = new URLSearchParams(hash.substring(1));
           access_token = hashParams.get('access_token');
           refresh_token = hashParams.get('refresh_token');
         }
 
-        // Check query params
+        // Check query params (implicit flow)
         if (!access_token) {
           access_token = searchParams.get('access_token');
           refresh_token = searchParams.get('refresh_token');
         }
 
+        // Check query params (PKCE flow - used by email confirmation links)
+        if (!access_token) {
+          code = searchParams.get('code');
+        }
+
         if (access_token) {
-          console.log('[AuthContext] Setting session from deep link');
+          console.log('[AuthContext] Setting session from deep link (implicit flow)');
           const { error } = await supabase.auth.setSession({
             access_token,
             refresh_token: refresh_token || '',
@@ -312,6 +318,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             console.error('[AuthContext] Failed to set session from deep link:', error);
           } else {
             console.log('[AuthContext] Session set from deep link');
+          }
+        } else if (code) {
+          console.log('[AuthContext] Exchanging code for session (PKCE flow)');
+          const { error } = await supabase.auth.exchangeCodeForSession(code);
+          if (error) {
+            console.error('[AuthContext] Failed to exchange code for session:', error);
+          } else {
+            console.log('[AuthContext] Session set from PKCE code exchange');
           }
         }
       } catch (e) {

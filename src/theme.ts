@@ -77,12 +77,12 @@ export const typography = {
   titleLarge: {
     fontSize: 24,
     fontWeight: '700' as const,
-    fontFamily: 'PlayfairDisplay_700Bold',
+    fontFamily: 'Montserrat_700Bold',
   },
   titleMedium: {
     fontSize: 18,
     fontWeight: '600' as const,
-    fontFamily: 'PlayfairDisplay_600SemiBold',
+    fontFamily: 'Montserrat_600SemiBold',
   },
   body: {
     fontSize: 14,
@@ -97,12 +97,12 @@ export const typography = {
   displayLarge: {
     fontSize: 28,
     fontWeight: '700' as const,
-    fontFamily: 'PlayfairDisplay_700Bold',
+    fontFamily: 'Montserrat_700Bold',
   },
   displayMedium: {
     fontSize: 22,
     fontWeight: '600' as const,
-    fontFamily: 'PlayfairDisplay_600SemiBold',
+    fontFamily: 'Montserrat_600SemiBold',
   },
   label: {
     fontSize: 14,

@@ -2,9 +2,7 @@ import { useMemo } from 'react';
 import { Linking, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { colors, spacing, radii, typography } from '../theme';
-
-const SUPPORT_EMAIL = process.env.EXPO_PUBLIC_SUPPORT_EMAIL || 'support@funxon.co.za';
-const SUPPORT_WHATSAPP = process.env.EXPO_PUBLIC_SUPPORT_WHATSAPP || '+27000000000';
+import { SUPPORT_EMAIL, SUPPORT_WHATSAPP } from '../utils/env';
 
 type AppFooterProps = {
   onNavigateToFAQs?: () => void;

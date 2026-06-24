@@ -169,6 +169,21 @@ export default function AccountScreen() {
     };
 
     const handleGoToVenueListingPlans = async () => {
+        // If user already has a venue listing, let them through to upgrade/change plan
+        if (user?.id) {
+            const { data: existingVenue } = await supabase
+                .from('venue_listings')
+                .select('id')
+                .eq('user_id', user.id)
+                .maybeSingle();
+
+            if (existingVenue?.id) {
+                navigation.navigate('VenueListingPlans');
+                return;
+            }
+        }
+
+        // New applicant — check for blocking application status
         const latestVenueApplication = await getLatestUserApplicationByType('venue');
         if (latestVenueApplication.success && latestVenueApplication.data && isBlockingApplicationStatus(latestVenueApplication.data.status)) {
             navigation.navigate('ApplicationStatus');

@@ -226,12 +226,6 @@ export default function SubscriptionPlansScreen() {
   );
 
   const handleSelectPlan = async () => {
-    const latestVendorApplication = await getLatestUserApplicationByType('vendor');
-    if (latestVendorApplication.success && latestVendorApplication.data && isBlockingApplicationStatus(latestVendorApplication.data.status)) {
-      navigation.navigate('ApplicationStatus');
-      return;
-    }
-
     const isFree = selectedPlan === 'get_started';
 
     const priceLabel = isFree
@@ -262,8 +256,16 @@ export default function SubscriptionPlansScreen() {
       return;
     }
 
+    // Existing vendor — go straight to checkout (upgrade/change plan flow)
     if (existingVendorId) {
       navigation.navigate('SubscriptionCheckout', checkoutParams);
+      return;
+    }
+
+    // New applicant — check for blocking application status before starting application form
+    const latestVendorApplication = await getLatestUserApplicationByType('vendor');
+    if (latestVendorApplication.success && latestVendorApplication.data && isBlockingApplicationStatus(latestVendorApplication.data.status)) {
+      navigation.navigate('ApplicationStatus');
       return;
     }
 

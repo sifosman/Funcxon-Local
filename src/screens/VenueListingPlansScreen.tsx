@@ -290,16 +290,6 @@ export default function VenueListingPlansScreen() {
   };
 
   const handleSelectPlan = async () => {
-    const latestVenueApplication = await getLatestUserApplicationByType('venue');
-    if (
-      latestVenueApplication.success &&
-      latestVenueApplication.data &&
-      isBlockingApplicationStatus(latestVenueApplication.data.status)
-    ) {
-      navigation.navigate('ApplicationStatus');
-      return;
-    }
-
     const isFree = selectedPlan === 'get_started';
 
     const priceLabel = isFree
@@ -331,8 +321,20 @@ export default function VenueListingPlansScreen() {
       return;
     }
 
+    // Existing venue — go straight to checkout (upgrade/change plan flow)
     if (existingVenueId) {
       navigation.navigate('SubscriptionCheckout', checkoutParams);
+      return;
+    }
+
+    // New applicant — check for blocking application status before starting application form
+    const latestVenueApplication = await getLatestUserApplicationByType('venue');
+    if (
+      latestVenueApplication.success &&
+      latestVenueApplication.data &&
+      isBlockingApplicationStatus(latestVenueApplication.data.status)
+    ) {
+      navigation.navigate('ApplicationStatus');
       return;
     }
 

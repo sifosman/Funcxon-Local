@@ -92,33 +92,74 @@ export default function VenueCatalogueScreen() {
 
       if (listingErr && (listingErr as any).code !== 'PGRST116') {
         console.error('Failed to load venue listing for catalogue:', listingErr);
+        setListing(null);
+        setItems([]);
+        return;
       }
 
-      if (!listingRow) {
+      let effectiveListing = listingRow;
+
+      if (!effectiveListing) {
+        // Fallback: check venues table and auto-create a venue_listings row if one exists there
+        const { data: venuesRow, error: venuesErr } = await supabase
+          .from('venues')
+          .select('id, name, subscription_plan_key, subscription_status, subscription_expires_at')
+          .eq('user_id', user.id)
+          .maybeSingle();
+
+        if (venuesErr && (venuesErr as any).code !== 'PGRST116') {
+          console.error('Failed to load venues fallback for catalogue:', venuesErr);
+        }
+
+        if (venuesRow) {
+          // Auto-create the missing venue_listings record from the venues row
+          const { data: createdRow, error: createErr } = await supabase
+            .from('venue_listings')
+            .upsert(
+              {
+                user_id: user.id,
+                name: venuesRow.name || 'Venue Listing',
+                subscription_plan: venuesRow.subscription_plan_key || 'get_started',
+                subscription_status: venuesRow.subscription_status || 'active',
+              },
+              { onConflict: 'user_id' },
+            )
+            .select('id, name, subscription_plan, subscription_status, subscription_expires_at')
+            .single();
+
+          if (createErr) {
+            console.error('Failed to auto-create venue_listings from venues fallback:', createErr);
+          } else {
+            effectiveListing = createdRow;
+          }
+        }
+      }
+
+      if (!effectiveListing) {
         setListing(null);
         setItems([]);
         return;
       }
 
       setListing({
-        id: listingRow.id,
-        name: listingRow.name,
-        subscription_plan: listingRow.subscription_plan || null,
-        subscription_status: listingRow.subscription_status || null,
-        subscription_expires_at: listingRow.subscription_expires_at || null,
+        id: effectiveListing.id,
+        name: effectiveListing.name,
+        subscription_plan: effectiveListing.subscription_plan || null,
+        subscription_status: effectiveListing.subscription_status || null,
+        subscription_expires_at: effectiveListing.subscription_expires_at || null,
       });
 
       const { data: itemRows, error: itemsErr } = await supabase
         .from('venue_catalogue_items')
         .select('id, listing_id, title, description, price, currency, sort_order, is_active, image_url')
-        .eq('listing_id', listingRow.id)
+        .eq('listing_id', effectiveListing.id)
         .order('sort_order', { ascending: true })
         .order('created_at', { ascending: true });
 
       const { data: pdfRows } = await supabase
         .from('venue_documents')
         .select('id, document_url, file_name, created_at')
-        .eq('venue_id', listingRow.id)
+        .eq('venue_id', effectiveListing.id)
         .eq('document_type', 'catalogue_pdf')
         .order('created_at', { ascending: false });
 

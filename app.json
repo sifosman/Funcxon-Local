@@ -52,7 +52,7 @@
         "visible": "visible"
       }
     },
-    "scheme": "funxon",
+    "scheme": ["vibeventz", "funxon"],
     "web": {
       "favicon": "./assets/favicon.png"
     },

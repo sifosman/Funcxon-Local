@@ -680,6 +680,10 @@ export default function UpdateVendorPortfolioScreen() {
                                             setAlertState({ visible: true, title: 'Create profile first', message: 'Please create your vendor profile before viewing analytics.', buttons: [{ text: 'OK', style: 'default', onPress: () => setAlertState(null) }] });
                                             return;
                                         }
+                                        if (!canEditLinks) {
+                                            navigation.navigate('SubscriptionPlans');
+                                            return;
+                                        }
                                         navigation.navigate('VendorAnalytics');
                                     }}
                                     style={{

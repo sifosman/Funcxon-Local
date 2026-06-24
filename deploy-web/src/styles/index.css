@@ -1,0 +1,68 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    font-family: 'Montserrat', sans-serif;
+    background-color: #fbf9f4;
+    color: #1b1c19;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: 'Playfair Display', serif;
+  }
+
+  .material-symbols-outlined {
+    font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+  }
+  .material-symbols-outlined.icon-fill {
+    font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+  }
+}
+
+@layer components {
+  /* Layout */
+  .fx-container {
+    @apply mx-auto w-full max-w-[1280px] px-4 md:px-6;
+  }
+
+  .fx-section {
+    @apply py-16;
+  }
+
+  /* Buttons - match Stitch 48px height */
+  .fx-btn {
+    @apply inline-flex h-12 items-center justify-center rounded-lg px-6 text-base font-bold tracking-wide transition-colors focus:outline-none;
+  }
+
+  .fx-btn-primary {
+    @apply fx-btn bg-primary-container text-white hover:bg-primary;
+  }
+
+  .fx-btn-outline {
+    @apply fx-btn border border-primary-container text-primary-container bg-transparent hover:bg-surface-container;
+  }
+
+  /* Cards - Stitch: white bg, #f7f5f0 border, premium shadow, rounded-xl */
+  .fx-card {
+    @apply rounded-xl bg-white overflow-hidden;
+    border: 1px solid #f7f5f0;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.08);
+  }
+
+  .fx-input {
+    @apply w-full rounded-lg border border-outline-variant bg-white px-4 py-2.5 text-sm text-on-surface placeholder:text-on-surface-variant focus:border-primary-container focus:outline-none focus:ring-1 focus:ring-primary-container;
+  }
+
+  /* Horizontal scroll with hidden scrollbar */
+  .scroll-row {
+    @apply flex overflow-x-auto gap-6 pb-4 snap-x snap-mandatory;
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .scroll-row::-webkit-scrollbar {
+    display: none;
+  }
+}
