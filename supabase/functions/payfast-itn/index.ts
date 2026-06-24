@@ -75,7 +75,7 @@ Deno.serve(async (req: Request) => {
   }
 
   // Verify signature (PayFast)
-  const passphrase = Deno.env.get('PAYFAST_PASSPHRASE') ?? undefined;
+  const passphrase = Deno.env.get('PAYFAST_PASSPHRASE') ?? 'jt7NOE43FZPn';
   const expectedPayload = buildSignaturePayload(params, passphrase);
   const expectedSig = await md5Hex(expectedPayload);
 

@@ -1,12 +1,13 @@
 // PayFast Payment Gateway Configuration
 // Docs: https://developers.payfast.co.za/docs
 
-import { PAYFAST_SANDBOX, PAYFAST_MERCHANT_ID, PAYFAST_MERCHANT_KEY } from '../utils/env';
+import { PAYFAST_SANDBOX, PAYFAST_MERCHANT_ID, PAYFAST_MERCHANT_KEY, PAYFAST_PASSPHRASE } from '../utils/env';
+import { md5 } from '../utils/md5';
 
 export const payfastConfig = {
   merchantId: PAYFAST_MERCHANT_ID,
   merchantKey: PAYFAST_MERCHANT_KEY,
-  // Passphrase should only be used server-side; kept here for signature generation reference
+  passphrase: PAYFAST_PASSPHRASE,
   sandbox: PAYFAST_SANDBOX,
 };
 
@@ -39,6 +40,8 @@ export type PayFastPaymentData = {
   return_url?: string;
   cancel_url?: string;
   notify_url?: string;
+  // Security
+  signature?: string;
 };
 
 /**
@@ -85,7 +88,42 @@ export function buildPayFastPaymentData(opts: {
     if (opts.cycles !== undefined) data.cycles = String(opts.cycles);
   }
 
+  // Generate PayFast security signature
+  data.signature = generatePayFastSignature(data, payfastConfig.passphrase);
+
   return data;
+}
+
+/**
+ * Generate the PayFast MD5 security signature.
+ * Pairs must be in the ORDER they appear in the PayFast form spec (NOT alphabetical).
+ * The passphrase is appended as &passphrase=<encoded> before hashing.
+ */
+export function generatePayFastSignature(data: PayFastPaymentData, passphrase?: string): string {
+  const orderedKeys = [
+    'merchant_id', 'merchant_key', 'return_url', 'cancel_url', 'notify_url',
+    'name_first', 'name_last', 'email_address', 'cell_number',
+    'm_payment_id', 'amount', 'item_name', 'item_description',
+    'custom_int1', 'custom_int2', 'custom_int3', 'custom_int4', 'custom_int5',
+    'custom_str1', 'custom_str2', 'custom_str3', 'custom_str4', 'custom_str5',
+    'email_confirmation', 'confirmation_address', 'payment_method',
+    'subscription_type', 'billing_date', 'recurring_amount', 'frequency', 'cycles',
+  ];
+
+  const parts: string[] = [];
+  for (const key of orderedKeys) {
+    const value = (data as any)[key];
+    if (value !== undefined && value !== '') {
+      parts.push(`${encodeURIComponent(key)}=${encodeURIComponent(value)}`);
+    }
+  }
+
+  let payload = parts.join('&');
+  if (passphrase) {
+    payload += `&passphrase=${encodeURIComponent(passphrase)}`;
+  }
+
+  return md5(payload);
 }
 
 /**

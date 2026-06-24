@@ -10,6 +10,7 @@ import {
   TouchableOpacity,
   View,
   Platform,
+  ViewStyle,
 } from 'react-native';
 import ThemedAlert from '../components/ThemedAlert';
 import DateTimePicker from '@react-native-community/datetimepicker';
@@ -281,6 +282,19 @@ type CategoryPickerOption = {
   selected: boolean;
   onPress: () => void;
   section?: string;
+};
+
+const GET_LISTED_CARD_STYLE: ViewStyle = {
+  borderRadius: radii.xl,
+  backgroundColor: colors.surface,
+  overflow: 'hidden',
+  borderWidth: 1,
+  borderColor: colors.borderSubtle,
+  shadowColor: '#000',
+  shadowOpacity: 0.08,
+  shadowRadius: 10,
+  shadowOffset: { width: 0, height: 3 },
+  elevation: 2,
 };
 
 export default function AttendeeHomeScreen() {
@@ -1677,17 +1691,7 @@ export default function AttendeeHomeScreen() {
             }}
           >
             <View
-              style={{
-                borderRadius: radii.xl,
-                overflow: 'hidden',
-                borderWidth: 1,
-                borderColor: colors.borderSubtle,
-                shadowColor: '#000',
-                shadowOpacity: 0.1,
-                shadowRadius: 10,
-                shadowOffset: { width: 0, height: 3 },
-                elevation: 3,
-              }}
+              style={GET_LISTED_CARD_STYLE}
             >
               <NetworkImage
                 uri={'https://images.unsplash.com/photo-1464366400600-7168b8af9bc3?w=800&q=80'}
@@ -1730,17 +1734,7 @@ export default function AttendeeHomeScreen() {
             }}
           >
             <View
-              style={{
-                borderRadius: radii.xl,
-                overflow: 'hidden',
-                borderWidth: 1,
-                borderColor: colors.borderSubtle,
-                shadowColor: '#000',
-                shadowOpacity: 0.1,
-                shadowRadius: 10,
-                shadowOffset: { width: 0, height: 3 },
-                elevation: 3,
-              }}
+              style={GET_LISTED_CARD_STYLE}
             >
               <NetworkImage
                 uri={'https://images.unsplash.com/photo-1621844061203-3f31a2a7d6ad?w=800&q=80'}
@@ -1783,17 +1777,7 @@ export default function AttendeeHomeScreen() {
             }}
           >
             <View
-              style={{
-                borderRadius: radii.xl,
-                overflow: 'hidden',
-                borderWidth: 1,
-                borderColor: colors.borderSubtle,
-                shadowColor: '#000',
-                shadowOpacity: 0.1,
-                shadowRadius: 10,
-                shadowOffset: { width: 0, height: 3 },
-                elevation: 3,
-              }}
+              style={GET_LISTED_CARD_STYLE}
             >
               <NetworkImage
                 uri={'https://images.unsplash.com/photo-1559136555-9303baea8ebd?w=800&q=80'}

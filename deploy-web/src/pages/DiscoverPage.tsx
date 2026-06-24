@@ -184,7 +184,7 @@ export default function DiscoverPage() {
                   )}
                 </div>
                 <div className="p-4">
-                  <h3 className="mb-1 truncate text-[18px] font-semibold text-primary" style={{ fontFamily: "'Playfair Display', serif" }}>
+                  <h3 className="mb-1 truncate text-[18px] font-semibold text-primary" style={{ fontFamily: "'Montserrat', sans-serif" }}>
                     {item.name}
                   </h3>
                   <p className="mb-3 flex items-center text-xs text-on-surface-variant" style={{ fontFamily: "'Montserrat', sans-serif" }}>

@@ -960,7 +960,7 @@ export default function DiscoverScreen() {
             onChangeText={setSearch}
             placeholder={getSearchPlaceholder()}
             placeholderTextColor={colors.textMuted}
-            style={{ flex: 1, paddingVertical: spacing.md, color: colors.textPrimary }}
+            style={{ flex: 1, paddingVertical: spacing.md, color: colors.textPrimary, fontFamily: typography.body.fontFamily }}
             autoCapitalize="none"
             autoCorrect={false}
             returnKeyType="search"
@@ -1154,7 +1154,7 @@ export default function DiscoverScreen() {
                         alignItems: 'center',
                       }}
                     >
-                      <Text style={{ color: selectedVenueType ? colors.textPrimary : colors.textMuted }}>
+                      <Text style={{ ...typography.body, color: selectedVenueType ? colors.textPrimary : colors.textMuted }}>
                         {selectedVenueType ?? 'Any'}
                       </Text>
                       <MaterialIcons name="keyboard-arrow-down" size={20} color={colors.textSecondary} />
@@ -1177,7 +1177,7 @@ export default function DiscoverScreen() {
                         alignItems: 'center',
                       }}
                     >
-                      <Text style={{ color: selectedVenueAmenities.length > 0 ? colors.textPrimary : colors.textMuted }} numberOfLines={1}>
+                      <Text style={{ ...typography.body, color: selectedVenueAmenities.length > 0 ? colors.textPrimary : colors.textMuted }} numberOfLines={1}>
                         {selectedVenueAmenities.length > 0 ? selectedVenueAmenities.join(', ') : 'Any'}
                       </Text>
                       <MaterialIcons name="keyboard-arrow-down" size={20} color={colors.textSecondary} />
@@ -1200,7 +1200,7 @@ export default function DiscoverScreen() {
                         alignItems: 'center',
                       }}
                     >
-                      <Text style={{ color: selectedCapacity ? colors.textPrimary : colors.textMuted }}>
+                      <Text style={{ ...typography.body, color: selectedCapacity ? colors.textPrimary : colors.textMuted }}>
                         {selectedCapacity ?? 'Any'}
                       </Text>
                       <MaterialIcons name="keyboard-arrow-down" size={20} color={colors.textSecondary} />
@@ -1223,7 +1223,7 @@ export default function DiscoverScreen() {
                         alignItems: 'center',
                       }}
                     >
-                      <Text style={{ color: selectedProvinces.length > 0 ? colors.textPrimary : colors.textMuted }} numberOfLines={1}>
+                      <Text style={{ ...typography.body, color: selectedProvinces.length > 0 ? colors.textPrimary : colors.textMuted }} numberOfLines={1}>
                         {selectedProvinces.length > 0 ? selectedProvinces.join(', ') : 'Any'}
                       </Text>
                       <MaterialIcons name="keyboard-arrow-down" size={20} color={colors.textSecondary} />
@@ -1246,7 +1246,7 @@ export default function DiscoverScreen() {
                         alignItems: 'center',
                       }}
                     >
-                      <Text style={{ color: selectedCities.length > 0 ? colors.textPrimary : colors.textMuted }} numberOfLines={1}>
+                      <Text style={{ ...typography.body, color: selectedCities.length > 0 ? colors.textPrimary : colors.textMuted }} numberOfLines={1}>
                         {selectedCities.length > 0 ? selectedCities.join(', ') : 'Any'}
                       </Text>
                       <MaterialIcons name="keyboard-arrow-down" size={20} color={colors.textSecondary} />
@@ -1293,7 +1293,7 @@ export default function DiscoverScreen() {
                         alignItems: 'center',
                       }}
                     >
-                      <Text style={{ color: selectedVendorCategories.length > 0 ? colors.textPrimary : colors.textMuted }} numberOfLines={1}>
+                      <Text style={{ ...typography.body, color: selectedVendorCategories.length > 0 ? colors.textPrimary : colors.textMuted }} numberOfLines={1}>
                         {selectedVendorCategories.length > 0 ? selectedVendorCategories.map((id) => VENDOR_CATEGORIES.find((c) => c.id === id)?.label ?? id).join(', ') : 'Any'}
                       </Text>
                       <MaterialIcons name="keyboard-arrow-down" size={20} color={colors.textSecondary} />
@@ -1316,7 +1316,7 @@ export default function DiscoverScreen() {
                         alignItems: 'center',
                       }}
                     >
-                      <Text style={{ color: selectedVendorSubcategories.length > 0 ? colors.textPrimary : colors.textMuted }} numberOfLines={1}>
+                      <Text style={{ ...typography.body, color: selectedVendorSubcategories.length > 0 ? colors.textPrimary : colors.textMuted }} numberOfLines={1}>
                         {selectedVendorSubcategories.length > 0 ? selectedVendorSubcategories.join(', ') : 'Any'}
                       </Text>
                       <MaterialIcons name="keyboard-arrow-down" size={20} color={colors.textSecondary} />
@@ -1339,7 +1339,7 @@ export default function DiscoverScreen() {
                         alignItems: 'center',
                       }}
                     >
-                      <Text style={{ color: selectedVendorProvinces.length > 0 ? colors.textPrimary : colors.textMuted }} numberOfLines={1}>
+                      <Text style={{ ...typography.body, color: selectedVendorProvinces.length > 0 ? colors.textPrimary : colors.textMuted }} numberOfLines={1}>
                         {selectedVendorProvinces.length > 0 ? selectedVendorProvinces.join(', ') : 'Any'}
                       </Text>
                       <MaterialIcons name="keyboard-arrow-down" size={20} color={colors.textSecondary} />
@@ -1362,7 +1362,7 @@ export default function DiscoverScreen() {
                         alignItems: 'center',
                       }}
                     >
-                      <Text style={{ color: selectedVendorCities.length > 0 ? colors.textPrimary : colors.textMuted }} numberOfLines={1}>
+                      <Text style={{ ...typography.body, color: selectedVendorCities.length > 0 ? colors.textPrimary : colors.textMuted }} numberOfLines={1}>
                         {selectedVendorCities.length > 0 ? selectedVendorCities.join(', ') : 'Any'}
                       </Text>
                       <MaterialIcons name="keyboard-arrow-down" size={20} color={colors.textSecondary} />
@@ -1618,6 +1618,7 @@ export default function DiscoverScreen() {
                     color: colors.textPrimary,
                     backgroundColor: colors.surfaceMuted,
                     marginBottom: spacing.md,
+                    fontFamily: typography.body.fontFamily,
                   }}
                 />
               )}
