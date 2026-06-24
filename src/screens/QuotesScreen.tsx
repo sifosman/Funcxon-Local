@@ -320,6 +320,39 @@ export default function QuotesScreen() {
     });
   };
 
+  const handleRemove = (quote: QuoteRequest) => {
+    setAlertState({
+      visible: true,
+      title: 'Remove quote request?',
+      message: 'This will permanently remove this cancelled quote request from your list. This action cannot be undone.',
+      buttons: [
+        { text: 'Keep', style: 'cancel', onPress: () => setAlertState(null) },
+        {
+          text: 'Remove',
+          style: 'destructive',
+          onPress: async () => {
+            setAlertState(null);
+            setActionLoadingId(quote.id);
+            try {
+              const tableName = quote.is_venue ? 'venue_quote_requests' : 'quote_requests';
+              const { error: deleteError } = await supabase
+                .from(tableName)
+                .delete()
+                .eq('id', quote.original_id ?? quote.id);
+
+              if (deleteError) throw deleteError;
+              await refetch();
+            } catch (err: any) {
+              setAlertState({ visible: true, title: 'Unable to remove', message: err?.message ?? 'Please try again.' });
+            } finally {
+              setActionLoadingId(null);
+            }
+          },
+        },
+      ],
+    });
+  };
+
   const handleSecondaryAction = async (quote: QuoteRequest) => {
     const targetId = quote.target_id ?? quote.vendor_id;
 
@@ -874,6 +907,29 @@ export default function QuotesScreen() {
                   <MaterialIcons name="cancel" size={16} color={colors.destructive} style={{ marginRight: spacing.xs }} />
                   <Text style={{ ...typography.captionSemiBold, color: colors.destructive }}>
                     {actionLoading ? 'Cancelling...' : 'Cancel request'}
+                  </Text>
+                </TouchableOpacity>
+              )}
+
+              {item.status === 'cancelled' && (
+                <TouchableOpacity
+                  onPress={() => handleRemove(item)}
+                  disabled={actionLoading}
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    marginTop: spacing.sm,
+                    paddingVertical: spacing.sm,
+                    borderRadius: radii.md,
+                    borderWidth: 1,
+                    borderColor: colors.destructive,
+                    opacity: actionLoading ? 0.7 : 1,
+                  }}
+                >
+                  <MaterialIcons name="delete" size={16} color={colors.destructive} style={{ marginRight: spacing.xs }} />
+                  <Text style={{ ...typography.captionSemiBold, color: colors.destructive }}>
+                    {actionLoading ? 'Removing...' : 'Remove request'}
                   </Text>
                 </TouchableOpacity>
               )}
