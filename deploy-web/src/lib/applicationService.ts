@@ -36,7 +36,7 @@ async function resolveFileBody(file: { uri: string; name: string; type: string }
   return response.blob();
 }
 
-const BLOCKING_APPLICATION_STATUSES: readonly string[] = ['approved'];
+const BLOCKING_APPLICATION_STATUSES: readonly string[] = ['pending', 'approved', 'under_review', 'needs_changes'];
 const EDITABLE_APPLICATION_STATUSES = ['needs_changes'] as const;
 
 export type ApplicationSubmission = {
@@ -103,7 +103,7 @@ export async function submitApplication(data: ApplicationSubmission) {
       terms_accepted: data.terms_accepted,
       privacy_accepted: data.privacy_accepted,
       marketing_consent: data.marketing_consent,
-      status: 'approved',
+      status: 'pending',
     };
 
     const existingApplicationId = data.existing_application_id ?? null;
@@ -133,7 +133,7 @@ export async function submitApplication(data: ApplicationSubmission) {
           .from('subscriber_applications')
           .update({
             ...payload,
-            status: 'approved',
+            status: 'pending',
             admin_notes: null,
             reviewed_at: null,
             reviewed_by: null,

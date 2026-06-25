@@ -695,7 +695,7 @@ export default function ApplicationStep3Screen() {
               </Text>
             </TouchableOpacity>
             {errors.images && (
-              <Text style={{ fontSize: 12, color: '#EF4444', marginTop: spacing.xs }}>
+              <Text style={{ ...typography.caption, fontSize: 12, color: '#EF4444', marginTop: spacing.xs }}>
                 {errors.images}
               </Text>
             )}
@@ -924,7 +924,7 @@ export default function ApplicationStep3Screen() {
                     </View>
 
                     {errorText && (
-                      <Text style={{ fontSize: 12, color: '#EF4444', marginTop: spacing.xs }}>
+                      <Text style={{ ...typography.caption, fontSize: 12, color: '#EF4444', marginTop: spacing.xs }}>
                         {errorText}
                       </Text>
                     )}

@@ -183,10 +183,11 @@ export default function ApplicationStep1Screen() {
                     backgroundColor: colors.surface,
                     fontSize: 14,
                     color: colors.textPrimary,
+                    fontFamily: typography.body.fontFamily,
                   }}
                 />
                 {errors.registeredBusinessName && (
-                  <Text style={{ fontSize: 12, color: '#EF4444', marginTop: 4 }}>
+                  <Text style={{ ...typography.caption, fontSize: 12, color: '#EF4444', marginTop: 4 }}>
                     {errors.registeredBusinessName}
                   </Text>
                 )}
@@ -209,6 +210,7 @@ export default function ApplicationStep1Screen() {
                     backgroundColor: colors.surface,
                     fontSize: 14,
                     color: colors.textPrimary,
+                    fontFamily: typography.body.fontFamily,
                   }}
                 />
               </View>
@@ -230,10 +232,11 @@ export default function ApplicationStep1Screen() {
                     backgroundColor: colors.surface,
                     fontSize: 14,
                     color: colors.textPrimary,
+                    fontFamily: typography.body.fontFamily,
                   }}
                 />
                 {errors.ownersName && (
-                  <Text style={{ fontSize: 12, color: '#EF4444', marginTop: 4 }}>
+                  <Text style={{ ...typography.caption, fontSize: 12, color: '#EF4444', marginTop: 4 }}>
                     {errors.ownersName}
                   </Text>
                 )}
@@ -256,6 +259,7 @@ export default function ApplicationStep1Screen() {
                     backgroundColor: colors.surface,
                     fontSize: 14,
                     color: colors.textPrimary,
+                    fontFamily: typography.body.fontFamily,
                   }}
                 />
               </View>
@@ -277,6 +281,7 @@ export default function ApplicationStep1Screen() {
                     backgroundColor: colors.surface,
                     fontSize: 14,
                     color: colors.textPrimary,
+                    fontFamily: typography.body.fontFamily,
                   }}
                 />
               </View>
@@ -319,10 +324,11 @@ export default function ApplicationStep1Screen() {
                     backgroundColor: colors.surface,
                     fontSize: 14,
                     color: colors.textPrimary,
+                    fontFamily: typography.body.fontFamily,
                   }}
                 />
                 {errors.contactPhoneNumber && (
-                  <Text style={{ fontSize: 12, color: '#EF4444', marginTop: 4 }}>
+                  <Text style={{ ...typography.caption, fontSize: 12, color: '#EF4444', marginTop: 4 }}>
                     {errors.contactPhoneNumber}
                   </Text>
                 )}
@@ -346,10 +352,11 @@ export default function ApplicationStep1Screen() {
                     backgroundColor: colors.surface,
                     fontSize: 14,
                     color: colors.textPrimary,
+                    fontFamily: typography.body.fontFamily,
                   }}
                 />
                 {errors.alternatePhone1 && (
-                  <Text style={{ fontSize: 12, color: '#EF4444', marginTop: 4 }}>
+                  <Text style={{ ...typography.caption, fontSize: 12, color: '#EF4444', marginTop: 4 }}>
                     {errors.alternatePhone1}
                   </Text>
                 )}
@@ -373,10 +380,11 @@ export default function ApplicationStep1Screen() {
                     backgroundColor: colors.surface,
                     fontSize: 14,
                     color: colors.textPrimary,
+                    fontFamily: typography.body.fontFamily,
                   }}
                 />
                 {errors.alternatePhone2 && (
-                  <Text style={{ fontSize: 12, color: '#EF4444', marginTop: 4 }}>
+                  <Text style={{ ...typography.caption, fontSize: 12, color: '#EF4444', marginTop: 4 }}>
                     {errors.alternatePhone2}
                   </Text>
                 )}
@@ -401,10 +409,11 @@ export default function ApplicationStep1Screen() {
                     backgroundColor: colors.surface,
                     fontSize: 14,
                     color: colors.textPrimary,
+                    fontFamily: typography.body.fontFamily,
                   }}
                 />
                 {errors.email && (
-                  <Text style={{ fontSize: 12, color: '#EF4444', marginTop: 4 }}>
+                  <Text style={{ ...typography.caption, fontSize: 12, color: '#EF4444', marginTop: 4 }}>
                     {errors.email}
                   </Text>
                 )}
@@ -429,10 +438,11 @@ export default function ApplicationStep1Screen() {
                     backgroundColor: colors.surface,
                     fontSize: 14,
                     color: colors.textPrimary,
+                    fontFamily: typography.body.fontFamily,
                   }}
                 />
                 {errors.alternateEmail && (
-                  <Text style={{ fontSize: 12, color: '#EF4444', marginTop: 4 }}>
+                  <Text style={{ ...typography.caption, fontSize: 12, color: '#EF4444', marginTop: 4 }}>
                     {errors.alternateEmail}
                   </Text>
                 )}
@@ -459,6 +469,7 @@ export default function ApplicationStep1Screen() {
                     fontSize: 14,
                     color: colors.textPrimary,
                     opacity: state.portfolioType === 'venues' && !canEditVenueLinks ? 0.7 : 1,
+                    fontFamily: typography.body.fontFamily,
                   }}
                 />
               </View>
@@ -484,6 +495,7 @@ export default function ApplicationStep1Screen() {
                     fontSize: 14,
                     color: colors.textPrimary,
                     opacity: state.portfolioType === 'venues' && !canEditVenueLinks ? 0.7 : 1,
+                    fontFamily: typography.body.fontFamily,
                   }}
                 />
               </View>
@@ -509,6 +521,7 @@ export default function ApplicationStep1Screen() {
                     fontSize: 14,
                     color: colors.textPrimary,
                     opacity: state.portfolioType === 'venues' && !canEditVenueLinks ? 0.7 : 1,
+                    fontFamily: typography.body.fontFamily,
                   }}
                 />
               </View>

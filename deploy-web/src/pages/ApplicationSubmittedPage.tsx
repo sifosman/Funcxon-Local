@@ -1,5 +1,5 @@
-import { PlaceholderPage } from '../components/PlaceholderPage';
+import { Navigate } from 'react-router-dom';
 
 export default function ApplicationSubmittedPage() {
-  return <PlaceholderPage title="Application Submitted" description="Thank you for applying. We will review your submission and be in touch." backTo={{ label: 'Home', href: '/' }} />;
+  return <Navigate to="/apply/success" replace />;
 }

@@ -436,6 +436,7 @@ export default function UpdateVenuePortfolioScreen() {
           backgroundColor: options?.disabled ? colors.surfaceMuted : colors.surface,
           color: colors.textPrimary,
           opacity: options?.disabled ? 0.7 : 1,
+          fontFamily: typography.body.fontFamily,
           ...(options?.multiline ? { minHeight: 80, textAlignVertical: 'top' as const } : {}),
         }}
       />

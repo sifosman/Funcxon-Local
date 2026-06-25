@@ -35,6 +35,8 @@ import ApplicationStep2Page from './pages/ApplicationStep2Page';
 import ApplicationStep3Page from './pages/ApplicationStep3Page';
 import ApplicationStep4Page from './pages/ApplicationStep4Page';
 import ApplicationSubmittedPage from './pages/ApplicationSubmittedPage';
+import ApplicationStatusPage from './pages/ApplicationStatusPage';
+import VendorSignupSuccessPage from './pages/VendorSignupSuccessPage';
 import VendorDashboardPage from './pages/VendorDashboardPage';
 import VenueDashboardPage from './pages/VenueDashboardPage';
 import VendorAnalyticsPage from './pages/VendorAnalyticsPage';
@@ -48,6 +50,24 @@ import QuoteRequestsPage from './pages/QuoteRequestsPage';
 import EventListPage from './pages/EventListPage';
 import PaymentPage from './pages/PaymentPage';
 import VendorPortfolioPage from './pages/VendorPortfolioPage';
+import SubscriberSuitePage from './pages/SubscriberSuitePage';
+import SubscriberLoginPage from './pages/SubscriberLoginPage';
+import SubscriberProfilePage from './pages/SubscriberProfilePage';
+import PortfolioTypePage from './pages/PortfolioTypePage';
+import VenueListingPlansPage from './pages/VenueListingPlansPage';
+import PortfolioAssistancePage from './pages/PortfolioAssistancePage';
+import PortfolioProfilePage from './pages/PortfolioProfilePage';
+import UpdatePortfolioPage from './pages/UpdatePortfolioPage';
+import UpdateVendorPortfolioPage from './pages/UpdateVendorPortfolioPage';
+import UpdateVenuePortfolioPage from './pages/UpdateVenuePortfolioPage';
+import VenueCataloguePage from './pages/VenueCataloguePage';
+import VendorCataloguePage from './pages/VendorCataloguePage';
+import VenueQuoteRequestsPage from './pages/VenueQuoteRequestsPage';
+import VendorQuoteCreatePage from './pages/VendorQuoteCreatePage';
+import VendorQuoteHistoryPage from './pages/VendorQuoteHistoryPage';
+import VenueTourBookingsPage from './pages/VenueTourBookingsPage';
+import ActionItemsPage from './pages/ActionItemsPage';
+import CalendarUpdatesPage from './pages/CalendarUpdatesPage';
 
 function App() {
   const [helpOpen, setHelpOpen] = useState(false);
@@ -89,6 +109,8 @@ function App() {
           <Route path="apply/step3" element={<GuardedRoute label="application"><ApplicationStep3Page /></GuardedRoute>} />
           <Route path="apply/step4" element={<GuardedRoute label="application"><ApplicationStep4Page /></GuardedRoute>} />
           <Route path="apply/submitted" element={<ApplicationSubmittedPage />} />
+          <Route path="apply/status" element={<GuardedRoute label="application status"><ApplicationStatusPage /></GuardedRoute>} />
+          <Route path="apply/success" element={<GuardedRoute label="application success"><VendorSignupSuccessPage /></GuardedRoute>} />
           <Route path="vendor-dashboard" element={<GuardedRoute label="vendor dashboard"><VendorDashboardPage /></GuardedRoute>} />
           <Route path="venue-dashboard" element={<GuardedRoute label="venue dashboard"><VenueDashboardPage /></GuardedRoute>} />
           <Route path="vendor-analytics" element={<GuardedRoute label="vendor analytics"><VendorAnalyticsPage /></GuardedRoute>} />
@@ -96,6 +118,31 @@ function App() {
           <Route path="tour-bookings" element={<GuardedRoute label="tour bookings"><TourBookingsPage /></GuardedRoute>} />
           <Route path="catalogue" element={<GuardedRoute label="catalogue"><CataloguePage /></GuardedRoute>} />
           <Route path="quote-requests" element={<GuardedRoute label="quote requests"><QuoteRequestsPage /></GuardedRoute>} />
+
+          {/* Subscriber portal routes */}
+          <Route path="subscriber-suite" element={<GuardedRoute label="subscriber suite"><SubscriberSuitePage /></GuardedRoute>} />
+          <Route path="subscriber-login" element={<SubscriberLoginPage />} />
+          <Route path="subscriber-profile" element={<GuardedRoute label="subscriber profile"><SubscriberProfilePage /></GuardedRoute>} />
+          <Route path="portfolio-type" element={<GuardedRoute label="portfolio type"><PortfolioTypePage /></GuardedRoute>} />
+          <Route path="venue-listing-plans" element={<GuardedRoute label="venue listing plans"><VenueListingPlansPage /></GuardedRoute>} />
+
+          {/* Portfolio management routes */}
+          <Route path="portfolio/assistance" element={<GuardedRoute label="portfolio assistance"><PortfolioAssistancePage /></GuardedRoute>} />
+          <Route path="portfolio/profile" element={<GuardedRoute label="portfolio profile"><PortfolioProfilePage /></GuardedRoute>} />
+          <Route path="portfolio/update" element={<GuardedRoute label="update portfolio"><UpdatePortfolioPage /></GuardedRoute>} />
+          <Route path="portfolio/vendor" element={<GuardedRoute label="update vendor portfolio"><UpdateVendorPortfolioPage /></GuardedRoute>} />
+          <Route path="portfolio/venue" element={<GuardedRoute label="update venue portfolio"><UpdateVenuePortfolioPage /></GuardedRoute>} />
+
+          {/* Catalogue, quote, tour, and analytics routes */}
+          <Route path="catalogue/venue" element={<GuardedRoute label="venue catalogue"><VenueCataloguePage /></GuardedRoute>} />
+          <Route path="catalogue/vendor" element={<GuardedRoute label="vendor catalogue"><VendorCataloguePage /></GuardedRoute>} />
+          <Route path="venue/quotes" element={<GuardedRoute label="venue quote requests"><VenueQuoteRequestsPage /></GuardedRoute>} />
+          <Route path="vendor/quotes/create" element={<GuardedRoute label="create quote"><VendorQuoteCreatePage /></GuardedRoute>} />
+          <Route path="vendor/quotes/history" element={<GuardedRoute label="quote history"><VendorQuoteHistoryPage /></GuardedRoute>} />
+          <Route path="vendor/action-items" element={<GuardedRoute label="action items"><ActionItemsPage /></GuardedRoute>} />
+          <Route path="vendor/calendar" element={<GuardedRoute label="calendar updates"><CalendarUpdatesPage /></GuardedRoute>} />
+          <Route path="venue/tours" element={<GuardedRoute label="venue tour bookings"><VenueTourBookingsPage /></GuardedRoute>} />
+          <Route path="venue/analytics" element={<GuardedRoute label="venue analytics"><VenueAnalyticsPage /></GuardedRoute>} />
 
           {/* Public content routes */}
           <Route path="blog" element={<BlogListPage />} />

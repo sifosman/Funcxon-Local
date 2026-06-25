@@ -16,6 +16,7 @@ interface BlogPost {
 export default function BlogListPage() {
   const [posts, setPosts] = useState<BlogPost[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     loadPosts();
@@ -23,11 +24,13 @@ export default function BlogListPage() {
 
   async function loadPosts() {
     setLoading(true);
+    setError(null);
     try {
       const data = await fetchHubSpotBlogPosts();
       setPosts(data || []);
     } catch (err) {
       console.error('Error loading blog posts:', err);
+      setError('Unable to load blog posts. Please check your connection or try again later.');
     } finally {
       setLoading(false);
     }
@@ -39,11 +42,24 @@ export default function BlogListPage() {
         <h1 className="font-display text-2xl font-bold text-on-surface md:text-3xl">Blog</h1>
         <p className="mt-2 text-on-surface-variant">Tips, trends, and inspiration for your next event</p>
 
+        {error && (
+          <div className="mt-8 rounded-xl border border-red-200 bg-red-50 p-6 text-center">
+            <BookOpen className="mx-auto h-8 w-8 text-red-400" />
+            <p className="mt-2 text-sm text-red-700">{error}</p>
+            <button
+              onClick={loadPosts}
+              className="mt-3 text-sm font-semibold text-primary hover:underline"
+            >
+              Try again
+            </button>
+          </div>
+        )}
+
         {loading ? (
           <div className="mt-8 grid gap-6 md:grid-cols-2 lg:grid-cols-3">
             {[1, 2, 3].map(i => <div key={i} className="h-80 animate-pulse rounded-xl bg-surface-container" />)}
           </div>
-        ) : posts.length === 0 ? (
+        ) : !error && posts.length === 0 ? (
           <div className="mt-12 rounded-xl bg-white p-12 text-center shadow-sm border border-outline-variant">
             <BookOpen className="mx-auto h-12 w-12 text-on-surface-variant" />
             <h3 className="mt-4 font-display text-lg font-semibold text-on-surface">No posts yet</h3>

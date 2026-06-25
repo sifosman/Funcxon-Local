@@ -17,7 +17,7 @@ export function ApplicationProgress({ currentStep, totalSteps = 4 }: Application
             key={step}
             className={cn(
               'h-2 w-8 rounded-full transition-colors',
-              isCompleted || isCurrent ? 'bg-brand-teal' : 'bg-surface-container-highest',
+              isCompleted || isCurrent ? 'bg-primary' : 'bg-surface-container-highest',
             )}
           />
         );

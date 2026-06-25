@@ -1,5 +1,18 @@
 import { Link } from 'react-router-dom';
-import { Store, Star, Users, ArrowRight, CheckCircle } from 'lucide-react';
+import { Store, Star, Users, ArrowRight, CheckCircle, LayoutDashboard, FolderKanban, Ticket, CalendarCheck, BarChart3, ListChecks, Calendar, PlusCircle } from 'lucide-react';
+
+const PORTAL_LINKS = [
+  { label: 'Vendor Dashboard', href: '/vendor-dashboard', icon: LayoutDashboard, description: 'Manage your vendor profile' },
+  { label: 'Venue Dashboard', href: '/venue-dashboard', icon: Store, description: 'Manage your venue listing' },
+  { label: 'Vendor Catalogue', href: '/catalogue/vendor', icon: FolderKanban, description: 'Products and PDF pricelist' },
+  { label: 'Venue Catalogue', href: '/catalogue/venue', icon: FolderKanban, description: 'Menu and pricelist items' },
+  { label: 'Venue Quotes', href: '/venue/quotes', icon: Ticket, description: 'Incoming quote requests' },
+  { label: 'Venue Tours', href: '/venue/tours', icon: CalendarCheck, description: 'Instant tour bookings' },
+  { label: 'Venue Analytics', href: '/venue/analytics', icon: BarChart3, description: 'Performance and counts' },
+  { label: 'Action Items', href: '/vendor/action-items', icon: ListChecks, description: 'Your task list' },
+  { label: 'Calendar', href: '/vendor/calendar', icon: Calendar, description: 'Events and due dates' },
+  { label: 'Venue Plans', href: '/venue-listing-plans', icon: PlusCircle, description: 'Upgrade or change plan' },
+];
 
 const BENEFITS = [
   'Reach thousands of event planners',
@@ -59,6 +72,34 @@ export default function ListersPortalPage() {
               <p className="mt-2 text-3xl font-bold text-on-surface">4.8</p>
               <p className="text-sm text-on-surface-variant">Average rating</p>
             </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Subscriber Portal Links */}
+      <section className="fx-section fx-container bg-surface-container-low">
+        <div className="mx-auto max-w-4xl">
+          <h2 className="text-center font-display text-2xl font-bold text-on-surface">Subscriber Portal</h2>
+          <p className="mt-2 text-center text-sm text-on-surface-variant">Manage your listings and leads</p>
+          <div className="mt-8 grid gap-4 md:grid-cols-2">
+            {PORTAL_LINKS.map(link => {
+              const Icon = link.icon;
+              return (
+                <Link
+                  key={link.label}
+                  to={link.href}
+                  className="flex items-center gap-4 rounded-xl bg-white p-5 shadow-sm border border-outline-variant hover:border-primary transition-colors"
+                >
+                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
+                    <Icon className="h-5 w-5 text-primary" />
+                  </div>
+                  <div>
+                    <p className="font-semibold text-on-surface">{link.label}</p>
+                    <p className="text-xs text-on-surface-variant">{link.description}</p>
+                  </div>
+                </Link>
+              );
+            })}
           </div>
         </div>
       </section>

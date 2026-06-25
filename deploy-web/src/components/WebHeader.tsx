@@ -15,8 +15,13 @@ const USER_NAV = [
   { label: 'Account', href: '/account' },
 ];
 
+const VENDOR_NAV = [
+  { label: 'Subscriber Suite', href: '/subscriber-suite' },
+  { label: 'Vendor Dashboard', href: '/vendor-dashboard' },
+];
+
 export default function WebHeader() {
-  const { user, session } = useAuth();
+  const { user, session, userRole } = useAuth();
   const [mobileOpen, setMobileOpen] = useState(false);
   const location = useLocation();
 
@@ -27,6 +32,7 @@ export default function WebHeader() {
     || null;
 
   const isLoggedIn = !!session;
+  const isVendor = userRole === 'vendor';
 
   const isActive = (href: string) =>
     href === '/' ? location.pathname === '/' : location.pathname.startsWith(href.split('?')[0]);
@@ -70,6 +76,20 @@ export default function WebHeader() {
               {label}
             </Link>
           ))}
+          {isLoggedIn && isVendor && VENDOR_NAV.map(({ label, href }) => (
+            <Link
+              key={label}
+              to={href}
+              className={`text-sm transition-colors ${
+                isActive(href)
+                  ? 'border-b-2 border-secondary-container pb-0.5 text-secondary-container font-medium'
+                  : 'text-on-surface-variant hover:text-primary'
+              }`}
+              style={{ fontFamily: "'Montserrat', sans-serif" }}
+            >
+              {label}
+            </Link>
+          ))}
         </nav>
 
         {/* Right Actions */}
@@ -80,9 +100,12 @@ export default function WebHeader() {
           </button>
 
           {isLoggedIn ? (
-            <span className="hidden text-sm font-medium text-on-surface-variant md:block">
+            <Link
+              to="/account"
+              className="hidden text-sm font-medium text-on-surface-variant hover:text-primary transition-colors md:block"
+            >
               Hi, {username}
-            </span>
+            </Link>
           ) : (
             <>
               <Link
@@ -117,7 +140,7 @@ export default function WebHeader() {
       {mobileOpen && (
         <div className="border-t border-outline-variant bg-surface-container px-4 pb-4 md:hidden">
           <nav className="flex flex-col gap-1 pt-3">
-            {[...NAV_LINKS, ...(isLoggedIn ? USER_NAV : [])].map(({ label, href }) => (
+            {[...NAV_LINKS, ...(isLoggedIn ? USER_NAV : []), ...(isLoggedIn && isVendor ? VENDOR_NAV : [])].map(({ label, href }) => (
               <Link
                 key={label}
                 to={href}

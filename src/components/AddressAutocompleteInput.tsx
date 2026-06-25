@@ -183,6 +183,7 @@ export function AddressAutocompleteInput({
               textAlignVertical: 'top',
               padding: 0,
               margin: 0,
+              fontFamily: typography.body.fontFamily,
             }}
           />
         </View>
@@ -196,7 +197,7 @@ export function AddressAutocompleteInput({
         </TouchableOpacity>
       </View>
 
-      {error && <Text style={{ fontSize: 12, color: '#EF4444', marginTop: 4 }}>{error}</Text>}
+      {error && <Text style={{ ...typography.caption, fontSize: 12, color: '#EF4444', marginTop: 4 }}>{error}</Text>}
 
       {open && (
         <View

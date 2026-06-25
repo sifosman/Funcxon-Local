@@ -18,10 +18,10 @@ export default function WebFooter() {
           {/* Nav links */}
           <nav className="flex flex-wrap justify-center gap-x-6 gap-y-2">
             {[
-              { label: 'About Us', href: '/about' },
+              { label: 'About Us', href: '/listers-portal' },
               { label: 'Venues', href: '/discover?category=venues' },
               { label: 'Vendors', href: '/discover?category=vendors' },
-              { label: 'Contact Support', href: '/contact' },
+              { label: 'Contact Support', href: 'mailto:support@funxon.co.za' },
               { label: 'Privacy Policy', href: '/legal/privacy' },
               { label: 'Terms of Service', href: '/terms' },
             ].map(({ label, href }) => (

@@ -22,24 +22,7 @@ import { HelpCenterModal } from '../../components/HelpCenterModal';
 import ThemedAlert from '../../components/ThemedAlert';
 import { useFocusEffect } from '@react-navigation/native';
 import { SUPPORT_WHATSAPP } from '../../utils/env';
-
-type ProfileStackParamList = {
-  ListerPortfolio: undefined;
-  PortfolioType: undefined;
-  ApplicationStep1: undefined;
-  UpdateVendorPortfolio: undefined;
-  UpdateVenuePortfolio: undefined;
-  VendorCatalogue: undefined;
-  VenueCatalogue: undefined;
-  AccountSettings: undefined;
-  ChangePassword: undefined;
-  MarketingPermissions: undefined;
-  Billing: undefined;
-  TermsAndPolicies: undefined;
-  SubscriptionPlans: undefined;
-  VenueListingPlans: undefined;
-  PortfolioAssistance: { openFaqs?: boolean } | undefined;
-};
+import type { ProfileStackParamList } from '../../navigation/ProfileNavigator';
 
 type NavigationProp = NativeStackNavigationProp<ProfileStackParamList>;
 
@@ -476,16 +459,7 @@ export default function ListerPortfolioScreen() {
       <View style={styles.ctaSection}>
         <TouchableOpacity
           style={styles.ctaButton}
-          onPress={() => {
-            const parentNav = (navigation as any).getParent?.();
-            if (vendorListing) {
-              parentNav?.navigate?.('Main', { screen: 'Home', params: { screen: 'CreateReview', params: { type: 'vendor', targetId: vendorListing.id, targetName: vendorListing.name } } });
-            } else if (venueListing) {
-              parentNav?.navigate?.('Main', { screen: 'Home', params: { screen: 'CreateReview', params: { type: 'venue', targetId: venueListing.id, targetName: venueListing.name } } });
-            } else {
-              setAlertState({ visible: true, title: 'No portfolio found', message: 'Create a portfolio first before submitting a review.' });
-            }
-          }}
+          onPress={() => navigation.navigate('CreateReview', { type: 'app' })}
         >
           <MaterialIcons name="rate-review" size={18} color={colors.surface} style={{ marginRight: spacing.sm }} />
           <Text style={styles.ctaButtonText}>Submit a Funxon app review</Text>

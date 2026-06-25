@@ -267,7 +267,7 @@ export default function CalendarUpdatesScreen() {
                                 flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
                             }}
                         >
-                            <Text style={{ color: colors.textPrimary }}>{addForm.date}</Text>
+                            <Text style={{ ...typography.body, color: colors.textPrimary }}>{addForm.date}</Text>
                             <MaterialIcons name="calendar-today" size={18} color={colors.primary} />
                         </TouchableOpacity>
                         {showDatePicker && (

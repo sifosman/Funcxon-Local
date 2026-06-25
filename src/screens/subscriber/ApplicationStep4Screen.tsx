@@ -639,7 +639,7 @@ export default function ApplicationStep4Screen() {
               </View>
             )}
             {errors.subscriptionPlan && (
-              <Text style={{ fontSize: 12, color: '#EF4444', marginTop: spacing.xs }}>
+              <Text style={{ ...typography.caption, fontSize: 12, color: '#EF4444', marginTop: spacing.xs }}>
                 {errors.subscriptionPlan}
               </Text>
             )}
@@ -703,7 +703,7 @@ export default function ApplicationStep4Screen() {
                   *
                 </Text>
                 {errors.termsAccepted && (
-                  <Text style={{ fontSize: 12, color: '#EF4444', marginTop: 4 }}>
+                  <Text style={{ ...typography.caption, fontSize: 12, color: '#EF4444', marginTop: 4 }}>
                     {errors.termsAccepted}
                   </Text>
                 )}
@@ -748,7 +748,7 @@ export default function ApplicationStep4Screen() {
                   *
                 </Text>
                 {errors.privacyAccepted && (
-                  <Text style={{ fontSize: 12, color: '#EF4444', marginTop: 4 }}>
+                  <Text style={{ ...typography.caption, fontSize: 12, color: '#EF4444', marginTop: 4 }}>
                     {errors.privacyAccepted}
                   </Text>
                 )}

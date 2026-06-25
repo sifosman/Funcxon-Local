@@ -380,6 +380,7 @@ export default function UpdateVendorPortfolioScreen() {
                     backgroundColor: options?.disabled ? colors.surfaceMuted : colors.surfaceMuted,
                     color: options?.disabled ? colors.textMuted : colors.textPrimary,
                     opacity: options?.disabled ? 0.7 : 1,
+                    fontFamily: typography.body.fontFamily,
                     ...(options?.multiline ? { minHeight: 80, textAlignVertical: 'top' as const } : {}),
                 }}
             />

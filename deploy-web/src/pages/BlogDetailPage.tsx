@@ -16,6 +16,7 @@ export default function BlogDetailPage() {
   const { id } = useParams<{ id: string }>();
   const [post, setPost] = useState<BlogPost | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (id) loadPost();
@@ -23,11 +24,13 @@ export default function BlogDetailPage() {
 
   async function loadPost() {
     setLoading(true);
+    setError(null);
     try {
       const data = await fetchHubSpotBlogPostBySlug(id!);
       setPost(data);
     } catch (err) {
       console.error('Error loading blog post:', err);
+      setError('Unable to load this article. Please check your connection or try again later.');
     } finally {
       setLoading(false);
     }
@@ -39,6 +42,25 @@ export default function BlogDetailPage() {
         <div className="mx-auto max-w-3xl">
           <div className="h-[300px] animate-pulse rounded-xl bg-surface-container" />
           <div className="mt-6 h-8 w-2/3 animate-pulse rounded bg-surface-container" />
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="fx-container py-20 text-center">
+        <BookOpen className="mx-auto h-12 w-12 text-on-surface-variant" />
+        <h2 className="mt-4 font-display text-xl font-bold text-on-surface">Could not load article</h2>
+        <p className="mt-2 text-sm text-on-surface-variant">{error}</p>
+        <button
+          onClick={loadPost}
+          className="mt-4 text-sm font-semibold text-primary hover:underline"
+        >
+          Try again
+        </button>
+        <div className="mt-2">
+          <Link to="/blog" className="text-sm text-primary hover:underline">Back to blog</Link>
         </div>
       </div>
     );

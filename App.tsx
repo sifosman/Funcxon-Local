@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { StatusBar } from 'expo-status-bar';
-import { DefaultTheme, NavigationContainer } from '@react-navigation/native';
+import { DefaultTheme, NavigationContainer, useNavigation } from '@react-navigation/native';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Platform, View } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
@@ -124,13 +124,23 @@ export default function App() {
 
 function AppContent({ helpVisible, setHelpVisible }: { helpVisible: boolean; setHelpVisible: (visible: boolean) => void }) {
   const { isVendor } = useVendorStatus();
-  
+  const navigation = useNavigation<any>();
+
   return (
     <View style={{ flex: 1 }}>
       <AppHeader />
       <AppNavigator />
       {isVendor && <FloatingHelpButton onPress={() => setHelpVisible(true)} />}
-      {isVendor && <HelpCenterModal visible={helpVisible} onClose={() => setHelpVisible(false)} />}
+      {isVendor && (
+        <HelpCenterModal
+          visible={helpVisible}
+          onClose={() => setHelpVisible(false)}
+          onNavigateToHelp={() => {
+            setHelpVisible(false);
+            navigation.navigate('PortfolioAssistance', { openFaqs: true });
+          }}
+        />
+      )}
     </View>
   );
 }

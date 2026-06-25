@@ -2,26 +2,31 @@
 // Avoids CORS by proxying requests server-side
 
 const HUBSPOT_API_BASE = 'https://api.hubapi.com/cms/v3/blogs/posts';
-const HUBSPOT_ACCESS_TOKEN = process.env.HUBSPOT_ACCESS_TOKEN;
+const HUBSPOT_TOKEN = process.env.HUBSPOT_API_KEY || process.env.HUBSPOT_ACCESS_TOKEN;
 
-const corsHeaders = {
+const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
   'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
 };
 
+function setCorsHeaders(res) {
+  Object.entries(CORS_HEADERS).forEach(([key, value]) => {
+    res.setHeader(key, value);
+  });
+}
+
 export default async function handler(req, res) {
   // Handle CORS preflight
   if (req.method === 'OPTIONS') {
-    res.setHeader('Access-Control-Allow-Origin', '*');
-    res.setHeader('Access-Control-Allow-Headers', 'authorization, x-client-info, apikey, content-type');
-    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+    setCorsHeaders(res);
     return res.status(200).end();
   }
 
   try {
-    if (!HUBSPOT_ACCESS_TOKEN) {
-      return res.status(500).json({ error: 'HubSpot access token not configured' });
+    if (!HUBSPOT_TOKEN) {
+      setCorsHeaders(res);
+      return res.status(500).json({ error: 'HubSpot API key not configured. Set HUBSPOT_API_KEY in Vercel environment variables.' });
     }
 
     const { action, limit = '20', slug } = req.query;
@@ -35,6 +40,8 @@ export default async function handler(req, res) {
       }
       case 'slug': {
         if (!slug) {
+          setCorsHeaders(res);
+          res.setHeader('Content-Type', 'application/json');
           return res.status(400).json({ error: 'Missing slug parameter' });
         }
         hubspotUrl = `${HUBSPOT_API_BASE}?slug__eq=${encodeURIComponent(slug)}&state__eq=PUBLISHED&limit=1`;
@@ -45,18 +52,22 @@ export default async function handler(req, res) {
         break;
       }
       default:
+        setCorsHeaders(res);
+        res.setHeader('Content-Type', 'application/json');
         return res.status(400).json({ error: 'Invalid action. Use: list, slug, or slugs' });
     }
 
     const response = await fetch(hubspotUrl, {
       headers: {
-        Authorization: `Bearer ${HUBSPOT_ACCESS_TOKEN}`,
+        Authorization: `Bearer ${HUBSPOT_TOKEN}`,
         'Content-Type': 'application/json',
       },
     });
 
     if (!response.ok) {
       const errorText = await response.text();
+      setCorsHeaders(res);
+      res.setHeader('Content-Type', 'application/json');
       return res.status(response.status).json({
         error: `HubSpot API error: ${response.status}`,
         details: errorText
@@ -65,13 +76,12 @@ export default async function handler(req, res) {
 
     const data = await response.json();
 
-    // Set CORS headers
-    res.setHeader('Access-Control-Allow-Origin', '*');
+    setCorsHeaders(res);
     res.setHeader('Content-Type', 'application/json');
     return res.status(200).json(data);
 
   } catch (error) {
-    res.setHeader('Access-Control-Allow-Origin', '*');
+    setCorsHeaders(res);
     return res.status(500).json({ error: error.message });
   }
 }

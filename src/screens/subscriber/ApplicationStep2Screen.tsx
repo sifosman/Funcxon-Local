@@ -242,7 +242,7 @@ export default function ApplicationStep2Screen() {
                   }),
                 )}
                 {errors.venueType && (
-                  <Text style={{ fontSize: 12, color: '#EF4444', marginTop: spacing.xs }}>
+                  <Text style={{ ...typography.caption, fontSize: 12, color: '#EF4444', marginTop: spacing.xs }}>
                     {errors.venueType}
                   </Text>
                 )}
@@ -283,7 +283,7 @@ export default function ApplicationStep2Screen() {
                           borderColor: isSelected ? colors.textPrimary : colors.borderSubtle,
                         }}
                       >
-                        <Text style={{ color: isSelected ? '#FFFFFF' : colors.textPrimary, fontSize: 13 }}>
+                        <Text style={{ ...typography.body, color: isSelected ? '#FFFFFF' : colors.textPrimary, fontSize: 13 }}>
                           {capacity}
                         </Text>
                       </TouchableOpacity>
@@ -291,7 +291,7 @@ export default function ApplicationStep2Screen() {
                   })}
                 </View>
                 {errors.venueCapacity && (
-                  <Text style={{ fontSize: 12, color: '#EF4444', marginTop: spacing.xs }}>
+                  <Text style={{ ...typography.caption, fontSize: 12, color: '#EF4444', marginTop: spacing.xs }}>
                     {errors.venueCapacity}
                   </Text>
                 )}
@@ -360,7 +360,7 @@ export default function ApplicationStep2Screen() {
                   }),
                 )}
                 {errors.eventTypes && (
-                  <Text style={{ fontSize: 12, color: '#EF4444', marginTop: spacing.xs }}>
+                  <Text style={{ ...typography.caption, fontSize: 12, color: '#EF4444', marginTop: spacing.xs }}>
                     {errors.eventTypes}
                   </Text>
                 )}
@@ -405,6 +405,7 @@ export default function ApplicationStep2Screen() {
                     color: colors.textPrimary,
                     textAlignVertical: 'top',
                     minHeight: 110,
+                    fontFamily: typography.body.fontFamily,
                   }}
                 />
               </View>
@@ -465,6 +466,7 @@ export default function ApplicationStep2Screen() {
                               backgroundColor: colors.surface,
                               fontSize: 14,
                               color: colors.textPrimary,
+                              fontFamily: typography.body.fontFamily,
                             }}
                           />
                         </View>
@@ -486,6 +488,7 @@ export default function ApplicationStep2Screen() {
                               backgroundColor: colors.surface,
                               fontSize: 14,
                               color: colors.textPrimary,
+                              fontFamily: typography.body.fontFamily,
                             }}
                           />
                         </View>
@@ -534,6 +537,7 @@ export default function ApplicationStep2Screen() {
                     color: colors.textPrimary,
                     textAlignVertical: 'top',
                     minHeight: 110,
+                    fontFamily: typography.body.fontFamily,
                   }}
                 />
               </View>
@@ -592,7 +596,7 @@ export default function ApplicationStep2Screen() {
                   );
                 })}
                 {errors.serviceCategories && (
-                  <Text style={{ fontSize: 12, color: '#EF4444', marginTop: spacing.xs }}>
+                  <Text style={{ ...typography.caption, fontSize: 12, color: '#EF4444', marginTop: spacing.xs }}>
                     {errors.serviceCategories}
                   </Text>
                 )}
@@ -642,7 +646,7 @@ export default function ApplicationStep2Screen() {
                                   borderColor: isSelected ? colors.textPrimary : colors.borderSubtle,
                                 }}
                               >
-                                <Text style={{ color: isSelected ? '#FFFFFF' : colors.textPrimary, fontSize: 13 }}>
+                                <Text style={{ ...typography.body, color: isSelected ? '#FFFFFF' : colors.textPrimary, fontSize: 13 }}>
                                   {type}
                                 </Text>
                               </TouchableOpacity>
@@ -690,7 +694,7 @@ export default function ApplicationStep2Screen() {
                           borderColor: isSelected ? colors.textPrimary : colors.borderSubtle,
                         }}
                       >
-                        <Text style={{ color: isSelected ? '#FFFFFF' : colors.textPrimary, fontSize: 13 }}>
+                        <Text style={{ ...typography.body, color: isSelected ? '#FFFFFF' : colors.textPrimary, fontSize: 13 }}>
                           {feature}
                         </Text>
                       </TouchableOpacity>
@@ -736,7 +740,7 @@ export default function ApplicationStep2Screen() {
                       borderColor: isSelected ? colors.textPrimary : colors.borderSubtle,
                     }}
                   >
-                    <Text style={{ color: isSelected ? '#FFFFFF' : colors.textPrimary, fontSize: 13 }}>
+                    <Text style={{ ...typography.body, color: isSelected ? '#FFFFFF' : colors.textPrimary, fontSize: 13 }}>
                       {province.name}
                     </Text>
                   </TouchableOpacity>
@@ -744,7 +748,7 @@ export default function ApplicationStep2Screen() {
               })}
             </View>
             {errors.provinces && (
-              <Text style={{ fontSize: 12, color: '#EF4444', marginTop: spacing.xs }}>
+              <Text style={{ ...typography.caption, fontSize: 12, color: '#EF4444', marginTop: spacing.xs }}>
                 {errors.provinces}
               </Text>
             )}
@@ -786,7 +790,7 @@ export default function ApplicationStep2Screen() {
                         borderColor: isSelected ? colors.textPrimary : colors.borderSubtle,
                       }}
                     >
-                      <Text style={{ color: isSelected ? '#FFFFFF' : colors.textPrimary, fontSize: 13 }}>
+                      <Text style={{ ...typography.body, color: isSelected ? '#FFFFFF' : colors.textPrimary, fontSize: 13 }}>
                         {city}
                       </Text>
                     </TouchableOpacity>
@@ -835,13 +839,14 @@ export default function ApplicationStep2Screen() {
                 color: colors.textPrimary,
                 textAlignVertical: 'top',
                 minHeight: 120,
+                fontFamily: typography.body.fontFamily,
               }}
             />
             <Text style={{ ...typography.caption, color: colors.textMuted, marginTop: spacing.xs }}>
               {state.step2.description.length} characters
             </Text>
             {errors.description && (
-              <Text style={{ fontSize: 12, color: '#EF4444', marginTop: spacing.xs }}>
+              <Text style={{ ...typography.caption, fontSize: 12, color: '#EF4444', marginTop: spacing.xs }}>
                 {errors.description}
               </Text>
             )}

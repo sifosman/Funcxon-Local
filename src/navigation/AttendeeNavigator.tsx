@@ -39,7 +39,7 @@ export type AttendeeStackParamList = {
     initialLineItems?: Array<{ name: string; quantity: string; price: string }>;
   };
   BookTour: { venueId: number; venueName: string };
-  CreateReview: { type: 'vendor' | 'venue'; targetId: number; targetName: string };
+  CreateReview: { type: 'vendor' | 'venue' | 'app'; targetId?: number; targetName?: string };
   VenueCatalogueView: { venueId: number; venueName: string };
   Planner: undefined;
   BlogList: undefined;

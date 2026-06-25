@@ -15,6 +15,7 @@ type Props = NativeStackScreenProps<AttendeeStackParamList, 'CreateReview'>;
 export default function CreateReviewScreen({ route, navigation }: Props) {
   const { type, targetId, targetName } = route.params;
   const { user } = useAuth();
+  const isAppReview = type === 'app';
 
   const [rating, setRating] = useState<number>(0);
   const [title, setTitle] = useState('');
@@ -33,6 +34,8 @@ export default function CreateReviewScreen({ route, navigation }: Props) {
 
   const checkEligibility = async (): Promise<boolean> => {
     if (!user?.id) return false;
+
+    if (isAppReview) return true;
 
     if (type === 'vendor') {
       const internalUserId = await resolveInternalUserId();
@@ -83,13 +86,25 @@ export default function CreateReviewScreen({ route, navigation }: Props) {
 
     setSubmitting(true);
     try {
-      const eligible = await checkEligibility();
-      if (!eligible) {
-        setAlertState({ visible: true, title: 'Not eligible', message: 'You can only leave a review after you have used this service.' });
-        return;
+      if (!isAppReview) {
+        const eligible = await checkEligibility();
+        if (!eligible) {
+          setAlertState({ visible: true, title: 'Not eligible', message: 'You can only leave a review after you have used this service.' });
+          return;
+        }
       }
 
-      if (type === 'vendor') {
+      if (isAppReview) {
+        const { error } = await supabase.from('app_reviews').insert({
+          user_id: user.id,
+          rating,
+          title: title.trim() || null,
+          review_text: reviewText.trim() || null,
+          status: 'pending',
+        });
+
+        if (error) throw error;
+      } else if (type === 'vendor') {
         const internalUserId = await resolveInternalUserId();
         if (!internalUserId) {
           setAlertState({ visible: true, title: 'Missing profile', message: 'We could not find your user profile. Please sign in again.' });
@@ -154,10 +169,14 @@ export default function CreateReviewScreen({ route, navigation }: Props) {
             borderColor: colors.borderSubtle,
           }}
         >
-          <Text style={{ ...typography.titleMedium, color: colors.textPrimary }}>Leave a review for</Text>
-          <Text style={{ ...typography.bodySemiBold, color: colors.textSecondary, marginTop: spacing.xs }}>
-            {targetName}
+          <Text style={{ ...typography.titleMedium, color: colors.textPrimary }}>
+            {isAppReview ? 'Review the Funxon App' : 'Leave a review for'}
           </Text>
+          {!isAppReview && (
+            <Text style={{ ...typography.bodySemiBold, color: colors.textSecondary, marginTop: spacing.xs }}>
+              {targetName}
+            </Text>
+          )}
         </View>
 
         <View
