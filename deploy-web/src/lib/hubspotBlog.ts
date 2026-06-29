@@ -3,7 +3,10 @@
  *
  * Uses Vercel serverless function proxy to avoid CORS issues when calling HubSpot API from browser.
  * The serverless function stores the token server-side.
+ * Falls back to Supabase blog_posts table when the proxy is unavailable.
  */
+
+import { supabase } from './supabaseClient';
 
 const getProxyUrl = (): string => {
   // On web, use relative path to the same domain
@@ -163,4 +166,86 @@ export async function fetchHubSpotAllSlugs(): Promise<{ id: string; slug: string
 export async function fetchHubSpotRelatedPosts(currentId: string, limit = 2): Promise<AppBlogPost[]> {
   const allPosts = await fetchHubSpotBlogPosts(20);
   return allPosts.filter((p) => p.id !== currentId).slice(0, limit);
+}
+
+// ── Supabase fallback ──
+// Used when the HubSpot proxy is unavailable (e.g. dev mode without API key).
+// Reads from the public.blog_posts table.
+
+interface SupabaseBlogPost {
+  id: number;
+  title: string;
+  slug: string;
+  excerpt?: string;
+  content?: string;
+  cover_image_url?: string;
+  author_name?: string;
+  published_at?: string;
+}
+
+function mapSupabaseToAppPost(post: SupabaseBlogPost): AppBlogPost {
+  return {
+    id: String(post.id),
+    title: post.title,
+    slug: post.slug,
+    excerpt: post.excerpt || '',
+    content: post.content || '',
+    cover_image_url: post.cover_image_url || null,
+    author_name: post.author_name || 'Funxon Team',
+    category: 'Blog',
+    published_at: post.published_at || '',
+    read_time_minutes: Math.max(1, Math.ceil((post.content || '').split(/\s+/).length / 200)),
+    tags: [],
+  };
+}
+
+export async function fetchBlogPosts(limit = 20): Promise<AppBlogPost[]> {
+  try {
+    return await fetchHubSpotBlogPosts(limit);
+  } catch {
+    const { data, error } = await supabase
+      .from('blog_posts')
+      .select('id, title, slug, excerpt, content, cover_image_url, author_name, published_at')
+      .order('published_at', { ascending: false })
+      .limit(limit);
+    if (error) throw error;
+    return (data || []).map(mapSupabaseToAppPost);
+  }
+}
+
+export async function fetchBlogPostBySlug(slug: string): Promise<AppBlogPost | null> {
+  try {
+    return await fetchHubSpotBlogPostBySlug(slug);
+  } catch {
+    const { data, error } = await supabase
+      .from('blog_posts')
+      .select('id, title, slug, excerpt, content, cover_image_url, author_name, published_at')
+      .eq('slug', slug)
+      .maybeSingle();
+    if (error) throw error;
+    if (!data) return null;
+    return mapSupabaseToAppPost(data);
+  }
+}
+
+export async function fetchAllSlugs(): Promise<{ id: string; slug: string; title: string }[]> {
+  try {
+    return await fetchHubSpotAllSlugs();
+  } catch {
+    const { data, error } = await supabase
+      .from('blog_posts')
+      .select('id, title, slug')
+      .order('published_at', { ascending: false });
+    if (error) throw error;
+    return (data || []).map((p: any) => ({ id: String(p.id), slug: p.slug, title: p.title }));
+  }
+}
+
+export async function fetchRelatedPosts(currentId: string, limit = 2): Promise<AppBlogPost[]> {
+  try {
+    return await fetchHubSpotRelatedPosts(currentId, limit);
+  } catch {
+    const posts = await fetchBlogPosts(limit + 1);
+    return posts.filter((p) => p.id !== currentId).slice(0, limit);
+  }
 }

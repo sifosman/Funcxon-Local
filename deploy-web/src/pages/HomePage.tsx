@@ -12,7 +12,7 @@ interface Listing {
   image_url?: string;
   rating?: number;
   category?: string;
-  price_from?: number;
+  price_range?: string;
   is_featured?: boolean;
 }
 
@@ -43,22 +43,22 @@ export default function HomePage() {
     try {
       const { data: featuredData } = await supabase
         .from('venue_listings')
-        .select('id, name, location, city, province, featured_image_url, category, price_from, rating')
+        .select('id, name, location, city, province, image_url, venue_type, rating')
         .limit(8);
 
       setFeatured((featuredData || []).map(item => {
         const parsed = parseLocation(item.location);
-        return { id: item.id, name: item.name, location: item.location, city: item.city || parsed.city, province: item.province || parsed.province, image_url: item.featured_image_url, category: item.category, price_from: item.price_from, rating: item.rating };
+        return { id: item.id, name: item.name, location: item.location, city: item.city || parsed.city, province: item.province || parsed.province, image_url: item.image_url, category: item.venue_type, rating: item.rating };
       }));
 
       const { data: vendorData } = await supabase
         .from('vendors')
-        .select('id, name, location, city, province, featured_image_url, category, price_from, rating')
+        .select('id, name, location, city, province, image_url, category_id, price_range, rating')
         .limit(6);
 
       setVendors((vendorData || []).map(item => {
         const parsed = parseLocation(item.location);
-        return { id: item.id, name: item.name, location: item.location, city: item.city || parsed.city, province: item.province || parsed.province, image_url: item.featured_image_url, category: item.category, price_from: item.price_from, rating: item.rating };
+        return { id: item.id, name: item.name, location: item.location, city: item.city || parsed.city, province: item.province || parsed.province, image_url: item.image_url, category: item.category_id?.toString(), price_range: item.price_range, rating: item.rating };
       }));
     } catch (err) {
       console.error('Error fetching listings:', err);
@@ -77,15 +77,25 @@ export default function HomePage() {
   return (
     <div className="bg-background text-on-surface">
       {/* ── Hero ── */}
-      <section className="relative w-full pb-32 pt-16" style={{ background: '#f7f5f0' }}>
-        <div className="fx-container flex flex-col items-center text-center">
+      <section
+        className="relative w-full overflow-hidden pb-32 pt-20 md:pt-28"
+        style={{
+          backgroundImage: "url('https://images.unsplash.com/photo-1527529482837-4698179dc6ce?auto=format&fit=crop&w=1920&q=80')",
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+        }}
+      >
+        {/* Dark overlay for text readability */}
+        <div className="absolute inset-0 bg-black/40" />
+
+        <div className="relative fx-container flex flex-col items-center text-center">
           <h1
-            className="mb-4 text-[28px] font-bold leading-tight tracking-tight"
-            style={{ fontFamily: "'Playfair Display', serif", color: '#123f5c', letterSpacing: '-0.02em' }}
+            className="mb-4 text-[28px] font-bold leading-tight tracking-tight text-white md:text-[36px]"
+            style={{ fontFamily: "'Playfair Display', serif", letterSpacing: '-0.02em', textShadow: '0 2px 8px rgba(0,0,0,0.3)' }}
           >
             Connect, Collaborate, Celebrate
           </h1>
-          <p className="max-w-2xl text-base text-black" style={{ fontFamily: "'Montserrat', sans-serif" }}>
+          <p className="max-w-2xl text-base text-white/90" style={{ fontFamily: "'Montserrat', sans-serif", textShadow: '0 1px 4px rgba(0,0,0,0.3)' }}>
             Let's get this party started!!
           </p>
         </div>
@@ -268,7 +278,7 @@ export default function HomePage() {
                     </p>
                     <div className="flex items-center justify-between border-t pt-3" style={{ borderColor: '#f7f5f0' }}>
                       <span className="text-sm font-semibold" style={{ fontFamily: "'Montserrat', sans-serif", color: '#123f5c' }}>
-                        {item.price_from ? `From R ${item.price_from.toLocaleString()}` : 'Request quote'}
+                        {item.price_range ? item.price_range : 'Request quote'}
                       </span>
                       {item.rating && (
                         <span className="flex items-center text-xs text-outline" style={{ fontFamily: "'Montserrat', sans-serif" }}>
@@ -324,7 +334,7 @@ export default function HomePage() {
                   </p>
                   <div className="flex items-center justify-between border-t pt-3" style={{ borderColor: '#f7f5f0' }}>
                     <span className="text-sm font-semibold" style={{ fontFamily: "'Montserrat', sans-serif", color: '#123f5c' }}>
-                      {item.price_from ? `From R ${item.price_from.toLocaleString()}` : 'Request quote'}
+                      {item.price_range ? item.price_range : 'Request quote'}
                     </span>
                     {item.rating && (
                       <span className="flex items-center text-xs text-outline" style={{ fontFamily: "'Montserrat', sans-serif" }}>

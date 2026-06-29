@@ -13,13 +13,13 @@ interface Venue {
   phone?: string;
   email?: string;
   website?: string;
-  featured_image_url?: string;
+  image_url?: string;
   images?: string[];
   rating?: number;
-  price_from?: number;
+  price_range?: string;
   capacity?: number;
   amenities?: string[];
-  category?: string;
+  venue_type?: string;
 }
 
 export default function VenueProfilePage() {
@@ -46,7 +46,7 @@ export default function VenueProfilePage() {
 
       if (error) throw error;
       setVenue(data);
-      if (data.featured_image_url) setSelectedImage(data.featured_image_url);
+      if (data.image_url) setSelectedImage(data.image_url);
     } catch (err) {
       console.error('Error fetching venue:', err);
     } finally {
@@ -93,8 +93,8 @@ export default function VenueProfilePage() {
       {/* ── Hero Image ── */}
       <section className="relative mx-auto w-full max-w-[1280px] overflow-hidden px-4 pt-6 md:px-6">
         <div className="relative h-[300px] overflow-hidden rounded-xl bg-surface-variant md:h-[400px] lg:h-[500px]">
-          {venue.featured_image_url
-            ? <img src={venue.featured_image_url} alt={venue.name} className="h-full w-full object-cover" />
+          {venue.image_url
+            ? <img src={venue.image_url} alt={venue.name} className="h-full w-full object-cover" />
             : <div className="flex h-full w-full items-center justify-center bg-surface-container"><MapPin className="h-16 w-16 text-on-surface-variant" /></div>
           }
           <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent" />
@@ -119,9 +119,9 @@ export default function VenueProfilePage() {
             {/* Header */}
             <div className="space-y-3">
               <div className="flex items-center gap-3">
-                {venue.category && (
+                {venue.venue_type && (
                   <span className="rounded-full px-3 py-1 text-xs font-semibold" style={{ background: '#b9c4eb', color: '#1a2544', fontFamily: "'Montserrat', sans-serif" }}>
-                    {venue.category}
+                    {venue.venue_type}
                   </span>
                 )}
                 {venue.rating && (
@@ -239,8 +239,8 @@ export default function VenueProfilePage() {
               <div className="border-b pb-4" style={{ borderColor: '#f7f5f0' }}>
                 <span className="text-xs font-semibold uppercase tracking-wider text-on-surface-variant" style={{ fontFamily: "'Montserrat', sans-serif" }}>Starting from</span>
                 <div className="mt-1 text-2xl font-semibold text-primary" style={{ fontFamily: "'Playfair Display', serif" }}>
-                  {venue.price_from ? `R ${venue.price_from.toLocaleString()}` : 'Request for pricing'}
-                  {venue.price_from && <span className="ml-1 text-sm font-normal text-on-surface-variant">/ event</span>}
+                  {venue.price_range ? venue.price_range : 'Request for pricing'}
+                  {venue.price_range && <span className="ml-1 text-sm font-normal text-on-surface-variant">/ event</span>}
                 </div>
               </div>
 

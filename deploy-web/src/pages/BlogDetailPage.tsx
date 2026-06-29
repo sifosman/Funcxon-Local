@@ -1,20 +1,11 @@
 import { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { fetchHubSpotBlogPostBySlug } from '../lib/hubspotBlog';
+import { fetchBlogPostBySlug, type AppBlogPost } from '../lib/hubspotBlog';
 import { BookOpen, Calendar, ChevronLeft, User } from 'lucide-react';
-
-interface BlogPost {
-  id: string;
-  title: string;
-  content?: string;
-  featuredImage?: string;
-  publishDate?: string;
-  author?: string;
-}
 
 export default function BlogDetailPage() {
   const { id } = useParams<{ id: string }>();
-  const [post, setPost] = useState<BlogPost | null>(null);
+  const [post, setPost] = useState<AppBlogPost | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -26,7 +17,7 @@ export default function BlogDetailPage() {
     setLoading(true);
     setError(null);
     try {
-      const data = await fetchHubSpotBlogPostBySlug(id!);
+      const data = await fetchBlogPostBySlug(id!);
       setPost(data);
     } catch (err) {
       console.error('Error loading blog post:', err);
@@ -83,14 +74,14 @@ export default function BlogDetailPage() {
           <ChevronLeft className="h-4 w-4" /> Back to blog
         </Link>
 
-        {post.featuredImage && (
-          <img src={post.featuredImage} alt={post.title} className="h-[300px] w-full rounded-xl object-cover md:h-[400px]" />
+        {post.cover_image_url && (
+          <img src={post.cover_image_url} alt={post.title} className="h-[300px] w-full rounded-xl object-cover md:h-[400px]" />
         )}
 
         <div className="mt-6">
           <div className="flex flex-wrap items-center gap-3 text-sm text-on-surface-variant">
-            {post.author && <span className="flex items-center gap-1"><User className="h-4 w-4" />{post.author}</span>}
-            {post.publishDate && <span className="flex items-center gap-1"><Calendar className="h-4 w-4" />{new Date(post.publishDate).toLocaleDateString()}</span>}
+            {post.author_name && <span className="flex items-center gap-1"><User className="h-4 w-4" />{post.author_name}</span>}
+            {post.published_at && <span className="flex items-center gap-1"><Calendar className="h-4 w-4" />{new Date(post.published_at).toLocaleDateString()}</span>}
           </div>
           <h1 className="mt-4 font-display text-2xl font-bold text-on-surface md:text-4xl">{post.title}</h1>
           {post.content && (

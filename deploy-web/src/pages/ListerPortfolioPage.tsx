@@ -13,7 +13,7 @@ interface Lister {
   phone?: string;
   email?: string;
   website?: string;
-  featured_image_url?: string;
+  image_url?: string;
   images?: string[];
   rating?: number;
   review_count?: number;
@@ -74,8 +74,8 @@ export default function ListerPortfolioPage() {
         </Link>
 
         <div className="relative overflow-hidden rounded-xl bg-surface-container">
-          {lister.featured_image_url ? (
-            <img src={lister.featured_image_url} alt={lister.name} className="h-[250px] w-full object-cover md:h-[350px]" />
+          {lister.image_url ? (
+            <img src={lister.image_url} alt={lister.name} className="h-[250px] w-full object-cover md:h-[350px]" />
           ) : (
             <div className="flex h-[250px] w-full items-center justify-center bg-surface-container md:h-[350px]">
               <MapPin className="h-16 w-16 text-on-surface-variant" />

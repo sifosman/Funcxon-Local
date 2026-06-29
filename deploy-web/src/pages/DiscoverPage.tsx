@@ -11,7 +11,7 @@ interface Listing {
   province?: string;
   image_url?: string;
   category?: string;
-  price_from?: number;
+  price_range?: string;
   rating?: number;
   type?: 'venue' | 'vendor';
 }
@@ -46,17 +46,17 @@ export default function DiscoverPage() {
       const results: Listing[] = [];
 
       if (!isVendorOnly) {
-        let q = supabase.from('venue_listings').select('id, name, location, city, province, featured_image_url, category, price_from, rating');
+        let q = supabase.from('venue_listings').select('id, name, location, city, province, image_url, venue_type, rating');
         if (selectedProvince !== 'All') q = q.eq('province', selectedProvince);
         const { data } = await q.limit(50);
-        (data || []).forEach(item => results.push({ id: item.id, name: item.name, location: item.location, city: item.city, province: item.province, image_url: item.featured_image_url, category: item.category, price_from: item.price_from, rating: item.rating, type: 'venue' }));
+        (data || []).forEach(item => results.push({ id: item.id, name: item.name, location: item.location, city: item.city, province: item.province, image_url: item.image_url, category: item.venue_type, rating: item.rating, type: 'venue' }));
       }
 
       if (!isVenueOnly) {
-        let q = supabase.from('vendors').select('id, name, location, city, province, featured_image_url, category, price_from, rating');
+        let q = supabase.from('vendors').select('id, name, location, city, province, image_url, category_id, price_range, rating');
         if (selectedProvince !== 'All') q = q.eq('province', selectedProvince);
         const { data } = await q.limit(50);
-        (data || []).forEach(item => results.push({ id: item.id, name: item.name, location: item.location, city: item.city, province: item.province, image_url: item.featured_image_url, category: item.category, price_from: item.price_from, rating: item.rating, type: 'vendor' }));
+        (data || []).forEach(item => results.push({ id: item.id, name: item.name, location: item.location, city: item.city, province: item.province, image_url: item.image_url, category: item.category_id?.toString(), price_range: item.price_range, rating: item.rating, type: 'vendor' }));
       }
 
       setListings(results);
@@ -193,7 +193,7 @@ export default function DiscoverPage() {
                   </p>
                   <div className="flex items-center justify-between border-t pt-3" style={{ borderColor: '#f7f5f0' }}>
                     <span className="text-sm font-semibold" style={{ fontFamily: "'Montserrat', sans-serif", color: '#123f5c' }}>
-                      {item.price_from ? `From R ${item.price_from.toLocaleString()}` : 'Request quote'}
+                      {item.price_range ? item.price_range : 'Request quote'}
                     </span>
                     {item.rating && (
                       <span className="flex items-center text-xs" style={{ fontFamily: "'Montserrat', sans-serif", color: '#72787e' }}>

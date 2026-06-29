@@ -13,12 +13,12 @@ interface Vendor {
   phone?: string;
   email?: string;
   website?: string;
-  featured_image_url?: string;
+  image_url?: string;
   images?: string[];
   rating?: number;
-  price_from?: number;
+  price_range?: string;
   services?: string[];
-  category?: string;
+  category_id?: number;
 }
 
 export default function VendorProfilePage() {
@@ -45,7 +45,7 @@ export default function VendorProfilePage() {
 
       if (error) throw error;
       setVendor(data);
-      if (data.featured_image_url) setSelectedImage(data.featured_image_url);
+      if (data.image_url) setSelectedImage(data.image_url);
     } catch (err) {
       console.error('Error fetching vendor:', err);
     } finally {
@@ -91,8 +91,8 @@ export default function VendorProfilePage() {
       {/* ── Hero Image ── */}
       <section className="relative mx-auto w-full max-w-[1280px] overflow-hidden px-4 pt-6 md:px-6">
         <div className="relative h-[300px] overflow-hidden rounded-xl bg-surface-variant md:h-[400px] lg:h-[500px]">
-          {vendor.featured_image_url
-            ? <img src={vendor.featured_image_url} alt={vendor.name} className="h-full w-full object-cover" />
+          {vendor.image_url
+            ? <img src={vendor.image_url} alt={vendor.name} className="h-full w-full object-cover" />
             : <div className="flex h-full w-full items-center justify-center bg-surface-container"><MapPin className="h-16 w-16 text-on-surface-variant" /></div>
           }
           <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent" />
@@ -115,9 +115,9 @@ export default function VendorProfilePage() {
           <div className="w-full space-y-8 lg:w-2/3">
             <div className="space-y-3">
               <div className="flex items-center gap-3">
-                {vendor.category && (
+                {vendor.category_id && (
                   <span className="rounded-full px-3 py-1 text-xs font-semibold" style={{ background: '#b9c4eb', color: '#1a2544', fontFamily: "'Montserrat', sans-serif" }}>
-                    {vendor.category}
+                    Vendor
                   </span>
                 )}
                 {vendor.rating && (
@@ -222,8 +222,8 @@ export default function VendorProfilePage() {
               <div className="border-b pb-4" style={{ borderColor: '#f7f5f0' }}>
                 <span className="text-xs font-semibold uppercase tracking-wider text-on-surface-variant" style={{ fontFamily: "'Montserrat', sans-serif" }}>Starting from</span>
                 <div className="mt-1 text-2xl font-semibold text-primary" style={{ fontFamily: "'Playfair Display', serif" }}>
-                  {vendor.price_from ? `R ${vendor.price_from.toLocaleString()}` : 'Request for pricing'}
-                  {vendor.price_from && <span className="ml-1 text-sm font-normal text-on-surface-variant">/ event</span>}
+                  {vendor.price_range ? vendor.price_range : 'Request for pricing'}
+                  {vendor.price_range && <span className="ml-1 text-sm font-normal text-on-surface-variant">/ event</span>}
                 </div>
               </div>
 

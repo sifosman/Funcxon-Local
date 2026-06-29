@@ -1,20 +1,10 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { fetchHubSpotBlogPosts } from '../lib/hubspotBlog';
+import { fetchBlogPosts, type AppBlogPost } from '../lib/hubspotBlog';
 import { BookOpen, Calendar, ArrowRight } from 'lucide-react';
 
-interface BlogPost {
-  id: string;
-  title: string;
-  excerpt?: string;
-  featuredImage?: string;
-  publishDate?: string;
-  author?: string;
-  url?: string;
-}
-
 export default function BlogListPage() {
-  const [posts, setPosts] = useState<BlogPost[]>([]);
+  const [posts, setPosts] = useState<AppBlogPost[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -26,7 +16,7 @@ export default function BlogListPage() {
     setLoading(true);
     setError(null);
     try {
-      const data = await fetchHubSpotBlogPosts();
+      const data = await fetchBlogPosts();
       setPosts(data || []);
     } catch (err) {
       console.error('Error loading blog posts:', err);
@@ -73,8 +63,8 @@ export default function BlogListPage() {
                 className="group flex flex-col overflow-hidden rounded-xl bg-white shadow-sm border border-outline-variant transition-shadow hover:shadow-md"
               >
                 <div className="aspect-[16/10] overflow-hidden bg-surface-container">
-                  {post.featuredImage ? (
-                    <img src={post.featuredImage} alt={post.title} className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105" loading="lazy" />
+                  {post.cover_image_url ? (
+                    <img src={post.cover_image_url} alt={post.title} className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105" loading="lazy" />
                   ) : (
                     <div className="flex h-full w-full items-center justify-center bg-surface-container">
                       <BookOpen className="h-8 w-8 text-on-surface-variant" />
@@ -83,10 +73,10 @@ export default function BlogListPage() {
                 </div>
                 <div className="flex flex-1 flex-col p-5">
                   <div className="flex items-center gap-2 text-xs text-on-surface-variant">
-                    {post.publishDate && (
-                      <span className="flex items-center gap-1"><Calendar className="h-3 w-3" />{new Date(post.publishDate).toLocaleDateString()}</span>
+                    {post.published_at && (
+                      <span className="flex items-center gap-1"><Calendar className="h-3 w-3" />{new Date(post.published_at).toLocaleDateString()}</span>
                     )}
-                    {post.author && <span>by {post.author}</span>}
+                    {post.author_name && <span>by {post.author_name}</span>}
                   </div>
                   <h3 className="mt-2 font-display text-lg font-semibold text-on-surface group-hover:text-primary">{post.title}</h3>
                   {post.excerpt && <p className="mt-2 line-clamp-2 text-sm text-on-surface-variant">{post.excerpt}</p>}
