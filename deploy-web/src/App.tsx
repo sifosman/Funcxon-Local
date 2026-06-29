@@ -5,6 +5,7 @@ import { GuardedRoute } from './components/GuardedRoute';
 import { DataConsentModal } from './components/DataConsentModal';
 import { FloatingHelpButton } from './components/FloatingHelpButton';
 import { HelpCenterModal } from './components/HelpCenterModal';
+import { ErrorBoundary } from './components/ErrorBoundary';
 import HomePage from './pages/HomePage';
 import DiscoverPage from './pages/DiscoverPage';
 import VenueProfilePage from './pages/VenueProfilePage';
@@ -78,6 +79,7 @@ function App() {
       <FloatingHelpButton onClick={() => setHelpOpen(true)} />
       <HelpCenterModal open={helpOpen} onClose={() => setHelpOpen(false)} />
 
+      <ErrorBoundary>
       <Routes>
         <Route element={<Layout />}>
           <Route index element={<HomePage />} />
@@ -163,6 +165,7 @@ function App() {
           <Route path="*" element={<NotFoundPage />} />
         </Route>
       </Routes>
+      </ErrorBoundary>
     </>
   );
 }

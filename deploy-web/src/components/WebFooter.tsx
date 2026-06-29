@@ -10,7 +10,7 @@ export default function WebFooter() {
           {/* Brand */}
           <div
             className="text-2xl font-bold text-secondary-container"
-            style={{ fontFamily: "'Playfair Display', serif" }}
+            
           >
             Funxon
           </div>
@@ -18,7 +18,7 @@ export default function WebFooter() {
           {/* Nav links */}
           <nav className="flex flex-wrap justify-center gap-x-6 gap-y-2">
             {[
-              { label: 'About Us', href: '/listers-portal' },
+              { label: 'About Us', href: '/blog' },
               { label: 'Venues', href: '/discover?category=venues' },
               { label: 'Vendors', href: '/discover?category=vendors' },
               { label: 'Contact Support', href: 'mailto:support@funxon.co.za' },
@@ -29,7 +29,7 @@ export default function WebFooter() {
                 key={label}
                 to={href}
                 className="text-xs font-medium text-on-surface-variant transition-colors hover:text-secondary-container focus:text-primary focus:outline-none"
-                style={{ fontFamily: "'Montserrat', sans-serif" }}
+                
               >
                 {label}
               </Link>
@@ -40,7 +40,7 @@ export default function WebFooter() {
         {/* Copyright */}
         <div
           className="mt-8 border-t pt-8 text-center text-xs text-on-surface-variant"
-          style={{ borderColor: '#f7f5f0', fontFamily: "'Montserrat', sans-serif" }}
+          style={{ borderColor: '#f7f5f0' }}
         >
           © {currentYear} Funxon Event Planning. All rights reserved.
         </div>

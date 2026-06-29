@@ -4,20 +4,20 @@ import { fetchBlogPostBySlug, type AppBlogPost } from '../lib/hubspotBlog';
 import { BookOpen, Calendar, ChevronLeft, User } from 'lucide-react';
 
 export default function BlogDetailPage() {
-  const { id } = useParams<{ id: string }>();
+  const { slug } = useParams<{ slug: string }>();
   const [post, setPost] = useState<AppBlogPost | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (id) loadPost();
-  }, [id]);
+    if (slug) loadPost();
+  }, [slug]);
 
   async function loadPost() {
     setLoading(true);
     setError(null);
     try {
-      const data = await fetchBlogPostBySlug(id!);
+      const data = await fetchBlogPostBySlug(slug!);
       setPost(data);
     } catch (err) {
       console.error('Error loading blog post:', err);

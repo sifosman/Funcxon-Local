@@ -42,7 +42,7 @@ export default function WebHeader() {
       <div className="fx-container flex h-16 items-center justify-between">
 
         {/* Brand */}
-        <Link to="/" className="font-display text-2xl font-bold text-primary" style={{ fontFamily: "'Playfair Display', serif" }}>
+        <Link to="/" className="font-display text-2xl font-bold text-primary" >
           Funxon
         </Link>
 
@@ -57,7 +57,7 @@ export default function WebHeader() {
                   ? 'border-b-2 border-secondary-container pb-0.5 text-secondary-container font-medium'
                   : 'text-on-surface-variant hover:text-primary'
               }`}
-              style={{ fontFamily: "'Montserrat', sans-serif" }}
+              
             >
               {label}
             </Link>
@@ -71,7 +71,7 @@ export default function WebHeader() {
                   ? 'border-b-2 border-secondary-container pb-0.5 text-secondary-container font-medium'
                   : 'text-on-surface-variant hover:text-primary'
               }`}
-              style={{ fontFamily: "'Montserrat', sans-serif" }}
+              
             >
               {label}
             </Link>
@@ -85,7 +85,7 @@ export default function WebHeader() {
                   ? 'border-b-2 border-secondary-container pb-0.5 text-secondary-container font-medium'
                   : 'text-on-surface-variant hover:text-primary'
               }`}
-              style={{ fontFamily: "'Montserrat', sans-serif" }}
+              
             >
               {label}
             </Link>
@@ -95,9 +95,16 @@ export default function WebHeader() {
         {/* Right Actions */}
         <div className="flex items-center gap-4">
           {/* SA Flag icon */}
-          <button className="hidden text-on-surface-variant hover:text-primary transition-colors md:flex" title="South Africa">
-            <span className="material-symbols-outlined">flag</span>
-          </button>
+          <span className="hidden md:flex" title="South Africa">
+            <svg width="28" height="20" viewBox="0 0 28 20" xmlns="http://www.w3.org/2000/svg" className="rounded-sm overflow-hidden">
+              <rect width="28" height="20" fill="#fff"/>
+              <polygon points="0,0 28,0 0,20" fill="#007a4d"/>
+              <polygon points="28,20 28,0 0,20" fill="#de3831"/>
+              <polygon points="14,10 28,0 28,3 17,10 28,17 28,20" fill="#002395"/>
+              <polygon points="14,10 0,0 0,3 11,10 0,17 0,20" fill="#000"/>
+              <polygon points="14,10 28,3 28,0 17,10 28,20 28,17" fill="#fff" stroke="#000" strokeWidth="0.5"/>
+            </svg>
+          </span>
 
           {isLoggedIn ? (
             <Link
@@ -111,14 +118,14 @@ export default function WebHeader() {
               <Link
                 to="/signin"
                 className="hidden text-sm font-bold text-primary hover:text-primary-container transition-colors md:block"
-                style={{ fontFamily: "'Montserrat', sans-serif" }}
+                
               >
                 Login
               </Link>
               <Link
                 to="/signup"
                 className="hidden h-12 items-center justify-center rounded px-6 bg-primary-container text-white text-sm font-bold hover:bg-primary transition-colors md:flex"
-                style={{ fontFamily: "'Montserrat', sans-serif" }}
+                
               >
                 Sign Up
               </Link>

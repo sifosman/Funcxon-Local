@@ -58,7 +58,7 @@ export default function SubscriberSuitePage() {
         <Link
           to="/account"
           className="mb-4 inline-flex items-center text-sm font-medium hover:underline"
-          style={{ fontFamily: "'Montserrat', sans-serif", color: '#123f5c' }}
+          style={{ color: '#123f5c' }}
         >
           <ArrowLeft className="mr-1 h-4 w-4" />
           Back to My Account
@@ -66,13 +66,13 @@ export default function SubscriberSuitePage() {
 
         <h1
           className="mb-2 text-3xl font-bold"
-          style={{ fontFamily: "'Playfair Display', serif", color: '#123f5c' }}
+          style={{ color: '#123f5c' }}
         >
           Subscriber Suite
         </h1>
         <p
           className="mb-8 text-sm"
-          style={{ fontFamily: "'Montserrat', sans-serif", color: '#72787e' }}
+          style={{ color: '#72787e' }}
         >
           Manage your business listings and subscriber profile
         </p>
@@ -102,13 +102,13 @@ export default function SubscriberSuitePage() {
                   <div>
                     <p
                       className="font-semibold text-on-surface"
-                      style={{ fontFamily: "'Montserrat', sans-serif" }}
+                      
                     >
                       {item.title}
                     </p>
                     <p
                       className="text-xs text-on-surface-variant"
-                      style={{ fontFamily: "'Montserrat', sans-serif" }}
+                      
                     >
                       {item.description}
                     </p>

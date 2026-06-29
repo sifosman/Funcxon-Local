@@ -142,11 +142,11 @@ export default function VendorCataloguePage() {
   return (
     <div className="fx-container fx-section">
       <div className="mx-auto max-w-4xl">
-        <Link to="/vendor-dashboard" className="mb-4 inline-flex items-center text-sm font-medium hover:underline" style={{ fontFamily: "'Montserrat', sans-serif", color: '#123f5c' }}>
+        <Link to="/vendor-dashboard" className="mb-4 inline-flex items-center text-sm font-medium hover:underline" style={{ color: '#123f5c' }}>
           <ArrowLeft className="mr-1 h-4 w-4" /> Back to Vendor Dashboard
         </Link>
-        <h1 className="mb-2 text-3xl font-bold" style={{ fontFamily: "'Playfair Display', serif", color: '#123f5c' }}>Vendor Catalogue</h1>
-        <p className="mb-6 text-sm" style={{ fontFamily: "'Montserrat', sans-serif", color: '#72787e' }}>{vendor ? vendor.name : 'Create a vendor profile to manage your catalogue.'}</p>
+        <h1 className="mb-2 text-3xl font-bold" style={{ color: '#123f5c' }}>Vendor Catalogue</h1>
+        <p className="mb-6 text-sm" style={{ color: '#72787e' }}>{vendor ? vendor.name : 'Create a vendor profile to manage your catalogue.'}</p>
 
         {!vendor ? (
           <div className="rounded-xl border border-outline-variant bg-surface-container p-6 text-center">

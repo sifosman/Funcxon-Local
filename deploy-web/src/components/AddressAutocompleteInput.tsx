@@ -130,7 +130,7 @@ export function AddressAutocompleteInput({
 
   return (
     <div className="relative">
-      <label className="mb-1 block text-xs font-semibold uppercase tracking-wider text-on-surface-variant" style={{ fontFamily: "'Montserrat', sans-serif" }}>
+      <label className="mb-1 block text-xs font-semibold uppercase tracking-wider text-on-surface-variant" >
         {label}
         {required ? ' *' : ''}
       </label>
@@ -163,7 +163,7 @@ export function AddressAutocompleteInput({
           className={`w-full rounded-lg border px-4 py-3 text-sm outline-none transition-colors ${
             error ? 'border-red-500' : 'border-outline-variant focus:border-primary'
           }`}
-          style={{ fontFamily: "'Montserrat', sans-serif" }}
+          
         />
 
         <button
@@ -188,19 +188,19 @@ export function AddressAutocompleteInput({
           {loading && (
             <div className="flex items-center gap-2 px-4 py-3">
               <span className="material-symbols-outlined animate-spin text-primary">refresh</span>
-              <span className="text-xs text-on-surface-variant" style={{ fontFamily: "'Montserrat', sans-serif" }}>Searching…</span>
+              <span className="text-xs text-on-surface-variant" >Searching…</span>
             </div>
           )}
 
           {!loading && canSearch && predictions.length === 0 && (
             <div className="px-4 py-3">
-              <p className="text-xs text-on-surface-variant" style={{ fontFamily: "'Montserrat', sans-serif" }}>No results</p>
+              <p className="text-xs text-on-surface-variant" >No results</p>
             </div>
           )}
 
           {!loading && query.trim().length < 3 && (
             <div className="px-4 py-3">
-              <p className="text-xs text-on-surface-variant" style={{ fontFamily: "'Montserrat', sans-serif" }}>Type at least 3 characters</p>
+              <p className="text-xs text-on-surface-variant" >Type at least 3 characters</p>
             </div>
           )}
 
@@ -210,7 +210,7 @@ export function AddressAutocompleteInput({
               type="button"
               onClick={() => handleSelect(prediction)}
               className="w-full border-t border-outline-variant px-4 py-3 text-left text-sm text-primary transition-colors hover:bg-surface-container-low"
-              style={{ fontFamily: "'Montserrat', sans-serif" }}
+              
             >
               {prediction.description}
             </button>

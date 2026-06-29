@@ -59,7 +59,7 @@ export default function BlogListPage() {
             {posts.map(post => (
               <Link
                 key={post.id}
-                to={`/blog/${post.id}`}
+                to={`/blog/${post.slug}`}
                 className="group flex flex-col overflow-hidden rounded-xl bg-white shadow-sm border border-outline-variant transition-shadow hover:shadow-md"
               >
                 <div className="aspect-[16/10] overflow-hidden bg-surface-container">

@@ -106,9 +106,9 @@ export default function VendorQuoteHistoryPage() {
   return (
     <div className="fx-container fx-section">
       <div className="mx-auto max-w-3xl">
-        <Link to="/quote-requests" className="mb-4 inline-flex items-center text-sm font-medium hover:underline" style={{ fontFamily: "'Montserrat', sans-serif", color: '#123f5c' }}><ArrowLeft className="mr-1 h-4 w-4" /> Back to Quote Requests</Link>
-        <h1 className="mb-2 text-3xl font-bold" style={{ fontFamily: "'Playfair Display', serif", color: '#123f5c' }}>Quote History</h1>
-        <p className="mb-6 text-sm" style={{ fontFamily: "'Montserrat', sans-serif", color: '#72787e' }}>{revisions.length} revision{revisions.length !== 1 ? 's' : ''}</p>
+        <Link to="/quote-requests" className="mb-4 inline-flex items-center text-sm font-medium hover:underline" style={{ color: '#123f5c' }}><ArrowLeft className="mr-1 h-4 w-4" /> Back to Quote Requests</Link>
+        <h1 className="mb-2 text-3xl font-bold" style={{ color: '#123f5c' }}>Quote History</h1>
+        <p className="mb-6 text-sm" style={{ color: '#72787e' }}>{revisions.length} revision{revisions.length !== 1 ? 's' : ''}</p>
 
         {revisions.length === 0 ? (
           <div className="rounded-xl border border-outline-variant bg-white p-10 text-center shadow-sm">

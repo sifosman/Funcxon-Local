@@ -122,21 +122,21 @@ export default function ApplicationStep4Page() {
         <Link
           to="/apply/step3"
           className="mb-4 inline-flex items-center text-sm font-medium hover:underline"
-          style={{ fontFamily: "'Montserrat', sans-serif", color: '#123f5c' }}
+          style={{ color: '#123f5c' }}
         >
           <ArrowLeft className="mr-1 h-4 w-4" />
           Back
         </Link>
 
         <div className="mb-6 flex items-center justify-between">
-          <h1 className="text-2xl font-bold" style={{ fontFamily: "'Playfair Display', serif", color: '#123f5c' }}>
+          <h1 className="text-2xl font-bold" style={{ color: '#123f5c' }}>
             Step 4: Subscription Plan
           </h1>
           <ApplicationProgress currentStep={4} />
         </div>
 
         {error && (
-          <div className="mb-6 flex items-center gap-3 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700" style={{ fontFamily: "'Montserrat', sans-serif" }}>
+          <div className="mb-6 flex items-center gap-3 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700" >
             <AlertCircle className="h-5 w-5 flex-shrink-0" />
             {error}
           </div>
@@ -144,7 +144,7 @@ export default function ApplicationStep4Page() {
 
         <div className="space-y-8">
           <div>
-            <label className="mb-3 block text-xs font-semibold uppercase tracking-wider text-on-surface-variant" style={{ fontFamily: "'Montserrat', sans-serif" }}>
+            <label className="mb-3 block text-xs font-semibold uppercase tracking-wider text-on-surface-variant" >
               Select a Plan *
             </label>
             <div className="grid gap-4 md:grid-cols-2">
@@ -160,11 +160,11 @@ export default function ApplicationStep4Page() {
                     style={selected ? { background: '#f2f7ff', borderColor: '#123f5c' } : { boxShadow: '0 4px 10px rgba(0,0,0,0.08)' }}
                   >
                     {selected && <Check className="absolute right-3 top-3 h-5 w-5 text-primary" />}
-                    <h3 className="mb-1 font-bold" style={{ fontFamily: "'Playfair Display', serif", color: '#123f5c' }}>{tier.tier_name}</h3>
-                    <p className="mb-2 text-2xl font-bold" style={{ fontFamily: "'Montserrat', sans-serif", color: '#123f5c' }}>
+                    <h3 className="mb-1 font-bold" style={{ color: '#123f5c' }}>{tier.tier_name}</h3>
+                    <p className="mb-2 text-2xl font-bold" style={{ color: '#123f5c' }}>
                       {price > 0 ? `R${price}` : 'Free'}
                     </p>
-                    <p className="text-xs text-on-surface-variant" style={{ fontFamily: "'Montserrat', sans-serif" }}>
+                    <p className="text-xs text-on-surface-variant" >
                       {tier.photo_limit} photos
                     </p>
                   </button>
@@ -175,7 +175,7 @@ export default function ApplicationStep4Page() {
           </div>
 
           <div>
-            <label className="mb-3 block text-xs font-semibold uppercase tracking-wider text-on-surface-variant" style={{ fontFamily: "'Montserrat', sans-serif" }}>
+            <label className="mb-3 block text-xs font-semibold uppercase tracking-wider text-on-surface-variant" >
               Billing Period
             </label>
             <div className="flex flex-wrap gap-2">
@@ -187,7 +187,7 @@ export default function ApplicationStep4Page() {
                   className={`rounded-full border px-4 py-2 text-sm font-medium transition-colors ${
                     state.step4.billingPeriod === p.value ? 'border-primary text-white' : 'border-outline-variant bg-white text-on-surface'
                   }`}
-                  style={state.step4.billingPeriod === p.value ? { background: '#123f5c', fontFamily: "'Montserrat', sans-serif" } : { fontFamily: "'Montserrat', sans-serif" }}
+                  style={state.step4.billingPeriod === p.value ? { background: '#123f5c' } : { fontFamily: "'Montserrat', sans-serif" }}
                 >
                   {p.label}
                 </button>
@@ -203,7 +203,7 @@ export default function ApplicationStep4Page() {
                 onChange={(e) => updateStep4({ termsAccepted: e.target.checked })}
                 className="mt-1 h-4 w-4 accent-primary"
               />
-              <span className="text-sm" style={{ fontFamily: "'Montserrat', sans-serif" }}>
+              <span className="text-sm" >
                 I accept the <Link to="/terms" className="font-semibold underline" style={{ color: '#123f5c' }}>Terms and Conditions</Link> *
               </span>
             </label>
@@ -216,7 +216,7 @@ export default function ApplicationStep4Page() {
                 onChange={(e) => updateStep4({ privacyAccepted: e.target.checked })}
                 className="mt-1 h-4 w-4 accent-primary"
               />
-              <span className="text-sm" style={{ fontFamily: "'Montserrat', sans-serif" }}>
+              <span className="text-sm" >
                 I accept the <Link to="/privacy" className="font-semibold underline" style={{ color: '#123f5c' }}>Privacy Policy</Link> *
               </span>
             </label>
@@ -229,7 +229,7 @@ export default function ApplicationStep4Page() {
                 onChange={(e) => updateStep4({ marketingConsent: e.target.checked })}
                 className="mt-1 h-4 w-4 accent-primary"
               />
-              <span className="text-sm" style={{ fontFamily: "'Montserrat', sans-serif" }}>
+              <span className="text-sm" >
                 I would like to receive marketing communications (optional)
               </span>
             </label>
@@ -240,7 +240,7 @@ export default function ApplicationStep4Page() {
           <Link
             to="/apply/step3"
             className="rounded-lg border border-outline-variant px-6 py-3 text-sm font-semibold text-on-surface hover:bg-surface-container-low"
-            style={{ fontFamily: "'Montserrat', sans-serif" }}
+            
           >
             Previous
           </Link>
@@ -248,7 +248,7 @@ export default function ApplicationStep4Page() {
             onClick={handleSubmit}
             disabled={submitting}
             className="rounded-lg bg-primary px-8 py-3 text-sm font-semibold text-white hover:opacity-90 disabled:opacity-60"
-            style={{ fontFamily: "'Montserrat', sans-serif", background: '#123f5c' }}
+            style={{ background: '#123f5c' }}
           >
             {submitting ? <span className="flex items-center gap-2"><Loader2 className="h-4 w-4 animate-spin" /> Submitting...</span> : 'Submit Application'}
           </button>

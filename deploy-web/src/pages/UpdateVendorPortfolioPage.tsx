@@ -92,16 +92,16 @@ export default function UpdateVendorPortfolioPage() {
         <Link
           to="/portfolio/profile"
           className="mb-4 inline-flex items-center text-sm font-medium hover:underline"
-          style={{ fontFamily: "'Montserrat', sans-serif", color: '#123f5c' }}
+          style={{ color: '#123f5c' }}
         >
           <ArrowLeft className="mr-1 h-4 w-4" />
           Back to Portfolio Profile
         </Link>
 
-        <h1 className="mb-2 text-3xl font-bold" style={{ fontFamily: "'Playfair Display', serif", color: '#123f5c' }}>
+        <h1 className="mb-2 text-3xl font-bold" style={{ color: '#123f5c' }}>
           Update Vendor Portfolio
         </h1>
-        <p className="mb-6 text-sm" style={{ fontFamily: "'Montserrat', sans-serif", color: '#72787e' }}>
+        <p className="mb-6 text-sm" style={{ color: '#72787e' }}>
           Edit your business details and contact information.
         </p>
 
@@ -109,7 +109,7 @@ export default function UpdateVendorPortfolioPage() {
           <div className="grid gap-4 md:grid-cols-2">
             {fields.map((field) => (
               <div key={field.key} className={field.type === 'textarea' ? 'md:col-span-2' : ''}>
-                <label className="mb-1 block text-xs font-semibold uppercase tracking-wider text-on-surface-variant" style={{ fontFamily: "'Montserrat', sans-serif" }}>
+                <label className="mb-1 block text-xs font-semibold uppercase tracking-wider text-on-surface-variant" >
                   {field.label}{field.required ? ' *' : ''}
                 </label>
                 {field.type === 'textarea' ? (
@@ -118,7 +118,7 @@ export default function UpdateVendorPortfolioPage() {
                     onChange={(e) => handleChange(field.key, e.target.value)}
                     rows={4}
                     className="w-full rounded-lg border border-outline-variant px-4 py-3 text-sm outline-none focus:border-primary"
-                    style={{ fontFamily: "'Montserrat', sans-serif" }}
+                    
                   />
                 ) : (
                   <input
@@ -126,7 +126,7 @@ export default function UpdateVendorPortfolioPage() {
                     value={form[field.key]}
                     onChange={(e) => handleChange(field.key, e.target.value)}
                     className="w-full rounded-lg border border-outline-variant px-4 py-3 text-sm outline-none focus:border-primary"
-                    style={{ fontFamily: "'Montserrat', sans-serif" }}
+                    
                   />
                 )}
               </div>
@@ -134,7 +134,7 @@ export default function UpdateVendorPortfolioPage() {
           </div>
 
           <div>
-            <label className="mb-1 block text-xs font-semibold uppercase tracking-wider text-on-surface-variant" style={{ fontFamily: "'Montserrat', sans-serif" }}>Location</label>
+            <label className="mb-1 block text-xs font-semibold uppercase tracking-wider text-on-surface-variant" >Location</label>
             <AddressAutocompleteInput
               label=""
               placeholder="Search address"
@@ -146,7 +146,7 @@ export default function UpdateVendorPortfolioPage() {
           <div className="grid gap-4 md:grid-cols-2">
             {(['address_line_1', 'address_line_2', 'suburb', 'city', 'province', 'postal_code'] as const).map((key) => (
               <div key={key}>
-                <label className="mb-1 block text-xs font-semibold uppercase tracking-wider text-on-surface-variant" style={{ fontFamily: "'Montserrat', sans-serif" }}>
+                <label className="mb-1 block text-xs font-semibold uppercase tracking-wider text-on-surface-variant" >
                   {key.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())}
                 </label>
                 <input
@@ -154,7 +154,7 @@ export default function UpdateVendorPortfolioPage() {
                   value={form[key]}
                   onChange={(e) => handleChange(key, e.target.value)}
                   className="w-full rounded-lg border border-outline-variant px-4 py-3 text-sm outline-none focus:border-primary"
-                  style={{ fontFamily: "'Montserrat', sans-serif" }}
+                  
                 />
               </div>
             ))}
@@ -165,7 +165,7 @@ export default function UpdateVendorPortfolioPage() {
           <Link
             to="/portfolio/profile"
             className="rounded-lg border border-outline-variant px-6 py-3 text-sm font-semibold text-on-surface hover:bg-surface-container-low"
-            style={{ fontFamily: "'Montserrat', sans-serif" }}
+            
           >
             Cancel
           </Link>
@@ -173,7 +173,7 @@ export default function UpdateVendorPortfolioPage() {
             onClick={handleSave}
             disabled={saving}
             className="rounded-lg bg-primary px-8 py-3 text-sm font-semibold text-white hover:opacity-90 disabled:opacity-60"
-            style={{ fontFamily: "'Montserrat', sans-serif", background: '#123f5c' }}
+            style={{ background: '#123f5c' }}
           >
             {saving ? <span className="flex items-center gap-2"><Loader2 className="h-4 w-4 animate-spin" /> Saving...</span> : saved ? <span className="flex items-center gap-2"><Check className="h-4 w-4" /> Saved</span> : 'Save Changes'}
           </button>

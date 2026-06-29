@@ -54,9 +54,12 @@ export default function HomePage() {
       const { data: vendorData } = await supabase
         .from('vendors')
         .select('id, name, location, city, province, image_url, category_id, price_range, rating')
+        .gt('rating', 0)
         .limit(6);
 
-      setVendors((vendorData || []).map(item => {
+      setVendors((vendorData || []).filter(item =>
+        item.name && !item.name.toLowerCase().includes('demo')
+      ).map(item => {
         const parsed = parseLocation(item.location);
         return { id: item.id, name: item.name, location: item.location, city: item.city || parsed.city, province: item.province || parsed.province, image_url: item.image_url, category: item.category_id?.toString(), price_range: item.price_range, rating: item.rating };
       }));
@@ -71,6 +74,16 @@ export default function HomePage() {
     const params = new URLSearchParams();
     if (searchLocation) params.set('location', searchLocation);
     if (selectedCategory) params.set('category', selectedCategory.toLowerCase());
+    if (selectedProvince) params.set('province', selectedProvince);
+    if (searchDate) params.set('date', searchDate);
+    if (searchGuests) params.set('guests', searchGuests);
+    navigate(`/discover?${params.toString()}`);
+  };
+
+  const handleExploreFilter = (province: string, category: string) => {
+    const params = new URLSearchParams();
+    if (province) params.set('province', province);
+    if (category) params.set('category', category.toLowerCase());
     navigate(`/discover?${params.toString()}`);
   };
 
@@ -91,11 +104,11 @@ export default function HomePage() {
         <div className="relative fx-container flex flex-col items-center text-center">
           <h1
             className="mb-4 text-[28px] font-bold leading-tight tracking-tight text-white md:text-[36px]"
-            style={{ fontFamily: "'Playfair Display', serif", letterSpacing: '-0.02em', textShadow: '0 2px 8px rgba(0,0,0,0.3)' }}
+            style={{ letterSpacing: '-0.02em', textShadow: '0 2px 8px rgba(0,0,0,0.3)' }}
           >
             Connect, Collaborate, Celebrate
           </h1>
-          <p className="max-w-2xl text-base text-white/90" style={{ fontFamily: "'Montserrat', sans-serif", textShadow: '0 1px 4px rgba(0,0,0,0.3)' }}>
+          <p className="max-w-2xl text-base text-white/90" style={{ textShadow: '0 1px 4px rgba(0,0,0,0.3)' }}>
             Let's get this party started!!
           </p>
         </div>
@@ -109,12 +122,12 @@ export default function HomePage() {
             <div className="flex flex-col md:flex-row items-stretch">
               {/* Location */}
               <div className="flex-1 cursor-pointer border-b border-outline-variant px-6 py-3 transition-colors hover:bg-surface-container-low md:border-b-0 md:border-r">
-                <label className="mb-1 block text-xs font-semibold uppercase tracking-wider text-on-surface-variant" style={{ fontFamily: "'Montserrat', sans-serif" }}>Location</label>
+                <label className="mb-1 block text-xs font-semibold uppercase tracking-wider text-on-surface-variant" >Location</label>
                 <div className="flex items-center">
                   <span className="material-symbols-outlined mr-2 text-primary text-[20px]">location_on</span>
                   <input
                     className="w-full border-none bg-transparent p-0 text-sm font-semibold text-primary placeholder-outline focus:outline-none focus:ring-0"
-                    style={{ fontFamily: "'Montserrat', sans-serif" }}
+                    
                     placeholder="Where is your event?"
                     type="text"
                     value={searchLocation}
@@ -124,14 +137,13 @@ export default function HomePage() {
               </div>
               {/* Event Date */}
               <div className="flex-1 cursor-pointer border-b border-outline-variant px-6 py-3 transition-colors hover:bg-surface-container-low md:border-b-0 md:border-r">
-                <label className="mb-1 block text-xs font-semibold uppercase tracking-wider text-on-surface-variant" style={{ fontFamily: "'Montserrat', sans-serif" }}>Event Date</label>
+                <label className="mb-1 block text-xs font-semibold uppercase tracking-wider text-on-surface-variant" >Event Date</label>
                 <div className="flex items-center">
                   <span className="material-symbols-outlined mr-2 text-primary text-[20px]">calendar_month</span>
                   <input
                     className="w-full border-none bg-transparent p-0 text-sm font-semibold text-primary placeholder-outline focus:outline-none focus:ring-0"
-                    style={{ fontFamily: "'Montserrat', sans-serif" }}
                     placeholder="Select date"
-                    type="text"
+                    type="date"
                     value={searchDate}
                     onChange={e => setSearchDate(e.target.value)}
                   />
@@ -139,14 +151,14 @@ export default function HomePage() {
               </div>
               {/* Guest Count */}
               <div className="flex-1 cursor-pointer px-6 py-3 transition-colors hover:bg-surface-container-low">
-                <label className="mb-1 block text-xs font-semibold uppercase tracking-wider text-on-surface-variant" style={{ fontFamily: "'Montserrat', sans-serif" }}>Guest Count</label>
+                <label className="mb-1 block text-xs font-semibold uppercase tracking-wider text-on-surface-variant" >Guest Count</label>
                 <div className="flex items-center">
                   <span className="material-symbols-outlined mr-2 text-primary text-[20px]">group</span>
                   <input
                     className="w-full border-none bg-transparent p-0 text-sm font-semibold text-primary placeholder-outline focus:outline-none focus:ring-0"
-                    style={{ fontFamily: "'Montserrat', sans-serif" }}
                     placeholder="How many guests?"
-                    type="text"
+                    type="number"
+                    min="1"
                     value={searchGuests}
                     onChange={e => setSearchGuests(e.target.value)}
                   />
@@ -157,7 +169,7 @@ export default function HomePage() {
                 <button
                   onClick={handleSearch}
                   className="h-14 w-full rounded-full px-10 font-bold text-white transition-all hover:scale-[1.02] active:scale-95 md:w-auto"
-                  style={{ background: '#123f5c', fontFamily: "'Montserrat', sans-serif", boxShadow: '0 4px 12px rgba(0,0,0,0.15)' }}
+                  style={{ background: '#123f5c', boxShadow: '0 4px 12px rgba(0,0,0,0.15)' }}
                 >
                   Search
                 </button>
@@ -168,30 +180,33 @@ export default function HomePage() {
       </section>
 
       {/* Spacer for floating search card */}
-      <div className="h-24 md:h-20 bg-background" />
+      <div className="h-32 md:h-20 bg-background" />
 
       {/* ── Explore By ── */}
       <section className="fx-container py-16">
         <h2
           className="mb-6 text-2xl font-semibold text-primary"
-          style={{ fontFamily: "'Playfair Display', serif" }}
+          
         >
           Explore by
         </h2>
 
         {/* Provinces */}
         <div className="mb-6">
-          <h3 className="mb-3 text-xs font-semibold uppercase tracking-wider text-on-surface-variant" style={{ fontFamily: "'Montserrat', sans-serif" }}>
+          <h3 className="mb-3 text-xs font-semibold uppercase tracking-wider text-on-surface-variant" >
             Provinces
           </h3>
           <div className="flex flex-wrap gap-3">
             {PROVINCES.map(p => (
               <button
                 key={p}
-                onClick={() => setSelectedProvince(selectedProvince === p ? '' : p)}
+                onClick={() => {
+                  const next = selectedProvince === p ? '' : p;
+                  setSelectedProvince(next);
+                  handleExploreFilter(next, selectedCategory);
+                }}
                 className="rounded-full px-4 py-2 text-sm font-semibold transition-colors"
                 style={{
-                  fontFamily: "'Montserrat', sans-serif",
                   background: selectedProvince === p ? '#b9c4eb' : 'transparent',
                   color: selectedProvince === p ? '#002940' : '#1b1c19',
                   border: selectedProvince === p ? 'none' : '1px solid #72787e',
@@ -205,17 +220,20 @@ export default function HomePage() {
 
         {/* Categories */}
         <div>
-          <h3 className="mb-3 text-xs font-semibold uppercase tracking-wider text-on-surface-variant" style={{ fontFamily: "'Montserrat', sans-serif" }}>
+          <h3 className="mb-3 text-xs font-semibold uppercase tracking-wider text-on-surface-variant" >
             Categories
           </h3>
           <div className="flex flex-wrap gap-3">
             {CATEGORIES.map(c => (
               <button
                 key={c}
-                onClick={() => setSelectedCategory(selectedCategory === c ? '' : c)}
+                onClick={() => {
+                  const next = selectedCategory === c ? '' : c;
+                  setSelectedCategory(next);
+                  handleExploreFilter(selectedProvince, next);
+                }}
                 className="rounded-full px-4 py-2 text-sm font-semibold transition-colors"
                 style={{
-                  fontFamily: "'Montserrat', sans-serif",
                   background: selectedCategory === c ? '#aa7478' : 'transparent',
                   color: selectedCategory === c ? '#ffffff' : '#1b1c19',
                   border: selectedCategory === c ? 'none' : '1px solid #72787e',
@@ -231,13 +249,13 @@ export default function HomePage() {
       {/* ── Featured Venues ── */}
       <section className="py-16">
         <div className="fx-container mb-6 flex items-end justify-between">
-          <h2 className="text-2xl font-semibold text-primary" style={{ fontFamily: "'Playfair Display', serif" }}>
+          <h2 className="text-2xl font-semibold text-primary" >
             Featured Venues
           </h2>
           <Link
             to="/discover?category=venues"
             className="flex items-center text-sm font-semibold hover:underline"
-            style={{ fontFamily: "'Montserrat', sans-serif", color: '#123f5c' }}
+            style={{ color: '#123f5c' }}
           >
             View all
             <span className="material-symbols-outlined ml-1 text-sm">arrow_forward</span>
@@ -263,25 +281,25 @@ export default function HomePage() {
                     }
                     <div
                       className="absolute left-3 top-3 rounded px-2 py-1 text-xs font-semibold text-white"
-                      style={{ background: '#aa7478', fontFamily: "'Montserrat', sans-serif" }}
+                      style={{ background: '#aa7478' }}
                     >
                       Featured
                     </div>
                   </div>
                   <div className="p-4">
-                    <h3 className="mb-1 text-[18px] font-semibold text-primary" style={{ fontFamily: "'Playfair Display', serif" }}>
+                    <h3 className="mb-1 text-[18px] font-semibold text-primary" >
                       {item.name}
                     </h3>
-                    <p className="mb-3 flex items-center text-xs text-on-surface-variant" style={{ fontFamily: "'Montserrat', sans-serif" }}>
+                    <p className="mb-3 flex items-center text-xs text-on-surface-variant" >
                       <span className="material-symbols-outlined mr-1 text-sm">location_on</span>
                       {item.province || item.city || 'South Africa'}
                     </p>
                     <div className="flex items-center justify-between border-t pt-3" style={{ borderColor: '#f7f5f0' }}>
-                      <span className="text-sm font-semibold" style={{ fontFamily: "'Montserrat', sans-serif", color: '#123f5c' }}>
+                      <span className="text-sm font-semibold" style={{ color: '#123f5c' }}>
                         {item.price_range ? item.price_range : 'Request quote'}
                       </span>
                       {item.rating && (
-                        <span className="flex items-center text-xs text-outline" style={{ fontFamily: "'Montserrat', sans-serif" }}>
+                        <span className="flex items-center text-xs text-outline" >
                           <span className="material-symbols-outlined mr-1 text-sm" style={{ color: '#aa7478', fontVariationSettings: "'FILL' 1" }}>star</span>
                           {item.rating}
                         </span>
@@ -295,23 +313,27 @@ export default function HomePage() {
       </section>
 
       {/* ── Featured Vendors ── */}
-      {vendors.length > 0 && (
+      {(loading || vendors.length > 0) && (
         <section className="py-16" style={{ background: '#f5f3ee' }}>
           <div className="fx-container mb-6 flex items-end justify-between">
-            <h2 className="text-2xl font-semibold text-primary" style={{ fontFamily: "'Playfair Display', serif" }}>
+            <h2 className="text-2xl font-semibold text-primary" >
               Top Vendors
             </h2>
             <Link
               to="/discover?category=vendors"
               className="flex items-center text-sm font-semibold hover:underline"
-              style={{ fontFamily: "'Montserrat', sans-serif", color: '#123f5c' }}
+              style={{ color: '#123f5c' }}
             >
               View all
               <span className="material-symbols-outlined ml-1 text-sm">arrow_forward</span>
             </Link>
           </div>
           <div className="scroll-row fx-container pb-8">
-            {vendors.map(item => (
+            {loading
+              ? [1, 2, 3, 4].map(i => (
+                  <div key={i} className="min-w-[300px] w-[300px] h-[280px] flex-shrink-0 animate-pulse rounded-lg bg-surface-container" />
+                ))
+              : vendors.map(item => (
               <Link
                 key={item.id}
                 to={`/vendor/${item.id}`}
@@ -325,19 +347,19 @@ export default function HomePage() {
                   }
                 </div>
                 <div className="p-4">
-                  <h3 className="mb-1 text-[18px] font-semibold text-primary" style={{ fontFamily: "'Playfair Display', serif" }}>
+                  <h3 className="mb-1 text-[18px] font-semibold text-primary" >
                     {item.name}
                   </h3>
-                  <p className="mb-3 flex items-center text-xs text-on-surface-variant" style={{ fontFamily: "'Montserrat', sans-serif" }}>
+                  <p className="mb-3 flex items-center text-xs text-on-surface-variant" >
                     <span className="material-symbols-outlined mr-1 text-sm">location_on</span>
                     {item.province || item.city || 'South Africa'}
                   </p>
                   <div className="flex items-center justify-between border-t pt-3" style={{ borderColor: '#f7f5f0' }}>
-                    <span className="text-sm font-semibold" style={{ fontFamily: "'Montserrat', sans-serif", color: '#123f5c' }}>
+                    <span className="text-sm font-semibold" style={{ color: '#123f5c' }}>
                       {item.price_range ? item.price_range : 'Request quote'}
                     </span>
                     {item.rating && (
-                      <span className="flex items-center text-xs text-outline" style={{ fontFamily: "'Montserrat', sans-serif" }}>
+                      <span className="flex items-center text-xs text-outline" >
                         <span className="material-symbols-outlined mr-1 text-sm" style={{ color: '#aa7478', fontVariationSettings: "'FILL' 1" }}>star</span>
                         {item.rating}
                       </span>
@@ -353,38 +375,40 @@ export default function HomePage() {
       {/* ── Blog / Inspiration ── */}
       <section className="py-16" style={{ background: '#f5f3ee' }}>
         <div className="fx-container">
-          <h2 className="mb-8 text-center text-2xl font-semibold text-primary" style={{ fontFamily: "'Playfair Display', serif" }}>
+          <h2 className="mb-8 text-center text-2xl font-semibold text-primary" >
             Inspiration &amp; Ideas
           </h2>
           <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
             {[
-              { tag: 'Weddings', title: 'Integrating Indigenous Flora into Your Decor', body: 'Discover elegant ways to use Proteas and Fynbos to create breathtaking, culturally resonant centerpieces for your special day.', href: '/blog' },
-              { tag: 'Corporate', title: 'Hosting High-Impact Corporate Retreats', body: 'Learn how to blend professional development with the serene landscapes of the Western Cape to maximize team engagement.', href: '/blog' },
-              { tag: 'Parties', title: 'The Rise of the Luxury Outdoor Festival', body: 'How event planners are transforming open spaces into exclusive, comfortable, and highly curated party experiences.', href: '/blog' },
-            ].map(({ tag, title, body, href }) => (
+              { tag: 'Weddings', title: 'Integrating Indigenous Flora into Your Decor', body: 'Discover elegant ways to use Proteas and Fynbos to create breathtaking, culturally resonant centerpieces for your special day.', href: '/blog', image: 'https://images.unsplash.com/photo-1464366400605-716099d9aa43?auto=format&fit=crop&w=600&q=80' },
+              { tag: 'Corporate', title: 'Hosting High-Impact Corporate Retreats', body: 'Learn how to blend professional development with the serene landscapes of the Western Cape to maximize team engagement.', href: '/blog', image: 'https://images.unsplash.com/photo-1517245386807-bb43f82c33c4?auto=format&fit=crop&w=600&q=80' },
+              { tag: 'Parties', title: 'The Rise of the Luxury Outdoor Festival', body: 'How event planners are transforming open spaces into exclusive, comfortable, and highly curated party experiences.', href: '/blog', image: 'https://images.unsplash.com/photo-1478146896981-b80fe4d6af0e?auto=format&fit=crop&w=600&q=80' },
+            ].map(({ tag, title, body, href, image }) => (
               <article
                 key={title}
-                className="overflow-hidden rounded-lg bg-white"
+                className="group overflow-hidden rounded-lg bg-white"
                 style={{ border: '1px solid #f7f5f0', boxShadow: '0 4px 10px rgba(0,0,0,0.08)' }}
               >
-                <div className="h-40 w-full bg-surface-dim" />
+                <div className="h-40 w-full overflow-hidden bg-surface-dim">
+                  <img src={image} alt={title} className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105" loading="lazy" />
+                </div>
                 <div className="p-5">
                   <span
                     className="mb-2 block text-xs uppercase tracking-wide"
-                    style={{ fontFamily: "'Montserrat', sans-serif", color: '#b9c4eb' }}
+                    style={{ color: '#b9c4eb' }}
                   >
                     {tag}
                   </span>
-                  <h3 className="mb-2 text-[18px] font-semibold text-primary" style={{ fontFamily: "'Playfair Display', serif" }}>
+                  <h3 className="mb-2 text-[18px] font-semibold text-primary" >
                     {title}
                   </h3>
-                  <p className="line-clamp-2 text-sm text-on-surface-variant" style={{ fontFamily: "'Montserrat', sans-serif" }}>
+                  <p className="line-clamp-2 text-sm text-on-surface-variant" >
                     {body}
                   </p>
                   <Link
                     to={href}
                     className="mt-4 inline-block text-sm font-semibold hover:underline"
-                    style={{ fontFamily: "'Montserrat', sans-serif", color: '#123f5c' }}
+                    style={{ color: '#123f5c' }}
                   >
                     Read More
                   </Link>

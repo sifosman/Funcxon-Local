@@ -98,9 +98,9 @@ export default function VenueListingPlansPage() {
   return (
     <div className="fx-container fx-section">
       <div className="mx-auto max-w-4xl">
-        <Link to="/subscriber-suite" className="mb-4 inline-flex items-center text-sm font-medium hover:underline" style={{ fontFamily: "'Montserrat', sans-serif", color: '#123f5c' }}><ArrowLeft className="mr-1 h-4 w-4" /> Back to Subscriber Suite</Link>
-        <h1 className="mb-2 text-3xl font-bold" style={{ fontFamily: "'Playfair Display', serif", color: '#123f5c' }}>Venue Listing Plans</h1>
-        <p className="mb-8 text-sm" style={{ fontFamily: "'Montserrat', sans-serif", color: '#72787e' }}>Limited-time launch offer — no hidden fees, zero commissions</p>
+        <Link to="/subscriber-suite" className="mb-4 inline-flex items-center text-sm font-medium hover:underline" style={{ color: '#123f5c' }}><ArrowLeft className="mr-1 h-4 w-4" /> Back to Subscriber Suite</Link>
+        <h1 className="mb-2 text-3xl font-bold" style={{ color: '#123f5c' }}>Venue Listing Plans</h1>
+        <p className="mb-8 text-sm" style={{ color: '#72787e' }}>Limited-time launch offer — no hidden fees, zero commissions</p>
 
         <div className="relative mx-auto max-w-sm">
           <div className="overflow-hidden rounded-2xl p-6 shadow-lg transition-colors" style={{ background: selectedPlan.theme.background, color: selectedPlan.theme.text }}>

@@ -130,11 +130,11 @@ export default function VenueCataloguePage() {
   return (
     <div className="fx-container fx-section">
       <div className="mx-auto max-w-4xl">
-        <Link to="/venue-dashboard" className="mb-4 inline-flex items-center text-sm font-medium hover:underline" style={{ fontFamily: "'Montserrat', sans-serif", color: '#123f5c' }}>
+        <Link to="/venue-dashboard" className="mb-4 inline-flex items-center text-sm font-medium hover:underline" style={{ color: '#123f5c' }}>
           <ArrowLeft className="mr-1 h-4 w-4" /> Back to Venue Dashboard
         </Link>
-        <h1 className="mb-2 text-3xl font-bold" style={{ fontFamily: "'Playfair Display', serif", color: '#123f5c' }}>Venue Catalogue</h1>
-        <p className="mb-6 text-sm" style={{ fontFamily: "'Montserrat', sans-serif", color: '#72787e' }}>{listing ? listing.name : 'Create a venue listing to manage your catalogue.'}</p>
+        <h1 className="mb-2 text-3xl font-bold" style={{ color: '#123f5c' }}>Venue Catalogue</h1>
+        <p className="mb-6 text-sm" style={{ color: '#72787e' }}>{listing ? listing.name : 'Create a venue listing to manage your catalogue.'}</p>
 
         {!listing ? (
           <div className="rounded-xl border border-outline-variant bg-surface-container p-6 text-center">

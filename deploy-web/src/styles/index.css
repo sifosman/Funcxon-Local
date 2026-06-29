@@ -56,11 +56,13 @@
     @apply w-full rounded-lg border border-outline-variant bg-white px-4 py-2.5 text-sm text-on-surface placeholder:text-on-surface-variant focus:border-primary-container focus:outline-none focus:ring-1 focus:ring-primary-container;
   }
 
-  /* Horizontal scroll with hidden scrollbar */
+  /* Horizontal scroll with hidden scrollbar + fade edges */
   .scroll-row {
     @apply flex overflow-x-auto gap-6 pb-4 snap-x snap-mandatory;
     -ms-overflow-style: none;
     scrollbar-width: none;
+    mask-image: linear-gradient(to right, transparent 0, black 24px, black calc(100% - 24px), transparent 100%);
+    -webkit-mask-image: linear-gradient(to right, transparent 0, black 24px, black calc(100% - 24px), transparent 100%);
   }
   .scroll-row::-webkit-scrollbar {
     display: none;

@@ -62,7 +62,7 @@ export default function PortfolioTypePage() {
         <Link
           to="/subscriber-profile"
           className="mb-4 inline-flex items-center text-sm font-medium hover:underline"
-          style={{ fontFamily: "'Montserrat', sans-serif", color: '#123f5c' }}
+          style={{ color: '#123f5c' }}
         >
           <ArrowLeft className="mr-1 h-4 w-4" />
           Back to Subscriber Profile
@@ -70,13 +70,13 @@ export default function PortfolioTypePage() {
 
         <h1
           className="mb-2 text-3xl font-bold"
-          style={{ fontFamily: "'Playfair Display', serif", color: '#123f5c' }}
+          style={{ color: '#123f5c' }}
         >
           Choose Portfolio Type
         </h1>
         <p
           className="mb-8 text-sm"
-          style={{ fontFamily: "'Montserrat', sans-serif", color: '#72787e' }}
+          style={{ color: '#72787e' }}
         >
           What kind of business would you like to list on Funxon?
         </p>
@@ -84,7 +84,7 @@ export default function PortfolioTypePage() {
         {error && (
           <div
             className="mb-6 flex items-center gap-3 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700"
-            style={{ fontFamily: "'Montserrat', sans-serif" }}
+            
           >
             <AlertCircle className="h-5 w-5 flex-shrink-0" />
             {error}
@@ -110,13 +110,13 @@ export default function PortfolioTypePage() {
                 </div>
                 <h2
                   className="mb-2 text-xl font-bold"
-                  style={{ fontFamily: "'Playfair Display', serif", color: '#123f5c' }}
+                  style={{ color: '#123f5c' }}
                 >
                   {type.title}
                 </h2>
                 <p
                   className="text-sm"
-                  style={{ fontFamily: "'Montserrat', sans-serif", color: '#72787e' }}
+                  style={{ color: '#72787e' }}
                 >
                   {type.description}
                 </p>

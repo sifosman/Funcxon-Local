@@ -38,13 +38,13 @@ export default function VendorSignupSuccessPage() {
 
           <h1
             className="mb-2 text-2xl font-bold"
-            style={{ fontFamily: "'Playfair Display', serif", color: '#123f5c' }}
+            style={{ color: '#123f5c' }}
           >
             Application Submitted
           </h1>
           <p
             className="mb-8 text-sm"
-            style={{ fontFamily: "'Montserrat', sans-serif", color: '#72787e' }}
+            style={{ color: '#72787e' }}
           >
             Thank you for applying. We will review your submission and be in touch.
           </p>
@@ -53,16 +53,16 @@ export default function VendorSignupSuccessPage() {
             <div className="flex items-center gap-3">
               <Mail className="h-5 w-5 text-on-surface-variant" />
               <div>
-                <p className="text-xs text-on-surface-variant" style={{ fontFamily: "'Montserrat', sans-serif" }}>Email</p>
-                <p className="text-sm font-semibold" style={{ fontFamily: "'Montserrat', sans-serif" }}>{user?.email || 'N/A'}</p>
+                <p className="text-xs text-on-surface-variant" >Email</p>
+                <p className="text-sm font-semibold" >{user?.email || 'N/A'}</p>
               </div>
             </div>
 
             <div className="flex items-center gap-3">
               <User className="h-5 w-5 text-on-surface-variant" />
               <div>
-                <p className="text-xs text-on-surface-variant" style={{ fontFamily: "'Montserrat', sans-serif" }}>Full Name</p>
-                <p className="text-sm font-semibold" style={{ fontFamily: "'Montserrat', sans-serif" }}>{displayName || 'N/A'}</p>
+                <p className="text-xs text-on-surface-variant" >Full Name</p>
+                <p className="text-sm font-semibold" >{displayName || 'N/A'}</p>
               </div>
             </div>
 
@@ -70,8 +70,8 @@ export default function VendorSignupSuccessPage() {
               <div className="flex items-center gap-3">
                 <Package className="h-5 w-5 text-on-surface-variant" />
                 <div>
-                  <p className="text-xs text-on-surface-variant" style={{ fontFamily: "'Montserrat', sans-serif" }}>Product Type</p>
-                  <p className="text-sm font-semibold" style={{ fontFamily: "'Montserrat', sans-serif" }}>{productType}</p>
+                  <p className="text-xs text-on-surface-variant" >Product Type</p>
+                  <p className="text-sm font-semibold" >{productType}</p>
                 </div>
               </div>
             )}
@@ -80,8 +80,8 @@ export default function VendorSignupSuccessPage() {
               <div className="flex items-center gap-3">
                 <Calendar className="h-5 w-5 text-on-surface-variant" />
                 <div>
-                  <p className="text-xs text-on-surface-variant" style={{ fontFamily: "'Montserrat', sans-serif" }}>Tier</p>
-                  <p className="text-sm font-semibold" style={{ fontFamily: "'Montserrat', sans-serif" }}>{tierName}</p>
+                  <p className="text-xs text-on-surface-variant" >Tier</p>
+                  <p className="text-sm font-semibold" >{tierName}</p>
                 </div>
               </div>
             )}
@@ -91,14 +91,14 @@ export default function VendorSignupSuccessPage() {
             <Link
               to="/apply/status"
               className="flex-1 rounded-lg bg-primary py-3 text-center text-sm font-semibold text-white hover:opacity-90"
-              style={{ fontFamily: "'Montserrat', sans-serif" }}
+              
             >
               View Application Status
             </Link>
             <Link
               to="/account"
               className="flex-1 rounded-lg border border-outline-variant bg-white py-3 text-center text-sm font-semibold text-on-surface hover:bg-surface-container-low"
-              style={{ fontFamily: "'Montserrat', sans-serif" }}
+              
             >
               Go to Account
             </Link>

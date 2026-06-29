@@ -59,7 +59,7 @@ export default function SubscriberProfilePage() {
         <Link
           to="/account"
           className="mb-4 inline-flex items-center text-sm font-medium hover:underline"
-          style={{ fontFamily: "'Montserrat', sans-serif", color: '#123f5c' }}
+          style={{ color: '#123f5c' }}
         >
           <ArrowLeft className="mr-1 h-4 w-4" />
           Back to My Account
@@ -68,13 +68,13 @@ export default function SubscriberProfilePage() {
         <div className="mb-8 text-center">
           <h1
             className="mb-2 text-3xl font-bold"
-            style={{ fontFamily: "'Playfair Display', serif", color: '#123f5c' }}
+            style={{ color: '#123f5c' }}
           >
             Welcome Back!
           </h1>
           <p
             className="text-sm"
-            style={{ fontFamily: "'Montserrat', sans-serif", color: '#72787e' }}
+            style={{ color: '#72787e' }}
           >
             What would you like to do today?
           </p>
@@ -98,13 +98,13 @@ export default function SubscriberProfilePage() {
                   <div>
                     <p
                       className="font-semibold text-on-surface"
-                      style={{ fontFamily: "'Montserrat', sans-serif" }}
+                      
                     >
                       {option.title}
                     </p>
                     <p
                       className="text-xs text-on-surface-variant"
-                      style={{ fontFamily: "'Montserrat', sans-serif" }}
+                      
                     >
                       {option.description}
                     </p>
@@ -142,7 +142,7 @@ export default function SubscriberProfilePage() {
 
         <div
           className="mt-8 rounded-2xl p-6"
-          style={{ backgroundColor: '#f2f7ff', fontFamily: "'Montserrat', sans-serif" }}
+          style={{ backgroundColor: '#f2f7ff' }}
         >
           <p className="text-center text-sm text-on-surface-variant">
             Create a new profile to list your services, or edit your existing portfolio to update your information.

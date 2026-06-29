@@ -31,16 +31,16 @@ export default function PortfolioAssistancePage() {
         <Link
           to="/subscriber-suite"
           className="mb-4 inline-flex items-center text-sm font-medium hover:underline"
-          style={{ fontFamily: "'Montserrat', sans-serif", color: '#123f5c' }}
+          style={{ color: '#123f5c' }}
         >
           <ArrowLeft className="mr-1 h-4 w-4" />
           Back to Subscriber Suite
         </Link>
 
-        <h1 className="mb-2 text-3xl font-bold" style={{ fontFamily: "'Playfair Display', serif", color: '#123f5c' }}>
+        <h1 className="mb-2 text-3xl font-bold" style={{ color: '#123f5c' }}>
           Portfolio Assistance
         </h1>
-        <p className="mb-8 text-sm" style={{ fontFamily: "'Montserrat', sans-serif", color: '#72787e' }}>
+        <p className="mb-8 text-sm" style={{ color: '#72787e' }}>
           Tips and guidance to help your portfolio stand out and attract more bookings.
         </p>
 
@@ -56,10 +56,10 @@ export default function PortfolioAssistancePage() {
                 <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full" style={{ backgroundColor: '#f2f7ff' }}>
                   <Icon className="h-6 w-6" style={{ color: '#123f5c' }} />
                 </div>
-                <h3 className="mb-2 font-bold" style={{ fontFamily: "'Playfair Display', serif", color: '#123f5c' }}>
+                <h3 className="mb-2 font-bold" style={{ color: '#123f5c' }}>
                   {tip.title}
                 </h3>
-                <p className="text-sm" style={{ fontFamily: "'Montserrat', sans-serif", color: '#72787e' }}>
+                <p className="text-sm" style={{ color: '#72787e' }}>
                   {tip.description}
                 </p>
               </div>
@@ -71,10 +71,10 @@ export default function PortfolioAssistancePage() {
           <div className="flex items-start gap-4">
             <HelpCircle className="h-6 w-6 flex-shrink-0" style={{ color: '#123f5c' }} />
             <div>
-              <h3 className="mb-1 font-bold" style={{ fontFamily: "'Playfair Display', serif", color: '#123f5c' }}>
+              <h3 className="mb-1 font-bold" style={{ color: '#123f5c' }}>
                 Need more help?
               </h3>
-              <p className="text-sm" style={{ fontFamily: "'Montserrat', sans-serif", color: '#72787e' }}>
+              <p className="text-sm" style={{ color: '#72787e' }}>
                 Contact our support team via the help button or email support@funxon.co.za. We are here to help you get the most out of your listing.
               </p>
             </div>

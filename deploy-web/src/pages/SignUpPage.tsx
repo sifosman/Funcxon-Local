@@ -13,9 +13,29 @@ export default function SignUpPage() {
   const [success, setSuccess] = useState(false);
   const { signUp } = useAuth();
 
+  const getPasswordStrength = (pwd: string): { label: string; color: string; width: string } => {
+    if (pwd.length === 0) return { label: '', color: 'transparent', width: '0%' };
+    let score = 0;
+    if (pwd.length >= 6) score++;
+    if (pwd.length >= 10) score++;
+    if (/[A-Z]/.test(pwd)) score++;
+    if (/[0-9]/.test(pwd)) score++;
+    if (/[^A-Za-z0-9]/.test(pwd)) score++;
+    if (score <= 1) return { label: 'Weak', color: '#de3831', width: '25%' };
+    if (score <= 2) return { label: 'Fair', color: '#e8a838', width: '50%' };
+    if (score <= 3) return { label: 'Good', color: '#007a4d', width: '75%' };
+    return { label: 'Strong', color: '#007a4d', width: '100%' };
+  };
+
+  const pwdStrength = getPasswordStrength(password);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    if (password.length < 6) {
+      setError('Password must be at least 6 characters long.');
+      return;
+    }
     setLoading(true);
 
     const { error } = await signUp({
@@ -87,6 +107,14 @@ export default function SignUpPage() {
                   {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </button>
               </div>
+              {password.length > 0 && (
+                <div className="mt-2">
+                  <div className="h-1.5 w-full overflow-hidden rounded-full bg-surface-container-high">
+                    <div className="h-full rounded-full transition-all duration-300" style={{ width: pwdStrength.width, background: pwdStrength.color }} />
+                  </div>
+                  <p className="mt-1 text-xs text-on-surface-variant">Password strength: <span className="font-semibold" style={{ color: pwdStrength.color }}>{pwdStrength.label}</span></p>
+                </div>
+              )}
             </div>
 
             <button type="submit" disabled={loading} className="fx-btn-primary w-full disabled:opacity-50">

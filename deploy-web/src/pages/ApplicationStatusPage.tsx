@@ -108,7 +108,7 @@ export default function ApplicationStatusPage() {
         <Link
           to="/subscriber-profile"
           className="mb-4 inline-flex items-center text-sm font-medium hover:underline"
-          style={{ fontFamily: "'Montserrat', sans-serif", color: '#123f5c' }}
+          style={{ color: '#123f5c' }}
         >
           <ArrowLeft className="mr-1 h-4 w-4" />
           Back to Subscriber Profile
@@ -116,13 +116,13 @@ export default function ApplicationStatusPage() {
 
         <h1
           className="mb-2 text-3xl font-bold"
-          style={{ fontFamily: "'Playfair Display', serif", color: '#123f5c' }}
+          style={{ color: '#123f5c' }}
         >
           Application Status
         </h1>
         <p
           className="mb-8 text-sm"
-          style={{ fontFamily: "'Montserrat', sans-serif", color: '#72787e' }}
+          style={{ color: '#72787e' }}
         >
           Track your listing application and next steps.
         </p>
@@ -136,7 +136,7 @@ export default function ApplicationStatusPage() {
         {error && (
           <div
             className="mb-6 flex items-center gap-3 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700"
-            style={{ fontFamily: "'Montserrat', sans-serif" }}
+            
           >
             <AlertCircle className="h-5 w-5 flex-shrink-0" />
             {error}
@@ -145,13 +145,13 @@ export default function ApplicationStatusPage() {
 
         {!loading && !application && (
           <div className="rounded-2xl border border-outline-variant bg-white p-8 text-center" style={{ boxShadow: '0 4px 10px rgba(0,0,0,0.08)' }}>
-            <p className="mb-6 text-sm text-on-surface-variant" style={{ fontFamily: "'Montserrat', sans-serif" }}>
+            <p className="mb-6 text-sm text-on-surface-variant" >
               You have not submitted an application yet.
             </p>
             <Link
               to="/listers-portal"
               className="inline-flex items-center rounded-lg bg-primary px-6 py-3 text-sm font-semibold text-white hover:opacity-90"
-              style={{ fontFamily: "'Montserrat', sans-serif" }}
+              
             >
               Start Application
             </Link>
@@ -163,11 +163,11 @@ export default function ApplicationStatusPage() {
             <div className="mb-6 flex items-center justify-between">
               <span
                 className={`rounded-full border px-3 py-1 text-xs font-semibold ${statusBadgeClasses(status)}`}
-                style={{ fontFamily: "'Montserrat', sans-serif" }}
+                
               >
                 {statusLabel(status)}
               </span>
-              <span className="text-xs text-on-surface-variant" style={{ fontFamily: "'Montserrat', sans-serif" }}>
+              <span className="text-xs text-on-surface-variant" >
                 Submitted {formatDate(application.created_at)}
               </span>
             </div>
@@ -178,10 +178,10 @@ export default function ApplicationStatusPage() {
                   <Store className="h-5 w-5 text-primary" />
                 </div>
                 <div>
-                  <p className="text-xs text-on-surface-variant" style={{ fontFamily: "'Montserrat', sans-serif" }}>
+                  <p className="text-xs text-on-surface-variant" >
                     Trading Name
                   </p>
-                  <p className="font-semibold text-on-surface" style={{ fontFamily: "'Montserrat', sans-serif" }}>
+                  <p className="font-semibold text-on-surface" >
                     {getTradingName(application)}
                   </p>
                 </div>
@@ -192,10 +192,10 @@ export default function ApplicationStatusPage() {
                   <Package className="h-5 w-5 text-primary" />
                 </div>
                 <div>
-                  <p className="text-xs text-on-surface-variant" style={{ fontFamily: "'Montserrat', sans-serif" }}>
+                  <p className="text-xs text-on-surface-variant" >
                     Portfolio Type
                   </p>
-                  <p className="font-semibold text-on-surface" style={{ fontFamily: "'Montserrat', sans-serif" }}>
+                  <p className="font-semibold text-on-surface" >
                     {getPortfolioTypeLabel(application)}
                   </p>
                 </div>
@@ -206,10 +206,10 @@ export default function ApplicationStatusPage() {
                   <Calendar className="h-5 w-5 text-primary" />
                 </div>
                 <div>
-                  <p className="text-xs text-on-surface-variant" style={{ fontFamily: "'Montserrat', sans-serif" }}>
+                  <p className="text-xs text-on-surface-variant" >
                     Submission Date
                   </p>
-                  <p className="font-semibold text-on-surface" style={{ fontFamily: "'Montserrat', sans-serif" }}>
+                  <p className="font-semibold text-on-surface" >
                     {formatDate(application.created_at)}
                   </p>
                 </div>
@@ -221,7 +221,7 @@ export default function ApplicationStatusPage() {
                 <button
                   onClick={handleUpdate}
                   className="flex-1 rounded-lg bg-primary py-3 text-sm font-semibold text-white hover:opacity-90"
-                  style={{ fontFamily: "'Montserrat', sans-serif" }}
+                  
                 >
                   Update Application
                 </button>
@@ -231,7 +231,7 @@ export default function ApplicationStatusPage() {
                   onClick={handleCancel}
                   disabled={cancelling}
                   className="flex-1 rounded-lg border border-outline-variant bg-white py-3 text-sm font-semibold text-on-surface hover:bg-surface-container-low disabled:opacity-60"
-                  style={{ fontFamily: "'Montserrat', sans-serif" }}
+                  
                 >
                   {cancelling ? 'Cancelling...' : 'Cancel Application'}
                 </button>
@@ -240,7 +240,7 @@ export default function ApplicationStatusPage() {
                 <Link
                   to="/subscriber-profile"
                   className="flex-1 rounded-lg bg-primary py-3 text-center text-sm font-semibold text-white hover:opacity-90"
-                  style={{ fontFamily: "'Montserrat', sans-serif" }}
+                  
                 >
                   Back to Profile
                 </Link>

@@ -86,8 +86,8 @@ export default function VenueQuoteRequestsPage() {
     return (
       <div className="fx-container fx-section">
         <div className="mx-auto max-w-2xl">
-          <Link to="/venue-dashboard" className="mb-4 inline-flex items-center text-sm font-medium hover:underline" style={{ fontFamily: "'Montserrat', sans-serif", color: '#123f5c' }}><ArrowLeft className="mr-1 h-4 w-4" /> Back to Venue Dashboard</Link>
-          <h1 className="mb-2 text-3xl font-bold" style={{ fontFamily: "'Playfair Display', serif", color: '#123f5c' }}>Quote Requests</h1>
+          <Link to="/venue-dashboard" className="mb-4 inline-flex items-center text-sm font-medium hover:underline" style={{ color: '#123f5c' }}><ArrowLeft className="mr-1 h-4 w-4" /> Back to Venue Dashboard</Link>
+          <h1 className="mb-2 text-3xl font-bold" style={{ color: '#123f5c' }}>Quote Requests</h1>
           <p className="mb-6 text-sm text-on-surface-variant">This feature is available on paid venue plans.</p>
           <div className="rounded-xl border border-amber-200 bg-amber-50 p-6">
             <h2 className="mb-2 font-display text-lg font-semibold text-amber-800">Upgrade required</h2>
@@ -103,8 +103,8 @@ export default function VenueQuoteRequestsPage() {
     return (
       <div className="fx-container fx-section">
         <div className="mx-auto max-w-2xl">
-          <Link to="/venue-dashboard" className="mb-4 inline-flex items-center text-sm font-medium hover:underline" style={{ fontFamily: "'Montserrat', sans-serif", color: '#123f5c' }}><ArrowLeft className="mr-1 h-4 w-4" /> Back to Venue Dashboard</Link>
-          <h1 className="mb-2 text-3xl font-bold" style={{ fontFamily: "'Playfair Display', serif", color: '#123f5c' }}>Quote Requests</h1>
+          <Link to="/venue-dashboard" className="mb-4 inline-flex items-center text-sm font-medium hover:underline" style={{ color: '#123f5c' }}><ArrowLeft className="mr-1 h-4 w-4" /> Back to Venue Dashboard</Link>
+          <h1 className="mb-2 text-3xl font-bold" style={{ color: '#123f5c' }}>Quote Requests</h1>
           <p className="mb-6 text-sm text-on-surface-variant">Create your venue listing first.</p>
           <div className="rounded-xl border border-outline-variant bg-surface-container p-6 text-center">
             <p className="text-sm">You don’t have a venue listing yet. Please create it in “Update Venue Portfolio” before managing quote requests.</p>
@@ -118,9 +118,9 @@ export default function VenueQuoteRequestsPage() {
   return (
     <div className="fx-container fx-section">
       <div className="mx-auto max-w-3xl">
-        <Link to="/venue-dashboard" className="mb-4 inline-flex items-center text-sm font-medium hover:underline" style={{ fontFamily: "'Montserrat', sans-serif", color: '#123f5c' }}><ArrowLeft className="mr-1 h-4 w-4" /> Back to Venue Dashboard</Link>
-        <h1 className="mb-2 text-3xl font-bold" style={{ fontFamily: "'Playfair Display', serif", color: '#123f5c' }}>Quote Requests</h1>
-        <p className="mb-6 text-sm" style={{ fontFamily: "'Montserrat', sans-serif", color: '#72787e' }}>{listing.name}</p>
+        <Link to="/venue-dashboard" className="mb-4 inline-flex items-center text-sm font-medium hover:underline" style={{ color: '#123f5c' }}><ArrowLeft className="mr-1 h-4 w-4" /> Back to Venue Dashboard</Link>
+        <h1 className="mb-2 text-3xl font-bold" style={{ color: '#123f5c' }}>Quote Requests</h1>
+        <p className="mb-6 text-sm" style={{ color: '#72787e' }}>{listing.name}</p>
 
         {requests.length === 0 ? (
           <div className="rounded-xl border border-outline-variant bg-white p-10 text-center shadow-sm">

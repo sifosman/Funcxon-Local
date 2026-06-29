@@ -95,7 +95,7 @@ export default function ApplicationStep1Page() {
         <Link
           to="/portfolio-type"
           className="mb-4 inline-flex items-center text-sm font-medium hover:underline"
-          style={{ fontFamily: "'Montserrat', sans-serif", color: '#123f5c' }}
+          style={{ color: '#123f5c' }}
         >
           <ArrowLeft className="mr-1 h-4 w-4" />
           Back
@@ -104,7 +104,7 @@ export default function ApplicationStep1Page() {
         <div className="mb-6 flex items-center justify-between">
           <h1
             className="text-2xl font-bold"
-            style={{ fontFamily: "'Playfair Display', serif", color: '#123f5c' }}
+            style={{ color: '#123f5c' }}
           >
             Step 1: Company Details
           </h1>
@@ -117,7 +117,7 @@ export default function ApplicationStep1Page() {
               <div key={field.key}>
                 <label
                   className="mb-1 block text-xs font-semibold uppercase tracking-wider text-on-surface-variant"
-                  style={{ fontFamily: "'Montserrat', sans-serif" }}
+                  
                 >
                   {field.label}
                   {field.required ? ' *' : ''}
@@ -130,7 +130,7 @@ export default function ApplicationStep1Page() {
                   className={`w-full rounded-lg border px-4 py-3 text-sm outline-none transition-colors ${
                     errors[field.key] ? 'border-red-500' : 'border-outline-variant focus:border-primary'
                   }`}
-                  style={{ fontFamily: "'Montserrat', sans-serif" }}
+                  
                 />
                 {errors[field.key] && <p className="mt-1 text-xs text-red-500">{errors[field.key]}</p>}
               </div>
@@ -159,7 +159,7 @@ export default function ApplicationStep1Page() {
               <div key={field.key}>
                 <label
                   className="mb-1 block text-xs font-semibold uppercase tracking-wider text-on-surface-variant"
-                  style={{ fontFamily: "'Montserrat', sans-serif" }}
+                  
                 >
                   {field.label}
                   {field.required ? ' *' : ''}
@@ -172,7 +172,7 @@ export default function ApplicationStep1Page() {
                   className={`w-full rounded-lg border px-4 py-3 text-sm outline-none transition-colors ${
                     errors[field.key] ? 'border-red-500' : 'border-outline-variant focus:border-primary'
                   }`}
-                  style={{ fontFamily: "'Montserrat', sans-serif" }}
+                  
                 />
                 {errors[field.key] && <p className="mt-1 text-xs text-red-500">{errors[field.key]}</p>}
               </div>
@@ -184,7 +184,7 @@ export default function ApplicationStep1Page() {
               <div key={field.key}>
                 <label
                   className="mb-1 block text-xs font-semibold uppercase tracking-wider text-on-surface-variant"
-                  style={{ fontFamily: "'Montserrat', sans-serif" }}
+                  
                 >
                   {field.label}
                 </label>
@@ -196,7 +196,7 @@ export default function ApplicationStep1Page() {
                   className={`w-full rounded-lg border px-4 py-3 text-sm outline-none transition-colors ${
                     errors[field.key] ? 'border-red-500' : 'border-outline-variant focus:border-primary'
                   }`}
-                  style={{ fontFamily: "'Montserrat', sans-serif" }}
+                  
                 />
                 {errors[field.key] && <p className="mt-1 text-xs text-red-500">{errors[field.key]}</p>}
               </div>
@@ -208,14 +208,14 @@ export default function ApplicationStep1Page() {
           <Link
             to="/portfolio-type"
             className="rounded-lg border border-outline-variant px-6 py-3 text-sm font-semibold text-on-surface hover:bg-surface-container-low"
-            style={{ fontFamily: "'Montserrat', sans-serif" }}
+            
           >
             Previous
           </Link>
           <button
             onClick={handleNext}
             className="rounded-lg bg-primary px-8 py-3 text-sm font-semibold text-white hover:opacity-90"
-            style={{ fontFamily: "'Montserrat', sans-serif", background: '#123f5c' }}
+            style={{ background: '#123f5c' }}
           >
             Next
           </button>

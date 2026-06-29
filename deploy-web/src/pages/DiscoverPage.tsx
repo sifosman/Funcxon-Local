@@ -1,6 +1,8 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
+import { useAuth } from '../auth/AuthContext';
+import { toggleFavourite, getFavourites } from '../lib/favourites';
 import { MapPin } from 'lucide-react';
 
 interface Listing {
@@ -30,12 +32,31 @@ const PROVINCES = ['All', 'Gauteng', 'Western Cape', 'KwaZulu-Natal', 'Eastern C
 export default function DiscoverPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const activeCategory = searchParams.get('category') || 'all';
+  const activeProvince = searchParams.get('province') || 'All';
+  const activeLocation = searchParams.get('location') || '';
+  const { user } = useAuth();
   const [listings, setListings] = useState<Listing[]>([]);
   const [loading, setLoading] = useState(true);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [selectedProvince, setSelectedProvince] = useState('All');
+  const [searchQuery, setSearchQuery] = useState(activeLocation);
+  const [selectedProvince, setSelectedProvince] = useState(activeProvince);
+  const [favIds, setFavIds] = useState<Set<string>>(new Set());
 
   useEffect(() => { fetchListings(); }, [activeCategory, selectedProvince]);
+
+  const loadFavourites = useCallback(async () => {
+    if (!user) return;
+    try {
+      const { vendorIds, venueIds } = await getFavourites(user);
+      const ids = new Set<string>();
+      vendorIds.forEach(id => ids.add(`vendor-${id}`));
+      venueIds.forEach(id => ids.add(`venue-${id}`));
+      setFavIds(ids);
+    } catch (err) {
+      console.error('Error loading favourites:', err);
+    }
+  }, [user]);
+
+  useEffect(() => { loadFavourites(); }, [loadFavourites]);
 
   async function fetchListings() {
     setLoading(true);
@@ -67,6 +88,24 @@ export default function DiscoverPage() {
     }
   }
 
+  const handleToggleFav = async (e: React.MouseEvent, id: number, type: 'vendor' | 'venue') => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!user) return;
+    const key = `${type}-${id}`;
+    try {
+      await toggleFavourite(user, id, type);
+      setFavIds(prev => {
+        const next = new Set(prev);
+        if (next.has(key)) next.delete(key);
+        else next.add(key);
+        return next;
+      });
+    } catch (err) {
+      console.error('Error toggling favourite:', err);
+    }
+  };
+
   const filtered = listings.filter(item => {
     if (!searchQuery) return true;
     const q = searchQuery.toLowerCase();
@@ -89,7 +128,7 @@ export default function DiscoverPage() {
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
               className="flex-1 border-none bg-transparent p-0 text-sm text-on-surface placeholder-on-surface-variant focus:outline-none focus:ring-0"
-              style={{ fontFamily: "'Montserrat', sans-serif" }}
+              
             />
             {searchQuery && (
               <button onClick={() => setSearchQuery('')} className="text-on-surface-variant hover:text-on-surface">
@@ -122,12 +161,12 @@ export default function DiscoverPage() {
       {/* ── Filter Bar ── */}
       <div className="border-b border-outline-variant bg-surface py-3">
         <div className="fx-container flex flex-wrap items-center gap-3">
-          <span className="text-xs font-semibold uppercase tracking-wider text-on-surface-variant" style={{ fontFamily: "'Montserrat', sans-serif" }}>Filter:</span>
+          <span className="text-xs font-semibold uppercase tracking-wider text-on-surface-variant" >Filter:</span>
           <select
             value={selectedProvince}
             onChange={e => setSelectedProvince(e.target.value)}
             className="rounded-lg border border-outline-variant bg-white px-3 py-2 text-sm text-on-surface focus:border-primary-container focus:outline-none"
-            style={{ fontFamily: "'Montserrat', sans-serif" }}
+            
           >
             {PROVINCES.map(p => <option key={p} value={p}>{p === 'All' ? 'All Provinces' : p}</option>)}
           </select>
@@ -136,7 +175,7 @@ export default function DiscoverPage() {
 
       {/* ── Results Grid ── */}
       <div className="fx-container py-8">
-        <p className="mb-6 text-sm text-on-surface-variant" style={{ fontFamily: "'Montserrat', sans-serif" }}>
+        <p className="mb-6 text-sm text-on-surface-variant" >
           {loading ? 'Loading...' : `${filtered.length} result${filtered.length !== 1 ? 's' : ''} found`}
         </p>
 
@@ -149,7 +188,7 @@ export default function DiscoverPage() {
         ) : filtered.length === 0 ? (
           <div className="py-20 text-center">
             <span className="material-symbols-outlined text-5xl text-on-surface-variant">location_off</span>
-            <p className="mt-4 text-base text-on-surface-variant" style={{ fontFamily: "'Montserrat', sans-serif" }}>No listings found</p>
+            <p className="mt-4 text-base text-on-surface-variant" >No listings found</p>
             <p className="mt-1 text-sm text-on-surface-variant">Try adjusting your filters or search query</p>
           </div>
         ) : (
@@ -168,35 +207,35 @@ export default function DiscoverPage() {
                   }
                   <div className="absolute right-2 top-2">
                     <button
-                      onClick={e => e.preventDefault()}
-                      className="flex h-8 w-8 items-center justify-center rounded-full bg-white/90 text-on-surface-variant shadow-sm transition-colors hover:bg-white hover:text-error"
+                      onClick={e => handleToggleFav(e, Number(item.id), item.type!)}
+                      className="flex h-8 w-8 items-center justify-center rounded-full bg-white/90 shadow-sm transition-colors hover:bg-white"
                     >
-                      <span className="material-symbols-outlined text-[18px]">favorite</span>
+                      <span className="material-symbols-outlined text-[18px]" style={{ fontVariationSettings: favIds.has(`${item.type}-${item.id}`) ? "'FILL' 1" : undefined, color: favIds.has(`${item.type}-${item.id}`) ? '#aa7478' : undefined }}>favorite</span>
                     </button>
                   </div>
                   {item.category && (
                     <div
                       className="absolute left-2 top-2 rounded-full px-2 py-0.5 text-xs font-semibold"
-                      style={{ background: '#b9c4eb', color: '#1a2544', fontFamily: "'Montserrat', sans-serif" }}
+                      style={{ background: '#b9c4eb', color: '#1a2544' }}
                     >
                       {item.category}
                     </div>
                   )}
                 </div>
                 <div className="p-4">
-                  <h3 className="mb-1 truncate text-[18px] font-semibold text-primary" style={{ fontFamily: "'Montserrat', sans-serif" }}>
+                  <h3 className="mb-1 truncate text-[18px] font-semibold text-primary" >
                     {item.name}
                   </h3>
-                  <p className="mb-3 flex items-center text-xs text-on-surface-variant" style={{ fontFamily: "'Montserrat', sans-serif" }}>
+                  <p className="mb-3 flex items-center text-xs text-on-surface-variant" >
                     <span className="material-symbols-outlined mr-1 text-sm">location_on</span>
                     {item.city || item.province || 'South Africa'}
                   </p>
                   <div className="flex items-center justify-between border-t pt-3" style={{ borderColor: '#f7f5f0' }}>
-                    <span className="text-sm font-semibold" style={{ fontFamily: "'Montserrat', sans-serif", color: '#123f5c' }}>
+                    <span className="text-sm font-semibold" style={{ color: '#123f5c' }}>
                       {item.price_range ? item.price_range : 'Request quote'}
                     </span>
                     {item.rating && (
-                      <span className="flex items-center text-xs" style={{ fontFamily: "'Montserrat', sans-serif", color: '#72787e' }}>
+                      <span className="flex items-center text-xs" style={{ color: '#72787e' }}>
                         <span className="material-symbols-outlined mr-0.5 text-sm" style={{ color: '#aa7478', fontVariationSettings: "'FILL' 1" }}>star</span>
                         {item.rating}
                       </span>

@@ -84,9 +84,9 @@ export default function CalendarUpdatesPage() {
   return (
     <div className="fx-container fx-section">
       <div className="mx-auto max-w-2xl">
-        <Link to="/vendor-dashboard" className="mb-4 inline-flex items-center text-sm font-medium hover:underline" style={{ fontFamily: "'Montserrat', sans-serif", color: '#123f5c' }}><ArrowLeft className="mr-1 h-4 w-4" /> Back to Vendor Dashboard</Link>
-        <h1 className="mb-2 text-3xl font-bold" style={{ fontFamily: "'Playfair Display', serif", color: '#123f5c' }}>Calendar Updates</h1>
-        <p className="mb-6 text-sm" style={{ fontFamily: "'Montserrat', sans-serif", color: '#72787e' }}>Tasks with due dates and calendar events appear here.</p>
+        <Link to="/vendor-dashboard" className="mb-4 inline-flex items-center text-sm font-medium hover:underline" style={{ color: '#123f5c' }}><ArrowLeft className="mr-1 h-4 w-4" /> Back to Vendor Dashboard</Link>
+        <h1 className="mb-2 text-3xl font-bold" style={{ color: '#123f5c' }}>Calendar Updates</h1>
+        <p className="mb-6 text-sm" style={{ color: '#72787e' }}>Tasks with due dates and calendar events appear here.</p>
 
         <div className="mb-6 rounded-xl border border-outline-variant bg-white p-4 shadow-sm">
           <div className="grid gap-3 md:grid-cols-3">

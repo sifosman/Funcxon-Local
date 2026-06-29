@@ -46,8 +46,8 @@ export default function VenueAnalyticsPage() {
     return (
       <div className="fx-container fx-section">
         <div className="mx-auto max-w-2xl">
-          <Link to="/account" className="mb-4 inline-flex items-center text-sm font-medium hover:underline" style={{ fontFamily: "'Montserrat', sans-serif", color: '#123f5c' }}><ArrowLeft className="mr-1 h-4 w-4" /> Back to Account</Link>
-          <h1 className="mb-2 text-3xl font-bold" style={{ fontFamily: "'Playfair Display', serif", color: '#123f5c' }}>Venue Analytics</h1>
+          <Link to="/account" className="mb-4 inline-flex items-center text-sm font-medium hover:underline" style={{ color: '#123f5c' }}><ArrowLeft className="mr-1 h-4 w-4" /> Back to Account</Link>
+          <h1 className="mb-2 text-3xl font-bold" style={{ color: '#123f5c' }}>Venue Analytics</h1>
           <p className="mb-6 text-sm text-on-surface-variant">Analytics is available on paid venue plans.</p>
           <div className="rounded-xl border border-amber-200 bg-amber-50 p-6">
             <h2 className="mb-2 font-display text-lg font-semibold text-amber-800">Upgrade required</h2>
@@ -63,8 +63,8 @@ export default function VenueAnalyticsPage() {
     return (
       <div className="fx-container fx-section">
         <div className="mx-auto max-w-2xl">
-          <Link to="/account" className="mb-4 inline-flex items-center text-sm font-medium hover:underline" style={{ fontFamily: "'Montserrat', sans-serif", color: '#123f5c' }}><ArrowLeft className="mr-1 h-4 w-4" /> Back to Account</Link>
-          <h1 className="mb-2 text-3xl font-bold" style={{ fontFamily: "'Playfair Display', serif", color: '#123f5c' }}>Venue Analytics</h1>
+          <Link to="/account" className="mb-4 inline-flex items-center text-sm font-medium hover:underline" style={{ color: '#123f5c' }}><ArrowLeft className="mr-1 h-4 w-4" /> Back to Account</Link>
+          <h1 className="mb-2 text-3xl font-bold" style={{ color: '#123f5c' }}>Venue Analytics</h1>
           <p className="mb-6 text-sm text-on-surface-variant">Create your venue listing first.</p>
           <div className="rounded-xl border border-outline-variant bg-surface-container p-6 text-center">
             <p className="text-sm">You don’t have a venue listing yet. Please create it in “Update Venue Portfolio”.</p>
@@ -78,9 +78,9 @@ export default function VenueAnalyticsPage() {
   return (
     <div className="fx-container fx-section">
       <div className="mx-auto max-w-3xl">
-        <Link to="/account" className="mb-4 inline-flex items-center text-sm font-medium hover:underline" style={{ fontFamily: "'Montserrat', sans-serif", color: '#123f5c' }}><ArrowLeft className="mr-1 h-4 w-4" /> Back to Account</Link>
-        <h1 className="mb-2 text-3xl font-bold" style={{ fontFamily: "'Playfair Display', serif", color: '#123f5c' }}>Venue Analytics</h1>
-        <p className="mb-6 text-sm" style={{ fontFamily: "'Montserrat', sans-serif", color: '#72787e' }}>{listing.name}</p>
+        <Link to="/account" className="mb-4 inline-flex items-center text-sm font-medium hover:underline" style={{ color: '#123f5c' }}><ArrowLeft className="mr-1 h-4 w-4" /> Back to Account</Link>
+        <h1 className="mb-2 text-3xl font-bold" style={{ color: '#123f5c' }}>Venue Analytics</h1>
+        <p className="mb-6 text-sm" style={{ color: '#72787e' }}>{listing.name}</p>
 
         <div className="grid gap-4 md:grid-cols-2">
           <div className="rounded-xl border border-outline-variant bg-white p-6 shadow-sm">

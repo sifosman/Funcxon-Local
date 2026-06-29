@@ -44,14 +44,14 @@ export default function PortfolioProfilePage() {
         <Link
           to="/subscriber-suite"
           className="mb-4 inline-flex items-center text-sm font-medium hover:underline"
-          style={{ fontFamily: "'Montserrat', sans-serif", color: '#123f5c' }}
+          style={{ color: '#123f5c' }}
         >
           <ArrowLeft className="mr-1 h-4 w-4" />
           Back to Subscriber Suite
         </Link>
 
         <div className="mb-6 flex items-center justify-between">
-          <h1 className="text-3xl font-bold" style={{ fontFamily: "'Playfair Display', serif", color: '#123f5c' }}>
+          <h1 className="text-3xl font-bold" style={{ color: '#123f5c' }}>
             Portfolio Profile
           </h1>
           <div className="rounded-full px-3 py-1 text-xs font-semibold" style={{ backgroundColor: '#f2f7ff', color: '#123f5c' }}>
@@ -63,13 +63,13 @@ export default function PortfolioProfilePage() {
 
         {!loading && !portfolio && (
           <div className="rounded-2xl border border-outline-variant bg-white p-8 text-center" style={{ boxShadow: '0 4px 10px rgba(0,0,0,0.08)' }}>
-            <p className="mb-4 text-sm" style={{ fontFamily: "'Montserrat', sans-serif", color: '#72787e' }}>
+            <p className="mb-4 text-sm" style={{ color: '#72787e' }}>
               You do not have an approved portfolio yet. Complete your application to create one.
             </p>
             <Link
               to="/listers-portal"
               className="inline-flex rounded-lg bg-primary px-6 py-3 text-sm font-semibold text-white hover:opacity-90"
-              style={{ fontFamily: "'Montserrat', sans-serif", background: '#123f5c' }}
+              style={{ background: '#123f5c' }}
             >
               Start Application
             </Link>
@@ -84,9 +84,9 @@ export default function PortfolioProfilePage() {
                   <img src={image} alt={title} className="h-40 w-full rounded-xl object-cover md:w-40" />
                 )}
                 <div className="flex-1">
-                  <h2 className="mb-1 text-xl font-bold" style={{ fontFamily: "'Playfair Display', serif", color: '#123f5c' }}>{title}</h2>
-                  <p className="mb-3 text-sm" style={{ fontFamily: "'Montserrat', sans-serif", color: '#72787e' }}>{description}</p>
-                  <div className="flex items-center gap-4 text-sm" style={{ fontFamily: "'Montserrat', sans-serif" }}>
+                  <h2 className="mb-1 text-xl font-bold" style={{ color: '#123f5c' }}>{title}</h2>
+                  <p className="mb-3 text-sm" style={{ color: '#72787e' }}>{description}</p>
+                  <div className="flex items-center gap-4 text-sm" >
                     <span className="flex items-center gap-1"><Star className="h-4 w-4 text-amber-500" /> {rating.toFixed(1)} ({reviewCount})</span>
                     {portfolio.location && <span className="flex items-center gap-1"><MapPin className="h-4 w-4" /> {portfolio.location}</span>}
                   </div>
@@ -96,8 +96,8 @@ export default function PortfolioProfilePage() {
 
             <div className="grid gap-4 md:grid-cols-2">
               <div className="rounded-2xl border border-outline-variant bg-white p-6" style={{ boxShadow: '0 4px 10px rgba(0,0,0,0.08)' }}>
-                <h3 className="mb-4 font-bold" style={{ fontFamily: "'Playfair Display', serif", color: '#123f5c' }}>Contact</h3>
-                <div className="space-y-3 text-sm" style={{ fontFamily: "'Montserrat', sans-serif" }}>
+                <h3 className="mb-4 font-bold" style={{ color: '#123f5c' }}>Contact</h3>
+                <div className="space-y-3 text-sm" >
                   {portfolio.email && <p className="flex items-center gap-2"><Mail className="h-4 w-4" /> {portfolio.email}</p>}
                   {portfolio.whatsapp_number && <p className="flex items-center gap-2"><Phone className="h-4 w-4" /> {portfolio.whatsapp_number}</p>}
                   {portfolio.website_url && <p className="flex items-center gap-2"><Globe className="h-4 w-4" /> {portfolio.website_url}</p>}
@@ -106,15 +106,15 @@ export default function PortfolioProfilePage() {
               </div>
 
               <div className="rounded-2xl border border-outline-variant bg-white p-6" style={{ boxShadow: '0 4px 10px rgba(0,0,0,0.08)' }}>
-                <h3 className="mb-4 font-bold" style={{ fontFamily: "'Playfair Display', serif", color: '#123f5c' }}>Subscription</h3>
-                <p className="text-sm" style={{ fontFamily: "'Montserrat', sans-serif" }}>
+                <h3 className="mb-4 font-bold" style={{ color: '#123f5c' }}>Subscription</h3>
+                <p className="text-sm" >
                   <span className="font-semibold">Tier:</span> {portfolio.subscription_tier || portfolio.subscription_plan || 'Free'}
                 </p>
-                <p className="text-sm" style={{ fontFamily: "'Montserrat', sans-serif" }}>
+                <p className="text-sm" >
                   <span className="font-semibold">Status:</span> {portfolio.subscription_status || 'Active'}
                 </p>
                 {portfolio.subscription_expires_at && (
-                  <p className="text-sm" style={{ fontFamily: "'Montserrat', sans-serif" }}>
+                  <p className="text-sm" >
                     <span className="flex items-center gap-1"><Calendar className="h-4 w-4" /> Expires {new Date(portfolio.subscription_expires_at).toLocaleDateString('en-ZA')}</span>
                   </p>
                 )}
@@ -123,7 +123,7 @@ export default function PortfolioProfilePage() {
 
             {photos.length > 0 && (
               <div className="rounded-2xl border border-outline-variant bg-white p-6" style={{ boxShadow: '0 4px 10px rgba(0,0,0,0.08)' }}>
-                <h3 className="mb-4 flex items-center gap-2 font-bold" style={{ fontFamily: "'Playfair Display', serif", color: '#123f5c' }}>
+                <h3 className="mb-4 flex items-center gap-2 font-bold" style={{ color: '#123f5c' }}>
                   <Image className="h-5 w-5" /> Gallery
                 </h3>
                 <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
@@ -138,14 +138,14 @@ export default function PortfolioProfilePage() {
               <Link
                 to={updateRoute}
                 className="rounded-lg bg-primary px-6 py-3 text-sm font-semibold text-white hover:opacity-90"
-                style={{ fontFamily: "'Montserrat', sans-serif", background: '#123f5c' }}
+                style={{ background: '#123f5c' }}
               >
                 Update Portfolio
               </Link>
               <Link
                 to={type === 'vendor' ? `/vendor/${portfolio.id}` : type === 'venue' ? `/venue/${portfolio.id}` : '#'}
                 className="rounded-lg border border-outline-variant bg-white px-6 py-3 text-sm font-semibold text-on-surface hover:bg-surface-container-low"
-                style={{ fontFamily: "'Montserrat', sans-serif" }}
+                
               >
                 View Public Profile
               </Link>

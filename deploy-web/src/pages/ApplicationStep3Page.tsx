@@ -76,14 +76,14 @@ export default function ApplicationStep3Page() {
         <Link
           to="/apply/step2"
           className="mb-4 inline-flex items-center text-sm font-medium hover:underline"
-          style={{ fontFamily: "'Montserrat', sans-serif", color: '#123f5c' }}
+          style={{ color: '#123f5c' }}
         >
           <ArrowLeft className="mr-1 h-4 w-4" />
           Back
         </Link>
 
         <div className="mb-6 flex items-center justify-between">
-          <h1 className="text-2xl font-bold" style={{ fontFamily: "'Playfair Display', serif", color: '#123f5c' }}>
+          <h1 className="text-2xl font-bold" style={{ color: '#123f5c' }}>
             Step 3: Portfolio Media
           </h1>
           <ApplicationProgress currentStep={3} />
@@ -91,7 +91,7 @@ export default function ApplicationStep3Page() {
 
         <div className="space-y-8">
           <div>
-            <label className="mb-2 block text-xs font-semibold uppercase tracking-wider text-on-surface-variant" style={{ fontFamily: "'Montserrat', sans-serif" }}>
+            <label className="mb-2 block text-xs font-semibold uppercase tracking-wider text-on-surface-variant" >
               Portfolio Images * <span className="font-normal normal-case">(at least one)</span>
             </label>
             <div className="rounded-lg border border-dashed border-outline-variant p-6 text-center">
@@ -103,7 +103,7 @@ export default function ApplicationStep3Page() {
                 className="hidden"
                 id="image-upload"
               />
-              <label htmlFor="image-upload" className="inline-flex cursor-pointer items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white hover:opacity-90" style={{ fontFamily: "'Montserrat', sans-serif", background: '#123f5c' }}>
+              <label htmlFor="image-upload" className="inline-flex cursor-pointer items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white hover:opacity-90" style={{ background: '#123f5c' }}>
                 <Upload className="h-4 w-4" /> Upload Images
               </label>
             </div>
@@ -125,7 +125,7 @@ export default function ApplicationStep3Page() {
           </div>
 
           <div>
-            <label className="mb-2 block text-xs font-semibold uppercase tracking-wider text-on-surface-variant" style={{ fontFamily: "'Montserrat', sans-serif" }}>
+            <label className="mb-2 block text-xs font-semibold uppercase tracking-wider text-on-surface-variant" >
               Portfolio Videos
             </label>
             <div className="rounded-lg border border-dashed border-outline-variant p-6 text-center">
@@ -137,14 +137,14 @@ export default function ApplicationStep3Page() {
                 className="hidden"
                 id="video-upload"
               />
-              <label htmlFor="video-upload" className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-outline-variant bg-white px-4 py-2 text-sm font-semibold text-on-surface hover:bg-surface-container-low" style={{ fontFamily: "'Montserrat', sans-serif" }}>
+              <label htmlFor="video-upload" className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-outline-variant bg-white px-4 py-2 text-sm font-semibold text-on-surface hover:bg-surface-container-low" >
                 <Upload className="h-4 w-4" /> Upload Videos
               </label>
             </div>
             <div className="mt-3 space-y-2">
               {state.step3.videos.map((vid, i) => (
                 <div key={i} className="flex items-center justify-between rounded-lg border border-outline-variant p-3">
-                  <span className="text-sm" style={{ fontFamily: "'Montserrat', sans-serif" }}>{vid.name}</span>
+                  <span className="text-sm" >{vid.name}</span>
                   <button type="button" onClick={() => removeFile('videos', i)} className="text-on-surface-variant"><X className="h-4 w-4" /></button>
                 </div>
               ))}
@@ -152,7 +152,7 @@ export default function ApplicationStep3Page() {
           </div>
 
           <div>
-            <label className="mb-2 block text-xs font-semibold uppercase tracking-wider text-on-surface-variant" style={{ fontFamily: "'Montserrat', sans-serif" }}>
+            <label className="mb-2 block text-xs font-semibold uppercase tracking-wider text-on-surface-variant" >
               Business Documents * <span className="font-normal normal-case">(ID copy and company logo required)</span>
             </label>
             <div className="grid gap-4 rounded-lg border border-dashed border-outline-variant p-6 md:grid-cols-2">
@@ -163,7 +163,7 @@ export default function ApplicationStep3Page() {
                   className="hidden"
                   id="id-copy-upload"
                 />
-                <label htmlFor="id-copy-upload" className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-outline-variant bg-white px-4 py-2 text-sm font-semibold text-on-surface hover:bg-surface-container-low" style={{ fontFamily: "'Montserrat', sans-serif" }}>
+                <label htmlFor="id-copy-upload" className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-outline-variant bg-white px-4 py-2 text-sm font-semibold text-on-surface hover:bg-surface-container-low" >
                   <Upload className="h-4 w-4" /> Upload ID Copy
                 </label>
               </div>
@@ -174,7 +174,7 @@ export default function ApplicationStep3Page() {
                   className="hidden"
                   id="logo-upload"
                 />
-                <label htmlFor="logo-upload" className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-outline-variant bg-white px-4 py-2 text-sm font-semibold text-on-surface hover:bg-surface-container-low" style={{ fontFamily: "'Montserrat', sans-serif" }}>
+                <label htmlFor="logo-upload" className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-outline-variant bg-white px-4 py-2 text-sm font-semibold text-on-surface hover:bg-surface-container-low" >
                   <Upload className="h-4 w-4" /> Upload Company Logo
                 </label>
               </div>
@@ -184,7 +184,7 @@ export default function ApplicationStep3Page() {
             <div className="mt-3 space-y-2">
               {state.step3.documents.map((doc, i) => (
                 <div key={i} className="flex items-center justify-between rounded-lg border border-outline-variant p-3">
-                  <span className="text-sm" style={{ fontFamily: "'Montserrat', sans-serif" }}>{doc.name}</span>
+                  <span className="text-sm" >{doc.name}</span>
                   <button type="button" onClick={() => removeFile('documents', i)} className="text-on-surface-variant"><X className="h-4 w-4" /></button>
                 </div>
               ))}
@@ -196,7 +196,7 @@ export default function ApplicationStep3Page() {
           <Link
             to="/apply/step2"
             className="rounded-lg border border-outline-variant px-6 py-3 text-sm font-semibold text-on-surface hover:bg-surface-container-low"
-            style={{ fontFamily: "'Montserrat', sans-serif" }}
+            
           >
             Previous
           </Link>
@@ -204,7 +204,7 @@ export default function ApplicationStep3Page() {
             onClick={handleNext}
             disabled={Object.values(uploading).some(Boolean)}
             className="rounded-lg bg-primary px-8 py-3 text-sm font-semibold text-white hover:opacity-90 disabled:opacity-60"
-            style={{ fontFamily: "'Montserrat', sans-serif", background: '#123f5c' }}
+            style={{ background: '#123f5c' }}
           >
             {Object.values(uploading).some(Boolean) ? <span className="flex items-center gap-2"><Loader2 className="h-4 w-4 animate-spin" /> Uploading...</span> : 'Next'}
           </button>

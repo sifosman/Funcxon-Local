@@ -195,9 +195,9 @@ export default function VendorQuoteCreatePage() {
   return (
     <div className="fx-container fx-section">
       <div className="mx-auto max-w-3xl">
-        <Link to="/quote-requests" className="mb-4 inline-flex items-center text-sm font-medium hover:underline" style={{ fontFamily: "'Montserrat', sans-serif", color: '#123f5c' }}><ArrowLeft className="mr-1 h-4 w-4" /> Back to Quote Requests</Link>
-        <h1 className="mb-2 text-3xl font-bold" style={{ fontFamily: "'Playfair Display', serif", color: '#123f5c' }}>Create Quote</h1>
-        <p className="mb-6 text-sm" style={{ fontFamily: "'Montserrat', sans-serif", color: '#72787e' }}>For: {clientName || quoteRequest?.name || 'Client'}</p>
+        <Link to="/quote-requests" className="mb-4 inline-flex items-center text-sm font-medium hover:underline" style={{ color: '#123f5c' }}><ArrowLeft className="mr-1 h-4 w-4" /> Back to Quote Requests</Link>
+        <h1 className="mb-2 text-3xl font-bold" style={{ color: '#123f5c' }}>Create Quote</h1>
+        <p className="mb-6 text-sm" style={{ color: '#72787e' }}>For: {clientName || quoteRequest?.name || 'Client'}</p>
 
         <div className="mb-6 rounded-xl border border-outline-variant bg-white p-5 shadow-sm">
           <h2 className="mb-3 font-display text-lg font-semibold" style={{ color: '#123f5c' }}>Request Details</h2>
