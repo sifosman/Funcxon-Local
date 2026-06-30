@@ -7,7 +7,7 @@ const NAV_LINKS = [
   { label: 'Home', href: '/' },
   { label: 'Venues', href: '/discover?category=venues' },
   { label: 'Vendors', href: '/discover?category=vendors' },
-  { label: 'Listers Portal', href: '/listers-portal' },
+  { label: "Listers Portal", href: '/listers-portal' },
 ];
 
 const USER_NAV = [
@@ -38,28 +38,40 @@ export default function WebHeader() {
   const isActive = (href: string) =>
     href === '/' ? location.pathname === '/' : location.pathname.startsWith(href.split('?')[0]);
 
-  return (
-    <header className="sticky top-0 z-50 w-full border-b border-border-subtle bg-brand-pink">
-      <div className="fx-container flex h-16 items-center justify-between">
+  const allNavLinks = [
+    ...NAV_LINKS,
+    ...(isLoggedIn ? USER_NAV : []),
+    ...(isLoggedIn && isVendor ? VENDOR_NAV : []),
+  ];
 
-        {/* Brand */}
-        <Link to="/" className="flex items-center gap-2">
-          <img src={logoUrl} alt="Funxon" className="h-10 w-10 object-contain" />
-          <span className="font-display text-2xl font-bold text-primary">Funxon</span>
+  return (
+    <header
+      className="sticky top-0 z-50 w-full border-b border-border-subtle"
+      style={{ backgroundColor: '#f7f5f0', boxShadow: '0 1px 3px rgba(0,0,0,0.06)' }}
+    >
+      <div className="fx-container flex h-16 items-center justify-between gap-4">
+
+        {/* Brand — logo only, no redundant text */}
+        <Link to="/" className="flex flex-shrink-0 items-center gap-2.5">
+          <img
+            src={logoUrl}
+            alt="Funxon"
+            className="h-11 w-auto object-contain"
+            style={{ maxHeight: '44px' }}
+          />
         </Link>
 
         {/* Desktop Nav */}
-        <nav className="hidden items-center gap-6 md:flex">
+        <nav className="hidden flex-1 items-center justify-center gap-1 lg:flex">
           {NAV_LINKS.map(({ label, href }) => (
             <Link
               key={label}
               to={href}
-              className={`text-sm transition-colors ${
+              className={`rounded-md px-3 py-2 text-sm transition-colors ${
                 isActive(href)
-                  ? 'border-b-2 border-secondary pb-0.5 text-primary font-semibold'
-                  : 'text-on-surface-variant hover:text-primary'
+                  ? 'bg-primary-muted font-semibold text-primary'
+                  : 'font-medium text-on-surface-variant hover:bg-surface-container-high hover:text-primary'
               }`}
-              
             >
               {label}
             </Link>
@@ -68,12 +80,11 @@ export default function WebHeader() {
             <Link
               key={label}
               to={href}
-              className={`text-sm transition-colors ${
+              className={`rounded-md px-3 py-2 text-sm transition-colors ${
                 isActive(href)
-                  ? 'border-b-2 border-secondary pb-0.5 text-primary font-semibold'
-                  : 'text-on-surface-variant hover:text-primary'
+                  ? 'bg-primary-muted font-semibold text-primary'
+                  : 'font-medium text-on-surface-variant hover:bg-surface-container-high hover:text-primary'
               }`}
-              
             >
               {label}
             </Link>
@@ -82,12 +93,11 @@ export default function WebHeader() {
             <Link
               key={label}
               to={href}
-              className={`text-sm transition-colors ${
+              className={`rounded-md px-3 py-2 text-sm transition-colors ${
                 isActive(href)
-                  ? 'border-b-2 border-secondary pb-0.5 text-primary font-semibold'
-                  : 'text-on-surface-variant hover:text-primary'
+                  ? 'bg-primary-muted font-semibold text-primary'
+                  : 'font-medium text-on-surface-variant hover:bg-surface-container-high hover:text-primary'
               }`}
-              
             >
               {label}
             </Link>
@@ -95,85 +105,104 @@ export default function WebHeader() {
         </nav>
 
         {/* Right Actions */}
-        <div className="flex items-center gap-4">
-          {/* SA Flag icon */}
-          <span className="hidden md:flex" title="South Africa">
-            <svg width="28" height="20" viewBox="0 0 28 20" xmlns="http://www.w3.org/2000/svg" className="rounded-sm overflow-hidden">
-              <rect width="28" height="20" fill="#fff"/>
-              <polygon points="0,0 28,0 0,20" fill="#007a4d"/>
-              <polygon points="28,20 28,0 0,20" fill="#de3831"/>
-              <polygon points="14,10 28,0 28,3 17,10 28,17 28,20" fill="#002395"/>
-              <polygon points="14,10 0,0 0,3 11,10 0,17 0,20" fill="#000"/>
-              <polygon points="14,10 28,3 28,0 17,10 28,20 28,17" fill="#fff" stroke="#000" strokeWidth="0.5"/>
-            </svg>
-          </span>
+        <div className="flex flex-shrink-0 items-center gap-3">
+          {/* App icon — replaces SA flag */}
+          <img
+            src="/adaptive-icon.png"
+            alt="Funxon SA"
+            className="h-8 w-8 rounded-full object-cover"
+            title="South Africa"
+          />
 
           {isLoggedIn ? (
             <Link
               to="/account"
-              className="hidden text-sm font-medium text-on-surface-variant hover:text-primary transition-colors md:block"
+              className="hidden items-center gap-2 rounded-full bg-white px-3 py-1.5 text-sm font-medium text-on-surface-variant shadow-sm transition-colors hover:text-primary md:flex"
             >
-              Hi, {username}
+              <span className="material-symbols-outlined text-[18px] text-primary">person</span>
+              <span className="max-w-[120px] truncate">Hi, {username}</span>
             </Link>
           ) : (
-            <>
+            <div className="hidden items-center gap-2 md:flex">
               <Link
                 to="/signin"
-                className="hidden text-sm font-bold text-primary hover:text-primary-teal transition-colors md:block"
-                
+                className="rounded-lg px-4 py-2 text-sm font-semibold text-primary transition-colors hover:bg-primary-muted"
               >
                 Login
               </Link>
               <Link
                 to="/signup"
-                className="hidden h-12 items-center justify-center rounded-lg px-6 bg-primary text-white text-sm font-bold hover:bg-primary-teal transition-colors md:flex"
-                
+                className="rounded-lg bg-primary px-5 py-2 text-sm font-semibold text-white transition-colors hover:bg-primary-teal"
               >
                 Sign Up
               </Link>
-            </>
+            </div>
           )}
 
           {/* Mobile hamburger */}
           <button
             onClick={() => setMobileOpen(!mobileOpen)}
-            className="text-on-surface-variant hover:text-primary transition-colors md:hidden"
+            className="flex h-10 w-10 items-center justify-center rounded-lg text-primary transition-colors hover:bg-surface-container-high lg:hidden"
             aria-label="Toggle menu"
           >
-            <span className="material-symbols-outlined">{mobileOpen ? 'close' : 'menu'}</span>
+            <span className="material-symbols-outlined text-[24px]">{mobileOpen ? 'close' : 'menu'}</span>
           </button>
         </div>
       </div>
 
       {/* Mobile Menu */}
       {mobileOpen && (
-        <div className="border-t border-border-subtle bg-brand-pink px-4 pb-4 md:hidden">
-          <nav className="flex flex-col gap-1 pt-3">
-            {[...NAV_LINKS, ...(isLoggedIn ? USER_NAV : []), ...(isLoggedIn && isVendor ? VENDOR_NAV : [])].map(({ label, href }) => (
+        <div
+          className="border-t border-border-subtle px-4 pb-6 pt-2 lg:hidden"
+          style={{ backgroundColor: '#f7f5f0' }}
+        >
+          {/* Mobile brand row with icon */}
+          <div className="mb-3 flex items-center justify-between border-b border-border-subtle pb-3">
+            <div className="flex items-center gap-2.5">
+              <img
+                src="/adaptive-icon.png"
+                alt="Funxon SA"
+                className="h-8 w-8 rounded-full object-cover"
+              />
+              <img src={logoUrl} alt="Funxon" className="h-9 w-auto object-contain" />
+            </div>
+          </div>
+
+          <nav className="flex flex-col gap-1">
+            {allNavLinks.map(({ label, href }) => (
               <Link
                 key={label}
                 to={href}
                 onClick={() => setMobileOpen(false)}
-                className={`rounded-lg px-3 py-3 text-sm font-medium transition-colors ${
+                className={`rounded-lg px-4 py-3 text-sm font-medium transition-colors ${
                   isActive(href)
                     ? 'bg-primary-muted text-primary'
-                    : 'text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface'
+                    : 'text-on-surface-variant hover:bg-surface-container-high hover:text-primary'
                 }`}
               >
                 {label}
               </Link>
             ))}
-            {!isLoggedIn && (
-              <div className="mt-3 flex flex-col gap-2 border-t border-outline-variant pt-3">
-                <Link to="/signin" onClick={() => setMobileOpen(false)} className="rounded-lg px-3 py-2.5 text-center text-sm font-bold text-primary">
-                  Login
-                </Link>
-                <Link to="/signup" onClick={() => setMobileOpen(false)} className="rounded-lg bg-primary px-3 py-2.5 text-center text-sm font-bold text-white">
-                  Sign Up
-                </Link>
-              </div>
-            )}
           </nav>
+
+          {!isLoggedIn && (
+            <div className="mt-4 flex flex-col gap-2.5 border-t border-border-subtle pt-4">
+              <Link
+                to="/signin"
+                onClick={() => setMobileOpen(false)}
+                className="rounded-lg border border-primary px-4 py-3 text-center text-sm font-semibold text-primary transition-colors hover:bg-primary-muted"
+              >
+                Login
+              </Link>
+              <Link
+                to="/signup"
+                onClick={() => setMobileOpen(false)}
+                className="rounded-lg bg-primary px-4 py-3 text-center text-sm font-semibold text-white transition-colors hover:bg-primary-teal"
+              >
+                Sign Up
+              </Link>
+            </div>
+          )}
         </div>
       )}
     </header>

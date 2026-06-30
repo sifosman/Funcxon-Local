@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
-import { MapPin, Search, CalendarDays, Users } from 'lucide-react';
+import { MapPin, Search, CalendarDays, Users, BadgeCheck, Store, Star, PartyPopper } from 'lucide-react';
 
 interface Listing {
   id: string;
@@ -26,10 +26,10 @@ const PROVINCES = ['Gauteng', 'Western Cape', 'KwaZulu-Natal', 'Eastern Cape'];
 const CATEGORIES = ['Weddings', 'Corporate', 'Parties', 'Festivals'];
 
 const TRUST_STATS = [
-  { icon: 'location_city', label: 'Verified Venues' },
-  { icon: 'storefront', label: 'Expert Vendors' },
-  { icon: 'star', label: 'Trusted Reviews' },
-  { icon: 'diversity_3', label: 'Happy Clients' },
+  { icon: BadgeCheck, label: 'Verified Venues' },
+  { icon: Store, label: 'Expert Vendors' },
+  { icon: Star, label: 'Trusted Reviews' },
+  { icon: PartyPopper, label: 'Happy Clients' },
 ];
 
 export default function HomePage() {
@@ -233,9 +233,9 @@ export default function HomePage() {
       <div style={{ background: '#123f5c' }}>
         <div className="fx-container">
           <div className="grid grid-cols-2 divide-x divide-white/10 py-0 md:grid-cols-4">
-            {TRUST_STATS.map(({ icon, label }) => (
-              <div key={label} className="flex flex-col items-center justify-center gap-1.5 py-5 text-center">
-                <span className="material-symbols-outlined text-[22px]" style={{ color: '#aa7478', fontVariationSettings: "'FILL' 1" }}>{icon}</span>
+            {TRUST_STATS.map(({ icon: Icon, label }) => (
+              <div key={label} className="flex flex-col items-center justify-center gap-2 py-6 text-center">
+                <Icon size={26} strokeWidth={1.8} className="text-white" />
                 <span className="text-xs font-semibold uppercase tracking-wider text-white/70">{label}</span>
               </div>
             ))}
