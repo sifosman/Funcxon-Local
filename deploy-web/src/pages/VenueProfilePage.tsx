@@ -171,7 +171,7 @@ export default function VenueProfilePage() {
             <div className="space-y-3">
               <div className="flex items-center gap-3">
                 {venue.venue_type && (
-                  <span className="rounded-full px-3 py-1 text-xs font-semibold" style={{ background: '#b9c4eb', color: '#1a2544' }}>
+                  <span className="rounded-full px-3 py-1 text-xs font-semibold" style={{ background: '#b9c4eb', color: '#123f5c' }}>
                     {venue.venue_type}
                   </span>
                 )}
@@ -199,8 +199,8 @@ export default function VenueProfilePage() {
                     className="border-b-2 px-1 py-4 text-sm font-semibold capitalize transition-colors"
                     style={{
                       fontFamily: "'Montserrat', sans-serif",
-                      borderColor: activeTab === tab ? '#002940' : 'transparent',
-                      color: activeTab === tab ? '#002940' : '#42474d',
+                      borderColor: activeTab === tab ? '#123f5c' : 'transparent',
+                      color: activeTab === tab ? '#123f5c' : '#42474d',
                     }}
                   >
                     {tab}
