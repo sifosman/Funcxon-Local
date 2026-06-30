@@ -1,4 +1,5 @@
 {
+  "$schema": "https://openapi.vercel.sh/vercel.json",
   "redirects": [
     { "source": "/assets/node_modules/@expo/vector-icons/:path*", "destination": "/assets/fonts/MaterialIcons.ttf", "permanent": false },
     { "source": "/assets/node_modules/@expo-google-fonts/montserrat/:path*", "destination": "/assets/fonts/Montserrat-Regular.ttf", "permanent": false },
