@@ -4,14 +4,11 @@ export default function WebFooter() {
   const currentYear = new Date().getFullYear();
 
   return (
-    <footer className="w-full border-t bg-surface-container-lowest" style={{ borderColor: '#f7f5f0' }}>
+    <footer className="w-full border-t border-border-subtle bg-brand-pink">
       <div className="fx-container py-16">
         <div className="flex flex-col items-center justify-between gap-6 md:flex-row">
           {/* Brand */}
-          <div
-            className="text-2xl font-bold text-secondary-container"
-            
-          >
+          <div className="font-display text-2xl font-bold text-primary">
             Funxon
           </div>
 
@@ -28,7 +25,7 @@ export default function WebFooter() {
               <Link
                 key={label}
                 to={href}
-                className="text-xs font-medium text-on-surface-variant transition-colors hover:text-secondary-container focus:text-primary focus:outline-none"
+                className="text-xs font-medium text-on-surface-variant transition-colors hover:text-primary focus:text-primary focus:outline-none"
                 
               >
                 {label}
@@ -39,8 +36,7 @@ export default function WebFooter() {
 
         {/* Copyright */}
         <div
-          className="mt-8 border-t pt-8 text-center text-xs text-on-surface-variant"
-          style={{ borderColor: '#f7f5f0' }}
+          className="mt-8 border-t border-border-subtle pt-8 text-center text-xs text-on-surface-variant"
         >
           © {currentYear} Funxon Event Planning. All rights reserved.
         </div>

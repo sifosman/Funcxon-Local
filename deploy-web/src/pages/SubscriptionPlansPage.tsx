@@ -84,7 +84,7 @@ export default function SubscriptionPlansPage() {
                 className={`relative rounded-xl p-6 text-left shadow-sm border ${
                   highlighted
                     ? 'border-primary bg-white ring-2 ring-primary/20'
-                    : 'border-outline-variant bg-white'
+                    : 'border-border-subtle bg-white'
                 }`}
               >
                 {highlighted && (
@@ -110,8 +110,8 @@ export default function SubscriptionPlansPage() {
                   to={href}
                   className={`mt-6 block rounded-lg px-4 py-2.5 text-center text-sm font-semibold ${
                     highlighted
-                      ? 'bg-primary text-white hover:bg-primary-container'
-                      : 'bg-surface-container text-on-surface hover:bg-surface-container-high'
+                      ? 'bg-primary text-white hover:bg-primary-teal'
+                      : 'bg-brand-pink text-on-surface hover:bg-surface-container-high'
                   }`}
                 >
                   {isFree ? 'Get Started' : 'Subscribe'}

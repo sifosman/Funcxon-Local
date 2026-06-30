@@ -64,9 +64,9 @@ export function ThemedInput({ errorText, label, icon, className = '', ...rest }:
         <input
           {...rest}
           className={[
-            'fx-input w-full rounded-lg border bg-white px-4 py-2.5 text-sm text-on-surface placeholder:text-on-surface-variant focus:border-primary-container focus:outline-none focus:ring-1 focus:ring-primary-container',
+            'fx-input w-full rounded-lg border bg-white px-4 py-2.5 text-sm text-on-surface placeholder:text-on-surface-variant focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary',
             icon ? 'pl-10' : '',
-            errorText ? 'border-error' : 'border-outline-variant',
+            errorText ? 'border-destructive' : 'border-border-subtle',
           ].join(' ')}
         />
       </div>
@@ -90,8 +90,8 @@ export function FilterChip({ label, selected, onClick, className = '' }: FilterC
       className={[
         'inline-flex items-center rounded-full px-4 py-2 text-sm font-medium transition-colors',
         selected
-          ? 'bg-brand-teal text-white'
-          : 'border border-outline-variant bg-white text-on-surface hover:bg-surface-container-low',
+          ? 'bg-primary text-white'
+          : 'border border-border-subtle bg-white text-on-surface hover:bg-brand-pink',
         className,
       ].join(' ')}
     >

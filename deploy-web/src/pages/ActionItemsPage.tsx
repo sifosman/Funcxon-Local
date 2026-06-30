@@ -68,10 +68,10 @@ export default function ActionItemsPage() {
         <h1 className="mb-2 text-3xl font-bold" style={{ color: '#123f5c' }}>Action Items</h1>
         <p className="mb-6 text-sm" style={{ color: '#72787e' }}>{completedCount} of {tasks.length} completed</p>
 
-        <div className="mb-6 rounded-xl border border-outline-variant bg-white p-4 shadow-sm">
+        <div className="mb-6 rounded-xl border border-border-subtle bg-white p-4 shadow-sm">
           <div className="flex gap-2">
-            <input type="text" value={title} onChange={(e) => setTitle(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && addTask()} placeholder="Add a new task..." className="flex-1 rounded-lg border border-outline-variant px-4 py-2 text-sm outline-none focus:border-primary" />
-            <select value={priority} onChange={(e) => setPriority(e.target.value)} className="rounded-lg border border-outline-variant px-3 py-2 text-sm outline-none focus:border-primary">
+            <input type="text" value={title} onChange={(e) => setTitle(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && addTask()} placeholder="Add a new task..." className="flex-1 rounded-lg border border-border-subtle px-4 py-2 text-sm outline-none focus:border-primary" />
+            <select value={priority} onChange={(e) => setPriority(e.target.value)} className="rounded-lg border border-border-subtle px-3 py-2 text-sm outline-none focus:border-primary">
               <option value="low">Low</option>
               <option value="medium">Medium</option>
               <option value="high">High</option>
@@ -87,9 +87,9 @@ export default function ActionItemsPage() {
 
           {pendingTasks.length > 0 && <h2 className="font-display text-sm font-semibold uppercase tracking-wider text-on-surface-variant">Pending</h2>}
           {pendingTasks.map((t) => (
-            <div key={t.id} className="flex items-center justify-between rounded-xl border border-outline-variant bg-white p-4 shadow-sm">
+            <div key={t.id} className="flex items-center justify-between rounded-xl border border-border-subtle bg-white p-4 shadow-sm">
               <div className="flex items-center gap-3">
-                <button onClick={() => toggleTask(t)} className="text-primary hover:text-primary-container"><Circle className="h-5 w-5" /></button>
+                <button onClick={() => toggleTask(t)} className="text-primary hover:text-primary-teal"><Circle className="h-5 w-5" /></button>
                 <div>
                   <p className="text-sm font-semibold text-on-surface">{t.title}</p>
                   <p className="text-xs text-on-surface-variant capitalize">{t.priority} priority</p>
@@ -101,7 +101,7 @@ export default function ActionItemsPage() {
 
           {completedTasks.length > 0 && <h2 className="font-display text-sm font-semibold uppercase tracking-wider text-on-surface-variant">Completed</h2>}
           {completedTasks.map((t) => (
-            <div key={t.id} className="flex items-center justify-between rounded-xl border border-outline-variant bg-surface-container p-4 opacity-70">
+            <div key={t.id} className="flex items-center justify-between rounded-xl border border-border-subtle bg-brand-pink p-4 opacity-70">
               <div className="flex items-center gap-3">
                 <button onClick={() => toggleTask(t)} className="text-primary"><CheckCircle2 className="h-5 w-5" /></button>
                 <p className="text-sm text-on-surface line-through">{t.title}</p>

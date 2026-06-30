@@ -58,7 +58,7 @@ export default function AccountPage() {
             <div>
               <h1 className="font-display text-xl font-bold text-on-surface">{displayName}</h1>
               <p className="text-sm text-on-surface-variant">{user.email}</p>
-              <span className="mt-1 inline-block rounded-full bg-primary-fixed px-2 py-0.5 text-xs font-medium text-primary">
+              <span className="mt-1 inline-block rounded-full bg-primary-muted px-2 py-0.5 text-xs font-medium text-primary">
                 {userRole === 'vendor' ? 'Vendor' : 'Attendee'}
               </span>
             </div>
@@ -73,10 +73,10 @@ export default function AccountPage() {
               <Link
                 key={item.label}
                 to={item.href}
-                className="flex items-center justify-between rounded-xl bg-white p-4 shadow-sm border border-outline-variant hover:border-primary transition-colors"
+                className="flex items-center justify-between rounded-xl bg-white p-4 shadow-sm border border-border-subtle hover:border-primary transition-colors"
               >
                 <div className="flex items-center gap-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-surface-container">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-brand-pink">
                     <Icon className="h-5 w-5 text-primary" />
                   </div>
                   <span className="font-medium text-on-surface">{item.label}</span>
@@ -95,7 +95,7 @@ export default function AccountPage() {
                   <Link
                     key={item.label}
                     to={item.href}
-                    className="mb-2 flex items-center justify-between rounded-xl bg-white p-4 shadow-sm border border-outline-variant hover:border-primary transition-colors"
+                    className="mb-2 flex items-center justify-between rounded-xl bg-white p-4 shadow-sm border border-border-subtle hover:border-primary transition-colors"
                   >
                     <div className="flex items-center gap-3">
                       <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-surface-container">
@@ -112,7 +112,7 @@ export default function AccountPage() {
 
           <button
             onClick={async () => { await signOut(); navigate('/'); }}
-            className="flex w-full items-center justify-between rounded-xl bg-white p-4 shadow-sm border border-outline-variant hover:border-destructive transition-colors"
+            className="flex w-full items-center justify-between rounded-xl bg-white p-4 shadow-sm border border-border-subtle hover:border-destructive transition-colors"
           >
             <div className="flex items-center gap-3">
               <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-error-container">

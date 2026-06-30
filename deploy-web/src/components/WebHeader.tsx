@@ -38,11 +38,11 @@ export default function WebHeader() {
     href === '/' ? location.pathname === '/' : location.pathname.startsWith(href.split('?')[0]);
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b border-outline-variant bg-surface-container">
+    <header className="sticky top-0 z-50 w-full border-b border-border-subtle bg-brand-pink">
       <div className="fx-container flex h-16 items-center justify-between">
 
         {/* Brand */}
-        <Link to="/" className="font-display text-2xl font-bold text-primary" >
+        <Link to="/" className="font-display text-2xl font-bold text-primary">
           Funxon
         </Link>
 
@@ -54,7 +54,7 @@ export default function WebHeader() {
               to={href}
               className={`text-sm transition-colors ${
                 isActive(href)
-                  ? 'border-b-2 border-secondary-container pb-0.5 text-secondary-container font-medium'
+                  ? 'border-b-2 border-secondary pb-0.5 text-primary font-semibold'
                   : 'text-on-surface-variant hover:text-primary'
               }`}
               
@@ -68,7 +68,7 @@ export default function WebHeader() {
               to={href}
               className={`text-sm transition-colors ${
                 isActive(href)
-                  ? 'border-b-2 border-secondary-container pb-0.5 text-secondary-container font-medium'
+                  ? 'border-b-2 border-secondary pb-0.5 text-primary font-semibold'
                   : 'text-on-surface-variant hover:text-primary'
               }`}
               
@@ -82,7 +82,7 @@ export default function WebHeader() {
               to={href}
               className={`text-sm transition-colors ${
                 isActive(href)
-                  ? 'border-b-2 border-secondary-container pb-0.5 text-secondary-container font-medium'
+                  ? 'border-b-2 border-secondary pb-0.5 text-primary font-semibold'
                   : 'text-on-surface-variant hover:text-primary'
               }`}
               
@@ -117,14 +117,14 @@ export default function WebHeader() {
             <>
               <Link
                 to="/signin"
-                className="hidden text-sm font-bold text-primary hover:text-primary-container transition-colors md:block"
+                className="hidden text-sm font-bold text-primary hover:text-primary-teal transition-colors md:block"
                 
               >
                 Login
               </Link>
               <Link
                 to="/signup"
-                className="hidden h-12 items-center justify-center rounded px-6 bg-primary-container text-white text-sm font-bold hover:bg-primary transition-colors md:flex"
+                className="hidden h-12 items-center justify-center rounded-lg px-6 bg-primary text-white text-sm font-bold hover:bg-primary-teal transition-colors md:flex"
                 
               >
                 Sign Up
@@ -145,7 +145,7 @@ export default function WebHeader() {
 
       {/* Mobile Menu */}
       {mobileOpen && (
-        <div className="border-t border-outline-variant bg-surface-container px-4 pb-4 md:hidden">
+        <div className="border-t border-border-subtle bg-brand-pink px-4 pb-4 md:hidden">
           <nav className="flex flex-col gap-1 pt-3">
             {[...NAV_LINKS, ...(isLoggedIn ? USER_NAV : []), ...(isLoggedIn && isVendor ? VENDOR_NAV : [])].map(({ label, href }) => (
               <Link
@@ -154,7 +154,7 @@ export default function WebHeader() {
                 onClick={() => setMobileOpen(false)}
                 className={`rounded-lg px-3 py-3 text-sm font-medium transition-colors ${
                   isActive(href)
-                    ? 'bg-primary-fixed text-primary'
+                    ? 'bg-primary-muted text-primary'
                     : 'text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface'
                 }`}
               >
@@ -166,7 +166,7 @@ export default function WebHeader() {
                 <Link to="/signin" onClick={() => setMobileOpen(false)} className="rounded-lg px-3 py-2.5 text-center text-sm font-bold text-primary">
                   Login
                 </Link>
-                <Link to="/signup" onClick={() => setMobileOpen(false)} className="rounded-lg bg-primary-container px-3 py-2.5 text-center text-sm font-bold text-white">
+                <Link to="/signup" onClick={() => setMobileOpen(false)} className="rounded-lg bg-primary px-3 py-2.5 text-center text-sm font-bold text-white">
                   Sign Up
                 </Link>
               </div>

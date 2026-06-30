@@ -198,7 +198,7 @@ export default function HomePage() {
                 <button
                   onClick={handleSearch}
                   className="flex h-14 w-full items-center justify-center gap-2 rounded-xl px-8 font-bold text-white transition-all hover:brightness-110 active:scale-95 md:w-auto"
-                  style={{ background: 'linear-gradient(135deg, #123f5c 0%, #1a5a82 100%)', boxShadow: '0 4px 16px rgba(18,63,92,0.45)' }}
+                  style={{ background: 'linear-gradient(135deg, #123f5c 0%, #1a5270 100%)', boxShadow: '0 4px 16px rgba(18,63,92,0.45)' }}
                 >
                   <Search size={18} strokeWidth={2.5} />
                   <span>Search</span>
@@ -294,7 +294,7 @@ export default function HomePage() {
       </section>
 
       {/* ── Featured Venues ── */}
-      <section className="py-14" style={{ background: '#f8f7f4' }}>
+      <section className="py-14" style={{ background: '#f7f5f0' }}>
         <div className="fx-container mb-7 flex items-end justify-between">
           <div>
             <p className="mb-1 text-[11px] font-bold uppercase tracking-widest text-gray-400">Hand-picked for you</p>
@@ -320,7 +320,7 @@ export default function HomePage() {
                   key={item.id}
                   to={`/venue/${item.id}`}
                   className="group min-w-[300px] w-[300px] flex-shrink-0 cursor-pointer snap-start overflow-hidden rounded-2xl bg-white"
-                  style={{ boxShadow: '0 2px 12px rgba(0,0,0,0.07)', border: '1px solid #ede9e2' }}
+                  style={{ boxShadow: '0 2px 12px rgba(0,0,0,0.07)', border: '1px solid #f7f5f0' }}
                 >
                   <div className="relative h-52 w-full overflow-hidden bg-gray-100">
                     {item.image_url
@@ -348,7 +348,7 @@ export default function HomePage() {
                       </span>
                       {item.rating && (
                         <span className="flex items-center gap-0.5 text-xs font-semibold text-gray-500">
-                          <span className="material-symbols-outlined text-sm" style={{ color: '#f59e0b', fontVariationSettings: "'FILL' 1" }}>star</span>
+                          <span className="material-symbols-outlined text-sm" style={{ color: '#aa7478', fontVariationSettings: "'FILL' 1" }}>star</span>
                           {item.rating}
                         </span>
                       )}
@@ -387,7 +387,7 @@ export default function HomePage() {
                 key={item.id}
                 to={`/vendor/${item.id}`}
                 className="group min-w-[300px] w-[300px] flex-shrink-0 cursor-pointer snap-start overflow-hidden rounded-2xl bg-white"
-                style={{ boxShadow: '0 2px 12px rgba(0,0,0,0.07)', border: '1px solid #ede9e2' }}
+                style={{ boxShadow: '0 2px 12px rgba(0,0,0,0.07)', border: '1px solid #f7f5f0' }}
               >
                 <div className="relative h-52 w-full overflow-hidden bg-gray-100">
                   {item.image_url
@@ -409,7 +409,7 @@ export default function HomePage() {
                     </span>
                     {item.rating && (
                       <span className="flex items-center gap-0.5 text-xs font-semibold text-gray-500">
-                        <span className="material-symbols-outlined text-sm" style={{ color: '#f59e0b', fontVariationSettings: "'FILL' 1" }}>star</span>
+                        <span className="material-symbols-outlined text-sm" style={{ color: '#aa7478', fontVariationSettings: "'FILL' 1" }}>star</span>
                         {item.rating}
                       </span>
                     )}
@@ -422,7 +422,7 @@ export default function HomePage() {
       )}
 
       {/* ── Blog / Inspiration ── */}
-      <section className="py-14" style={{ background: '#f8f7f4' }}>
+      <section className="py-14" style={{ background: '#f7f5f0' }}>
         <div className="fx-container">
           <div className="mb-8 flex items-end justify-between">
             <div>
@@ -443,7 +443,7 @@ export default function HomePage() {
               <article
                 key={title}
                 className="group overflow-hidden rounded-2xl bg-white"
-                style={{ boxShadow: '0 2px 12px rgba(0,0,0,0.07)', border: '1px solid #ede9e2' }}
+                style={{ boxShadow: '0 2px 12px rgba(0,0,0,0.07)', border: '1px solid #f7f5f0' }}
               >
                 <div className="h-44 w-full overflow-hidden">
                   <img src={image} alt={title} className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105" loading="lazy" />
@@ -451,7 +451,7 @@ export default function HomePage() {
                 <div className="p-5">
                   <span
                     className="mb-2 inline-block rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-widest"
-                    style={{ background: '#f0eaf0', color: '#aa7478' }}
+                    style={{ background: '#e8f0f5', color: '#123f5c' }}
                   >
                     {tag}
                   </span>
@@ -479,7 +479,7 @@ export default function HomePage() {
       {/* ── CTA Banner ── */}
       <section
         className="py-16 text-center"
-        style={{ background: 'linear-gradient(135deg, #123f5c 0%, #1a5a82 100%)' }}
+        style={{ background: 'linear-gradient(135deg, #123f5c 0%, #1a5270 100%)' }}
       >
         <div className="fx-container">
           <h2 className="mb-3 text-2xl font-bold text-white md:text-3xl">

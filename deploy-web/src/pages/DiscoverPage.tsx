@@ -115,10 +115,10 @@ export default function DiscoverPage() {
   return (
     <div className="bg-background min-h-screen">
       {/* ── Search Bar ── */}
-      <div className="border-b border-outline-variant bg-surface-container py-6">
+      <div className="border-b border-border-subtle bg-brand-pink py-6">
         <div className="fx-container">
           <div
-            className="flex items-center gap-3 overflow-hidden border border-outline-variant bg-white px-4 py-3"
+            className="flex items-center gap-3 overflow-hidden border border-border-subtle bg-white px-4 py-3"
             style={{ borderRadius: '12px' }}
           >
             <span className="material-symbols-outlined text-on-surface-variant">search</span>
@@ -146,9 +146,9 @@ export default function DiscoverPage() {
                 className="rounded-full px-4 py-2 text-sm font-semibold transition-colors"
                 style={{
                   fontFamily: "'Montserrat', sans-serif",
-                  background: activeCategory === value ? '#b9c4eb' : 'transparent',
-                  color: activeCategory === value ? '#002940' : '#42474d',
-                  border: activeCategory === value ? 'none' : '1px solid #c2c7ce',
+                  background: activeCategory === value ? '#123f5c' : 'transparent',
+                  color: activeCategory === value ? '#ffffff' : '#42474d',
+                  border: activeCategory === value ? '1.5px solid #123f5c' : '1px solid #d0d0d0',
                 }}
               >
                 {label}
@@ -159,13 +159,13 @@ export default function DiscoverPage() {
       </div>
 
       {/* ── Filter Bar ── */}
-      <div className="border-b border-outline-variant bg-surface py-3">
+      <div className="border-b border-border-subtle bg-white py-3">
         <div className="fx-container flex flex-wrap items-center gap-3">
           <span className="text-xs font-semibold uppercase tracking-wider text-on-surface-variant" >Filter:</span>
           <select
             value={selectedProvince}
             onChange={e => setSelectedProvince(e.target.value)}
-            className="rounded-lg border border-outline-variant bg-white px-3 py-2 text-sm text-on-surface focus:border-primary-container focus:outline-none"
+            className="rounded-lg border border-border-subtle bg-white px-3 py-2 text-sm text-on-surface focus:border-primary focus:outline-none"
             
           >
             {PROVINCES.map(p => <option key={p} value={p}>{p === 'All' ? 'All Provinces' : p}</option>)}
@@ -216,7 +216,7 @@ export default function DiscoverPage() {
                   {item.category && (
                     <div
                       className="absolute left-2 top-2 rounded-full px-2 py-0.5 text-xs font-semibold"
-                      style={{ background: '#b9c4eb', color: '#1a2544' }}
+                      style={{ background: '#b9c4eb', color: '#123f5c' }}
                     >
                       {item.category}
                     </div>
