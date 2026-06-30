@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import logoUrl from '../../assets/assets/logo.png';
 
 export default function WebFooter() {
   const currentYear = new Date().getFullYear();
@@ -8,8 +9,9 @@ export default function WebFooter() {
       <div className="fx-container py-16">
         <div className="flex flex-col items-center justify-between gap-6 md:flex-row">
           {/* Brand */}
-          <div className="font-display text-2xl font-bold text-primary">
-            Funxon
+          <div className="flex items-center gap-2">
+            <img src={logoUrl} alt="Funxon" className="h-10 w-10 object-contain" />
+            <span className="font-display text-2xl font-bold text-primary">Funxon</span>
           </div>
 
           {/* Nav links */}

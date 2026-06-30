@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
+import logoUrl from '../../assets/assets/logo.png';
 
 const NAV_LINKS = [
   { label: 'Home', href: '/' },
@@ -42,8 +43,9 @@ export default function WebHeader() {
       <div className="fx-container flex h-16 items-center justify-between">
 
         {/* Brand */}
-        <Link to="/" className="font-display text-2xl font-bold text-primary">
-          Funxon
+        <Link to="/" className="flex items-center gap-2">
+          <img src={logoUrl} alt="Funxon" className="h-10 w-10 object-contain" />
+          <span className="font-display text-2xl font-bold text-primary">Funxon</span>
         </Link>
 
         {/* Desktop Nav */}

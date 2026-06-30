@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
 import { Mail, Lock, User, Eye, EyeOff } from 'lucide-react';
+import logoUrl from '../../assets/assets/logo.png';
 
 export default function SignUpPage() {
   const [name, setName] = useState('');
@@ -73,6 +74,7 @@ export default function SignUpPage() {
       <div className="w-full max-w-md">
         <div className="rounded-xl bg-white p-8 shadow-sm border border-outline-variant">
           <div className="text-center">
+            <img src={logoUrl} alt="Funxon" className="mx-auto mb-4 h-16 w-16 object-contain" />
             <h1 className="font-display text-2xl font-bold text-on-surface">Create account</h1>
             <p className="mt-2 text-sm text-on-surface-variant">Join Funxon and start planning</p>
           </div>

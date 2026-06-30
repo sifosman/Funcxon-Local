@@ -1,5 +1,6 @@
 // WEB ONLY — deploy-web/src/components/GuestPrompt.tsx
 import { Link } from 'react-router-dom';
+import logoUrl from '../../assets/assets/logo.png';
 
 interface GuestPromptProps {
   label: string;
@@ -9,7 +10,7 @@ export default function GuestPrompt({ label }: GuestPromptProps) {
   return (
     <div className="flex min-h-[60vh] flex-col items-center justify-center px-4 py-16 text-center">
       <div className="mb-8 h-24 w-24 overflow-hidden rounded-full border border-outline-variant bg-brand-cream p-3">
-        <img src="/assets/logo.png" alt="Funxon" className="h-full w-full object-contain" />
+        <img src={logoUrl} alt="Funxon" className="h-full w-full object-contain" />
       </div>
 
       <h1 className="font-display mb-3 text-2xl font-bold text-on-surface">

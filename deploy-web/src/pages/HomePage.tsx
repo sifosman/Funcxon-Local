@@ -98,14 +98,21 @@ export default function HomePage() {
     <div className="bg-background text-on-surface">
 
       {/* ── Hero ── */}
-      <section
-        className="relative flex min-h-[88vh] w-full flex-col items-center justify-center overflow-hidden px-4"
-        style={{
-          backgroundImage: "url('https://images.unsplash.com/photo-1527529482837-4698179dc6ce?auto=format&fit=crop&w=1920&q=80')",
-          backgroundSize: 'cover',
-          backgroundPosition: 'center top',
-        }}
-      >
+      <section className="relative flex min-h-[88vh] w-full flex-col items-center justify-center overflow-hidden px-4">
+        {/* Background video */}
+        <video
+          autoPlay
+          muted
+          loop
+          playsInline
+          preload="auto"
+          disableRemotePlayback
+          poster="https://images.pexels.com/videos/31501465/event-marquee-wedding-31501465.jpeg?auto=compress&cs=tinysrgb&w=1920"
+          className="absolute inset-0 h-full w-full object-cover"
+        >
+          <source src="https://videos.pexels.com/video-files/31501465/13430839_1920_1080_60fps.mp4" type="video/mp4" />
+        </video>
+
         {/* Gradient overlay — darker at top for nav, strong at bottom for search legibility */}
         <div
           className="absolute inset-0"

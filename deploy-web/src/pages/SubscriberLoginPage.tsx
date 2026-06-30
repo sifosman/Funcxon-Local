@@ -2,6 +2,7 @@ import { useState, useEffect, type FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Mail, Lock, Eye, EyeOff, AlertCircle } from 'lucide-react';
 import { useAuth } from '../auth/AuthContext';
+import logoUrl from '../../assets/assets/logo.png';
 
 export default function SubscriberLoginPage() {
   const navigate = useNavigate();
@@ -55,8 +56,11 @@ export default function SubscriberLoginPage() {
           className="rounded-2xl border border-outline-variant bg-white p-8"
           style={{ boxShadow: '0 4px 10px rgba(0,0,0,0.08)' }}
         >
+          <div className="mb-4 flex justify-center">
+            <img src={logoUrl} alt="Funxon" className="h-16 w-16 object-contain" />
+          </div>
           <h1
-            className="mb-2 text-2xl font-bold"
+            className="mb-2 text-center text-2xl font-bold"
             style={{ color: '#123f5c' }}
           >
             Subscriber Portal

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
 import { Mail, Lock, Eye, EyeOff } from 'lucide-react';
+import logoUrl from '../../assets/assets/logo.png';
 
 export default function SignInPage() {
   const [email, setEmail] = useState('');
@@ -31,6 +32,7 @@ export default function SignInPage() {
       <div className="w-full max-w-md">
         <div className="rounded-xl bg-white p-8 shadow-sm border border-outline-variant">
           <div className="text-center">
+            <img src={logoUrl} alt="Funxon" className="mx-auto mb-4 h-16 w-16 object-contain" />
             <h1 className="font-display text-2xl font-bold text-on-surface">Welcome back</h1>
             <p className="mt-2 text-sm text-on-surface-variant">Sign in to your Funxon account</p>
           </div>
