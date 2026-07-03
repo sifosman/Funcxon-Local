@@ -32,47 +32,6 @@ export default function CreateReviewScreen({ route, navigation }: Props) {
     return (data as any)?.id ?? null;
   };
 
-  const checkEligibility = async (): Promise<boolean> => {
-    if (!user?.id) return false;
-
-    if (isAppReview) return true;
-
-    if (type === 'vendor') {
-      const internalUserId = await resolveInternalUserId();
-      if (!internalUserId) return false;
-
-      const { count, error } = await supabase
-        .from('quote_requests')
-        .select('id', { count: 'exact', head: true })
-        .eq('vendor_id', targetId)
-        .eq('user_id', internalUserId)
-        .in('status', ['accepted', 'finalised']);
-
-      if (error) throw error;
-      return (count ?? 0) > 0;
-    }
-
-    const { count: quoteCount, error: quoteError } = await supabase
-      .from('venue_quote_requests')
-      .select('id', { count: 'exact', head: true })
-      .eq('listing_id', targetId)
-      .eq('requester_user_id', user.id)
-      .in('status', ['accepted', 'finalised']);
-
-    if (quoteError) throw quoteError;
-
-    const { count: tourCount, error: tourError } = await supabase
-      .from('venue_tour_bookings')
-      .select('id', { count: 'exact', head: true })
-      .eq('listing_id', targetId)
-      .eq('requester_user_id', user.id)
-      .in('status', ['accepted', 'finalised']);
-
-    if (tourError) throw tourError;
-
-    return (quoteCount ?? 0) > 0 || (tourCount ?? 0) > 0;
-  };
-
   const handleSubmit = async () => {
     if (!user?.id) {
       setAlertState({ visible: true, title: 'Sign in required', message: 'Please sign in to leave a review.' });
@@ -86,14 +45,6 @@ export default function CreateReviewScreen({ route, navigation }: Props) {
 
     setSubmitting(true);
     try {
-      if (!isAppReview) {
-        const eligible = await checkEligibility();
-        if (!eligible) {
-          setAlertState({ visible: true, title: 'Not eligible', message: 'You can only leave a review after you have used this service.' });
-          return;
-        }
-      }
-
       if (isAppReview) {
         const { error } = await supabase.from('app_reviews').insert({
           user_id: user.id,
@@ -117,7 +68,8 @@ export default function CreateReviewScreen({ route, navigation }: Props) {
           rating,
           title: title.trim() || null,
           review_text: reviewText.trim() || null,
-          is_verified: true,
+          is_verified: false,
+          review_source: 'public',
           status: 'pending',
         });
 
@@ -129,7 +81,8 @@ export default function CreateReviewScreen({ route, navigation }: Props) {
           rating,
           title: title.trim() || null,
           review_text: reviewText.trim() || null,
-          is_verified: true,
+          is_verified: false,
+          review_source: 'public',
           status: 'pending',
         });
 

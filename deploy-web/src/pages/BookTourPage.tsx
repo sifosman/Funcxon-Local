@@ -1,6 +1,9 @@
 import { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { Calendar, Clock, User, Mail, Phone, Send, ChevronLeft } from 'lucide-react';
+import { supabase } from '../lib/supabaseClient';
+import { useAuth } from '../auth/AuthContext';
+import { createTourRequestedNotification } from '../lib/notifications';
+import { Calendar, Clock, User, Mail, Phone, Send, ChevronLeft, Loader2, AlertCircle, MessageSquare } from 'lucide-react';
 
 export default function BookTourPage() {
   const { id } = useParams<{ id: string }>();
@@ -9,11 +12,53 @@ export default function BookTourPage() {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
+  const [notes, setNotes] = useState('');
   const [submitted, setSubmitted] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const { user } = useAuth();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setSubmitted(true);
+    if (!id) return;
+    setSaving(true);
+    setError(null);
+    try {
+      const { data: listing, error: listingError } = await supabase
+        .from('venue_listings')
+        .select('id, user_id, name')
+        .eq('id', id)
+        .maybeSingle();
+      if (listingError) throw listingError;
+      if (!listing) throw new Error('Venue listing not found.');
+
+      const { error: insertError } = await supabase
+        .from('venue_tour_bookings')
+        .insert({
+          listing_id: listing.id,
+          requester_user_id: user?.id || null,
+          requester_name: name,
+          requester_email: email,
+          requester_phone: phone,
+          requested_date: date,
+          requested_time: time,
+          message: notes || null,
+          status: 'pending',
+        })
+        .select('id')
+        .single();
+      if (insertError) throw insertError;
+
+      if (listing.user_id) {
+        await createTourRequestedNotification(listing.user_id, name, date).catch(() => {});
+      }
+
+      setSubmitted(true);
+    } catch (err: any) {
+      setError(err?.message || 'Could not submit tour request. Please try again.');
+    } finally {
+      setSaving(false);
+    }
   };
 
   if (submitted) {
@@ -74,7 +119,22 @@ export default function BookTourPage() {
                 <input type="tel" value={phone} onChange={e => setPhone(e.target.value)} className="fx-input pl-10" placeholder="+27..." />
               </div>
             </div>
-            <button type="submit" className="fx-btn-primary w-full"><Send className="mr-2 h-4 w-4" /> Request Tour</button>
+            <div>
+              <label className="mb-1 block text-sm font-medium text-on-surface">Message (optional)</label>
+              <div className="relative">
+                <MessageSquare className="absolute left-3 top-3 h-4 w-4 text-on-surface-variant" />
+                <textarea value={notes} onChange={e => setNotes(e.target.value)} className="fx-input min-h-[80px] pl-10 pt-2" placeholder="Any specific questions or requests?" />
+              </div>
+            </div>
+            {error && (
+              <div className="flex items-center gap-2 rounded-lg border border-error/30 bg-error-container/30 p-3 text-sm text-error">
+                <AlertCircle className="h-4 w-4 flex-shrink-0" />
+                {error}
+              </div>
+            )}
+            <button type="submit" disabled={saving} className="fx-btn-primary w-full disabled:opacity-60">
+              {saving ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Submitting...</> : <><Send className="mr-2 h-4 w-4" /> Request Tour</>}
+            </button>
           </form>
         </div>
       </div>

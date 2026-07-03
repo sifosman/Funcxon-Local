@@ -21,11 +21,14 @@ import ThemedAlert from '../components/ThemedAlert';
 
 type QuotesStackParamList = {
   QuoteResponse: {
-    revisionId: number;
+    revisionId?: number | null;
     quoteRequestId: number;
     vendorName?: string;
     amount?: number;
     description?: string;
+    accepted?: boolean;
+    rejectOnly?: boolean;
+    from?: string;
   };
   QuoteHistory: {
     quoteRequestId: number;
@@ -66,9 +69,11 @@ export default function QuoteResponseScreen() {
   const route = useRoute<RouteProp<QuotesStackParamList, 'QuoteResponse'>>();
   const { user } = useAuth();
 
-  const { revisionId, quoteRequestId, vendorName: initialVendorName, amount: initialAmount, description: initialDescription } = route.params;
+  const { revisionId, quoteRequestId, vendorName: initialVendorName, amount: initialAmount, description: initialDescription, accepted: preAccepted, rejectOnly, from } = route.params;
 
   const [loading, setLoading] = useState(true);
+  const [showCelebration, setShowCelebration] = useState(false);
+  const [quoteRequest, setQuoteRequest] = useState<{ is_venue?: boolean; original_id?: number; vendor_id?: number; listing_id?: number; target_name?: string } | null>(null);
   const [saving, setSaving] = useState(false);
   const [revision, setRevision] = useState<QuoteRevision | null>(null);
   const [vendor, setVendor] = useState<VendorInfo | null>(null);
@@ -80,41 +85,48 @@ export default function QuoteResponseScreen() {
     if (!user?.id) return;
 
     try {
-      // Get internal user ID
-      const { data: internalUser } = await supabase
-        .from('users')
-        .select('id')
-        .eq('auth_user_id', user.id)
+      // Resolve quote request
+      const isVenueQuote = typeof quoteRequestId === 'string' && String(quoteRequestId).startsWith('venue-');
+      const resolvedQuoteId = isVenueQuote ? Number(String(quoteRequestId).replace('venue-', '')) : quoteRequestId;
+      const quoteTable = isVenueQuote ? 'venue_quote_requests' : 'quote_requests';
+      const { data: quoteRow } = await supabase
+        .from(quoteTable)
+        .select('id, vendor_id, listing_id, status, quote_amount')
+        .eq('id', resolvedQuoteId)
         .maybeSingle();
+      setQuoteRequest({
+        is_venue: isVenueQuote,
+        original_id: quoteRow?.id,
+        vendor_id: (quoteRow as any)?.vendor_id,
+        listing_id: (quoteRow as any)?.listing_id,
+        target_name: initialVendorName,
+      });
 
-      if (!internalUser) {
-        setAlertState({ visible: true, title: 'Error', message: 'User not found' });
-        return;
+      if (preAccepted) {
+        setShowCelebration(true);
+        setTimeout(() => setShowCelebration(false), 3000);
       }
 
-      // Get revision details
-      const { data: rev } = await supabase
-        .from('quote_revisions')
-        .select('*')
-        .eq('id', revisionId)
-        .maybeSingle();
+      if (revisionId) {
+        // Get revision details
+        const { data: rev } = await supabase
+          .from('quote_revisions')
+          .select('*')
+          .eq('id', revisionId)
+          .maybeSingle();
 
-      if (!rev) {
-        setAlertState({ visible: true, title: 'Error', message: 'Quote not found' });
-        return;
-      }
-
-      setRevision(rev as QuoteRevision);
-
-      // Get vendor info
-      const { data: vendorData } = await supabase
-        .from('vendors')
-        .select('id, name, email, phone')
-        .eq('id', rev.vendor_id)
-        .maybeSingle();
-
-      if (vendorData) {
-        setVendor(vendorData as VendorInfo);
+        if (rev) {
+          setRevision(rev as QuoteRevision);
+          // Get vendor info
+          const { data: vendorData } = await supabase
+            .from('vendors')
+            .select('id, name, email, phone')
+            .eq('id', rev.vendor_id)
+            .maybeSingle();
+          if (vendorData) {
+            setVendor(vendorData as VendorInfo);
+          }
+        }
       }
     } catch (err) {
       console.error('Error loading quote:', err);
@@ -122,15 +134,14 @@ export default function QuoteResponseScreen() {
     } finally {
       setLoading(false);
     }
-  }, [revisionId, user?.id]);
+  }, [revisionId, quoteRequestId, user?.id, preAccepted]);
 
   useEffect(() => {
     loadQuoteDetails();
   }, [loadQuoteDetails]);
 
   const handleResponse = async () => {
-    if (!responseType || !revision || !user?.id) return;
-
+    if (!responseType || !user?.id) return;
     if (responseType === 'reject' && !feedback.trim()) {
       setAlertState({ visible: true, title: 'Feedback Required', message: 'Please provide feedback on why you\'re rejecting this quote. This helps the vendor improve their offer.' });
       return;
@@ -138,28 +149,35 @@ export default function QuoteResponseScreen() {
 
     setSaving(true);
     try {
-      // Update revision status
-      const { error: updateError } = await supabase
-        .from('quote_revisions')
-        .update({
-          status: responseType === 'accept' ? 'accepted' : 'rejected',
-          client_notes: feedback.trim() || null,
-          responded_at: new Date().toISOString(),
-        })
-        .eq('id', revisionId);
+      const tableName = quoteRequest?.is_venue ? 'venue_quote_requests' : 'quote_requests';
+      const resolvedId = quoteRequest?.original_id ?? quoteRequestId;
+      const now = new Date().toISOString();
 
-      if (updateError) throw updateError;
+      if (revisionId && revision) {
+        // Update revision status
+        const { error: updateError } = await supabase
+          .from('quote_revisions')
+          .update({
+            status: responseType === 'accept' ? 'accepted' : 'rejected',
+            client_notes: feedback.trim() || null,
+            responded_at: now,
+          })
+          .eq('id', revisionId);
+        if (updateError) throw updateError;
+      }
 
       // Update quote request status
       await supabase
-        .from('quote_requests')
+        .from(tableName)
         .update({
-          status: responseType === 'accept' ? 'finalised' : 'rejected',
+          status: responseType === 'accept' ? 'accepted' : 'rejected',
+          response_message: feedback.trim() || null,
+          ...(responseType === 'accept' ? { accepted_at: now } : { rejected_at: now }),
         })
-        .eq('id', quoteRequestId);
+        .eq('id', resolvedId);
 
       // Add comment
-      if (feedback.trim()) {
+      if (feedback.trim() && revisionId) {
         await supabase.from('quote_comments').insert({
           quote_revision_id: revisionId,
           author_id: user.id,
@@ -171,6 +189,11 @@ export default function QuoteResponseScreen() {
 
       // Send notification to vendor
       await sendVendorNotification(responseType);
+
+      if (responseType === 'accept') {
+        setShowCelebration(true);
+        setTimeout(() => setShowCelebration(false), 3000);
+      }
 
       setAlertState({
         visible: true,
@@ -187,17 +210,35 @@ export default function QuoteResponseScreen() {
     }
   };
 
+  const handleAmend = () => {
+    const targetId = quoteRequest?.is_venue ? quoteRequest.listing_id : quoteRequest?.vendor_id;
+    if (!targetId) return;
+    (navigation as any).navigate('Home', {
+      screen: 'QuoteRequest',
+      params: {
+        vendorId: targetId,
+        vendorName: quoteRequest?.target_name ?? initialVendorName ?? 'Vendor',
+        type: quoteRequest?.is_venue ? 'venue' : 'vendor',
+        editMode: true,
+        quoteId: quoteRequest?.original_id ?? quoteRequestId,
+        from,
+      },
+    });
+  };
+
   const sendVendorNotification = async (type: 'accept' | 'reject') => {
     try {
+      const isVenue = quoteRequest?.is_venue ?? false;
       await supabase.functions.invoke('send-quote-notifications', {
         body: {
           type: type === 'accept' ? 'quote-accepted-vendor' : 'quote-rejected-vendor',
-          quoteRequestId,
+          quoteRequestId: quoteRequest?.original_id ?? quoteRequestId,
           quoteRevisionId: revisionId,
           vendorBusinessName: vendor?.name || initialVendorName,
           vendorEmail: vendor?.email,
           quoteAmount: revision?.quote_amount || initialAmount,
           clientNotes: feedback.trim() || undefined,
+          isVenue,
         },
       });
     } catch (err) {
@@ -396,11 +437,12 @@ export default function QuoteResponseScreen() {
                 Your Response
               </Text>
 
-              {/* Accept/Reject Buttons */}
+              {/* Accept/Reject/Amend Buttons */}
               <View style={{ flexDirection: 'row', gap: spacing.md, marginBottom: spacing.md }}>
-                <TouchableOpacity
-                  onPress={() => setResponseType('accept')}
-                  style={{
+                {!rejectOnly && (
+                  <TouchableOpacity
+                    onPress={() => setResponseType('accept')}
+                    style={{
                     flex: 1,
                     paddingVertical: spacing.md,
                     borderRadius: radii.md,
@@ -426,6 +468,7 @@ export default function QuoteResponseScreen() {
                     Accept
                   </Text>
                 </TouchableOpacity>
+                )}
 
                 <TouchableOpacity
                   onPress={() => setResponseType('reject')}
@@ -453,6 +496,30 @@ export default function QuoteResponseScreen() {
                     }}
                   >
                     Reject
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={handleAmend}
+                  style={{
+                    flex: 1,
+                    paddingVertical: spacing.md,
+                    borderRadius: radii.md,
+                    backgroundColor: '#F3F4F6',
+                    alignItems: 'center',
+                    borderWidth: 1,
+                    borderColor: colors.borderSubtle,
+                  }}
+                >
+                  <MaterialIcons name="edit" size={24} color={colors.primary} />
+                  <Text
+                    style={{
+                      ...typography.body,
+                      color: colors.primary,
+                      marginTop: spacing.xs,
+                      fontWeight: '600',
+                    }}
+                  >
+                    Amend
                   </Text>
                 </TouchableOpacity>
               </View>
@@ -574,6 +641,41 @@ export default function QuoteResponseScreen() {
           </View>
         )}
       </ScrollView>
+
+      {showCelebration && (
+        <View
+          style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(255,255,255,0.95)',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 100,
+          }}
+          pointerEvents="none"
+        >
+          <View
+            style={{
+              width: 120,
+              height: 120,
+              borderRadius: 60,
+              backgroundColor: '#DCFCE7',
+              alignItems: 'center',
+              justifyContent: 'center',
+              marginBottom: spacing.md,
+            }}
+          >
+            <MaterialIcons name="celebration" size={64} color="#16A34A" />
+          </View>
+          <Text style={{ ...typography.titleMedium, color: '#16A34A' }}>Congratulations!</Text>
+          <Text style={{ ...typography.body, color: colors.textSecondary, marginTop: spacing.xs }}>
+            You have accepted this quote.
+          </Text>
+        </View>
+      )}
 
       {alertState && (
         <ThemedAlert

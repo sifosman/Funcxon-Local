@@ -55,15 +55,27 @@ export function AppAlert({ visible, title, message, type = 'info', onDismiss, du
     return () => clearTimeout(timer);
   }, [duration, isVisible, onDismiss]);
 
+  useEffect(() => {
+    if (!isVisible) return;
+    const handleEsc = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setIsVisible(false);
+        onDismiss?.();
+      }
+    };
+    document.addEventListener('keydown', handleEsc);
+    return () => document.removeEventListener('keydown', handleEsc);
+  }, [isVisible, onDismiss]);
+
   if (!isVisible) return null;
 
   const styles = typeStyles[type];
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/30 p-4 transition-opacity duration-200">
+    <div className="fixed bottom-4 right-4 z-[100] flex items-end justify-end p-4 transition-all duration-300">
       <div
         className={[
-          'w-full max-w-sm rounded-xl border p-5 shadow-lg',
+          'w-full max-w-sm rounded-xl border p-4 shadow-lg',
           styles.bg,
           styles.border,
           styles.text,

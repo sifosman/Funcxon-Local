@@ -21,6 +21,7 @@ export default {
         'text-primary': '#000000',
         'destructive': '#DC2626',
         'chart5': '#aa7478',
+        'featured-gold': '#d4af37',
         // Semantic aliases for backward compat
         'on-surface': '#000000',
         'on-surface-variant': '#42474d',

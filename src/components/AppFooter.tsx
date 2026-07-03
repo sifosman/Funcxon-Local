@@ -1,8 +1,9 @@
-import { useMemo } from 'react';
-import { Linking, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useMemo, useState } from 'react';
+import { Linking, Modal, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { colors, spacing, radii, typography } from '../theme';
 import { SUPPORT_EMAIL, SUPPORT_WHATSAPP } from '../utils/env';
+import { supabase } from '../lib/supabaseClient';
 
 type AppFooterProps = {
   onNavigateToFAQs?: () => void;
@@ -11,6 +12,12 @@ type AppFooterProps = {
 };
 
 export function AppFooter({ onNavigateToFAQs, onNavigateToTerms, onNavigateToHelpDesk }: AppFooterProps) {
+  const [reviewModalVisible, setReviewModalVisible] = useState(false);
+  const [reviewRating, setReviewRating] = useState(0);
+  const [reviewComment, setReviewComment] = useState('');
+  const [reviewSubmitting, setReviewSubmitting] = useState(false);
+  const [reviewSubmitted, setReviewSubmitted] = useState(false);
+
   const whatsappLink = useMemo(() => {
     const number = SUPPORT_WHATSAPP.replace(/[^0-9+]/g, '');
     const message = encodeURIComponent('Hi, I need assistance with Funxon.');
@@ -33,6 +40,41 @@ export function AppFooter({ onNavigateToFAQs, onNavigateToTerms, onNavigateToHel
     Linking.openURL(`mailto:${SUPPORT_EMAIL}?subject=Problem%20Report%20-%20Funxon`).catch(() => null);
   };
 
+  const handleOpenReview = () => {
+    setReviewRating(0);
+    setReviewComment('');
+    setReviewSubmitted(false);
+    setReviewModalVisible(true);
+  };
+
+  const handleCloseReview = () => {
+    setReviewModalVisible(false);
+  };
+
+  const handleSubmitReview = async () => {
+    if (reviewRating === 0) return;
+    setReviewSubmitting(true);
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const userId = sessionData.session?.user?.id;
+      const payload: any = {
+        rating: reviewRating,
+        review_text: reviewComment.trim() || null,
+        status: 'pending',
+      };
+      if (userId) {
+        payload.user_id = userId;
+      }
+      const { error } = await supabase.from('app_reviews').insert(payload);
+      if (error) throw error;
+      setReviewSubmitted(true);
+    } catch (err) {
+      console.error('Failed to submit app review:', err);
+    } finally {
+      setReviewSubmitting(false);
+    }
+  };
+
   return (
     <View style={styles.container}>
       {/* Divider line */}
@@ -44,6 +86,24 @@ export function AppFooter({ onNavigateToFAQs, onNavigateToTerms, onNavigateToHel
         <View style={styles.brandSection}>
           <Text style={styles.brandName}>Funxon</Text>
           <Text style={styles.brandTagline}>Connect Collaborate Celebrate</Text>
+          <TouchableOpacity
+            onPress={handleOpenReview}
+            style={{
+              marginTop: spacing.sm,
+              alignSelf: 'flex-start',
+              flexDirection: 'row',
+              alignItems: 'center',
+              backgroundColor: colors.primary,
+              paddingHorizontal: spacing.md,
+              paddingVertical: spacing.sm,
+              borderRadius: radii.md,
+            }}
+          >
+            <MaterialIcons name="star" size={16} color="#FFFFFF" />
+            <Text style={{ ...typography.captionSemiBold, color: '#FFFFFF', marginLeft: spacing.xs }}>
+              Submit a Funxon App Review
+            </Text>
+          </TouchableOpacity>
         </View>
 
         {/* Quick Links Section */}
@@ -140,6 +200,92 @@ export function AppFooter({ onNavigateToFAQs, onNavigateToTerms, onNavigateToHel
           © {new Date().getFullYear()} Funxon. All rights reserved.
         </Text>
       </View>
+
+      {/* App Review Modal */}
+      <Modal visible={reviewModalVisible} transparent animationType="fade" onRequestClose={handleCloseReview}>
+        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center', padding: spacing.lg }}>
+          <View style={{ backgroundColor: colors.surface, borderRadius: radii.lg, padding: spacing.lg, width: '100%', maxWidth: 400 }}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.md }}>
+              <Text style={{ ...typography.titleMedium, color: colors.textPrimary }}>
+                {reviewSubmitted ? 'Thank You!' : 'Rate Funxon'}
+              </Text>
+              <TouchableOpacity onPress={handleCloseReview}>
+                <MaterialIcons name="close" size={24} color={colors.textMuted} />
+              </TouchableOpacity>
+            </View>
+
+            {reviewSubmitted ? (
+              <View style={{ alignItems: 'center', paddingVertical: spacing.lg }}>
+                <MaterialIcons name="check-circle" size={48} color={colors.primary} />
+                <Text style={{ ...typography.body, color: colors.textPrimary, textAlign: 'center', marginTop: spacing.md }}>
+                  Thank you for reviewing the app. We will contact you.
+                </Text>
+                <TouchableOpacity
+                  onPress={handleCloseReview}
+                  style={{ marginTop: spacing.lg, paddingVertical: spacing.sm, paddingHorizontal: spacing.lg, borderRadius: radii.md, backgroundColor: colors.primary }}
+                >
+                  <Text style={{ ...typography.bodySemiBold, color: '#FFFFFF' }}>Close</Text>
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <View style={{ gap: spacing.md }}>
+                <Text style={{ ...typography.caption, color: colors.textMuted }}>
+                  How would you rate your experience with the Funxon app?
+                </Text>
+                <View style={{ flexDirection: 'row', justifyContent: 'center', gap: spacing.sm }}>
+                  {[1, 2, 3, 4, 5].map((star) => (
+                    <TouchableOpacity key={star} onPress={() => setReviewRating(star)}>
+                      <MaterialIcons
+                        name={star <= reviewRating ? 'star' : 'star-border'}
+                        size={32}
+                        color={star <= reviewRating ? '#F59E0B' : colors.textMuted}
+                      />
+                    </TouchableOpacity>
+                  ))}
+                </View>
+                <View>
+                  <Text style={{ ...typography.caption, color: colors.textMuted, marginBottom: spacing.xs }}>
+                    Comments (optional)
+                  </Text>
+                  <TextInput
+                    value={reviewComment}
+                    onChangeText={setReviewComment}
+                    placeholder="Tell us what you think..."
+                    placeholderTextColor={colors.textMuted}
+                    multiline
+                    numberOfLines={4}
+                    style={{
+                      borderWidth: 1,
+                      borderColor: colors.borderSubtle,
+                      borderRadius: radii.md,
+                      paddingHorizontal: spacing.md,
+                      paddingVertical: spacing.sm,
+                      backgroundColor: colors.surfaceMuted,
+                      color: colors.textPrimary,
+                      minHeight: 80,
+                      textAlignVertical: 'top',
+                    }}
+                  />
+                </View>
+                <TouchableOpacity
+                  onPress={handleSubmitReview}
+                  disabled={reviewRating === 0 || reviewSubmitting}
+                  style={{
+                    paddingVertical: spacing.sm,
+                    borderRadius: radii.md,
+                    backgroundColor: reviewRating === 0 || reviewSubmitting ? colors.surfaceMuted : colors.primary,
+                    alignItems: 'center',
+                  }}
+                >
+                  <Text style={{ ...typography.bodySemiBold, color: reviewRating === 0 || reviewSubmitting ? colors.textMuted : '#FFFFFF' }}>
+                    {reviewSubmitting ? 'Submitting...' : 'Submit Review'}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            )}
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }

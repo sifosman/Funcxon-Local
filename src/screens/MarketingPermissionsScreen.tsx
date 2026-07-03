@@ -11,6 +11,7 @@ import ThemedAlert from '../components/ThemedAlert';
 export default function MarketingPermissionsScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<ProfileStackParamList>>();
   const [marketingOptIn, setMarketingOptIn] = useState(false);
+  const [marketingOptWhatsapp, setMarketingOptWhatsapp] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [alertState, setAlertState] = useState<{visible: boolean; title: string; message: string; buttons?: any[]} | null>(null);
@@ -24,12 +25,13 @@ export default function MarketingPermissionsScreen() {
 
     const { data, error } = await supabase
       .from('users')
-      .select('marketing_opt_in')
+      .select('marketing_opt_in, marketing_opt_whatsapp')
       .eq('auth_user_id', sessionResult.session.user.id)
       .maybeSingle();
 
     if (!error && data) {
       setMarketingOptIn(!!data.marketing_opt_in);
+      setMarketingOptWhatsapp(!!data.marketing_opt_whatsapp);
     }
 
     setLoading(false);
@@ -51,7 +53,7 @@ export default function MarketingPermissionsScreen() {
     setSaving(true);
     const { error } = await supabase
       .from('users')
-      .update({ marketing_opt_in: marketingOptIn })
+      .update({ marketing_opt_in: marketingOptIn, marketing_opt_whatsapp: marketingOptWhatsapp })
       .eq('auth_user_id', sessionResult.session.user.id);
     setSaving(false);
 
@@ -105,6 +107,30 @@ export default function MarketingPermissionsScreen() {
             <Switch
               value={marketingOptIn}
               onValueChange={setMarketingOptIn}
+              trackColor={{ false: colors.borderSubtle, true: colors.textPrimary }}
+              thumbColor="#FFFFFF"
+            />
+          </View>
+
+          <View
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              paddingVertical: spacing.md,
+              borderBottomWidth: 1,
+              borderColor: colors.borderSubtle,
+            }}
+          >
+            <View style={{ flex: 1, paddingRight: spacing.md }}>
+              <Text style={{ ...typography.bodySemiBold, color: colors.textPrimary }}>WhatsApp marketing</Text>
+              <Text style={{ ...typography.caption, color: colors.textMuted, marginTop: spacing.xs }}>
+                Receive occasional updates, offers, and relevant product communications via WhatsApp.
+              </Text>
+            </View>
+            <Switch
+              value={marketingOptWhatsapp}
+              onValueChange={setMarketingOptWhatsapp}
               trackColor={{ false: colors.borderSubtle, true: colors.textPrimary }}
               thumbColor="#FFFFFF"
             />

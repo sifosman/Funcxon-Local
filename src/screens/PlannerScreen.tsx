@@ -73,6 +73,8 @@ export default function PlannerScreen({ navigation }: PlannerProps) {
     type: '',
     otherType: '',
     date: '',
+    guests: '',
+    additionalNotes: '',
   });
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showCalendarDatePicker, setShowCalendarDatePicker] = useState(false);
@@ -124,6 +126,7 @@ export default function PlannerScreen({ navigation }: PlannerProps) {
     tagColor: '#3B82F6',
   });
   const [showEventTypeModal, setShowEventTypeModal] = useState(false);
+  const [taskListExpanded, setTaskListExpanded] = useState(true);
 
   const { data: eventTypeOptions } = useQuery<string[]>({
     queryKey: ['event-type-options'],
@@ -597,6 +600,52 @@ export default function PlannerScreen({ navigation }: PlannerProps) {
               />
             )}
           </View>
+          <View>
+            <Text style={{ ...typography.caption, color: colors.textMuted }}>My Event Guests</Text>
+            <TextInput
+              value={eventDetails.guests}
+              onChangeText={(value) => setEventDetails((prev) => ({ ...prev, guests: value }))}
+              placeholder="List important guests or notes"
+              placeholderTextColor={colors.textMuted}
+              multiline
+              numberOfLines={3}
+              style={{
+                marginTop: spacing.xs,
+                borderWidth: 1,
+                borderColor: colors.borderSubtle,
+                borderRadius: radii.md,
+                paddingHorizontal: spacing.md,
+                paddingVertical: spacing.sm,
+                backgroundColor: colors.surfaceMuted,
+                color: colors.textPrimary,
+                minHeight: 64,
+                textAlignVertical: 'top',
+              }}
+            />
+          </View>
+          <View>
+            <Text style={{ ...typography.caption, color: colors.textMuted }}>Additional Event Details</Text>
+            <TextInput
+              value={eventDetails.additionalNotes}
+              onChangeText={(value) => setEventDetails((prev) => ({ ...prev, additionalNotes: value }))}
+              placeholder="Any other details about your event"
+              placeholderTextColor={colors.textMuted}
+              multiline
+              numberOfLines={3}
+              style={{
+                marginTop: spacing.xs,
+                borderWidth: 1,
+                borderColor: colors.borderSubtle,
+                borderRadius: radii.md,
+                paddingHorizontal: spacing.md,
+                paddingVertical: spacing.sm,
+                backgroundColor: colors.surfaceMuted,
+                color: colors.textPrimary,
+                minHeight: 64,
+                textAlignVertical: 'top',
+              }}
+            />
+          </View>
         </View>
       </View>
 
@@ -614,95 +663,107 @@ export default function PlannerScreen({ navigation }: PlannerProps) {
           shadowOffset: { width: 0, height: 3 },
         }}
       >
-        <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.md }}>
-          <MaterialIcons name="checklist" size={20} color={colors.primary} style={{ marginRight: spacing.sm }} />
-          <Text style={{ ...typography.titleMedium, color: colors.textPrimary }}>Task List</Text>
-        </View>
-        <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.md }}>
-          <TextInput
-            value={newTask}
-            onChangeText={setNewTask}
-            placeholder="Add new task..."
-            style={{
-              flex: 1,
-              borderWidth: 1,
-              borderColor: colors.borderSubtle,
-              borderRadius: radii.md,
-              paddingHorizontal: spacing.md,
-              paddingVertical: spacing.sm,
-              backgroundColor: colors.surfaceMuted,
-              color: colors.textPrimary,
-            }}
-          />
-          <TouchableOpacity
-            onPress={handleAddTask}
-            style={{
-              marginLeft: spacing.sm,
-              padding: spacing.sm,
-              borderRadius: radii.md,
-              backgroundColor: colors.primary,
-            }}
-          >
-            <MaterialIcons name="add" size={20} color="#FFFFFF" />
-          </TouchableOpacity>
-        </View>
+        <TouchableOpacity
+          activeOpacity={0.7}
+          onPress={() => setTaskListExpanded((p) => !p)}
+          style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: taskListExpanded ? spacing.md : 0 }}
+        >
+          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+            <MaterialIcons name="checklist" size={20} color={colors.primary} style={{ marginRight: spacing.sm }} />
+            <Text style={{ ...typography.titleMedium, color: colors.textPrimary }}>To Do List</Text>
+          </View>
+          <MaterialIcons name={taskListExpanded ? 'expand-less' : 'expand-more'} size={22} color={colors.textMuted} />
+        </TouchableOpacity>
 
-        {tasks.length === 0 && (
-          <Text style={{ ...typography.caption, color: colors.textMuted }}>No tasks yet. Add your first task.</Text>
-        )}
-
-        {tasks.map((item) => {
-          const due = item.due_date ? new Date(item.due_date).toLocaleDateString('en-ZA') : 'No due date';
-          const completed = item.status === 'completed';
-          return (
-            <View
-              key={item.id}
-              style={{
-                marginTop: spacing.sm,
-                padding: spacing.md,
-                borderRadius: radii.md,
-                borderWidth: 1,
-                borderColor: colors.borderSubtle,
-                backgroundColor: colors.surfaceMuted,
-              }}
-            >
-              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                <TouchableOpacity onPress={() => toggleTask(item)} style={{ marginRight: spacing.sm }}>
-                  <MaterialIcons
-                    name={completed ? 'check-box' : 'check-box-outline-blank'}
-                    size={20}
-                    color={completed ? colors.primary : colors.textMuted}
-                  />
-                </TouchableOpacity>
-                <View style={{ flex: 1 }}>
-                  <Text
-                    style={{
-                      ...typography.body,
-                      color: colors.textPrimary,
-                      fontWeight: '600',
-                      textDecorationLine: completed ? 'line-through' : 'none',
-                    }}
-                  >
-                    {item.title}
-                  </Text>
-                  <Text style={{ ...typography.caption, color: colors.textMuted, marginTop: spacing.xs }}>
-                    {due}
-                  </Text>
-                </View>
-                <TouchableOpacity onPress={() => handleEditTask(item)} style={{ marginRight: spacing.sm }}>
-                  <MaterialIcons name="edit" size={18} color={colors.primary} />
-                </TouchableOpacity>
-                <TouchableOpacity onPress={() => deleteTask(item.id)}>
-                  <MaterialIcons name="delete" size={18} color={colors.textMuted} />
-                </TouchableOpacity>
-              </View>
+        {taskListExpanded && (
+          <>
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.md }}>
+              <TextInput
+                value={newTask}
+                onChangeText={setNewTask}
+                placeholder="Add new task..."
+                style={{
+                  flex: 1,
+                  borderWidth: 1,
+                  borderColor: colors.borderSubtle,
+                  borderRadius: radii.md,
+                  paddingHorizontal: spacing.md,
+                  paddingVertical: spacing.sm,
+                  backgroundColor: colors.surfaceMuted,
+                  color: colors.textPrimary,
+                }}
+              />
+              <TouchableOpacity
+                onPress={handleAddTask}
+                style={{
+                  marginLeft: spacing.sm,
+                  padding: spacing.sm,
+                  borderRadius: radii.md,
+                  backgroundColor: colors.primary,
+                }}
+              >
+                <MaterialIcons name="add" size={20} color="#FFFFFF" />
+              </TouchableOpacity>
             </View>
-          );
-        })}
 
-        <Text style={{ ...typography.caption, color: colors.textMuted, marginTop: spacing.sm }}>
-          {remainingTasks} remaining of {tasks.length} tasks
-        </Text>
+            {tasks.length === 0 && (
+              <Text style={{ ...typography.caption, color: colors.textMuted }}>No tasks yet. Add your first task.</Text>
+            )}
+
+            {tasks.map((item) => {
+              const due = item.due_date ? new Date(item.due_date).toLocaleDateString('en-ZA') : 'No due date';
+              const completed = item.status === 'completed';
+              return (
+                <View
+                  key={item.id}
+                  style={{
+                    marginTop: spacing.sm,
+                    padding: spacing.md,
+                    borderRadius: radii.md,
+                    borderWidth: 1,
+                    borderColor: colors.borderSubtle,
+                    backgroundColor: colors.surfaceMuted,
+                  }}
+                >
+                  <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                    <TouchableOpacity onPress={() => toggleTask(item)} style={{ marginRight: spacing.sm }}>
+                      <MaterialIcons
+                        name={completed ? 'check-box' : 'check-box-outline-blank'}
+                        size={20}
+                        color={completed ? colors.primary : colors.textMuted}
+                      />
+                    </TouchableOpacity>
+                    <View style={{ flex: 1 }}>
+                      <Text
+                        style={{
+                          ...typography.body,
+                          color: colors.textPrimary,
+                          fontWeight: '600',
+                          textDecorationLine: completed ? 'line-through' : 'none',
+                        }}
+                      >
+                        {item.title}
+                      </Text>
+                      <Text style={{ ...typography.caption, color: colors.textMuted, marginTop: spacing.xs }}>
+                        {due}
+                      </Text>
+                    </View>
+                    <TouchableOpacity onPress={() => handleEditTask(item)} style={{ marginRight: spacing.sm }}>
+                      <MaterialIcons name="edit" size={18} color={colors.primary} />
+                    </TouchableOpacity>
+                    <TouchableOpacity onPress={() => deleteTask(item.id)}>
+                      <MaterialIcons name="delete" size={18} color={colors.textMuted} />
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              );
+            })}
+
+            <Text style={{ ...typography.caption, color: colors.textMuted, marginTop: spacing.sm }}>
+              {remainingTasks} remaining of {tasks.length} tasks
+            </Text>
+          </>
+        )}
       </View>
 
       {/* Edit Task Modal */}
@@ -801,15 +862,15 @@ export default function PlannerScreen({ navigation }: PlannerProps) {
           <View style={{ flex: 1 }}>
             <Text style={{ ...typography.caption, color: colors.textMuted }}>Total Budget:</Text>
             <Text style={{ ...typography.bodySemiBold, color: colors.textPrimary }}>
-              R {budgetTotals.total.toLocaleString('en-ZA')}
+              R{budgetTotals.total.toLocaleString('en-ZA')}
             </Text>
             <Text style={{ ...typography.caption, color: colors.textMuted, marginTop: spacing.xs }}>Total Spent:</Text>
             <Text style={{ ...typography.bodySemiBold, color: colors.textPrimary }}>
-              R {budgetTotals.spent.toLocaleString('en-ZA')}
+              R{budgetTotals.spent.toLocaleString('en-ZA')}
             </Text>
             <Text style={{ ...typography.caption, color: colors.textMuted, marginTop: spacing.xs }}>Remaining:</Text>
             <Text style={{ ...typography.bodySemiBold, color: '#16A34A' }}>
-              R {budgetTotals.remaining.toLocaleString('en-ZA')}
+              R{budgetTotals.remaining.toLocaleString('en-ZA')}
             </Text>
           </View>
         </View>

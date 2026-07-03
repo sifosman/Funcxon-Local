@@ -1,12 +1,14 @@
 import { useEffect, useState, useMemo } from 'react';
-import { Link } from 'react-router-dom';
-import { ArrowLeft, Loader2, Check, Upload, X } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
+import { ArrowLeft, Loader2, Check, Upload, X, Video } from 'lucide-react';
 import { useAuth } from '../auth/AuthContext';
 import { supabase } from '../lib/supabaseClient';
 import { uploadFileToStorage } from '../lib/applicationService';
+import { createGalleryMediaRecord } from '../lib/mediaUpload';
 import { AddressAutocompleteInput } from '../components/AddressAutocompleteInput';
-import { getMyVenueEntitlement, isVenueFeatureEnabled } from '../lib/venueSubscription';
+import { getMyVenueEntitlement } from '../lib/venueSubscription';
 import { AppAlert } from '../components/AppAlert';
+import { normalizePhoneNumber } from '../utils/phoneNormalization';
 
 const VENUE_COLUMNS = 'id, user_id, name, description, location, address_line_1, address_line_2, suburb, city, province, postal_code, country, latitude, longitude, contact_email, whatsapp_number, website_url, instagram_url, facebook_url, tiktok_url, linkedin_url, venue_type, venue_capacity, image_url, additional_photos';
 
@@ -51,14 +53,17 @@ function parseCoordinate(value: string) {
 
 export default function UpdateVenuePortfolioPage() {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
-  const [linksLocked, setLinksLocked] = useState(false);
   const [photoLimit, setPhotoLimit] = useState(10);
+  const [videoLimit, setVideoLimit] = useState(1);
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [additionalPhotos, setAdditionalPhotos] = useState<string[]>([]);
+  const [videos, setVideos] = useState<string[]>([]);
   const [uploadingImage, setUploadingImage] = useState(false);
+  const [uploadingVideo, setUploadingVideo] = useState(false);
   const [alert, setAlert] = useState<{ title: string; message: string; type: 'error' | 'success' | 'warning' } | null>(null);
 
   const [form, setForm] = useState({
@@ -101,6 +106,8 @@ export default function UpdateVenuePortfolioPage() {
 
   const currentPhotoCount = (imageUrl ? 1 : 0) + additionalPhotos.length;
   const remainingPhotoSlots = Math.max(0, photoLimit - currentPhotoCount);
+  const currentVideoCount = videos.length;
+  const remainingVideoSlots = Math.max(0, videoLimit - currentVideoCount);
 
   useEffect(() => {
     const load = async () => {
@@ -111,12 +118,17 @@ export default function UpdateVenuePortfolioPage() {
           supabase.from('venue_listings').select(VENUE_COLUMNS).eq('user_id', user.id).maybeSingle(),
         ]);
         setPhotoLimit(ent.photoUploadLimit);
-        setLinksLocked(!isVenueFeatureEnabled(ent, 'website_social_links'));
+        setVideoLimit(ent.videoUploadLimit ?? 1);
 
         if (data) {
           const row = data as VenueListing;
           setImageUrl(row.image_url || null);
           setAdditionalPhotos(row.additional_photos || []);
+          const { data: galleryRows } = await supabase
+            .from('gallery_media')
+            .select('media_url, media_type')
+            .eq('venue_id', row.id);
+          setVideos((galleryRows || []).filter((g) => g.media_type === 'video').map((g) => g.media_url));
           setForm({
             name: row.name || '',
             description: row.description || '',
@@ -161,12 +173,9 @@ export default function UpdateVenuePortfolioPage() {
   }, [user?.id]);
 
   const handleChange = (key: keyof typeof form, value: string) => {
-    const isLinksField = ['website_url', 'instagram_url', 'facebook_url', 'tiktok_url', 'linkedin_url'].includes(key);
-    if (isLinksField && linksLocked) {
-      setAlert({ title: 'Upgrade Required', message: 'Website and social media links are available on paid venue plans. Please upgrade to add these links.', type: 'warning' });
-      return;
-    }
-    setForm((prev) => ({ ...prev, [key]: value }));
+    const isPhoneField = key === 'whatsapp_number';
+    const normalizedValue = isPhoneField ? normalizePhoneNumber(value) : value;
+    setForm((prev) => ({ ...prev, [key]: normalizedValue }));
   };
 
   const handleImageUpload = async (files: FileList | null, isMain: boolean) => {
@@ -175,9 +184,15 @@ export default function UpdateVenuePortfolioPage() {
     try {
       const uploads: string[] = [];
       const toUpload = Array.from(files).slice(0, isMain ? 1 : remainingPhotoSlots);
+      const { data: listing } = await supabase.from('venue_listings').select('id').eq('user_id', user.id).maybeSingle();
       for (const file of toUpload) {
         const result = await uploadFileToStorage('portfolio-images', file, user.id);
-        if (result.success && result.url) uploads.push(result.url);
+        if (result.success && result.url) {
+          uploads.push(result.url);
+          if (listing?.id) {
+            await createGalleryMediaRecord(result.url, 'image', { venueId: listing.id });
+          }
+        }
       }
       if (isMain) {
         setImageUrl(uploads[0] || imageUrl);
@@ -193,6 +208,31 @@ export default function UpdateVenuePortfolioPage() {
 
   const handleRemoveMainImage = () => setImageUrl(null);
   const handleRemoveAdditionalPhoto = (index: number) => setAdditionalPhotos((prev) => prev.filter((_, i) => i !== index));
+  const handleRemoveVideo = (index: number) => setVideos((prev) => prev.filter((_, i) => i !== index));
+
+  const handleVideoUpload = async (files: FileList | null) => {
+    if (!files || files.length === 0 || !user?.id) return;
+    setUploadingVideo(true);
+    try {
+      const uploads: string[] = [];
+      const toUpload = Array.from(files).slice(0, remainingVideoSlots);
+      const { data: listing } = await supabase.from('venue_listings').select('id').eq('user_id', user.id).maybeSingle();
+      for (const file of toUpload) {
+        const result = await uploadFileToStorage('portfolio-videos', file, user.id);
+        if (result.success && result.url) {
+          uploads.push(result.url);
+          if (listing?.id) {
+            await createGalleryMediaRecord(result.url, 'video', { venueId: listing.id });
+          }
+        }
+      }
+      setVideos((prev) => [...prev, ...uploads]);
+    } catch (err: any) {
+      setAlert({ title: 'Upload Failed', message: err?.message || 'Could not upload video(s).', type: 'error' });
+    } finally {
+      setUploadingVideo(false);
+    }
+  };
 
   const handleSave = async () => {
     if (!form.name.trim()) {
@@ -230,11 +270,11 @@ export default function UpdateVenuePortfolioPage() {
         longitude,
         contact_email: form.contact_email.trim() || null,
         whatsapp_number: form.whatsapp_number.trim() || null,
-        website_url: linksLocked ? null : (form.website_url.trim() || null),
-        instagram_url: linksLocked ? null : (form.instagram_url.trim() || null),
-        facebook_url: linksLocked ? null : (form.facebook_url.trim() || null),
-        tiktok_url: linksLocked ? null : (form.tiktok_url.trim() || null),
-        linkedin_url: linksLocked ? null : (form.linkedin_url.trim() || null),
+        website_url: form.website_url.trim() || null,
+        instagram_url: form.instagram_url.trim() || null,
+        facebook_url: form.facebook_url.trim() || null,
+        tiktok_url: form.tiktok_url.trim() || null,
+        linkedin_url: form.linkedin_url.trim() || null,
         venue_type: form.venue_type.trim() || null,
         venue_capacity: form.venue_capacity.trim() || null,
         image_url: imageUrl,
@@ -244,7 +284,10 @@ export default function UpdateVenuePortfolioPage() {
       const { error } = await supabase.from('venue_listings').upsert(payload, { onConflict: 'user_id' });
       if (error) throw error;
       setSaved(true);
-      setTimeout(() => setSaved(false), 2000);
+      setTimeout(() => {
+        setSaved(false);
+        navigate('/lister-portfolio');
+      }, 800);
     } catch (err: any) {
       console.error('Venue portfolio update error:', err);
       setAlert({ title: 'Error', message: err?.message || 'Failed to save changes.', type: 'error' });
@@ -279,7 +322,7 @@ export default function UpdateVenuePortfolioPage() {
     <div className="fx-container fx-section">
       <div className="mx-auto max-w-3xl">
         <Link
-          to="/portfolio/update"
+          to="/lister-portfolio"
           className="mb-4 inline-flex items-center text-sm font-medium hover:underline"
           style={{ color: '#123f5c' }}
         >
@@ -335,7 +378,7 @@ export default function UpdateVenuePortfolioPage() {
           {/* Additional photos */}
           <div>
             <label className="mb-2 block text-xs font-semibold uppercase tracking-wider text-on-surface-variant" >
-              Additional Photos <span className="font-normal normal-case">({remainingPhotoSlots} remaining)</span>
+              Additional Photos <span className="font-normal normal-case">({currentPhotoCount} of {photoLimit} used. Your current subscription allows up to {photoLimit} photos.)</span>
             </label>
             <div className="rounded-lg border border-dashed border-outline-variant p-6 text-center">
               <input
@@ -374,12 +417,43 @@ export default function UpdateVenuePortfolioPage() {
             )}
           </div>
 
+          {/* Videos */}
+          <div>
+            <label className="mb-2 block text-xs font-semibold uppercase tracking-wider text-on-surface-variant" >
+              Portfolio Videos <span className="font-normal normal-case">({currentVideoCount} of {videoLimit})</span>
+            </label>
+            <div className="rounded-lg border border-dashed border-outline-variant p-6 text-center">
+              <input
+                type="file"
+                accept="video/*"
+                onChange={(e) => handleVideoUpload(e.target.files)}
+                className="hidden"
+                id="venue-video-upload"
+                disabled={uploadingVideo || remainingVideoSlots <= 0}
+              />
+              <label
+                htmlFor="venue-video-upload"
+                className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-outline-variant bg-white px-4 py-2 text-sm font-semibold text-on-surface hover:bg-surface-container-low disabled:opacity-60"
+              >
+                <Video className="h-4 w-4" />
+                {uploadingVideo ? 'Uploading...' : 'Upload Video'}
+              </label>
+            </div>
+            <div className="mt-3 space-y-2">
+              {videos.map((_, i) => (
+                <div key={i} className="flex items-center justify-between rounded-lg border border-outline-variant p-3">
+                  <span className="text-sm">Video {i + 1}</span>
+                  <button type="button" onClick={() => handleRemoveVideo(i)} className="text-on-surface-variant"><X className="h-4 w-4" /></button>
+                </div>
+              ))}
+            </div>
+          </div>
+
           <div className="grid gap-4 md:grid-cols-2">
             {fields.map((field) => (
               <div key={field.key} className={field.span || field.type === 'textarea' ? 'md:col-span-2' : ''}>
                 <label className="mb-1 block text-xs font-semibold uppercase tracking-wider text-on-surface-variant" >
                   {field.label}{field.key === 'name' || field.key === 'description' ? ' *' : ''}
-                  {linksLocked && ['website_url', 'instagram_url', 'facebook_url', 'tiktok_url', 'linkedin_url'].includes(field.key) ? ' (paid plans)' : ''}
                 </label>
                 {field.type === 'textarea' ? (
                   <textarea
@@ -394,8 +468,7 @@ export default function UpdateVenuePortfolioPage() {
                     type={field.type || 'text'}
                     value={form[field.key]}
                     onChange={(e) => handleChange(field.key, e.target.value)}
-                    disabled={linksLocked && ['website_url', 'instagram_url', 'facebook_url', 'tiktok_url', 'linkedin_url'].includes(field.key)}
-                    className="w-full rounded-lg border border-outline-variant px-4 py-3 text-sm outline-none focus:border-primary disabled:bg-surface-container disabled:opacity-70"
+                    className="w-full rounded-lg border border-outline-variant px-4 py-3 text-sm outline-none focus:border-primary"
                     
                   />
                 )}
@@ -433,7 +506,7 @@ export default function UpdateVenuePortfolioPage() {
 
         <div className="mt-10 flex items-center justify-between">
           <Link
-            to="/portfolio/update"
+            to="/lister-portfolio"
             className="rounded-lg border border-outline-variant px-6 py-3 text-sm font-semibold text-on-surface hover:bg-surface-container-low"
             
           >

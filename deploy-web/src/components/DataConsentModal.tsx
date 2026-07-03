@@ -50,15 +50,47 @@ export function DataConsentModal({ forceShow, onClose }: DataConsentModalProps) 
     onClose?.();
   };
 
-  const handleDecline = () => {
+  const handleDecline = async () => {
+    try {
+      localStorage.setItem(CONSENT_KEY, 'declined');
+    } catch {
+      // ignore
+    }
+
+    if (session?.user?.id) {
+      try {
+        await supabase
+          .from('users')
+          .update({ data_consent_accepted: false, data_consent_accepted_at: new Date().toISOString() })
+          .eq('auth_user_id', session.user.id);
+      } catch (error) {
+        console.error('Failed to record decline in Supabase:', error);
+      }
+    }
+
     setVisible(false);
     onClose?.();
   };
 
+  useEffect(() => {
+    if (!visible) return;
+    const handleEsc = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        handleDecline();
+      }
+    };
+    document.addEventListener('keydown', handleEsc);
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.removeEventListener('keydown', handleEsc);
+      document.body.style.overflow = '';
+    };
+  }, [visible]);
+
   if (!visible) return null;
 
   return (
-    <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/50 p-4 transition-opacity duration-200">
+    <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/50 p-4 transition-opacity duration-200" onClick={(e) => { if (e.target === e.currentTarget) handleDecline(); }}>
       <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
         <h2 className="font-display mb-2 text-xl font-semibold text-on-surface">Data & Privacy Consent</h2>
         <p className="mb-4 text-sm leading-relaxed text-on-surface-variant">

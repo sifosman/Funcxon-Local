@@ -10,8 +10,8 @@ import { ApplicationProgress } from '../../components/ApplicationProgress';
 import { AddressAutocompleteInput } from '../../components/AddressAutocompleteInput';
 import { useAuth } from '../../auth/AuthContext';
 import { getLatestUserApplicationByType, isBlockingApplicationStatus } from '../../lib/applicationService';
-import { getMyVenueEntitlement, isVenueFeatureEnabled } from '../../lib/venueSubscription';
 import ThemedAlert from '../../components/ThemedAlert';
+import { normalizePhoneNumber } from '../../utils/phoneNormalization';
 
 type ProfileStackParamList = {
   PortfolioType: undefined;
@@ -25,23 +25,7 @@ export default function ApplicationStep1Screen() {
   const { state, updateStep1 } = useApplicationForm();
   const { user } = useAuth();
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const [canEditVenueLinks, setCanEditVenueLinks] = useState(true);
   const [alertState, setAlertState] = useState<{visible: boolean; title: string; message: string; buttons?: any[]} | null>(null);
-
-  useEffect(() => {
-    async function loadVenueLinkEntitlement() {
-      if (!user) return;
-      if (state.portfolioType !== 'venues') {
-        setCanEditVenueLinks(true);
-        return;
-      }
-
-      const ent = await getMyVenueEntitlement(user.id);
-      setCanEditVenueLinks(isVenueFeatureEnabled(ent, 'website_social_links'));
-    }
-
-    loadVenueLinkEntitlement();
-  }, [state.portfolioType, user]);
 
   useEffect(() => {
     let isActive = true;
@@ -66,22 +50,10 @@ export default function ApplicationStep1Screen() {
   }, [navigation, state.portfolioType]);
 
   const handleChange = (field: string, value: string) => {
-    const isVenueLinksField =
-      field === 'instagram' ||
-      field === 'facebook' ||
-      field === 'tiktok';
+    const phoneFields = ['contactPhoneNumber', 'alternatePhone1', 'alternatePhone2', 'userWhatsapp'];
+    const normalizedValue = phoneFields.includes(field) ? normalizePhoneNumber(value) : value;
 
-    if (state.portfolioType === 'venues' && isVenueLinksField && !canEditVenueLinks) {
-      setAlertState({
-        visible: true,
-        title: 'Upgrade Required',
-        message: 'Website & social media links are available on paid venue plans. Please upgrade to add these links.',
-        buttons: [{ text: 'OK', style: 'default', onPress: () => setAlertState(null) }],
-      });
-      return;
-    }
-
-    updateStep1({ [field]: value });
+    updateStep1({ [field]: normalizedValue });
     if (errors[field]) {
       setErrors((prev) => {
         const newErrors = { ...prev };
@@ -456,7 +428,6 @@ export default function ApplicationStep1Screen() {
                   placeholder="@yourhandle"
                   value={state.step1.instagram}
                   onChangeText={(value) => handleChange('instagram', value)}
-                  editable={state.portfolioType !== 'venues' || canEditVenueLinks}
                   autoCapitalize="none"
                   style={{
                     borderWidth: 1,
@@ -464,11 +435,9 @@ export default function ApplicationStep1Screen() {
                     borderRadius: radii.md,
                     paddingHorizontal: spacing.md,
                     paddingVertical: spacing.sm,
-                    backgroundColor:
-                      state.portfolioType === 'venues' && !canEditVenueLinks ? colors.surfaceMuted : colors.surface,
+                    backgroundColor: colors.surface,
                     fontSize: 14,
                     color: colors.textPrimary,
-                    opacity: state.portfolioType === 'venues' && !canEditVenueLinks ? 0.7 : 1,
                     fontFamily: typography.body.fontFamily,
                   }}
                 />
@@ -482,7 +451,6 @@ export default function ApplicationStep1Screen() {
                   placeholder="Facebook page or profile URL"
                   value={state.step1.facebook}
                   onChangeText={(value) => handleChange('facebook', value)}
-                  editable={state.portfolioType !== 'venues' || canEditVenueLinks}
                   autoCapitalize="none"
                   style={{
                     borderWidth: 1,
@@ -490,11 +458,9 @@ export default function ApplicationStep1Screen() {
                     borderRadius: radii.md,
                     paddingHorizontal: spacing.md,
                     paddingVertical: spacing.sm,
-                    backgroundColor:
-                      state.portfolioType === 'venues' && !canEditVenueLinks ? colors.surfaceMuted : colors.surface,
+                    backgroundColor: colors.surface,
                     fontSize: 14,
                     color: colors.textPrimary,
-                    opacity: state.portfolioType === 'venues' && !canEditVenueLinks ? 0.7 : 1,
                     fontFamily: typography.body.fontFamily,
                   }}
                 />
@@ -508,7 +474,6 @@ export default function ApplicationStep1Screen() {
                   placeholder="@yourhandle"
                   value={state.step1.tiktok}
                   onChangeText={(value) => handleChange('tiktok', value)}
-                  editable={state.portfolioType !== 'venues' || canEditVenueLinks}
                   autoCapitalize="none"
                   style={{
                     borderWidth: 1,
@@ -516,52 +481,14 @@ export default function ApplicationStep1Screen() {
                     borderRadius: radii.md,
                     paddingHorizontal: spacing.md,
                     paddingVertical: spacing.sm,
-                    backgroundColor:
-                      state.portfolioType === 'venues' && !canEditVenueLinks ? colors.surfaceMuted : colors.surface,
+                    backgroundColor: colors.surface,
                     fontSize: 14,
                     color: colors.textPrimary,
-                    opacity: state.portfolioType === 'venues' && !canEditVenueLinks ? 0.7 : 1,
                     fontFamily: typography.body.fontFamily,
                   }}
                 />
               </View>
 
-              {state.portfolioType === 'venues' && !canEditVenueLinks && (
-                <View
-                  style={{
-                    marginTop: spacing.md,
-                    padding: spacing.md,
-                    borderRadius: radii.md,
-                    backgroundColor: '#FFF7ED',
-                    borderWidth: 1,
-                    borderColor: '#FDBA74',
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    gap: spacing.md,
-                  }}
-                >
-                  <View style={{ flex: 1 }}>
-                    <Text style={{ ...typography.captionSemiBold, color: '#9A3412' }}>
-                      Upgrade required
-                    </Text>
-                    <Text style={{ ...typography.caption, color: '#9A3412', marginTop: 2 }}>
-                      Website & social media links are available on paid venue plans.
-                    </Text>
-                  </View>
-                  <TouchableOpacity
-                    onPress={() => (navigation as any).navigate('VenueListingPlans')}
-                    style={{
-                      paddingHorizontal: spacing.md,
-                      paddingVertical: spacing.xs,
-                      borderRadius: radii.full,
-                      backgroundColor: colors.primary,
-                    }}
-                  >
-                    <Text style={{ ...typography.captionSemiBold, color: '#FFFFFF' }}>Upgrade</Text>
-                  </TouchableOpacity>
-                </View>
-              )}
             </View>
           </View>
 

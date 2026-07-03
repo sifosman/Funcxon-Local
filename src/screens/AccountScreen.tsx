@@ -31,7 +31,6 @@ export default function AccountScreen() {
     const [deleteAlertVisible, setDeleteAlertVisible] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
     const [logoutAlert, setLogoutAlert] = useState<{visible: boolean; title: string; message: string} | null>(null);
-    const [subscriberAlert, setSubscriberAlert] = useState<{visible: boolean; title: string; message: string} | null>(null);
     const [currentPlan, setCurrentPlan] = useState<string | null>(null);
     const hasSubscriberAccess = userRole === 'vendor';
 
@@ -193,15 +192,6 @@ export default function AccountScreen() {
         navigation.navigate('VenueListingPlans');
     };
 
-    const handleSubscriberAccess = () => {
-        if (!hasSubscriberAccess) {
-            setSubscriberAlert({ visible: true, title: 'Subscriber access only', message: 'This area is only available to vendors and venues with subscriber access. You can view plans to upgrade your account.' });
-            return;
-        }
-
-        navigation.navigate('SubscriberProfile');
-    };
-
     const handleGoToListings = () => {
         // Jump to the Home tab (Search/Listings) and its initial screen.
         // This screen lives in the root tab navigator, so we need to navigate via the parent navigator.
@@ -263,15 +253,10 @@ export default function AccountScreen() {
             ],
         },
         {
-            id: 'subscriber-suite',
-            label: 'Subscriber Suite',
-            icon: 'credit-card',
-            submenu: [
-                { id: 'portfolio-profile', label: 'Portfolio Profile', icon: 'business-center', action: handleSubscriberAccess },
-                { id: 'billing', label: 'Billing & Payments', icon: 'receipt-long', action: hasSubscriberAccess ? () => navigation.navigate('Billing') : handleSubscriberAccess },
-                { id: 'subscriber-legal-terms', label: 'Subscriber Legal Terms', icon: 'description', route: 'TermsAndPolicies' },
-                { id: 'activity-dashboard', label: 'Activity Dashboard', icon: 'bar-chart', action: handleSubscriberAccess },
-            ],
+            id: 'my-tours',
+            label: 'My Bookings',
+            icon: 'calendar-month',
+            route: 'MyTours',
         },
         {
             id: 'account-management',
@@ -463,7 +448,7 @@ export default function AccountScreen() {
                     }}
                 >
                     {menuItems
-                        .filter((item) => hasSubscriberAccess || (item.id !== 'subscriber-suite' && item.id !== 'lister-portfolio'))
+                        .filter((item) => hasSubscriberAccess ? item.id !== 'subscriber-suite' : (item.id !== 'subscriber-suite' && item.id !== 'lister-portfolio'))
                         .map((item) => renderMenuItem(item))}
                 </View>
             </ScrollView>
@@ -496,18 +481,6 @@ export default function AccountScreen() {
                         { text: 'OK', style: 'default', onPress: () => { setLogoutAlert(null); const parentNav = navigation.getParent() as any; parentNav?.navigate?.('Home'); } }
                     ]}
                     onDismiss={() => setLogoutAlert(null)}
-                />
-            )}
-            {subscriberAlert && (
-                <ThemedAlert
-                    visible={subscriberAlert.visible}
-                    title={subscriberAlert.title}
-                    message={subscriberAlert.message}
-                    buttons={[
-                        { text: 'View Plans', style: 'default', onPress: () => { setSubscriberAlert(null); navigation.navigate('SubscriptionPlans'); } },
-                        { text: 'Cancel', style: 'cancel', onPress: () => setSubscriberAlert(null) }
-                    ]}
-                    onDismiss={() => setSubscriberAlert(null)}
                 />
             )}
             {errorAlert && (

@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useState } from 'react';
-import { ActivityIndicator, FlatList, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, FlatList, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useQuery } from '@tanstack/react-query';
@@ -7,6 +7,7 @@ import { MaterialIcons } from '@expo/vector-icons';
 
 import { supabase } from '../lib/supabaseClient';
 import { colors, spacing, radii, typography } from '../theme';
+import { quoteStatusLabel } from '../lib/quoting';
 import type { QuotesStackParamList } from '../navigation/QuotesNavigator';
 import { useAuth } from '../auth/AuthContext';
 import ThemedAlert from '../components/ThemedAlert';
@@ -46,7 +47,7 @@ type CategorySeed = {
 export default function QuotesScreen() {
   const navigation = useNavigation<any>();
   const { user } = useAuth();
-  const [activeTab, setActiveTab] = useState<'all' | 'pending' | 'finalised' | 'tours'>('all');
+  const [activeTab, setActiveTab] = useState<'all' | 'pending' | 'quoted' | 'amended' | 'accepted' | 'finalised' | 'cancelled' | 'tours'>('all');
   const [actionLoadingId, setActionLoadingId] = useState<number | string | null>(null);
   const [editingNotesId, setEditingNotesId] = useState<number | string | null>(null);
   const [notesDraft, setNotesDraft] = useState('');
@@ -143,7 +144,7 @@ export default function QuotesScreen() {
 
       const { data: venueQuotes, error: venueError } = await supabase
         .from('venue_quote_requests')
-        .select('id, listing_id, requester_name, requester_email, status, message, event_date, created_at, line_items')
+        .select('id, listing_id, requester_name, requester_email, status, message, event_date, created_at, line_items, quote_amount')
         .eq('requester_user_id', user.id) // venue requests use the auth.uid
         .order('id', { ascending: false })
         .limit(50);
@@ -186,7 +187,7 @@ export default function QuotesScreen() {
         event_type: 'Venues',
         event_date: q.event_date,
         budget: null,
-        quote_amount: null,
+        quote_amount: q.quote_amount,
         created_at: q.created_at,
         requirements: null,
         notes: null,
@@ -215,6 +216,7 @@ export default function QuotesScreen() {
   const filtered = useMemo(() => {
     if (!data) return [];
     if (activeTab === 'all') return data;
+    if (activeTab === 'quoted') return data.filter((item) => item.status === 'quoted' || (typeof item.quote_amount === 'number' && item.quote_amount > 0 && item.status !== 'accepted' && item.status !== 'finalised' && item.status !== 'rejected' && item.status !== 'cancelled'));
     if (activeTab === 'tours') return data.filter((item) => item.status === 'tour_requested');
     return data.filter((item) => item.status === activeTab);
   }, [data, activeTab]);
@@ -224,18 +226,18 @@ export default function QuotesScreen() {
       total: 0,
       finalised: 0,
       pending: 0,
-      inProgress: 0,
+      received: 0,
     };
     data?.forEach((quote) => {
       if (quote.status === 'cancelled') return;
       const amount = typeof quote.quote_amount === 'number' ? quote.quote_amount : 0;
       totals.total += amount;
-      if (quote.status === 'finalised') {
+      if (quote.status === 'finalised' || quote.status === 'accepted') {
         totals.finalised += amount;
       } else if (quote.status === 'pending') {
         totals.pending += amount;
-      } else if (quote.status === 'in_progress') {
-        totals.inProgress += amount;
+      } else if (quote.status === 'quoted') {
+        totals.received += amount;
       }
     });
     return totals;
@@ -271,12 +273,16 @@ export default function QuotesScreen() {
   const tabCounts = {
     all: data?.length ?? 0,
     pending: data?.filter((item) => item.status === 'pending').length ?? 0,
+    quoted: data?.filter((item) => item.status === 'quoted' || (typeof item.quote_amount === 'number' && item.quote_amount > 0 && item.status !== 'accepted' && item.status !== 'finalised' && item.status !== 'rejected' && item.status !== 'cancelled')).length ?? 0,
+    amended: data?.filter((item) => item.status === 'amended').length ?? 0,
+    accepted: data?.filter((item) => item.status === 'accepted').length ?? 0,
     finalised: data?.filter((item) => item.status === 'finalised').length ?? 0,
+    cancelled: data?.filter((item) => item.status === 'cancelled').length ?? 0,
     tours: data?.filter((item) => item.status === 'tour_requested').length ?? 0,
   };
 
   const canCancel = (status?: string | null) => {
-    return status === 'pending' || status === 'quoted' || status === 'amended' || status === 'in_progress';
+    return status === 'pending' || status === 'quoted' || status === 'amended';
   };
 
   const handleCancel = (quote: QuoteRequest) => {
@@ -426,23 +432,17 @@ export default function QuotesScreen() {
     }
 
     if (quote.status === 'amended') {
-      setActionLoadingId(quote.id);
-      try {
-        const { error: updateError } = await supabase
-          .from('quote_requests')
-          .update({ status: 'finalised' })
-          .eq('id', quote.original_id ?? quote.id);
-
-        if (updateError) {
-          throw updateError;
-        }
-
-        await refetch();
-      } catch (err: any) {
-        setAlertState({ visible: true, title: 'Unable to approve', message: err?.message ?? 'Please try again.' });
-      } finally {
-        setActionLoadingId(null);
-      }
+      // User can amend a quote that was already amended; navigate to QuoteRequest edit mode
+      navigation.navigate('Home', {
+        screen: 'QuoteRequest',
+        params: {
+          vendorId: targetId ?? 0,
+          vendorName: quote.target_name ?? 'Vendor',
+          type: quote.is_venue ? 'venue' : 'vendor',
+          editMode: true,
+          quoteId: quote.original_id ?? quote.id,
+        },
+      });
       return;
     }
 
@@ -588,19 +588,27 @@ export default function QuotesScreen() {
                   </Text>
                 </View>
                 <View style={{ width: '50%' }}>
-                  <Text style={{ ...typography.caption, color: colors.textMuted }}>In Progress</Text>
+                  <Text style={{ ...typography.caption, color: colors.textMuted }}>Received</Text>
                   <Text style={{ ...typography.titleMedium, color: '#D97706' }}>
-                    {formatCurrency(summary.inProgress)}
+                    {formatCurrency(summary.received)}
                   </Text>
                 </View>
               </View>
             </View>
 
-            <View style={{ flexDirection: 'row', columnGap: spacing.sm, marginTop: spacing.lg, marginBottom: spacing.md }}>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={{ flexDirection: 'row', columnGap: spacing.sm, marginTop: spacing.lg, marginBottom: spacing.md, paddingRight: spacing.lg }}
+            >
               {([
                 { key: 'all' as const, label: `All (${tabCounts.all})` },
                 { key: 'pending' as const, label: `Pending (${tabCounts.pending})` },
+                { key: 'quoted' as const, label: `Received Quote (${tabCounts.quoted})` },
+                { key: 'amended' as const, label: `Amended (${tabCounts.amended})` },
+                { key: 'accepted' as const, label: `Accepted (${tabCounts.accepted})` },
                 { key: 'finalised' as const, label: `Finalised (${tabCounts.finalised})` },
+                { key: 'cancelled' as const, label: `Cancelled (${tabCounts.cancelled})` },
                 { key: 'tours' as const, label: `Tours (${tabCounts.tours})` },
               ]).map((tab) => {
                 const selected = activeTab === tab.key;
@@ -623,7 +631,7 @@ export default function QuotesScreen() {
                   </TouchableOpacity>
                 );
               })}
-            </View>
+            </ScrollView>
           </View>
         }
         renderItem={({ item }) => {
@@ -637,7 +645,7 @@ export default function QuotesScreen() {
               : item.status === 'quoted' || (typeof item.quote_amount === 'number' && item.quote_amount > 0)
                 ? 'Review & Accept'
                 : item.status === 'amended'
-                  ? 'Approve'
+                  ? 'Amend'
                   : item.status === 'pending'
                     ? 'Amend'
                     : item.status === 'tour_requested'
@@ -677,7 +685,7 @@ export default function QuotesScreen() {
                   }}
                 >
                   <Text style={{ ...typography.captionSemiBold, color: statusStyle(item.status).color }}>
-                    {item.status ?? 'requested'}
+                    {quoteStatusLabel(item.status)}
                   </Text>
                 </View>
               </View>
@@ -851,7 +859,7 @@ export default function QuotesScreen() {
 
               <View style={{ flexDirection: 'row', marginTop: spacing.md, columnGap: spacing.sm }}>
                 <TouchableOpacity
-                  onPress={() => navigation.navigate('QuoteDetail', { quoteId: item.id })}
+                  onPress={() => navigation.navigate('QuoteDetail', { quoteId: item.id, from: 'Quotes' })}
                   style={{
                     flex: 1,
                     flexDirection: 'row',

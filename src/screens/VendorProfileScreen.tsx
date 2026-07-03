@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, BackHandler, Dimensions, Image, Linking, Platform, ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, BackHandler, Dimensions, Image, Linking, Platform, ScrollView, Share, Text, TouchableOpacity, View } from 'react-native';
 import Carousel from 'react-native-reanimated-carousel';
 import type { ICarouselInstance } from 'react-native-reanimated-carousel';
 import ThemedAlert from '../components/ThemedAlert';
 import NetworkImage from '../components/NetworkImage';
+import ImageZoomModal, { type GalleryItem } from '../components/ImageZoomModal';
 import { useQuery} from '@tanstack/react-query';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { WebView } from 'react-native-webview';
@@ -77,10 +78,19 @@ type AvailabilityRecord = {
   notes: string | null;
 };
 
+type GalleryMedia = {
+  id: number;
+  media_url: string;
+  media_type: 'image' | 'video';
+  sort_order: number;
+};
+
 export default function VendorProfileScreen({ route, navigation }: Props) {
   const { vendorId } = route.params;
-  const [activeTab, setActiveTab] = useState<'about' | 'catalog' | 'reviews' | 'calendar'>('about');
+  const [activeTab, setActiveTab] = useState<'about' | 'features' | 'reviews' | 'calendar'>('about');
   const [galleryIndex, setGalleryIndex] = useState(0);
+  const [zoomVisible, setZoomVisible] = useState(false);
+  const [zoomInitialIndex, setZoomInitialIndex] = useState(0);
   const carouselRef = useRef<ICarouselInstance>(null);
   const [mapImageFailed, setMapImageFailed] = useState(false);
   const [favouriteIds, setFavouriteIds] = useState<{ vendorIds: number[]; venueIds: number[] }>({
@@ -194,39 +204,25 @@ export default function VendorProfileScreen({ route, navigation }: Props) {
   });
 
   const {
-    data: canLeaveReview,
-    isLoading: eligibilityLoading,
-  } = useQuery<boolean>({
-    queryKey: ['vendor-review-eligibility', vendorId, user?.id],
-    enabled: !!vendorId && !!user?.id,
+    data: galleryMedia,
+    isLoading: galleryMediaLoading,
+  } = useQuery<GalleryMedia[]>({
+    queryKey: ['vendor-gallery-media', vendorId],
+    enabled: !!vendorId,
     queryFn: async () => {
-      if (!user?.id) return false;
-
-      const { data: userRow, error: userError } = await supabase
-        .from('users')
-        .select('id')
-        .eq('auth_user_id', user.id)
-        .maybeSingle();
-
-      if (userError) {
-        throw userError;
-      }
-
-      const internalUserId = (userRow as any)?.id ?? null;
-      if (!internalUserId) return false;
-
-      const { count, error } = await supabase
-        .from('quote_requests')
-        .select('id', { count: 'exact', head: true })
+      const { data, error } = await supabase
+        .from('gallery_media')
+        .select('id, media_url, media_type, sort_order')
         .eq('vendor_id', vendorId)
-        .eq('user_id', internalUserId)
-        .in('status', ['accepted', 'finalised']);
+        .eq('is_active', true)
+        .order('sort_order', { ascending: true });
 
       if (error) {
-        throw error;
+        console.warn('gallery_media query failed, falling back to additional_photos:', error);
+        return [];
       }
 
-      return (count ?? 0) > 0;
+      return (data as GalleryMedia[]) ?? [];
     },
   });
 
@@ -393,10 +389,13 @@ export default function VendorProfileScreen({ route, navigation }: Props) {
     `;
   }, [mapCoordinates, mapSearchTarget, vendor?.name]);
 
-  const galleryImages = useMemo(
-    () => [vendor?.image_url, ...(Array.isArray(vendor?.additional_photos) ? vendor.additional_photos : [])].filter(Boolean) as string[],
-    [vendor?.image_url, vendor?.additional_photos],
-  );
+  const galleryItems = useMemo<GalleryItem[]>(() => {
+    if (galleryMedia && galleryMedia.length > 0) {
+      return galleryMedia.map((m) => ({ url: m.media_url, type: m.media_type }));
+    }
+    const legacyImages = [vendor?.image_url, ...(Array.isArray(vendor?.additional_photos) ? vendor.additional_photos : [])].filter(Boolean) as string[];
+    return legacyImages.map((url) => ({ url, type: 'image' as const }));
+  }, [galleryMedia, vendor?.image_url, vendor?.additional_photos]);
 
   const tagArrays: string[][] = [
     Array.isArray(vendor?.vendor_tags) ? vendor.vendor_tags : [],
@@ -485,13 +484,34 @@ export default function VendorProfileScreen({ route, navigation }: Props) {
     }
   };
 
+  const handleShare = async () => {
+    if (!vendor) return;
+    const url = `https://funxon-web.vercel.app/vendor/${vendor.id}`;
+    const message = encodeURIComponent(`Check out ${vendor.name} on Funxon: ${url}`);
+    const whatsappUrl = Platform.select({
+      ios: `https://wa.me/?text=${message}`,
+      android: `whatsapp://send?text=${message}`,
+      default: `https://wa.me/?text=${message}`,
+    });
+    try {
+      const supported = await Linking.canOpenURL(whatsappUrl);
+      if (supported) {
+        await Linking.openURL(whatsappUrl);
+      } else {
+        await Share.share({ message: `Check out ${vendor.name} on Funxon! ${url}`, title: vendor.name });
+      }
+    } catch (error) {
+      console.error('Share failed:', error);
+    }
+  };
+
   const handleOpenMap = () => {
     if (!mapCoordinates && !physicalAddress && !vendor?.google_maps_link) return;
     const mapsUrl = vendor?.google_maps_link
       ? vendor.google_maps_link
       : mapCoordinates
         ? `https://www.google.com/maps/search/?api=1&query=${mapCoordinates.latitude},${mapCoordinates.longitude}`
-        : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(mapSearchTarget)}`;
+        : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(mapSearchTarget ?? '')}`;
     Linking.openURL(mapsUrl).catch(() => null);
   };
 
@@ -634,7 +654,7 @@ export default function VendorProfileScreen({ route, navigation }: Props) {
       >
         <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
           <View style={{ flex: 1, paddingRight: spacing.md }}>
-            <Text style={{ ...typography.titleLarge, color: colors.textPrimary }}>{name}</Text>
+            <Text style={{ ...typography.titleLarge, color: colors.primary }}>{name}</Text>
             {vendor.subscription_tier && (
               <Text style={{ ...typography.caption, color: colors.textMuted, marginTop: 4 }}>
                 Subscription: {vendor.subscription_tier}
@@ -652,7 +672,7 @@ export default function VendorProfileScreen({ route, navigation }: Props) {
                 borderColor: colors.borderSubtle,
                 alignItems: 'center',
                 justifyContent: 'center',
-                marginRight: vendor.logo_url ? spacing.sm : 0,
+                marginRight: spacing.sm,
               }}
             >
               <MaterialIcons
@@ -660,6 +680,21 @@ export default function VendorProfileScreen({ route, navigation }: Props) {
                 size={18}
                 color={favouriteIds.vendorIds.includes(vendor.id) ? colors.primaryTeal : colors.textMuted}
               />
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={handleShare}
+              style={{
+                width: 36,
+                height: 36,
+                borderRadius: 18,
+                borderWidth: 1,
+                borderColor: colors.borderSubtle,
+                alignItems: 'center',
+                justifyContent: 'center',
+                marginRight: vendor.logo_url ? spacing.sm : 0,
+              }}
+            >
+              <MaterialIcons name="share" size={18} color={colors.textMuted} />
             </TouchableOpacity>
             {vendor.logo_url && (
               <View
@@ -715,22 +750,46 @@ export default function VendorProfileScreen({ route, navigation }: Props) {
         }}
       >
         <View style={{ height: 220, backgroundColor: colors.surfaceMuted }}>
-          {galleryImages.length > 0 ? (
+          {galleryItems.length > 0 ? (
             <>
               <Carousel
                 ref={carouselRef}
                 width={Dimensions.get('window').width}
                 height={220}
-                data={galleryImages}
-                loop={galleryImages.length > 1}
+                data={galleryItems}
+                loop={galleryItems.length > 1}
                 pagingEnabled={false}
                 snapEnabled
                 onSnapToItem={(index) => setGalleryIndex(index)}
                 renderItem={({ item }) => (
-                  <NetworkImage uri={item} style={{ width: '100%', height: '100%' }} resizeMode="cover" />
+                  <TouchableOpacity
+                    activeOpacity={0.9}
+                    onPress={() => {
+                      setZoomInitialIndex(galleryIndex);
+                      setZoomVisible(true);
+                    }}
+                    style={{ width: '100%', height: '100%' }}
+                  >
+                    {item.type === 'video' ? (
+                      <View style={{ width: '100%', height: '100%', alignItems: 'center', justifyContent: 'center', backgroundColor: '#000' }}>
+                        <NetworkImage
+                          uri={item.url}
+                          style={{ width: '100%', height: '100%', position: 'absolute' }}
+                          resizeMode="cover"
+                          placeholderIcon="videocam"
+                          useLogoFallback={false}
+                        />
+                        <View style={{ width: 48, height: 48, borderRadius: 24, backgroundColor: 'rgba(0,0,0,0.6)', alignItems: 'center', justifyContent: 'center' }}>
+                          <MaterialIcons name="play-arrow" size={32} color="#FFFFFF" />
+                        </View>
+                      </View>
+                    ) : (
+                      <NetworkImage uri={item.url} style={{ width: '100%', height: '100%' }} resizeMode="cover" />
+                    )}
+                  </TouchableOpacity>
                 )}
               />
-              {galleryImages.length > 1 && (
+              {galleryItems.length > 1 && (
                 <>
                   <TouchableOpacity
                     onPress={() => carouselRef.current?.prev()}
@@ -777,7 +836,7 @@ export default function VendorProfileScreen({ route, navigation }: Props) {
                       gap: 6,
                     }}
                   >
-                    {galleryImages.map((_, idx) => (
+                    {galleryItems.map((_, idx) => (
                       <View
                         key={idx}
                         style={{
@@ -801,7 +860,7 @@ export default function VendorProfileScreen({ route, navigation }: Props) {
             </View>
           )}
         </View>
-        {galleryImages.length > 1 && (
+        {galleryItems.length > 1 && (
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
@@ -809,32 +868,49 @@ export default function VendorProfileScreen({ route, navigation }: Props) {
             snapToInterval={80 + spacing.sm}
             decelerationRate="fast"
           >
-            {galleryImages.map((imageUrl, idx) => (
+            {galleryItems.map((item, idx) => (
               <TouchableOpacity
-                key={imageUrl + idx}
+                key={item.url + idx}
                 onPress={() => {
                   setGalleryIndex(idx);
                   carouselRef.current?.scrollTo({ index: idx });
                 }}
                 style={{ marginRight: spacing.sm }}
               >
-                <NetworkImage
-                  uri={imageUrl}
-                  style={{
-                    width: 80,
-                    height: 80,
-                    borderRadius: radii.md,
-                    backgroundColor: colors.surfaceMuted,
-                    borderWidth: idx === galleryIndex ? 2 : 0,
-                    borderColor: colors.textPrimary,
-                  }}
-                  resizeMode="cover"
-                />
+                <View style={{ position: 'relative' }}>
+                  <NetworkImage
+                    uri={item.url}
+                    style={{
+                      width: 80,
+                      height: 80,
+                      borderRadius: radii.md,
+                      backgroundColor: colors.surfaceMuted,
+                      borderWidth: idx === galleryIndex ? 2 : 0,
+                      borderColor: colors.textPrimary,
+                    }}
+                    resizeMode="cover"
+                    placeholderIcon={item.type === 'video' ? 'videocam' : 'image'}
+                    useLogoFallback={false}
+                  />
+                  {item.type === 'video' && (
+                    <View style={{ position: 'absolute', top: '50%', left: '50%', marginLeft: -10, marginTop: -10, width: 20, height: 20, borderRadius: 10, backgroundColor: 'rgba(0,0,0,0.6)', alignItems: 'center', justifyContent: 'center' }}>
+                      <MaterialIcons name="play-arrow" size={14} color="#FFFFFF" />
+                    </View>
+                  )}
+                </View>
               </TouchableOpacity>
             ))}
           </ScrollView>
         )}
       </View>
+
+      {/* Zoom / Video Modal */}
+      <ImageZoomModal
+        visible={zoomVisible}
+        items={galleryItems}
+        initialIndex={zoomInitialIndex}
+        onClose={() => setZoomVisible(false)}
+      />
 
       {/* Tabs */}
       <View
@@ -850,7 +926,7 @@ export default function VendorProfileScreen({ route, navigation }: Props) {
       >
         {([
           { key: 'about', label: 'About' },
-          { key: 'catalog', label: 'Catalog' },
+          { key: 'features', label: 'Features' },
           { key: 'reviews', label: 'Reviews' },
           { key: 'calendar', label: 'Calendar' },
         ] as const).map((tab) => {
@@ -907,39 +983,6 @@ export default function VendorProfileScreen({ route, navigation }: Props) {
               <Text style={{ ...typography.body, color: colors.textSecondary, lineHeight: 20 }}>{description}</Text>
             </View>
           )}
-
-          {/* Features & Amenities */}
-          {(vendor.amenities?.length || vendor.service_options?.length || vendor.dietary_options?.length || vendor.cuisine_types?.length) ? (
-            <View
-              style={{
-                marginBottom: spacing.lg,
-                padding: spacing.lg,
-                borderRadius: radii.lg,
-                backgroundColor: colors.surface,
-                borderWidth: 1,
-                borderColor: colors.borderSubtle,
-              }}
-            >
-              <Text style={{ ...typography.titleMedium, color: colors.textPrimary, marginBottom: spacing.md }}>
-                Features & Amenities
-              </Text>
-              <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
-                <View style={{ width: '50%', paddingRight: spacing.sm }}>
-                  {renderBulletSection('Venue Amenities', vendor.amenities)}
-                  {renderBulletSection('Service Options', vendor.service_options)}
-                </View>
-                <View style={{ width: '50%', paddingLeft: spacing.sm }}>
-                  {renderBulletSection('Dietary Options', vendor.dietary_options)}
-                  {renderBulletSection('Cuisine Types', vendor.cuisine_types)}
-                </View>
-              </View>
-              {vendor.venue_capacity && (
-                <Text style={{ ...typography.caption, color: colors.textMuted, marginTop: spacing.sm }}>
-                  Capacity: {vendor.venue_capacity} guests
-                </Text>
-              )}
-            </View>
-          ) : null}
 
           {/* Tags / highlights */}
           {tags.length > 0 && (
@@ -1137,41 +1180,57 @@ export default function VendorProfileScreen({ route, navigation }: Props) {
         </View>
       )}
 
-      {activeTab === 'catalog' && (
+      {activeTab === 'features' && (
         <View>
-          <View
-            style={{
-              marginBottom: spacing.lg,
-              padding: spacing.lg,
-              borderRadius: radii.lg,
-              backgroundColor: colors.surface,
-              borderWidth: 1,
-              borderColor: colors.borderSubtle,
-            }}
-          >
-            <Text style={{ ...typography.titleMedium, color: colors.textPrimary, marginBottom: spacing.sm }}>
-              View Catalogue
-            </Text>
+          {/* Service Options */}
+          {renderBulletSection('Service Options', vendor.service_options)}
+
+          {/* Vendor Tags / Specialties */}
+          {renderBulletSection('Specialties', vendor.vendor_tags)}
+
+          {/* Dietary Options */}
+          {renderBulletSection('Dietary Options', vendor.dietary_options)}
+
+          {/* Cuisine Types */}
+          {renderBulletSection('Cuisine Types', vendor.cuisine_types)}
+
+          {/* Amenities */}
+          {renderBulletSection('Amenities', vendor.amenities)}
+
+          {/* Coverage areas */}
+          {(vendor.province || vendor.city) && (
             <View
               style={{
-                borderWidth: 1,
-                borderStyle: 'dashed',
-                borderColor: colors.borderSubtle,
-                borderRadius: radii.md,
+                marginBottom: spacing.lg,
                 padding: spacing.lg,
-                alignItems: 'center',
-                backgroundColor: colors.surfaceMuted,
+                borderRadius: radii.lg,
+                backgroundColor: colors.surface,
+                borderWidth: 1,
+                borderColor: colors.borderSubtle,
               }}
             >
-              <Text style={{ ...typography.bodySemiBold, color: colors.textPrimary, marginBottom: spacing.xs }}>
-                Your catalog is empty
+              <Text style={{ ...typography.titleMedium, color: colors.textPrimary, marginBottom: spacing.md }}>
+                Coverage Area
               </Text>
-              <Text style={{ ...typography.caption, color: colors.textMuted, textAlign: 'center' }}>
-                This vendor hasn't added any items to their catalog yet.
-              </Text>
+              {vendor.province && (
+                <Text style={{ ...typography.body, color: colors.textPrimary, marginBottom: spacing.xs }}>
+                  Province: {vendor.province}
+                </Text>
+              )}
+              {vendor.city && (
+                <Text style={{ ...typography.body, color: colors.textPrimary, marginBottom: spacing.xs }}>
+                  City: {vendor.city}
+                </Text>
+              )}
+              {(vendor.city || vendor.province) && (
+                <Text style={{ ...typography.caption, color: colors.textMuted, marginTop: spacing.sm }}>
+                  Willing to travel to selected coverage areas.
+                </Text>
+              )}
             </View>
-          </View>
+          )}
 
+          {/* Request Quote CTA */}
           <View
             style={{
               marginBottom: spacing.lg,
@@ -1196,18 +1255,6 @@ export default function VendorProfileScreen({ route, navigation }: Props) {
               }}
             >
               <Text style={{ ...typography.bodySemiBold, color: '#FFFFFF' }}>Request Quote</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              onPress={() => setAlertState({ visible: true, title: 'Coming soon', message: 'Amend quote functionality will be available soon.' })}
-              style={{
-                borderWidth: 1,
-                borderColor: colors.textPrimary,
-                paddingVertical: spacing.md,
-                borderRadius: radii.md,
-                alignItems: 'center',
-              }}
-            >
-              <Text style={{ ...typography.bodySemiBold, color: colors.textPrimary }}>Amend Quote</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -1321,11 +1368,10 @@ export default function VendorProfileScreen({ route, navigation }: Props) {
                 Leave a review
               </Text>
               <Text style={{ ...typography.body, color: colors.textSecondary, marginBottom: spacing.md }}>
-                Reviews are available after you have used this service.
+                Share your experience with this vendor. Reviews help other users make informed decisions.
               </Text>
               <PrimaryButton
-                title={eligibilityLoading ? 'Checking eligibility...' : 'Leave a review'}
-                disabled={!canLeaveReview || eligibilityLoading}
+                title="Leave a review"
                 onPress={() =>
                   navigation.navigate('CreateReview', {
                     type: 'vendor',
@@ -1334,11 +1380,6 @@ export default function VendorProfileScreen({ route, navigation }: Props) {
                   })
                 }
               />
-              {!eligibilityLoading && !canLeaveReview ? (
-                <Text style={{ ...typography.caption, color: colors.textMuted, marginTop: spacing.sm }}>
-                  You can leave a review once your booking or quote is accepted/finalised.
-                </Text>
-              ) : null}
             </View>
           ) : (
             <View

@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Image, KeyboardAvoidingView, Modal, Platform, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useNavigation, useRoute } from '@react-navigation/native';
@@ -9,6 +9,7 @@ import type { ProfileStackParamList } from '../navigation/ProfileNavigator';
 import { useApplicationForm } from '../context/ApplicationFormContext';
 import { buildPayFastPaymentData, getPayFastCheckoutUrl, payfastConfig } from '../config/payfast';
 import { supabase } from '../lib/supabaseClient';
+import { useAuth } from '../auth/AuthContext';
 import ThemedAlert from '../components/ThemedAlert';
 
 const payfastLogo = require('../../assets/payfast.webp');
@@ -219,6 +220,7 @@ type RouteParams = {
 export default function SubscriptionCheckoutScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<ProfileStackParamList>>();
   const route = useRoute();
+  const { user } = useAuth();
   const { updateStep4, setPortfolioType } = useApplicationForm();
   const [alertState, setAlertState] = useState<{visible: boolean; title: string; message: string; buttons?: any[]} | null>(null);
 
@@ -244,6 +246,31 @@ export default function SubscriptionCheckoutScreen() {
   const fieldLayouts = useRef<Record<string, number>>({});
 
   const notifyUrl = `${process.env.EXPO_PUBLIC_SUPABASE_URL || 'https://fhlocaqndxawkbztncwo.supabase.co'}/functions/v1/payfast-itn`;
+
+  useEffect(() => {
+    if (!user?.id) return;
+    const loadUser = async () => {
+      const { data: auth } = await supabase.auth.getUser();
+      const { data: userRow } = await supabase
+        .from('users')
+        .select('full_name, email, phone, business_name, vat_number, address_line1, address_line2, city, province, postal_code')
+        .eq('auth_user_id', auth?.user?.id ?? user.id)
+        .maybeSingle();
+      if (!userRow) return;
+      const row = userRow as any;
+      if (row.full_name) setFullName(row.full_name);
+      if (row.email) setEmail(row.email);
+      if (row.phone) setPhone(row.phone);
+      if (row.business_name) setBusinessName(row.business_name);
+      if (row.vat_number) setVatNumber(row.vat_number);
+      if (row.address_line1) setAddressLine1(row.address_line1);
+      if (row.address_line2) setAddressLine2(row.address_line2);
+      if (row.city) setCity(row.city);
+      if (row.province) setProvince(row.province);
+      if (row.postal_code) setPostalCode(row.postal_code);
+    };
+    loadUser();
+  }, [user?.id]);
 
   const summary = useMemo(() => {
     const planLabel = (tierName || '').toUpperCase();
@@ -333,12 +360,26 @@ export default function SubscriptionCheckoutScreen() {
       return;
     }
 
+    const { data: auth } = await supabase.auth.getUser();
+    const authUserId = auth?.user?.id;
+    if (authUserId) {
+      await supabase.from('users').update({
+        full_name: fullName.trim(),
+        email: email.trim(),
+        phone: normalizedPhone,
+        business_name: businessName.trim() || null,
+        vat_number: vatNumber.trim() || null,
+        address_line1: addressLine1.trim() || null,
+        address_line2: addressLine2.trim() || null,
+        city: city.trim() || null,
+        province: province || null,
+        postal_code: postalCode.trim() || null,
+      }).eq('auth_user_id', authUserId);
+    }
+
     console.log('Validation passed, updating step 4');
     const normalizedVendorTier = normalizeVendorTierKey(tierName);
     updateStep4({ subscriptionPlan: normalizedVendorTier });
-
-    const { data: auth } = await supabase.auth.getUser();
-    const authUserId = auth?.user?.id;
 
     if (isFree) {
       if (productType === 'venue' && authUserId) {
@@ -422,8 +463,8 @@ export default function SubscriptionCheckoutScreen() {
       frequency: billing === 'yearly' ? '6' : '3',
       recurringAmount: billing === '6_month' || billing === '12_month' ? undefined : priceNum,
       cycles: billing === '6_month' || billing === '12_month' ? undefined : 0,
-      returnUrl: 'https://funxon.co.za/payment/success',
-      cancelUrl: 'https://funxon.co.za/payment/cancel',
+      returnUrl: 'funxon://payment/success',
+      cancelUrl: 'funxon://payment/cancel',
       notifyUrl,
     });
 
@@ -476,8 +517,14 @@ export default function SubscriptionCheckoutScreen() {
     const checkoutUrl = getPayFastCheckoutUrl(paymentData);
 
     try {
-      await WebBrowser.openBrowserAsync(checkoutUrl);
-      // After returning from PayFast, send welcome email and proceed to success
+      const result = await WebBrowser.openAuthSessionAsync(checkoutUrl, 'funxon://payment/success');
+      if (result.type === 'cancel' || result.type === 'dismiss') {
+        return;
+      }
+      if (result.type === 'success' && result.url?.startsWith('funxon://payment/cancel')) {
+        return;
+      }
+      // Treat success (or unknown) as completed payment and proceed
       await sendWelcomeEmail();
 
       // Set portfolio type based on productType before navigating

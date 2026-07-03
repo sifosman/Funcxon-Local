@@ -1,5 +1,5 @@
-import { useCallback, useState } from 'react';
-import { ActivityIndicator, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { useCallback, useRef, useState } from 'react';
+import { ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { useQuery } from '@tanstack/react-query';
 import { MaterialIcons } from '@expo/vector-icons';
@@ -17,6 +17,9 @@ export default function FavouritesScreen() {
   const [loadingIds, setLoadingIds] = useState(true);
   const [noteDrafts, setNoteDrafts] = useState<Record<number, string>>({});
   const [savingNotes, setSavingNotes] = useState<Record<number, boolean>>({});
+  const scrollViewRef = useRef<ScrollView>(null);
+  const lastOffsetRef = useRef(0);
+  const pendingRestoreRef = useRef(false);
 
   const loadFavourites = useCallback(async () => {
     setLoadingIds(true);
@@ -28,6 +31,12 @@ export default function FavouritesScreen() {
   useFocusEffect(
     useCallback(() => {
       loadFavourites();
+      if (pendingRestoreRef.current) {
+        pendingRestoreRef.current = false;
+        requestAnimationFrame(() => {
+          scrollViewRef.current?.scrollTo({ y: lastOffsetRef.current, animated: false });
+        });
+      }
     }, [loadFavourites]),
   );
 
@@ -125,8 +134,19 @@ export default function FavouritesScreen() {
   };
 
   return (
-    <View style={{ flex: 1, backgroundColor: colors.background }}>
-      <ScrollView contentContainerStyle={{ flexGrow: 1, paddingHorizontal: spacing.lg, paddingTop: spacing.sm, paddingBottom: spacing.xl }}>
+    <KeyboardAvoidingView
+      style={{ flex: 1, backgroundColor: colors.background }}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? spacing.lg : 0}
+    >
+      <ScrollView
+        ref={scrollViewRef}
+        scrollEventThrottle={16}
+        onScroll={(e) => {
+          lastOffsetRef.current = e.nativeEvent.contentOffset.y;
+        }}
+        contentContainerStyle={{ flexGrow: 1, paddingHorizontal: spacing.lg, paddingTop: spacing.sm, paddingBottom: spacing.xl }}
+      >
         <Text style={{ ...typography.displayMedium, color: colors.textPrimary, marginBottom: spacing.lg }}>
           My Favourites
         </Text>
@@ -288,14 +308,15 @@ export default function FavouritesScreen() {
                     </View>
                   ) : null}
                   <TouchableOpacity
-                    onPress={() =>
+                    onPress={() => {
+                      pendingRestoreRef.current = true;
                       navigation.navigate('Home', {
                         screen: item.type === 'venue' ? 'VenueProfile' : 'VendorProfile',
-                        params: item.type === 'venue' 
+                        params: item.type === 'venue'
                           ? { venueId: item.id, from: 'Favourites' }
                           : { vendorId: item.id, from: 'Favourites' },
-                      })
-                    }
+                      });
+                    }}
                     style={{
                       marginTop: spacing.md,
                       paddingVertical: spacing.sm,
@@ -362,6 +383,6 @@ export default function FavouritesScreen() {
           </View>
         )}
       </ScrollView>
-    </View>
+    </KeyboardAvoidingView>
   );
 }

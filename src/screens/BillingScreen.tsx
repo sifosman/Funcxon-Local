@@ -5,7 +5,7 @@ import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import * as WebBrowser from 'expo-web-browser';
 import { colors, spacing, radii, typography } from '../theme';
-import { supabase } from '../lib/supabaseClient';
+import { supabase, SUPABASE_URL } from '../lib/supabaseClient';
 import { useAuth } from '../auth/AuthContext';
 import { buildPayFastPaymentData, getPayFastCheckoutUrl } from '../config/payfast';
 import type { ProfileStackParamList } from '../navigation/ProfileNavigator';
@@ -192,13 +192,20 @@ export default function BillingScreen() {
                 lastName: nameParts.slice(1).join(' ') || '',
                 email: billing.billing_email || '',
                 phone: billing.billing_phone || '',
-                returnUrl: 'https://funxon.co.za/payment/success',
-                cancelUrl: 'https://funxon.co.za/payment/cancel',
-                notifyUrl: 'https://funxon.co.za/api/payfast/notify',
+                returnUrl: 'funxon://payment/success',
+                cancelUrl: 'funxon://payment/cancel',
+                notifyUrl: `${SUPABASE_URL}/functions/v1/payfast-itn`,
             });
 
             const checkoutUrl = getPayFastCheckoutUrl(paymentData);
-            await WebBrowser.openBrowserAsync(checkoutUrl);
+            const result = await WebBrowser.openAuthSessionAsync(checkoutUrl, 'funxon://payment/success');
+
+            if (result.type === 'cancel' || result.type === 'dismiss') {
+                return;
+            }
+            if (result.type === 'success' && result.url?.startsWith('funxon://payment/cancel')) {
+                return;
+            }
 
             // After returning, refresh billing data
             loadBillingData();

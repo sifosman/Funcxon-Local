@@ -1,5 +1,7 @@
-import { Link } from 'react-router-dom';
-import { Store, Star, Users, ArrowRight, CheckCircle, LayoutDashboard, FolderKanban, Ticket, CalendarCheck, BarChart3, ListChecks, Calendar, PlusCircle } from 'lucide-react';
+import { useEffect } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { useAuth } from '../auth/AuthContext';
+import { Store, ArrowRight, CheckCircle, LayoutDashboard, FolderKanban, Ticket, CalendarCheck, BarChart3, ListChecks, Calendar, PlusCircle } from 'lucide-react';
 
 const PORTAL_LINKS = [
   { label: 'Vendor Dashboard', href: '/vendor-dashboard', icon: LayoutDashboard, description: 'Manage your vendor profile' },
@@ -22,6 +24,15 @@ const BENEFITS = [
 ];
 
 export default function ListersPortalPage() {
+  const { user, userRole, isLoading } = useAuth();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (!isLoading && user && userRole === 'vendor') {
+      navigate('/account', { replace: true });
+    }
+  }, [isLoading, user, userRole, navigate]);
+
   return (
     <div>
       {/* Hero */}
@@ -49,29 +60,6 @@ export default function ListersPortalPage() {
                 <span className="font-medium text-on-surface">{b}</span>
               </div>
             ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Stats */}
-      <section className="fx-section bg-surface-container-low">
-        <div className="fx-container">
-          <div className="mx-auto grid max-w-4xl gap-8 text-center md:grid-cols-3">
-            <div>
-              <Store className="mx-auto h-8 w-8 text-primary" />
-              <p className="mt-2 text-3xl font-bold text-on-surface">500+</p>
-              <p className="text-sm text-on-surface-variant">Listed businesses</p>
-            </div>
-            <div>
-              <Users className="mx-auto h-8 w-8 text-primary" />
-              <p className="mt-2 text-3xl font-bold text-on-surface">10k+</p>
-              <p className="text-sm text-on-surface-variant">Monthly visitors</p>
-            </div>
-            <div>
-              <Star className="mx-auto h-8 w-8 text-primary" />
-              <p className="mt-2 text-3xl font-bold text-on-surface">4.8</p>
-              <p className="text-sm text-on-surface-variant">Average rating</p>
-            </div>
           </div>
         </div>
       </section>

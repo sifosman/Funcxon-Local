@@ -1,5 +1,10 @@
-import { PlaceholderPage } from '../components/PlaceholderPage';
+import { useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 
 export default function TourBookingsPage() {
-  return <PlaceholderPage title="Tour Bookings" description="Manage venue tour requests and scheduled tours." backTo={{ label: 'Account', href: '/account' }} />;
+  const navigate = useNavigate();
+  useEffect(() => {
+    navigate('/bookings', { replace: true });
+  }, [navigate]);
+  return null;
 }

@@ -8,6 +8,8 @@ import { colors, spacing, radii, typography } from '../../theme';
 import { supabase } from '../../lib/supabaseClient';
 import { uploadFileToStorage } from '../../lib/applicationService';
 import { getVendorPhotoLimit } from '../../lib/subscription';
+import { createGalleryMediaRecord } from '../../lib/mediaUpload';
+import { normalizePhoneNumber } from '../../utils/phoneNormalization';
 import { useAuth } from '../../auth/AuthContext';
 import ThemedAlert from '../../components/ThemedAlert';
 
@@ -28,6 +30,7 @@ type ProfileStackParamList = {
     SubscriptionPlans: undefined;
     VendorCatalogue: undefined;
     VendorAnalytics: undefined;
+    ListerPortfolio: undefined;
 };
 
 type VendorListing = {
@@ -65,11 +68,13 @@ export default function UpdateVendorPortfolioScreen() {
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [vendor, setVendor] = useState<VendorListing | null>(null);
-    const [canEditLinks, setCanEditLinks] = useState(true);
     const [imageUrl, setImageUrl] = useState<string | null>(null);
     const [additionalPhotos, setAdditionalPhotos] = useState<string[]>([]);
+    const [videos, setVideos] = useState<string[]>([]);
     const [photoLimit, setPhotoLimit] = useState<number>(8);
+    const [videoLimit, setVideoLimit] = useState<number>(0);
     const [uploadingImage, setUploadingImage] = useState(false);
+    const [uploadingVideo, setUploadingVideo] = useState(false);
     const [alertState, setAlertState] = useState<{visible: boolean; title: string; message: string; buttons?: any[]} | null>(null);
     const [form, setForm] = useState({
         name: '',
@@ -122,13 +127,23 @@ export default function UpdateVendorPortfolioScreen() {
 
             if (vendorData) {
                 setVendor(vendorData as VendorListing);
-                const tier = String((vendorData as any).subscription_tier ?? '').toLowerCase();
-                const status = String((vendorData as any).subscription_status ?? '').toLowerCase();
-                setCanEditLinks(tier !== 'free' && tier !== '' && status === 'active');
                 setImageUrl((vendorData as VendorListing).image_url || null);
                 setAdditionalPhotos((vendorData as VendorListing).additional_photos || []);
                 const limit = await getVendorPhotoLimit((vendorData as VendorListing).id);
                 setPhotoLimit(limit);
+                // Vendor tiers don't currently expose a video limit; default to 0 until supported
+                setVideoLimit(0);
+
+                const { data: gallery } = await supabase
+                    .from('gallery_media')
+                    .select('media_url, media_type')
+                    .eq('vendor_id', vendorData.id)
+                    .order('created_at', { ascending: false });
+                const videoUrls = (gallery || [])
+                    .filter((g: any) => g.media_type === 'video')
+                    .map((g: any) => g.media_url);
+                setVideos(videoUrls);
+
                 setForm({
                     name: vendorData.name || '',
                     description: vendorData.description || '',
@@ -157,12 +172,9 @@ export default function UpdateVendorPortfolioScreen() {
     }, [user?.id]);
 
     const handleChange = (key: keyof typeof form, value: string) => {
-        const isLinksField = key === 'website_url' || key === 'instagram_url';
-        if (isLinksField && !canEditLinks) {
-            return;
-        }
-
-        setForm((prev) => ({ ...prev, [key]: value }));
+        const isPhoneField = key === 'whatsapp_number';
+        const normalizedValue = isPhoneField ? normalizePhoneNumber(value) : value;
+        setForm((prev) => ({ ...prev, [key]: normalizedValue }));
     };
 
     const currentPhotoCount = (imageUrl ? 1 : 0) + additionalPhotos.length;
@@ -204,7 +216,12 @@ export default function UpdateVendorPortfolioScreen() {
             });
             if (result.canceled || !result.assets?.[0]) return;
             const url = await uploadPickedImage(result.assets[0]);
-            if (url) setImageUrl(url);
+            if (url) {
+                setImageUrl(url);
+                if (vendor?.id) {
+                    await createGalleryMediaRecord(url, 'image', { vendorId: vendor.id });
+                }
+            }
         } catch (err: any) {
             setAlertState({ visible: true, title: 'Upload failed', message: err?.message || 'Could not upload image.', buttons: [{ text: 'OK', style: 'default', onPress: () => setAlertState(null) }] });
         } finally {
@@ -232,7 +249,12 @@ export default function UpdateVendorPortfolioScreen() {
             const newUrls: string[] = [];
             for (const asset of result.assets.slice(0, remainingPhotoSlots)) {
                 const url = await uploadPickedImage(asset);
-                if (url) newUrls.push(url);
+                if (url) {
+                    newUrls.push(url);
+                    if (vendor?.id) {
+                        await createGalleryMediaRecord(url, 'image', { vendorId: vendor.id });
+                    }
+                }
             }
             setAdditionalPhotos((prev) => [...prev, ...newUrls]);
         } catch (err: any) {
@@ -248,6 +270,50 @@ export default function UpdateVendorPortfolioScreen() {
 
     const handleRemoveMainImage = () => {
         setImageUrl(null);
+    };
+
+    const currentVideoCount = videos.length;
+    const remainingVideoSlots = Math.max(0, videoLimit - currentVideoCount);
+
+    const handlePickVideos = async () => {
+        if (remainingVideoSlots <= 0) {
+            setAlertState({ visible: true, title: 'Video limit reached', message: `Your current plan does not allow video uploads.`, buttons: [{ text: 'OK', style: 'default', onPress: () => setAlertState(null) }] });
+            return;
+        }
+        const permitted = await requestImagePermission();
+        if (!permitted) return;
+        try {
+            setUploadingVideo(true);
+            const result = await ImagePicker.launchImageLibraryAsync({
+                mediaTypes: ['videos'],
+                allowsMultipleSelection: true,
+                allowsEditing: false,
+                selectionLimit: Math.max(1, Math.min(5, remainingVideoSlots)),
+            });
+            if (result.canceled || !result.assets?.length || !user?.id || !vendor?.id) return;
+            const newUrls: string[] = [];
+            for (const asset of result.assets.slice(0, remainingVideoSlots)) {
+                const file = {
+                    uri: asset.uri,
+                    name: asset.fileName || `video_${Date.now()}.mp4`,
+                    type: asset.mimeType || 'video/mp4',
+                };
+                const uploadResult = await uploadFileToStorage('portfolio-videos', file, user.id);
+                if (uploadResult.success && uploadResult.url) {
+                    await createGalleryMediaRecord(uploadResult.url, 'video', { vendorId: vendor.id });
+                    newUrls.push(uploadResult.url);
+                }
+            }
+            setVideos((prev) => [...prev, ...newUrls]);
+        } catch (err: any) {
+            setAlertState({ visible: true, title: 'Upload failed', message: err?.message || 'Could not upload videos.', buttons: [{ text: 'OK', style: 'default', onPress: () => setAlertState(null) }] });
+        } finally {
+            setUploadingVideo(false);
+        }
+    };
+
+    const handleRemoveVideo = (index: number) => {
+        setVideos((prev) => prev.filter((_, i) => i !== index));
     };
 
     useEffect(() => {
@@ -305,7 +371,12 @@ export default function UpdateVendorPortfolioScreen() {
             if (vendor) {
                 const { error } = await supabase.from('vendors').update(payload).eq('id', vendor.id);
                 if (error) throw error;
-                setAlertState({ visible: true, title: 'Saved', message: 'Your portfolio has been updated.', buttons: [{ text: 'OK', style: 'default', onPress: () => setAlertState(null) }] });
+                setAlertState({
+                    visible: true,
+                    title: 'Saved',
+                    message: 'Your portfolio has been updated.',
+                    buttons: [{ text: 'OK', style: 'default', onPress: () => { setAlertState(null); navigation.navigate('ListerPortfolio'); } }],
+                });
             } else {
                 const { data, error } = await supabase
                     .from('vendors')
@@ -343,7 +414,12 @@ export default function UpdateVendorPortfolioScreen() {
                         photo_count: currentPhotoCount,
                     });
                 }
-                setAlertState({ visible: true, title: 'Created', message: 'Your vendor portfolio has been created.', buttons: [{ text: 'OK', style: 'default', onPress: () => setAlertState(null) }] });
+                setAlertState({
+                    visible: true,
+                    title: 'Created',
+                    message: 'Your vendor portfolio has been created.',
+                    buttons: [{ text: 'OK', style: 'default', onPress: () => { setAlertState(null); navigation.navigate('ListerPortfolio'); } }],
+                });
             }
         } catch (err: any) {
             setAlertState({ visible: true, title: 'Error', message: err?.message ?? 'Failed to save changes.', buttons: [{ text: 'OK', style: 'default', onPress: () => setAlertState(null) }] });
@@ -492,7 +568,7 @@ export default function UpdateVendorPortfolioScreen() {
                                         Portfolio Photos
                                     </Text>
                                     <Text style={{ ...typography.caption, color: colors.textMuted, marginTop: 2 }}>
-                                        {currentPhotoCount} of {photoLimit} photos used
+                                        {currentPhotoCount} of {photoLimit} photos used. Your current subscription allows up to {photoLimit} photos.
                                     </Text>
                                 </View>
                                 {vendor && (
@@ -612,6 +688,73 @@ export default function UpdateVendorPortfolioScreen() {
                                     <Text style={{ ...typography.caption, color: colors.textMuted }}>Uploading image...</Text>
                                 </View>
                             )}
+
+                            {/* Videos */}
+                            <View style={{ marginTop: spacing.md }}>
+                                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.xs }}>
+                                    <View style={{ flex: 1 }}>
+                                        <Text style={{ ...typography.caption, color: colors.textMuted }}>
+                                            Videos ({currentVideoCount} of {videoLimit})
+                                        </Text>
+                                    </View>
+                                </View>
+                                <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm }}>
+                                    {videos.map((url, idx) => (
+                                        <View key={`${url}-${idx}`} style={{ position: 'relative' }}>
+                                            <View
+                                                style={{
+                                                    width: 80,
+                                                    height: 80,
+                                                    borderRadius: radii.md,
+                                                    backgroundColor: colors.background,
+                                                    alignItems: 'center',
+                                                    justifyContent: 'center',
+                                                }}
+                                            >
+                                                <MaterialIcons name="videocam" size={28} color={colors.textPrimary} />
+                                            </View>
+                                            <TouchableOpacity
+                                                onPress={() => handleRemoveVideo(idx)}
+                                                style={{
+                                                    position: 'absolute',
+                                                    top: 2,
+                                                    right: 2,
+                                                    backgroundColor: 'rgba(0,0,0,0.6)',
+                                                    borderRadius: radii.full,
+                                                    padding: 2,
+                                                }}
+                                            >
+                                                <MaterialIcons name="delete" size={16} color="#FFFFFF" />
+                                            </TouchableOpacity>
+                                        </View>
+                                    ))}
+                                    {remainingVideoSlots > 0 && (
+                                        <TouchableOpacity
+                                            onPress={handlePickVideos}
+                                            disabled={uploadingVideo}
+                                            style={{
+                                                width: 80,
+                                                height: 80,
+                                                borderRadius: radii.md,
+                                                borderWidth: 1,
+                                                borderColor: colors.borderSubtle,
+                                                borderStyle: 'dashed',
+                                                backgroundColor: colors.surfaceMuted,
+                                                alignItems: 'center',
+                                                justifyContent: 'center',
+                                            }}
+                                        >
+                                            <MaterialIcons name="videocam" size={28} color={colors.textMuted} />
+                                        </TouchableOpacity>
+                                    )}
+                                </View>
+                                {uploadingVideo && (
+                                    <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: spacing.md, gap: spacing.sm }}>
+                                        <ActivityIndicator size="small" color={colors.primary} />
+                                        <Text style={{ ...typography.caption, color: colors.textMuted }}>Uploading video...</Text>
+                                    </View>
+                                )}
+                            </View>
                         </View>
 
                         {vendor && <View
@@ -681,50 +824,20 @@ export default function UpdateVendorPortfolioScreen() {
                                             setAlertState({ visible: true, title: 'Create profile first', message: 'Please create your vendor profile before viewing analytics.', buttons: [{ text: 'OK', style: 'default', onPress: () => setAlertState(null) }] });
                                             return;
                                         }
-                                        if (!canEditLinks) {
-                                            navigation.navigate('SubscriptionPlans');
-                                            return;
-                                        }
                                         navigation.navigate('VendorAnalytics');
                                     }}
                                     style={{
                                         paddingHorizontal: spacing.md,
                                         paddingVertical: spacing.xs,
                                         borderRadius: radii.full,
-                                        backgroundColor: canEditLinks ? colors.primary : colors.surfaceMuted,
-                                        borderWidth: canEditLinks ? 0 : 1,
-                                        borderColor: colors.borderSubtle,
+                                        backgroundColor: colors.primary,
                                     }}
                                 >
-                                    <Text
-                                        style={{
-                                            ...typography.captionBold,
-                                            color: canEditLinks ? '#FFFFFF' : colors.textMuted,
-                                        }}
-                                    >
-                                        {canEditLinks ? 'Open' : 'Upgrade'}
+                                    <Text style={{ ...typography.captionBold, color: '#FFFFFF' }}>
+                                        Open
                                     </Text>
                                 </TouchableOpacity>
                             </View>
-                            {!canEditLinks && (
-                                <View
-                                    style={{
-                                        marginTop: spacing.md,
-                                        padding: spacing.md,
-                                        borderRadius: radii.md,
-                                        backgroundColor: '#FFF7ED',
-                                        borderWidth: 1,
-                                        borderColor: '#FDBA74',
-                                    }}
-                                >
-                                    <Text style={{ ...typography.captionSemiBold, color: '#9A3412' }}>
-                                        Upgrade required
-                                    </Text>
-                                    <Text style={{ ...typography.caption, color: '#9A3412', marginTop: 2 }}>
-                                        Analytics & stats are available on paid vendor plans.
-                                    </Text>
-                                </View>
-                            )}
                         </View>}
 
                         {/* Edit Form */}
@@ -789,31 +902,8 @@ export default function UpdateVendorPortfolioScreen() {
                             </Text>
                             {renderField('Email', 'email', { keyboardType: 'email-address', placeholder: 'business@example.com' })}
                             {renderField('WhatsApp Number', 'whatsapp_number', { keyboardType: 'phone-pad', placeholder: '+27...' })}
-                            {!canEditLinks && (
-                                <TouchableOpacity
-                                    onPress={() => navigation.navigate('SubscriptionPlans')}
-                                    style={{
-                                        flexDirection: 'row',
-                                        alignItems: 'center',
-                                        backgroundColor: '#FEF3C7',
-                                        borderRadius: radii.md,
-                                        paddingHorizontal: spacing.md,
-                                        paddingVertical: spacing.sm,
-                                        marginBottom: spacing.md,
-                                        gap: spacing.sm,
-                                    }}
-                                >
-                                    <MaterialIcons name="lock" size={16} color="#B45309" />
-                                    <Text style={{ ...typography.caption, color: '#B45309', flex: 1 }}>
-                                        Upgrade to add website and social media links.
-                                    </Text>
-                                    <Text style={{ ...typography.captionSemiBold, color: colors.primary }}>
-                                        View Plans
-                                    </Text>
-                                </TouchableOpacity>
-                            )}
-                            {renderField('Website URL', 'website_url', { keyboardType: 'url', placeholder: 'https://...', disabled: !canEditLinks })}
-                            {renderField('Instagram URL', 'instagram_url', { keyboardType: 'url', placeholder: 'https://instagram.com/...', disabled: !canEditLinks })}
+                            {renderField('Website URL', 'website_url', { keyboardType: 'url', placeholder: 'https://...' })}
+                            {renderField('Instagram URL', 'instagram_url', { keyboardType: 'url', placeholder: 'https://instagram.com/...' })}
                         </View>
 
                         {/* Tags display */}

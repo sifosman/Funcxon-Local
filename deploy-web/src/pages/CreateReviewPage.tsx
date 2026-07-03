@@ -1,32 +1,67 @@
 import { useState } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useSearchParams, Link } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
 import { useAuth } from '../auth/AuthContext';
+import { AppAlert } from '../components/AppAlert';
 import { Star, Send, ChevronLeft } from 'lucide-react';
 
 export default function CreateReviewPage() {
-  const { id } = useParams<{ id: string }>();
+  const [searchParams] = useSearchParams();
+  const type = (searchParams.get('type') as 'venue' | 'vendor') || 'venue';
+  const id = searchParams.get('id');
   const { user } = useAuth();
   const [rating, setRating] = useState(0);
   const [hoverRating, setHoverRating] = useState(0);
   const [comment, setComment] = useState('');
   const [submitted, setSubmitted] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [alert, setAlert] = useState<{ title: string; message: string; type: 'error' | 'success' } | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user || rating === 0) return;
+    if (!user || rating === 0 || !id) return;
+    setSaving(true);
     try {
-      await supabase.from('reviews').insert({
-        user_id: user.id,
-        venue_id: id,
+      let payload: Record<string, unknown> = {
         rating,
         comment,
-      });
+        is_verified: false,
+        review_source: 'public',
+      };
+      if (type === 'vendor') {
+        const { data: internalUser } = await supabase
+          .from('users')
+          .select('id')
+          .eq('auth_user_id', user.id)
+          .maybeSingle();
+        if (!internalUser) throw new Error('We could not find your user profile. Please sign in again.');
+        payload = {
+          ...payload,
+          user_id: internalUser.id,
+          vendor_id: id,
+        };
+        const { error } = await supabase.from('reviews').insert(payload);
+        if (error) throw error;
+      } else {
+        payload = {
+          ...payload,
+          user_id: user.id,
+          venue_id: id,
+        };
+        const { error } = await supabase.from('venue_reviews').insert(payload);
+        if (error) throw error;
+      }
       setSubmitted(true);
-    } catch (err) {
+    } catch (err: any) {
       console.error('Error submitting review:', err);
+      setAlert({ title: 'Submission failed', message: err?.message || 'Could not submit review.', type: 'error' });
+    } finally {
+      setSaving(false);
     }
   };
+
+  const backUrl = type === 'vendor' ? `/vendor/${id}` : `/venue/${id}`;
+  const title = type === 'vendor' ? 'Write a Vendor Review' : 'Write a Venue Review';
 
   if (submitted) {
     return (
@@ -34,7 +69,7 @@ export default function CreateReviewPage() {
         <div className="w-full max-w-md rounded-xl bg-white p-8 text-center shadow-sm border border-outline-variant">
           <h2 className="font-display text-2xl font-bold text-on-surface">Thank you!</h2>
           <p className="mt-4 text-on-surface-variant">Your review has been submitted.</p>
-          <Link to={`/venue/${id}`} className="mt-6 inline-block text-primary hover:underline">Back to venue</Link>
+          <Link to={backUrl} className="mt-6 inline-block text-primary hover:underline">Back to {type}</Link>
         </div>
       </div>
     );
@@ -55,11 +90,11 @@ export default function CreateReviewPage() {
   return (
     <div className="fx-container flex min-h-[calc(100vh-200px)] items-center justify-center py-12">
       <div className="w-full max-w-md">
-        <Link to={`/venue/${id}`} className="mb-4 inline-flex items-center gap-1 text-sm text-on-surface-variant hover:text-primary">
+        <Link to={backUrl} className="mb-4 inline-flex items-center gap-1 text-sm text-on-surface-variant hover:text-primary">
           <ChevronLeft className="h-4 w-4" /> Back
         </Link>
         <div className="rounded-xl bg-white p-8 shadow-sm border border-outline-variant">
-          <h1 className="font-display text-2xl font-bold text-on-surface">Write a Review</h1>
+          <h1 className="font-display text-2xl font-bold text-on-surface">{title}</h1>
 
           <form onSubmit={handleSubmit} className="mt-6 space-y-4">
             <div>
@@ -89,12 +124,13 @@ export default function CreateReviewPage() {
                 required
               />
             </div>
-            <button type="submit" disabled={rating === 0} className="fx-btn-primary w-full disabled:opacity-50">
-              <Send className="mr-2 h-4 w-4" /> Submit Review
+            <button type="submit" disabled={rating === 0 || saving} className="fx-btn-primary w-full disabled:opacity-50">
+              <Send className="mr-2 h-4 w-4" /> {saving ? 'Submitting...' : 'Submit Review'}
             </button>
           </form>
         </div>
       </div>
+      {alert && <AppAlert visible={true} title={alert.title} message={alert.message} type={alert.type} onDismiss={() => setAlert(null)} />}
     </div>
   );
 }

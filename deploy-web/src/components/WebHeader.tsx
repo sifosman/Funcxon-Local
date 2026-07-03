@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
 import logoUrl from '../../assets/assets/logo.png';
+import NotificationBell from './NotificationBell';
 
 const NAV_LINKS = [
   { label: 'Home', href: '/' },
@@ -11,8 +12,8 @@ const NAV_LINKS = [
 ];
 
 const USER_NAV = [
-  { label: 'Quotes', href: '/quotes' },
   { label: 'Planner', href: '/planner' },
+  { label: 'My Bookings', href: '/my-tours' },
   { label: 'Account', href: '/account' },
 ];
 
@@ -113,6 +114,8 @@ export default function WebHeader() {
             className="h-8 w-8 rounded-full object-cover"
             title="South Africa"
           />
+
+          {isLoggedIn && <NotificationBell />}
 
           {isLoggedIn ? (
             <Link

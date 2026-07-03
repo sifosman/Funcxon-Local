@@ -17,9 +17,9 @@ test.describe('Account Tests', () => {
     await expect(page.getByText(/Attendee|Vendor/, { exact: true }).first()).toBeVisible();
 
     // Menu items
-    await expect(page.getByText('Favourites', { exact: true })).toBeVisible();
-    await expect(page.getByText('My Quotes', { exact: true })).toBeVisible();
-    await expect(page.getByText('Event Planner', { exact: true })).toBeVisible();
+    await expect(page.getByText('Favourites', { exact: true }).first()).toBeVisible();
+    await expect(page.getByText('My Quotes', { exact: true }).first()).toBeVisible();
+    await expect(page.getByText('Event Planner', { exact: true }).first()).toBeVisible();
   });
 
   test('/account/favourites → shortlist renders', async ({ page }) => {

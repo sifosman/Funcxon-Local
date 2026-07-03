@@ -1,19 +1,16 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Modal, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import DateTimePicker from '@react-native-community/datetimepicker';
 import { colors, spacing, radii, typography } from '../../theme';
 import { supabase } from '../../lib/supabaseClient';
 import { useAuth } from '../../auth/AuthContext';
 import ThemedAlert from '../../components/ThemedAlert';
 import { getMyVenueEntitlement, isVenueFeatureEnabled } from '../../lib/venueSubscription';
-
-type ProfileStackParamList = {
-  UpdateVenuePortfolio: undefined;
-  VenueTourBookings: undefined;
-  VenueListingPlans: undefined;
-};
+import { createTourResponseNotification } from '../../lib/notifications';
+import type { ProfileStackParamList } from '../../navigation/ProfileNavigator';
 
 type VenueListingRow = {
   id: number;
@@ -23,17 +20,35 @@ type VenueListingRow = {
 type TourBookingRow = {
   id: number;
   listing_id: number;
+  requester_user_id: string | null;
   requester_name: string | null;
   requester_email: string | null;
   requester_phone: string | null;
   requested_date: string | null;
   requested_time: string | null;
   message: string | null;
+  countered_date: string | null;
+  countered_time: string | null;
+  countered_message: string | null;
   status: string;
   created_at: string;
 };
 
-const STATUS_OPTIONS = ['new', 'scheduled', 'completed', 'closed'] as const;
+const STATUS_ORDER: Record<string, number> = {
+  pending: 0,
+  countered: 1,
+  confirmed: 2,
+  completed: 3,
+  cancelled: 4,
+};
+
+const STATUS_LABEL: Record<string, string> = {
+  pending: 'Pending',
+  countered: 'Alternative proposed',
+  confirmed: 'Confirmed',
+  cancelled: 'Cancelled',
+  completed: 'Completed',
+};
 
 export default function VenueTourBookingsScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<ProfileStackParamList>>();
@@ -46,6 +61,11 @@ export default function VenueTourBookingsScreen() {
   const [listing, setListing] = useState<VenueListingRow | null>(null);
   const [bookings, setBookings] = useState<TourBookingRow[]>([]);
   const [canUseTours, setCanUseTours] = useState<boolean>(false);
+  const [counterBooking, setCounterBooking] = useState<TourBookingRow | null>(null);
+  const [counterDate, setCounterDate] = useState(new Date());
+  const [counterTime, setCounterTime] = useState('');
+  const [counterMessage, setCounterMessage] = useState('');
+  const [showDatePicker, setShowDatePicker] = useState(false);
 
   const loadEntitlement = useCallback(async () => {
     if (!user?.id) return;
@@ -73,7 +93,7 @@ export default function VenueTourBookingsScreen() {
 
       const { data: rows, error } = await supabase
         .from('venue_tour_bookings')
-        .select('id, listing_id, requester_name, requester_email, requester_phone, requested_date, requested_time, message, status, created_at')
+        .select('id, listing_id, requester_user_id, requester_name, requester_email, requester_phone, requested_date, requested_time, message, countered_date, countered_time, countered_message, status, created_at')
         .eq('listing_id', listingRow.id)
         .order('created_at', { ascending: false })
         .limit(100);
@@ -84,7 +104,9 @@ export default function VenueTourBookingsScreen() {
         return;
       }
 
-      setBookings((rows || []) as TourBookingRow[]);
+      const sorted = (rows || []) as TourBookingRow[];
+      sorted.sort((a, b) => STATUS_ORDER[a.status] - STATUS_ORDER[b.status]);
+      setBookings(sorted);
     } finally {
       setLoading(false);
     }
@@ -105,34 +127,63 @@ export default function VenueTourBookingsScreen() {
   const statusColor = useMemo(() => {
     return (status: string) => {
       switch (status) {
-        case 'new':
-          return '#3B82F6';
-        case 'scheduled':
+        case 'pending':
           return '#F59E0B';
-        case 'completed':
+        case 'countered':
+          return '#3B82F6';
+        case 'confirmed':
           return '#16A34A';
-        case 'closed':
-          return colors.textMuted;
+        case 'cancelled':
+          return '#DC2626';
+        case 'completed':
+          return colors.textPrimary;
         default:
           return colors.textMuted;
       }
     };
   }, []);
 
-  const updateStatus = async (booking: TourBookingRow) => {
-    const currentIndex = STATUS_OPTIONS.indexOf(booking.status as any);
-    const next = STATUS_OPTIONS[(currentIndex + 1) % STATUS_OPTIONS.length];
-
+  const updateBooking = async (booking: TourBookingRow, patch: Partial<TourBookingRow>) => {
     setSaving(true);
     try {
-      const { error } = await supabase.from('venue_tour_bookings').update({ status: next }).eq('id', booking.id);
+      const { error } = await supabase.from('venue_tour_bookings').update(patch).eq('id', booking.id);
       if (error) throw error;
-      setBookings((prev) => prev.map((b) => (b.id === booking.id ? { ...b, status: next } : b)));
+      setBookings((prev) =>
+        prev
+          .map((b) => (b.id === booking.id ? { ...b, ...patch } : b))
+          .sort((a, b) => STATUS_ORDER[a.status] - STATUS_ORDER[b.status])
+      );
+      if (patch.status && booking.requester_user_id && booking.requester_user_id !== user?.id) {
+        await createTourResponseNotification(booking.requester_user_id, listing?.name || 'Venue', patch.status, booking.id).catch(() => {});
+      }
     } catch (err: any) {
-      setAlertState({ visible: true, title: 'Error', message: err?.message ?? 'Failed to update status.' });
+      setAlertState({ visible: true, title: 'Error', message: err?.message ?? 'Failed to update booking.' });
     } finally {
       setSaving(false);
     }
+  };
+
+  const openCounter = (booking: TourBookingRow) => {
+    setCounterBooking(booking);
+    setCounterDate(booking.requested_date ? new Date(booking.requested_date) : new Date());
+    setCounterTime(booking.requested_time || '');
+    setCounterMessage('');
+  };
+
+  const submitCounter = async () => {
+    if (!counterBooking) return;
+    await updateBooking(counterBooking, {
+      status: 'countered',
+      countered_date: counterDate.toISOString().slice(0, 10),
+      countered_time: counterTime || null,
+      countered_message: counterMessage || null,
+    });
+    setCounterBooking(null);
+  };
+
+  const onCounterDateChange = (event: any, selectedDate?: Date) => {
+    setShowDatePicker(false);
+    if (selectedDate) setCounterDate(selectedDate);
   };
 
   if (loading) {
@@ -307,7 +358,7 @@ export default function VenueTourBookingsScreen() {
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                   <View style={{ flex: 1, paddingRight: spacing.md }}>
                     <Text style={{ ...typography.titleMedium, color: colors.textPrimary }}>
-                      {b.requester_name || 'New booking'}
+                      {b.requester_name || 'Visitor'}
                     </Text>
                     <Text style={{ ...typography.caption, color: colors.textMuted, marginTop: spacing.xs }}>
                       Requested: {formatDate(b.created_at)}
@@ -339,7 +390,7 @@ export default function VenueTourBookingsScreen() {
                         textTransform: 'uppercase',
                       }}
                     >
-                      {b.status}
+                      {STATUS_LABEL[b.status] || b.status}
                     </Text>
                   </View>
                 </View>
@@ -368,28 +419,184 @@ export default function VenueTourBookingsScreen() {
                   </View>
                 ) : null}
 
-                <TouchableOpacity
-                  onPress={() => updateStatus(b)}
-                  disabled={saving}
-                  style={{
-                    marginTop: spacing.md,
-                    paddingVertical: spacing.sm,
-                    borderRadius: radii.md,
-                    borderWidth: 1,
-                    borderColor: colors.primary,
-                    alignItems: 'center',
-                    opacity: saving ? 0.6 : 1,
-                  }}
-                >
-                  <Text style={{ ...typography.bodyBold, color: colors.primary }}>
-                    Change status
-                  </Text>
-                </TouchableOpacity>
+                {b.status === 'countered' && (
+                  <View style={{ marginTop: spacing.md, padding: spacing.md, borderRadius: radii.md, backgroundColor: '#3B82F620', borderWidth: 1, borderColor: '#3B82F6' }}>
+                    <Text style={{ ...typography.captionBold, color: '#3B82F6' }}>Your proposed alternative</Text>
+                    <Text style={{ ...typography.body, color: colors.textPrimary, marginTop: spacing.xs }}>
+                      {formatDate(b.countered_date)} {b.countered_time}
+                    </Text>
+                    {b.countered_message && (
+                      <Text style={{ ...typography.body, color: colors.textSecondary, marginTop: spacing.xs }}>{b.countered_message}</Text>
+                    )}
+                    <Text style={{ ...typography.caption, color: '#3B82F6', marginTop: spacing.xs }}>Waiting for visitor response.</Text>
+                  </View>
+                )}
+
+                <View style={{ flexDirection: 'row', gap: spacing.sm, marginTop: spacing.md }}>
+                  {b.status === 'pending' && (
+                    <>
+                      <TouchableOpacity
+                        onPress={() => updateBooking(b, { status: 'confirmed' })}
+                        disabled={saving}
+                        style={{ flex: 1, paddingVertical: spacing.sm, borderRadius: radii.md, backgroundColor: '#16A34A', alignItems: 'center', opacity: saving ? 0.6 : 1 }}
+                      >
+                        <Text style={{ ...typography.bodyBold, color: '#FFFFFF' }}>Accept as-is</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        onPress={() => openCounter(b)}
+                        disabled={saving}
+                        style={{ flex: 1, paddingVertical: spacing.sm, borderRadius: radii.md, borderWidth: 1, borderColor: colors.primary, alignItems: 'center', opacity: saving ? 0.6 : 1 }}
+                      >
+                        <Text style={{ ...typography.bodyBold, color: colors.primary }}>Propose alternative</Text>
+                      </TouchableOpacity>
+                    </>
+                  )}
+                  {b.status === 'countered' && (
+                    <>
+                      <TouchableOpacity
+                        onPress={() => updateBooking(b, { status: 'confirmed' })}
+                        disabled={saving}
+                        style={{ flex: 1, paddingVertical: spacing.sm, borderRadius: radii.md, backgroundColor: '#16A34A', alignItems: 'center', opacity: saving ? 0.6 : 1 }}
+                      >
+                        <Text style={{ ...typography.bodyBold, color: '#FFFFFF' }}>Accept as-is</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        onPress={() => updateBooking(b, { status: 'cancelled' })}
+                        disabled={saving}
+                        style={{ flex: 1, paddingVertical: spacing.sm, borderRadius: radii.md, borderWidth: 1, borderColor: '#DC2626', alignItems: 'center', opacity: saving ? 0.6 : 1 }}
+                      >
+                        <Text style={{ ...typography.bodyBold, color: '#DC2626' }}>Cancel</Text>
+                      </TouchableOpacity>
+                    </>
+                  )}
+                  {b.status === 'confirmed' && (
+                    <>
+                      <TouchableOpacity
+                        onPress={() => updateBooking(b, { status: 'completed' })}
+                        disabled={saving}
+                        style={{ flex: 1, paddingVertical: spacing.sm, borderRadius: radii.md, backgroundColor: colors.primary, alignItems: 'center', opacity: saving ? 0.6 : 1 }}
+                      >
+                        <Text style={{ ...typography.bodyBold, color: '#FFFFFF' }}>Mark completed</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        onPress={() => updateBooking(b, { status: 'cancelled' })}
+                        disabled={saving}
+                        style={{ flex: 1, paddingVertical: spacing.sm, borderRadius: radii.md, borderWidth: 1, borderColor: '#DC2626', alignItems: 'center', opacity: saving ? 0.6 : 1 }}
+                      >
+                        <Text style={{ ...typography.bodyBold, color: '#DC2626' }}>Cancel</Text>
+                      </TouchableOpacity>
+                    </>
+                  )}
+                  {(b.status === 'cancelled' || b.status === 'completed') && (
+                    <View style={{ flex: 1, alignItems: 'center' }}>
+                      <Text style={{ ...typography.caption, color: colors.textMuted }}>This tour is {b.status}. No further action available.</Text>
+                    </View>
+                  )}
+                </View>
               </View>
             ))
           )}
         </View>
       </ScrollView>
+
+      <Modal
+        visible={counterBooking !== null}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setCounterBooking(null)}
+      >
+        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' }}>
+          <View style={{ backgroundColor: colors.background, borderTopLeftRadius: radii.xl, borderTopRightRadius: radii.xl, padding: spacing.lg, paddingBottom: spacing.xl }}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.md }}>
+              <Text style={{ ...typography.titleMedium, color: colors.textPrimary }}>Propose alternative date</Text>
+              <TouchableOpacity onPress={() => setCounterBooking(null)}>
+                <MaterialIcons name="close" size={24} color={colors.textMuted} />
+              </TouchableOpacity>
+            </View>
+
+            <Text style={{ ...typography.label, color: colors.textSecondary, marginBottom: spacing.xs }}>Date</Text>
+            <TouchableOpacity
+              onPress={() => setShowDatePicker(true)}
+              style={{
+                padding: spacing.md,
+                borderWidth: 1,
+                borderColor: colors.borderSubtle,
+                borderRadius: radii.md,
+                marginBottom: spacing.md,
+                backgroundColor: colors.surface,
+              }}
+            >
+              <Text style={{ ...typography.body, color: colors.textPrimary }}>
+                {counterDate.toLocaleDateString('en-ZA')}
+              </Text>
+            </TouchableOpacity>
+            {showDatePicker && (
+              <DateTimePicker
+                value={counterDate}
+                mode="date"
+                display="default"
+                onChange={onCounterDateChange}
+                minimumDate={new Date()}
+              />
+            )}
+
+            <Text style={{ ...typography.label, color: colors.textSecondary, marginBottom: spacing.xs }}>Time</Text>
+            <TextInput
+              value={counterTime}
+              onChangeText={setCounterTime}
+              placeholder="e.g. 10:00"
+              placeholderTextColor={colors.textMuted}
+              style={{
+                padding: spacing.md,
+                borderWidth: 1,
+                borderColor: colors.borderSubtle,
+                borderRadius: radii.md,
+                marginBottom: spacing.md,
+                backgroundColor: colors.surface,
+                color: colors.textPrimary,
+              }}
+            />
+
+            <Text style={{ ...typography.label, color: colors.textSecondary, marginBottom: spacing.xs }}>Message (optional)</Text>
+            <TextInput
+              value={counterMessage}
+              onChangeText={setCounterMessage}
+              placeholder="Explain why you’re proposing a different time..."
+              placeholderTextColor={colors.textMuted}
+              multiline
+              numberOfLines={4}
+              textAlignVertical="top"
+              style={{
+                padding: spacing.md,
+                borderWidth: 1,
+                borderColor: colors.borderSubtle,
+                borderRadius: radii.md,
+                marginBottom: spacing.md,
+                backgroundColor: colors.surface,
+                color: colors.textPrimary,
+                minHeight: 80,
+              }}
+            />
+
+            <View style={{ flexDirection: 'row', gap: spacing.sm }}>
+              <TouchableOpacity
+                onPress={() => setCounterBooking(null)}
+                disabled={saving}
+                style={{ flex: 1, paddingVertical: spacing.md, borderRadius: radii.md, borderWidth: 1, borderColor: colors.borderSubtle, alignItems: 'center', opacity: saving ? 0.6 : 1 }}
+              >
+                <Text style={{ ...typography.bodyBold, color: colors.textPrimary }}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={submitCounter}
+                disabled={saving}
+                style={{ flex: 1, paddingVertical: spacing.md, borderRadius: radii.md, backgroundColor: colors.primary, alignItems: 'center', opacity: saving ? 0.6 : 1 }}
+              >
+                <Text style={{ ...typography.bodyBold, color: '#FFFFFF' }}>Send proposal</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
 
       {alertState && (
         <ThemedAlert

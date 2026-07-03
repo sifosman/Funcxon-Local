@@ -18,6 +18,10 @@ test.describe('Auth Tests', () => {
     await page.getByPlaceholder('Your name').fill('Test User');
     await page.getByPlaceholder('you@example.com').fill(testEmail);
     await page.getByPlaceholder('Min 6 characters').fill('TestPass123!');
+    await page.getByPlaceholder('Re-enter password').fill('TestPass123!');
+    // Accept terms and privacy
+    await page.locator('input[type="checkbox"]').nth(0).check();
+    await page.locator('input[type="checkbox"]').nth(1).check();
     await page.getByRole('button', { name: 'Sign Up', exact: true }).click();
 
     // Should show either the "Check your email" success page or an error message

@@ -1,4 +1,5 @@
 // WEB ONLY — deploy-web/src/components/HelpCenterModal.tsx
+import { useEffect } from 'react';
 import { SUPPORT_EMAIL, SUPPORT_WHATSAPP } from '../utils/env';
 
 interface HelpCenterModalProps {
@@ -30,6 +31,19 @@ const HELP_TOPICS = [
 ];
 
 export function HelpCenterModal({ open, onClose }: HelpCenterModalProps) {
+  useEffect(() => {
+    if (!open) return;
+    const handleEsc = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    document.addEventListener('keydown', handleEsc);
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.removeEventListener('keydown', handleEsc);
+      document.body.style.overflow = '';
+    };
+  }, [open, onClose]);
+
   if (!open) return null;
 
   return (

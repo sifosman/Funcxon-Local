@@ -9,6 +9,7 @@ import { validateStep4 } from '../../utils/formValidation';
 import { ApplicationProgress } from '../../components/ApplicationProgress';
 import { getSubscriptionTiers } from '../../lib/subscription';
 import { submitApplication, uploadFileToStorage, updateUserRoleToVendor } from '../../lib/applicationService';
+import { createGalleryMediaRecord } from '../../lib/mediaUpload';
 import { useAuth } from '../../auth/AuthContext';
 import { supabase } from '../../lib/supabaseClient';
 import ThemedAlert from '../../components/ThemedAlert';
@@ -156,7 +157,6 @@ export default function ApplicationStep4Screen() {
       // Upload files to Supabase Storage first
       const uploadedImages = [];
       const uploadedVideos = [];
-      const uploadedDocuments = [];
       const uploadErrors = [];
 
       // Upload images
@@ -179,18 +179,6 @@ export default function ApplicationStep4Screen() {
         }
       }
 
-      // Upload documents
-      for (const document of state.step3.documents) {
-        // Route company logo to portfolio-images bucket, other documents to business-documents
-        const bucket = document.name.startsWith('company_logo__') ? 'portfolio-images' : 'business-documents';
-        const result = await uploadFileToStorage(bucket, document, user.id);
-        if (result.success && result.url) {
-          uploadedDocuments.push(result.url);
-        } else {
-          uploadErrors.push(`Document "${document.name}": ${result.error || 'Upload failed'}`);
-        }
-      }
-
       // If any uploads failed, show error and prevent submission
       if (uploadErrors.length > 0) {
         console.error('Upload errors:', uploadErrors);
@@ -198,7 +186,7 @@ export default function ApplicationStep4Screen() {
         return;
       }
 
-      console.log(`Successfully uploaded ${uploadedImages.length} images, ${uploadedVideos.length} videos, ${uploadedDocuments.length} documents`);
+      console.log(`Successfully uploaded ${uploadedImages.length} images, ${uploadedVideos.length} videos`);
 
       // Submit application to database
       const portfolioType = state.portfolioType === 'venues' ? 'venue' as const : 'vendor' as const;
@@ -213,7 +201,6 @@ export default function ApplicationStep4Screen() {
         business_description: state.step2.description,
         portfolio_images: uploadedImages,
         portfolio_videos: uploadedVideos,
-        business_documents: uploadedDocuments,
         subscription_tier: state.step4.subscriptionPlan,
         terms_accepted: state.step4.termsAccepted,
         privacy_accepted: state.step4.privacyAccepted,
@@ -261,7 +248,7 @@ export default function ApplicationStep4Screen() {
               venueTypes: state.step2.venueType,
             };
 
-            const { error: listingError } = await supabase
+            const { data: upsertedListing, error: listingError } = await supabase
               .from('venue_listings')
               .upsert(
                 {
@@ -290,11 +277,23 @@ export default function ApplicationStep4Screen() {
                   subscription_status: 'active',
                 } as any,
                 { onConflict: 'user_id' },
-              );
+              )
+              .select('id')
+              .single();
 
             if (listingError) {
               console.error('Venue listing upsert error:', listingError);
               throw listingError;
+            }
+
+            const venueId = upsertedListing?.id;
+            if (venueId) {
+              for (const imageUrl of uploadedImages) {
+                await createGalleryMediaRecord(imageUrl, 'image', { venueId });
+              }
+              for (const videoUrl of uploadedVideos) {
+                await createGalleryMediaRecord(videoUrl, 'video', { venueId });
+              }
             }
           } catch (e: any) {
             console.error('Failed to create venue listing from application:', e);
@@ -372,18 +371,33 @@ export default function ApplicationStep4Screen() {
               .eq('user_id', user.id)
               .maybeSingle();
 
-            if (existingVendor) {
+            let vendorId: number | null = existingVendor?.id ?? null;
+
+            if (vendorId) {
               const { error: updateError } = await supabase
                 .from('vendors')
                 .update(vendorPayload)
-                .eq('id', existingVendor.id);
+                .eq('id', vendorId);
               if (updateError) throw updateError;
             } else {
-              const { error: insertError } = await supabase
+              const { data: insertedVendor, error: insertError } = await supabase
                 .from('vendors')
-                .insert(vendorPayload);
+                .insert(vendorPayload)
+                .select('id')
+                .single();
               if (insertError) throw insertError;
+              vendorId = insertedVendor?.id ?? null;
             }
+
+            if (vendorId) {
+              for (const imageUrl of uploadedImages) {
+                await createGalleryMediaRecord(imageUrl, 'image', { vendorId });
+              }
+              for (const videoUrl of uploadedVideos) {
+                await createGalleryMediaRecord(videoUrl, 'video', { vendorId });
+              }
+            }
+
             portfolioCreated = true;
           }
         } catch (e: any) {

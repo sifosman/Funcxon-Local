@@ -82,7 +82,6 @@ export default function ApplicationStatusPage() {
       step1: (application.company_details ?? {}) as ApplicationFormState['step1'],
       step2: (application.service_categories ?? {}) as ApplicationFormState['step2'],
       step3: {
-        documents: (application.business_documents ?? []).map((uri) => ({ uri, name: 'document', type: 'application/pdf', size: 0 })),
         images: (application.portfolio_images ?? []).map((uri) => ({ uri, name: 'image', type: 'image/jpeg' })),
         videos: (application.portfolio_videos ?? []).map((uri) => ({ uri, name: 'video', type: 'video/mp4' })),
       },

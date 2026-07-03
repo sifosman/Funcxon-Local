@@ -2,7 +2,7 @@ import { createContext, useContext, useEffect, useState, ReactNode } from 'react
 import type { Session } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabaseClient';
 
-type OAuthProvider = 'google';
+type OAuthProvider = 'google' | 'facebook';
 
 export type AuthContextValue = {
   session: Session | null | undefined;
@@ -124,7 +124,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const signInWithProvider = async (provider: OAuthProvider) => {
-    const redirectTo = `${window.location.origin}/`;
+    const redirectTo = `${window.location.origin}/email-confirmation`;
     const { error } = await supabase.auth.signInWithOAuth({
       provider,
       options: { redirectTo },

@@ -4,6 +4,7 @@ import { ArrowLeft } from 'lucide-react';
 import { useApplicationForm, type ApplicationFormState } from '../context/ApplicationFormContext';
 import { validateStep1 } from '../utils/formValidation';
 import { getLatestUserApplicationByType, isBlockingApplicationStatus } from '../lib/applicationService';
+import { normalizePhoneNumber } from '../utils/phoneNormalization';
 import { AddressAutocompleteInput } from '../components/AddressAutocompleteInput';
 import { ApplicationProgress } from '../components/ApplicationProgress';
 
@@ -65,8 +66,11 @@ export default function ApplicationStep1Page() {
     checkStatus();
   }, [state.portfolioType, navigate]);
 
+  const PHONE_FIELDS: (keyof ApplicationFormState['step1'])[] = ['userWhatsapp', 'contactPhoneNumber', 'alternatePhone1', 'alternatePhone2'];
+
   const handleChange = (key: keyof ApplicationFormState['step1'], value: string) => {
-    updateStep1({ [key]: value });
+    const normalizedValue = PHONE_FIELDS.includes(key) ? normalizePhoneNumber(value) : value;
+    updateStep1({ [key]: normalizedValue });
     if (errors[key]) {
       setErrors((prev) => ({ ...prev, [key]: '' }));
     }

@@ -5,7 +5,7 @@ export default function TermsAndPoliciesPage() {
     <div className="fx-container fx-section">
       <div className="mx-auto max-w-3xl">
         <h1 className="font-display text-3xl font-bold text-on-surface">Terms & Policies</h1>
-        <p className="mt-4 text-on-surface-variant">Last updated: {new Date().toLocaleDateString()}</p>
+        <p className="mt-4 text-on-surface-variant">Last updated: 1 July 2026</p>
 
         <div className="mt-8 space-y-8">
           <section>

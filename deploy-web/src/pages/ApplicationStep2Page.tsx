@@ -4,6 +4,7 @@ import { ArrowLeft } from 'lucide-react';
 import { useApplicationForm, type ApplicationFormState } from '../context/ApplicationFormContext';
 import { validateStep2 } from '../utils/formValidation';
 import { ApplicationProgress } from '../components/ApplicationProgress';
+import { provinces, getCitiesByProvince } from '../config/locations';
 
 const VENUE_TYPES = [
   'Barn', 'Banquet Hall', 'Beach', 'Boat', 'Castle', 'Conference Centre', 'Country House', 'Estate', 'Garden', 'Hotel', 'Restaurant', 'Rooftop', 'Vineyard', 'Warehouse', 'Winery', 'Other',
@@ -21,7 +22,7 @@ const VENDOR_SERVICE_CATEGORIES = [
   'Photography', 'Videography', 'Catering', 'Floristry', 'Decor', 'Music', 'DJ', 'Entertainment', 'Lighting', 'Sound', 'Cake', 'Stationery', 'Hair & Makeup', 'Styling', 'Wedding Planning', 'Event Planning', 'Transport', 'Security', 'Other',
 ];
 
-const PROVINCES = ['Gauteng', 'Western Cape', 'KwaZulu-Natal', 'Eastern Cape', 'Free State', 'Limpopo', 'Mpumalanga', 'North West', 'Northern Cape'];
+const PROVINCE_NAMES = provinces.map((p) => p.name);
 
 export default function ApplicationStep2Page() {
   const navigate = useNavigate();
@@ -50,6 +51,45 @@ export default function ApplicationStep2Page() {
     }
     updateStep2({ [key]: next });
     if (errors[key]) setErrors((prev) => ({ ...prev, [key]: '' }));
+  };
+
+  const toggleProvince = (provinceName: string) => {
+    const currentProvinces = state.step2.provinces;
+    if (currentProvinces.includes(provinceName)) {
+      const newProvinces = currentProvinces.filter((p) => p !== provinceName);
+      const citiesToRemove = getCitiesByProvince(provinceName);
+      const newCities = state.step2.cities.filter((c) => !citiesToRemove.includes(c));
+      updateStep2({ provinces: newProvinces, cities: newCities });
+    } else {
+      updateStep2({ provinces: [...currentProvinces, provinceName] });
+    }
+    if (errors.provinces) setErrors((prev) => ({ ...prev, provinces: '' }));
+  };
+
+  const getAvailableCities = (): string[] => {
+    return state.step2.provinces.flatMap((prov) => getCitiesByProvince(prov));
+  };
+
+  const allProvincesSelected = PROVINCE_NAMES.every((p) => state.step2.provinces.includes(p));
+  const availableCities = getAvailableCities();
+  const allCitiesSelected = availableCities.length > 0 && availableCities.every((c) => state.step2.cities.includes(c));
+
+  const selectAllProvinces = () => {
+    if (allProvincesSelected) {
+      updateStep2({ provinces: [], cities: [] });
+    } else {
+      const allCities = provinces.flatMap((p) => p.cities);
+      updateStep2({ provinces: PROVINCE_NAMES, cities: allCities });
+    }
+  };
+
+  const selectAllCities = () => {
+    if (availableCities.length === 0) return;
+    if (allCitiesSelected) {
+      updateStep2({ cities: [] });
+    } else {
+      updateStep2({ cities: availableCities });
+    }
   };
 
   const updateHall = (index: number, field: 'name' | 'capacity', value: string) => {
@@ -241,24 +281,71 @@ export default function ApplicationStep2Page() {
             </>
           )}
 
-          <ChipGroup
-            label="Coverage Provinces *"
-            values={PROVINCES}
-            selected={state.step2.provinces}
-            error={errors.provinces}
-            onToggle={(v) => toggleChip('provinces', v)}
-          />
           <div>
-            <label className="mb-1 block text-xs font-semibold uppercase tracking-wider text-on-surface-variant" >Coverage Cities</label>
-            <input
-              type="text"
-              value={state.step2.cities.join(', ')}
-              onChange={(e) => updateStep2({ cities: e.target.value.split(',').map((s) => s.trim()).filter(Boolean) })}
-              placeholder="Comma separated cities"
-              className="w-full rounded-lg border border-outline-variant px-4 py-3 text-sm outline-none focus:border-primary"
-              
-            />
+            <div className="mb-2 flex items-center justify-between">
+              <label className="text-xs font-semibold uppercase tracking-wider text-on-surface-variant" >Coverage Provinces *</label>
+              <button
+                type="button"
+                onClick={selectAllProvinces}
+                className="rounded-full border border-outline-variant px-3 py-1 text-xs font-medium text-on-surface hover:bg-surface-container-low"
+              >
+                {allProvincesSelected ? 'Deselect All Provinces' : 'Select All Provinces'}
+              </button>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {PROVINCE_NAMES.map((province) => {
+                const active = state.step2.provinces.includes(province);
+                return (
+                  <button
+                    key={province}
+                    type="button"
+                    onClick={() => toggleProvince(province)}
+                    className={`rounded-full border px-3 py-1.5 text-xs font-medium transition-colors ${
+                      active ? 'border-primary text-white' : 'border-outline-variant bg-white text-on-surface hover:bg-surface-container-low'
+                    }`}
+                    style={active ? { background: '#123f5c' } : { fontFamily: "'Montserrat', sans-serif" }}
+                  >
+                    {province}
+                  </button>
+                );
+              })}
+            </div>
+            {errors.provinces && <p className="mt-1 text-xs text-red-500">{errors.provinces}</p>}
           </div>
+
+          {state.step2.provinces.length > 0 && (
+            <div>
+              <div className="mb-2 flex items-center justify-between">
+                <label className="text-xs font-semibold uppercase tracking-wider text-on-surface-variant" >Coverage Cities</label>
+                <button
+                  type="button"
+                  onClick={selectAllCities}
+                  disabled={availableCities.length === 0}
+                  className="rounded-full border border-outline-variant px-3 py-1 text-xs font-medium text-on-surface hover:bg-surface-container-low disabled:opacity-50"
+                >
+                  {allCitiesSelected ? 'Deselect All Cities' : 'Select All Cities'}
+                </button>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {availableCities.map((city) => {
+                  const active = state.step2.cities.includes(city);
+                  return (
+                    <button
+                      key={city}
+                      type="button"
+                      onClick={() => toggleChip('cities', city)}
+                      className={`rounded-full border px-3 py-1.5 text-xs font-medium transition-colors ${
+                        active ? 'border-primary text-white' : 'border-outline-variant bg-white text-on-surface hover:bg-surface-container-low'
+                      }`}
+                      style={active ? { background: '#123f5c' } : { fontFamily: "'Montserrat', sans-serif" }}
+                    >
+                      {city}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
           <div>
             <label className="mb-1 block text-xs font-semibold uppercase tracking-wider text-on-surface-variant" >
               {state.portfolioType === 'venues' ? 'Venue Bio *' : 'Business Description *'}

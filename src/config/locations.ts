@@ -7,95 +7,104 @@ export const provinces: Province[] = [
   {
     name: "Gauteng",
     cities: [
-      "Johannesburg", "Pretoria", "Centurion", "Sandton", "Soweto", "Midrand", 
-      "Roodepoort", "Benoni", "Boksburg", "Kempton Park", "Randburg", "Edenvale",
-      "Germiston", "Krugersdorp", "Alberton", "Springs", "Brakpan", "Vereeniging",
-      "Vanderbijlpark", "Nigel", "Bronkhorstspruit", "Carletonville", "Randfontein",
-      "Westonaria", "Heidelberg", "Meyerton", "Tembisa", "Alexandra", "Fourways",
-      "Rosebank", "Melville"
+      "Alberton", "Alexandra", "Benoni", "Boksburg", "Brakpan", "Bronkhorstspruit",
+      "Carletonville", "Centurion", "Daveyton", "Edenvale", "Evaton", "Fourways",
+      "Germiston", "Heidelberg", "Isando", "Johannesburg", "Katlehong", "Kempton Park",
+      "Krugersdorp", "Lenasia", "Mabopane", "Mamelodi", "Melville", "Meyerton",
+      "Midrand", "Ormonde", "Parktown", "Pretoria", "Protea Glen", "Randburg",
+      "Randfontein", "Roodepoort", "Rosebank", "Sandton", "Sebokeng", "Sharpeville",
+      "Soweto", "Springs", "Tembisa", "Tsakane", "Vanderbijlpark", "Vereeniging",
+      "Vosloorus", "Wattville", "Westonaria", "Yeoville"
     ]
   },
   {
     name: "Western Cape",
     cities: [
-      "Cape Town", "Stellenbosch", "Paarl", "George", "Knysna", "Hermanus", 
-      "Somerset West", "Franschhoek", "Worcester", "Mossel Bay", "Oudtshoorn",
-      "Swellendam", "Caledon", "Wellington", "Robertson", "Plettenberg Bay",
-      "Saldanha Bay", "Malmesbury", "Bredasdorp", "Vredenburg", "Beaufort West",
-      "Montagu", "Ceres", "Grabouw", "Langebaan", "Muizenberg", "Simons Town",
-      "Strand", "Gordon's Bay", "Bellville", "Parow", "Mitchells Plain",
-      "Khayelitsha", "Atlantis", "Fish Hoek"
+      "Athlone", "Atlantis", "Bellville", "Bloubergstrand", "Brackenfell", "Beaufort West",
+      "Bredasdorp", "Caledon", "Cape Town", "Ceres", "Claremont", "Durbanville",
+      "Fish Hoek", "Franschhoek", "Gansbaai", "George", "Grabouw", "Gordon's Bay",
+      "Hermanus", "Hout Bay", "Khayelitsha", "Knysna", "Kuils River", "Langebaan",
+      "Lansdowne", "Malmesbury", "Milnerton", "Mitchells Plain", "Montagu", "Mossel Bay",
+      "Muizenberg", "Newlands", "Observatory", "Oudtshoorn", "Paarl", "Parow",
+      "Pinelands", "Plettenberg Bay", "Robertson", "Rondebosch", "Saldanha Bay", "Sea Point",
+      "Simons Town", "Somerset West", "Stellenbosch", "Strand", "Swellendam", "Table View",
+      "Vredenburg", "Wellington", "Worcester", "Wynberg"
     ]
   },
   {
     name: "KwaZulu-Natal",
     cities: [
-      "Durban", "Pietermaritzburg", "Umhlanga", "Ballito", "Richards Bay", 
-      "Newcastle", "Ladysmith", "Empangeni", "Port Shepstone", "Dundee",
-      "Vryheid", "Eshowe", "Kokstad", "Scottburgh", "Margate", "Amanzimtoti",
-      "Howick", "Estcourt", "Pinetown", "Chatsworth", "Phoenix", "Westville",
-      "Umlazi", "Tongaat", "Stanger", "Mtunzini", "Hluhluwe", "Ixopo"
+      "Amanzimtoti", "Ballito", "Chatsworth", "Dundee", "Durban", "Empangeni",
+      "Eshowe", "Estcourt", "Hillcrest", "Hluhluwe", "Howick", "Ixopo",
+      "Kloof", "Kokstad", "La Lucia", "Ladysmith", "Margate", "Mtunzini",
+      "Newcastle", "Phoenix", "Pietermaritzburg", "Pinetown", "Port Edward", "Port Shepstone",
+      "Queensburgh", "Richards Bay", "Scottburgh", "Stanger", "Tongaat", "Umhlanga",
+      "Umlazi", "Vryheid", "Westville"
     ]
   },
   {
     name: "Eastern Cape",
     cities: [
-      "Port Elizabeth", "East London", "Mthatha", "Grahamstown", "Jeffreys Bay",
-      "Graaff-Reinet", "Queenstown", "Uitenhage", "King William's Town",
-      "Port Alfred", "Cradock", "Fort Beaufort", "Adelaide", "Butterworth",
-      "Komga", "Aliwal North", "Lady Frere", "Middleburg", "Somerset East",
-      "Burgersdorp", "Despatch", "Humansdorp", "Kirkwood", "St Francis Bay",
-      "Bathurst", "Alexandria"
+      "Adelaide", "Alexandria", "Aliwal North", "Bathurst", "Bhisho", "Burgersdorp",
+      "Butterworth", "Cradock", "Despatch", "East London", "Fort Beaufort", "Graaff-Reinet",
+      "Grahamstown", "Humansdorp", "Jeffreys Bay", "King William's Town", "Kirkwood", "Komani",
+      "Komga", "Lady Frere", "Matatiele", "Middleburg", "Mthatha", "Port Alfred",
+      "Port Elizabeth", "Queenstown", "Somerset East", "St Francis Bay", "Sterkspruit", "Uitenhage"
     ]
   },
   {
     name: "Free State",
     cities: [
-      "Bloemfontein", "Welkom", "Kroonstad", "Bethlehem", "Parys", "Clarens",
-      "Sasolburg", "Phuthaditjhaba", "Virginia", "Bothaville", "Odendaalsrus",
-      "Harrismith", "Ficksburg", "Vrede", "Heilbron", "Frankfort", "Vredefort",
-      "Koffiefontein", "Trompsburg", "Marquard", "Lindley", "Ladybrand",
-      "Clocolan", "Senekal", "Reitz", "Fouriesburg"
+      "Bethlehem", "Bloemfontein", "Bothaville", "Clarens", "Clocolan", "Ficksburg",
+      "Fouriesburg", "Frankfort", "Harrismith", "Heilbron", "Hennenman", "Kestell",
+      "Koffiefontein", "Kroonstad", "Ladybrand", "Lindley", "Marquard", "Odendaalsrus",
+      "Parys", "Phuthaditjhaba", "Reitz", "Sasolburg", "Senekal", "Trompsburg", "Villiers",
+      "Virginia", "Vrede", "Vredefort", "Welkom", "Winburg"
     ]
   },
   {
     name: "Limpopo",
     cities: [
-      "Polokwane", "Tzaneen", "Louis Trichardt", "Mokopane", "Thohoyandou",
-      "Phalaborwa", "Musina", "Giyani", "Lebowakgomo", "Modimolle", "Bela-Bela",
-      "Thabazimbi", "Lephalale", "Hoedspruit", "Burgersfort", "Nkowakowa",
-      "Makhado", "Groblersdal", "Marble Hall", "Messina", "Nylstroom",
-      "Mokopane", "Dendron", "Duiwelskloof", "Haenertsburg"
+      "Bela-Bela", "Bochum", "Burgersfort", "Dendron", "Duiwelskloof", "Giyani",
+      "Groblersdal", "Haenertsburg", "Hoedspruit", "Lebowakgomo", "Lephalale", "Letsitele",
+      "Louis Trichardt", "Makhado", "Malamulele", "Marble Hall", "Messina", "Modimolle",
+      "Modjadjiskloof", "Mokopane", "Musina", "Mutale", "Namakgale", "Nkowakowa",
+      "Nylstroom", "Phalaborwa", "Polokwane", "Seshego", "Thabazimbi", "Thohoyandou",
+      "Tzaneen", "Vuwani"
     ]
   },
   {
     name: "Mpumalanga",
     cities: [
-      "Nelspruit", "Witbank", "Secunda", "White River", "Middelburg", "Hazyview",
-      "Ermelo", "Standerton", "Barberton", "Sabie", "Graskop", "Komatipoort",
-      "Piet Retief", "Carolina", "Delmas", "Bethal", "Lydenburg", "Balfour",
-      "Belfast", "Dullstroom", "Pilgrim's Rest", "Waterval Boven", "Machadodorp",
-      "Hendrina", "eMalahleni", "Steve Tshwete", "Kinross"
+      "Acornhoek", "Balfour", "Barberton", "Belfast", "Bethal", "Bushbuckridge",
+      "Carolina", "Delmas", "Dullstroom", "Ermelo", "Graskop", "Hazyview",
+      "Hendrina", "KaBokweni", "Kinross", "Komatipoort", "KwaMhlanga", "Lydenburg",
+      "Machadodorp", "Malelane", "Middelburg", "Nelspruit", "Piet Retief", "Pilgrim's Rest",
+      "Sabie", "Secunda", "Siyabuswa", "Standerton", "Steve Tshwete", "Volksrust",
+      "Wakkerstroom", "Waterval Boven", "White River", "Witbank", "eMalahleni"
     ]
   },
   {
     name: "North West",
     cities: [
-      "Rustenburg", "Potchefstroom", "Klerksdorp", "Mahikeng", "Brits", "Sun City",
-      "Mmabatho", "Zeerust", "Lichtenburg", "Vryburg", "Hartbeespoort",
-      "Schweizer-Reneke", "Koster", "Orkney", "Stilfontein", "Wolmaransstad",
-      "Groot Marico", "Madikwe", "Taung", "Ventersdorp", "Coligny", "Christiana",
-      "Delareyville", "Bloemhof"
+      "Bapong", "Bloemhof", "Brits", "Christiana", "Coligny", "Delareyville",
+      "Ga-Rankuwa", "Groot Marico", "Hartbeespoort", "Itsoseng", "Klerksdorp", "Koster",
+      "Lehurutshe", "Lichtenburg", "Madikwe", "Mahikeng", "Marikana", "Mmabatho",
+      "Mogwase", "Mooinooi", "Orkney", "Potchefstroom", "Rustenburg", "Sannieshof",
+      "Schweizer-Reneke", "Stilfontein", "Sun City", "Swartruggens", "Taung", "Ventersdorp",
+      "Vryburg", "Wolmaransstad", "Zeerust"
     ]
   },
   {
     name: "Northern Cape",
     cities: [
-      "Kimberley", "Upington", "Springbok", "Kuruman", "De Aar", "Sutherland",
-      "Kathu", "Postmasburg", "Prieska", "Carnarvon", "Calvinia", "Fraserburg",
-      "Victoria West", "Hopetown", "Colesberg", "Britstown", "Richmond",
-      "Douglas", "Pofadder", "Kenhardt", "Brandvlei", "Williston", "Griquatown",
-      "Campbell", "Barkly West"
+      "Aggeneys", "Barkly West", "Brandvlei", "Britstown", "Calvinia", "Campbell",
+      "Carnarvon", "Colesberg", "Daniëlskuil", "De Aar", "Douglas", "Fraserburg",
+      "Griquatown", "Groblershoop", "Hartswater", "Hopetown", "Kakamas", "Kathu",
+      "Kenhardt", "Kimberley", "Koopmansfontein", "Kuruman", "Loxton", "Niekerkshoop",
+      "Olifantshoek", "Orania", "Pofadder", "Postmasburg", "Prieska", "Richmond",
+      "Springbok", "Strydenburg", "Sutherland", "Upington", "Victoria West", "Vioolsdrif",
+      "Williston"
     ]
   }
 ];

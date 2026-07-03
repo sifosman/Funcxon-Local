@@ -57,7 +57,7 @@ export default function DiscoverScreen() {
   });
 
   // Venue-specific dropdown states
-  const [selectedVenueType, setSelectedVenueType] = useState<string | null>(null);
+  const [selectedVenueTypes, setSelectedVenueTypes] = useState<string[]>([]);
   const [selectedVenueAmenities, setSelectedVenueAmenities] = useState<string[]>([]);
   const [selectedCapacity, setSelectedCapacity] = useState<string | null>(null);
   const [selectedProvinces, setSelectedProvinces] = useState<string[]>([]);
@@ -424,9 +424,9 @@ export default function DiscoverScreen() {
 
       // Venue-specific dropdown filters (only apply when item is a venue)
       let matchesVenueType = true;
-      if (selectedVenueType && item.type === 'venue') {
+      if (selectedVenueTypes.length > 0 && item.type === 'venue') {
         const vt = String(item.venue_type ?? '').toLowerCase();
-        matchesVenueType = vt === selectedVenueType.toLowerCase();
+        matchesVenueType = selectedVenueTypes.some((type) => vt === type.toLowerCase());
       }
 
       let matchesVenueAmenities = true;
@@ -530,7 +530,7 @@ export default function DiscoverScreen() {
     provinceFilterQuery,
     queryTokens,
     safeData,
-    selectedVenueType,
+    selectedVenueTypes,
     selectedVenueAmenities,
     selectedCapacity,
     selectedProvinces,
@@ -608,7 +608,7 @@ export default function DiscoverScreen() {
     category !== 'all' ||
     minRating != null ||
     onlyWithPrice ||
-    !!selectedVenueType ||
+    selectedVenueTypes.length > 0 ||
     selectedVenueAmenities.length > 0 ||
     !!selectedCapacity ||
     selectedProvinces.length > 0 ||
@@ -857,7 +857,7 @@ export default function DiscoverScreen() {
     setCategoryTextFilter('');
     setCategory('all');
     setSortBy('best-match');
-    setSelectedVenueType(null);
+    setSelectedVenueTypes([]);
     setSelectedVenueAmenities([]);
     setSelectedCapacity(null);
     setSelectedProvinces([]);
@@ -1082,7 +1082,7 @@ export default function DiscoverScreen() {
 
       <Modal visible={showFilters} transparent animationType="fade" onRequestClose={() => setShowFilters(false)}>
         <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          behavior="padding"
           style={{ flex: 1 }}
         >
           <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.28)', justifyContent: 'flex-end' }}>
@@ -1105,7 +1105,7 @@ export default function DiscoverScreen() {
                 </View>
               </View>
 
-              <ScrollView keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: spacing.lg, paddingBottom: spacing.lg }}>
+              <ScrollView keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: spacing.lg, paddingBottom: spacing.xl }}>
                 <Text style={{ ...typography.caption, color: colors.textMuted, marginBottom: spacing.xs }}>Browse by</Text>
                 <View style={{ flexDirection: 'row', flexWrap: 'wrap', rowGap: spacing.sm, columnGap: spacing.sm, marginBottom: spacing.md }}>
                   {[
@@ -1135,7 +1135,7 @@ export default function DiscoverScreen() {
                   })}
                 </View>
 
-                {category === 'venues' ? (
+                {(category === 'all' || category === 'venues') && (
                   <>
                     {/* Venue Type Dropdown */}
                     <Text style={{ ...typography.caption, color: colors.textMuted, marginBottom: spacing.xs }}>Select your preferred venue type</Text>
@@ -1154,8 +1154,8 @@ export default function DiscoverScreen() {
                         alignItems: 'center',
                       }}
                     >
-                      <Text style={{ ...typography.body, color: selectedVenueType ? colors.textPrimary : colors.textMuted }}>
-                        {selectedVenueType ?? 'Any'}
+                      <Text style={{ ...typography.body, color: selectedVenueTypes.length > 0 ? colors.textPrimary : colors.textMuted }} numberOfLines={1}>
+                        {selectedVenueTypes.length > 0 ? selectedVenueTypes.join(', ') : 'Any'}
                       </Text>
                       <MaterialIcons name="keyboard-arrow-down" size={20} color={colors.textSecondary} />
                     </TouchableOpacity>
@@ -1205,7 +1205,11 @@ export default function DiscoverScreen() {
                       </Text>
                       <MaterialIcons name="keyboard-arrow-down" size={20} color={colors.textSecondary} />
                     </TouchableOpacity>
+                  </>
+                )}
 
+                {(category === 'all' || category === 'venues') && (
+                  <>
                     {/* Province Dropdown */}
                     <Text style={{ ...typography.caption, color: colors.textMuted, marginBottom: spacing.xs }}>Select preferred provinces</Text>
                     <TouchableOpacity
@@ -1274,7 +1278,9 @@ export default function DiscoverScreen() {
                       </Text>
                     </TouchableOpacity>
                   </>
-                ) : (
+                )}
+
+                {(category === 'all' || category === 'vendors' || category === 'services') && (
                   <>
                     {/* Vendor Category Dropdown */}
                     <Text style={{ ...typography.caption, color: colors.textMuted, marginBottom: spacing.xs }}>Select vendor category</Text>
@@ -1321,7 +1327,11 @@ export default function DiscoverScreen() {
                       </Text>
                       <MaterialIcons name="keyboard-arrow-down" size={20} color={colors.textSecondary} />
                     </TouchableOpacity>
+                  </>
+                )}
 
+                {(category === 'all' || category === 'vendors' || category === 'services') && (
+                  <>
                     {/* Province Dropdown */}
                     <Text style={{ ...typography.caption, color: colors.textMuted, marginBottom: spacing.xs }}>Select preferred provinces</Text>
                     <TouchableOpacity
@@ -1562,7 +1572,7 @@ export default function DiscoverScreen() {
       {/* Dropdown Picker Modal */}
       <Modal visible={activeDropdown !== null} transparent animationType="slide" onRequestClose={() => setActiveDropdown(null)}>
         <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          behavior="padding"
           style={{ flex: 1, justifyContent: 'flex-end' }}
         >
           <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.3)', justifyContent: 'flex-end' }}>
@@ -1623,9 +1633,13 @@ export default function DiscoverScreen() {
                 />
               )}
 
-              <ScrollView keyboardShouldPersistTaps="handled" style={{ maxHeight: 400 }}>
+              <ScrollView
+                keyboardShouldPersistTaps="handled"
+                style={{ maxHeight: 400 }}
+                contentContainerStyle={{ paddingBottom: spacing.xl }}
+              >
                 {(() => {
-                  const isMulti = activeDropdown === 'venue_amenities' || activeDropdown === 'province' || activeDropdown === 'city' || activeDropdown === 'vendor_category' || activeDropdown === 'vendor_subcategory' || activeDropdown === 'vendor_province' || activeDropdown === 'vendor_city';
+                  const isMulti = activeDropdown === 'venue_type' || activeDropdown === 'venue_amenities' || activeDropdown === 'province' || activeDropdown === 'city' || activeDropdown === 'vendor_category' || activeDropdown === 'vendor_subcategory' || activeDropdown === 'vendor_province' || activeDropdown === 'vendor_city';
                   const isSingle = !isMulti;
 
                   let allOptions: string[] = [];
@@ -1646,7 +1660,7 @@ export default function DiscoverScreen() {
                   // Any option
                   const anySelected =
                     activeDropdown === 'venue_type'
-                      ? selectedVenueType === null
+                      ? selectedVenueTypes.length === 0
                       : activeDropdown === 'venue_amenities'
                       ? selectedVenueAmenities.length === 0
                       : activeDropdown === 'capacity'
@@ -1673,7 +1687,7 @@ export default function DiscoverScreen() {
                         <TouchableOpacity
                           key="any"
                           onPress={() => {
-                            if (activeDropdown === 'venue_type') setSelectedVenueType(null);
+                            if (activeDropdown === 'venue_type') setSelectedVenueTypes([]);
                             else if (activeDropdown === 'venue_amenities') setSelectedVenueAmenities([]);
                             else if (activeDropdown === 'capacity') setSelectedCapacity(null);
                             else if (activeDropdown === 'province') setSelectedProvinces([]);
@@ -1708,7 +1722,7 @@ export default function DiscoverScreen() {
 
                     const isSelected =
                       activeDropdown === 'venue_type'
-                        ? selectedVenueType === option
+                        ? selectedVenueTypes.includes(option)
                         : activeDropdown === 'venue_amenities'
                         ? selectedVenueAmenities.includes(option)
                         : activeDropdown === 'capacity'
@@ -1732,8 +1746,9 @@ export default function DiscoverScreen() {
                         key={option}
                         onPress={() => {
                           if (activeDropdown === 'venue_type') {
-                            setSelectedVenueType(isSelected ? null : option);
-                            setActiveDropdown(null);
+                            setSelectedVenueTypes((prev) =>
+                              prev.includes(option) ? prev.filter((t) => t !== option) : [...prev, option]
+                            );
                           } else if (activeDropdown === 'venue_amenities') {
                             setSelectedVenueAmenities((prev) =>
                               prev.includes(option) ? prev.filter((a) => a !== option) : [...prev, option]

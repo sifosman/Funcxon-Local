@@ -157,6 +157,29 @@ export default function ApplicationStep2Screen() {
     return state.step2.provinces.flatMap((prov) => getCitiesByProvince(prov));
   };
 
+  const allProvincesSelected = provinces.every((p) => state.step2.provinces.includes(p.name));
+  const allCitiesSelected = getAvailableCities().length > 0 && getAvailableCities().every((c) => state.step2.cities.includes(c));
+
+  const selectAllProvinces = () => {
+    if (allProvincesSelected) {
+      updateStep2({ provinces: [], cities: [] });
+    } else {
+      const allProvinceNames = provinces.map((p) => p.name);
+      const allCities = provinces.flatMap((p) => p.cities);
+      updateStep2({ provinces: allProvinceNames, cities: allCities });
+    }
+  };
+
+  const selectAllCities = () => {
+    const availableCities = getAvailableCities();
+    if (availableCities.length === 0) return;
+    if (allCitiesSelected) {
+      updateStep2({ cities: [] });
+    } else {
+      updateStep2({ cities: availableCities });
+    }
+  };
+
   const handleNext = () => {
     const validation = validateStep2(state.step2, state.portfolioType);
 
@@ -433,6 +456,11 @@ export default function ApplicationStep2Screen() {
                   Add details for each hall/space at your venue (up to 5)
                 </Text>
 
+                {errors.halls && (
+                  <Text style={{ ...typography.caption, fontSize: 12, color: '#EF4444', marginBottom: spacing.md }}>
+                    {errors.halls}
+                  </Text>
+                )}
                 {Array.from({ length: 5 }, (_, idx) => {
                   const hall = state.step2.halls?.[idx] ?? { name: '', capacity: '' };
                   const hallNumber = idx + 1;
@@ -724,6 +752,23 @@ export default function ApplicationStep2Screen() {
             <Text style={{ ...typography.titleMedium, color: colors.textPrimary, marginBottom: spacing.md }}>
               Coverage Areas - Provinces *
             </Text>
+            <TouchableOpacity
+              onPress={selectAllProvinces}
+              style={{
+                alignSelf: 'flex-start',
+                paddingHorizontal: spacing.md,
+                paddingVertical: spacing.sm,
+                borderRadius: radii.full,
+                backgroundColor: allProvincesSelected ? colors.textPrimary : colors.surface,
+                borderWidth: 1,
+                borderColor: colors.textPrimary,
+                marginBottom: spacing.md,
+              }}
+            >
+              <Text style={{ ...typography.body, color: allProvincesSelected ? '#FFFFFF' : colors.textPrimary, fontSize: 13 }}>
+                {allProvincesSelected ? 'Deselect All Provinces' : 'Select All Provinces'}
+              </Text>
+            </TouchableOpacity>
             <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm }}>
               {provinces.map((province) => {
                 const isSelected = state.step2.provinces.includes(province.name);
@@ -774,6 +819,25 @@ export default function ApplicationStep2Screen() {
               <Text style={{ ...typography.titleMedium, color: colors.textPrimary, marginBottom: spacing.md }}>
                 Coverage Areas - Cities
               </Text>
+              <TouchableOpacity
+                onPress={selectAllCities}
+                disabled={getAvailableCities().length === 0}
+                style={{
+                  alignSelf: 'flex-start',
+                  paddingHorizontal: spacing.md,
+                  paddingVertical: spacing.sm,
+                  borderRadius: radii.full,
+                  backgroundColor: allCitiesSelected ? colors.textPrimary : colors.surface,
+                  borderWidth: 1,
+                  borderColor: colors.textPrimary,
+                  marginBottom: spacing.md,
+                  opacity: getAvailableCities().length === 0 ? 0.5 : 1,
+                }}
+              >
+                <Text style={{ ...typography.body, color: allCitiesSelected ? '#FFFFFF' : colors.textPrimary, fontSize: 13 }}>
+                  {allCitiesSelected ? 'Deselect All Cities' : 'Select All Cities'}
+                </Text>
+              </TouchableOpacity>
               <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm }}>
                 {getAvailableCities().map((city) => {
                   const isSelected = state.step2.cities.includes(city);

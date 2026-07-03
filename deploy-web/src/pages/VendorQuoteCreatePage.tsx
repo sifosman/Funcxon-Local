@@ -12,12 +12,17 @@ type QuoteRequest = {
   user_id: number;
   name: string;
   email: string;
+  phone?: string | null;
+  contact_phone?: string | null;
   status: string;
   details: string | null;
   event_type: string | null;
   event_date: string | null;
+  end_date: string | null;
   budget: string | null;
   quote_amount: number | null;
+  amended_message: string | null;
+  response_message: string | null;
   created_at: string;
 };
 
@@ -83,6 +88,8 @@ export default function VendorQuoteCreatePage() {
           setValidityDays(draft.validity_days?.toString() || '7');
           setInternalNotes(draft.notes || '');
           if (draft.attachments) setAttachments(draft.attachments.map((a: QuoteAttachment, i: number) => ({ id: `draft-${i}`, name: a.name, url: a.url })));
+        } else if (qr.status === 'amended' && qr.response_message) {
+          setDescription(qr.response_message || '');
         }
       } catch (err: any) {
         setAlert({ title: 'Error', message: err?.message || 'Failed to load quote request.', type: 'error' });
@@ -204,7 +211,14 @@ export default function VendorQuoteCreatePage() {
           {eventDetails || quoteRequest?.details ? <p className="text-sm text-on-surface">{eventDetails || quoteRequest?.details}</p> : null}
           {quoteRequest?.event_type && <p className="mt-1 text-xs text-on-surface-variant">Event Type: {quoteRequest.event_type}</p>}
           {quoteRequest?.event_date && <p className="mt-1 text-xs text-on-surface-variant">Event Date: {new Date(quoteRequest.event_date).toLocaleDateString()}</p>}
+          {quoteRequest?.end_date && <p className="mt-1 text-xs text-on-surface-variant">End Date: {new Date(quoteRequest.end_date).toLocaleDateString()}</p>}
           {quoteRequest?.budget && <p className="mt-1 text-xs text-on-surface-variant">Client Budget: {quoteRequest.budget}</p>}
+          {(quoteRequest?.phone || quoteRequest?.contact_phone) && <p className="mt-1 text-xs text-on-surface-variant">Contact: {quoteRequest?.phone || quoteRequest?.contact_phone}</p>}
+          {quoteRequest?.amended_message && (
+            <div className="mt-3 rounded-lg bg-amber-50 p-3 text-sm text-amber-800">
+              <span className="font-semibold">Amendment request:</span> {quoteRequest.amended_message}
+            </div>
+          )}
         </div>
 
         <div className="space-y-4 rounded-xl border border-outline-variant bg-white p-5 shadow-sm">

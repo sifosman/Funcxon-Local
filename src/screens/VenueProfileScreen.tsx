@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, BackHandler, Dimensions, Image, Linking, Modal, Platform, ScrollView, Share, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, BackHandler, Dimensions, Image, Linking, Platform, ScrollView, Share, Text, TouchableOpacity, View } from 'react-native';
 import Carousel from 'react-native-reanimated-carousel';
 import type { ICarouselInstance } from 'react-native-reanimated-carousel';
 import ThemedAlert from '../components/ThemedAlert';
 import NetworkImage from '../components/NetworkImage';
+import ImageZoomModal, { type GalleryItem } from '../components/ImageZoomModal';
 import { useQuery } from '@tanstack/react-query';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { WebView } from 'react-native-webview';
@@ -79,6 +80,13 @@ type AvailabilityRecord = {
   notes: string | null;
 };
 
+type GalleryMedia = {
+  id: number;
+  media_url: string;
+  media_type: 'image' | 'video';
+  sort_order: number;
+};
+
 export default function VenueProfileScreen({ route, navigation }: Props) {
   const { venueId } = route.params;
   const [activeTab, setActiveTab] = useState<'about' | 'amenities' | 'reviews' | 'calendar'>('about');
@@ -86,7 +94,7 @@ export default function VenueProfileScreen({ route, navigation }: Props) {
   const [galleryIndex, setGalleryIndex] = useState(0);
   const carouselRef = useRef<ICarouselInstance>(null);
   const [zoomVisible, setZoomVisible] = useState(false);
-  const [zoomImageUri, setZoomImageUri] = useState<string | null>(null);
+  const [zoomInitialIndex, setZoomInitialIndex] = useState(0);
   const [favouriteIds, setFavouriteIds] = useState<{ vendorIds: number[]; venueIds: number[] }>({
     vendorIds: [],
     venueIds: [],
@@ -189,33 +197,25 @@ export default function VenueProfileScreen({ route, navigation }: Props) {
   });
 
   const {
-    data: canLeaveReview,
-    isLoading: eligibilityLoading,
-  } = useQuery<boolean>({
-    queryKey: ['venue-review-eligibility', venueId, user?.id],
-    enabled: typeof venueId === 'number' && !!user?.id,
+    data: galleryMedia,
+    isLoading: galleryMediaLoading,
+  } = useQuery<GalleryMedia[]>({
+    queryKey: ['venue-gallery-media', venueId],
+    enabled: typeof venueId === 'number',
     queryFn: async () => {
-      if (!user?.id) return false;
+      const { data, error } = await supabase
+        .from('gallery_media')
+        .select('id, media_url, media_type, sort_order')
+        .eq('venue_id', venueId)
+        .eq('is_active', true)
+        .order('sort_order', { ascending: true });
 
-      const { count: quoteCount, error: quoteError } = await supabase
-        .from('venue_quote_requests')
-        .select('id', { count: 'exact', head: true })
-        .eq('listing_id', venueId)
-        .eq('requester_user_id', user.id)
-        .in('status', ['accepted', 'finalised']);
+      if (error) {
+        console.warn('gallery_media query failed, falling back to additional_photos:', error);
+        return [];
+      }
 
-      if (quoteError) throw quoteError;
-
-      const { count: tourCount, error: tourError } = await supabase
-        .from('venue_tour_bookings')
-        .select('id', { count: 'exact', head: true })
-        .eq('listing_id', venueId)
-        .eq('requester_user_id', user.id)
-        .in('status', ['accepted', 'finalised']);
-
-      if (tourError) throw tourError;
-
-      return (quoteCount ?? 0) > 0 || (tourCount ?? 0) > 0;
+      return (data as GalleryMedia[]) ?? [];
     },
   });
 
@@ -381,10 +381,13 @@ export default function VenueProfileScreen({ route, navigation }: Props) {
     `;
   }, [mapCoordinates, mapSearchTarget, venue?.name]);
 
-  const galleryImages = useMemo(
-    () => [venue?.image_url, ...(venue?.additional_photos ?? [])].filter(Boolean) as string[],
-    [venue?.image_url, venue?.additional_photos],
-  );
+  const galleryItems = useMemo<GalleryItem[]>(() => {
+    if (galleryMedia && galleryMedia.length > 0) {
+      return galleryMedia.map((m) => ({ url: m.media_url, type: m.media_type }));
+    }
+    const legacyImages = [venue?.image_url, ...(venue?.additional_photos ?? [])].filter(Boolean) as string[];
+    return legacyImages.map((url) => ({ url, type: 'image' as const }));
+  }, [galleryMedia, venue?.image_url, venue?.additional_photos]);
 
   const halls = useMemo(() => {
     const raw = (venue?.features as any)?.halls;
@@ -462,11 +465,20 @@ export default function VenueProfileScreen({ route, navigation }: Props) {
 
   const handleShare = async () => {
     if (!venue) return;
+    const url = `https://funxon-web.vercel.app/venue/${venue.id}`;
+    const message = encodeURIComponent(`Check out ${venue.name} on Funxon: ${url}`);
+    const whatsappUrl = Platform.select({
+      ios: `https://wa.me/?text=${message}`,
+      android: `whatsapp://send?text=${message}`,
+      default: `https://wa.me/?text=${message}`,
+    });
     try {
-      await Share.share({
-        message: `Check out ${venue.name} on Funxon!`,
-        title: venue.name,
-      });
+      const supported = await Linking.canOpenURL(whatsappUrl);
+      if (supported) {
+        await Linking.openURL(whatsappUrl);
+      } else {
+        await Share.share({ message: `Check out ${venue.name} on Funxon! ${url}`, title: venue.name });
+      }
     } catch (error) {
       console.error('Share failed:', error);
     }
@@ -476,7 +488,7 @@ export default function VenueProfileScreen({ route, navigation }: Props) {
     if (!mapCoordinates && !physicalAddress && !mapQuery) return;
     const mapsUrl = mapCoordinates
       ? `https://www.google.com/maps/search/?api=1&query=${mapCoordinates.latitude},${mapCoordinates.longitude}`
-      : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(mapSearchTarget)}`;
+      : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(mapSearchTarget ?? '')}`;
     Linking.openURL(mapsUrl).catch(() => null);
   };
 
@@ -631,7 +643,7 @@ export default function VenueProfileScreen({ route, navigation }: Props) {
       >
         <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
           <View style={{ flex: 1, paddingRight: spacing.md }}>
-            <Text style={{ ...headerTitleLarge, color: colors.textPrimary }}>{venue.name}</Text>
+            <Text style={{ ...headerTitleLarge, color: colors.primary }}>{venue.name}</Text>
           </View>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
             <TouchableOpacity
@@ -709,14 +721,14 @@ export default function VenueProfileScreen({ route, navigation }: Props) {
         }}
       >
         <View style={{ height: 220, backgroundColor: colors.surfaceMuted }}>
-          {galleryImages.length > 0 ? (
+          {galleryItems.length > 0 ? (
             <>
               <Carousel
                 ref={carouselRef}
                 width={Dimensions.get('window').width}
                 height={220}
-                data={galleryImages}
-                loop={galleryImages.length > 1}
+                data={galleryItems}
+                loop={galleryItems.length > 1}
                 pagingEnabled={false}
                 snapEnabled
                 onSnapToItem={(index) => setGalleryIndex(index)}
@@ -724,16 +736,31 @@ export default function VenueProfileScreen({ route, navigation }: Props) {
                   <TouchableOpacity
                     activeOpacity={0.9}
                     onPress={() => {
-                      setZoomImageUri(item);
+                      setZoomInitialIndex(galleryIndex);
                       setZoomVisible(true);
                     }}
                     style={{ width: '100%', height: '100%' }}
                   >
-                    <NetworkImage uri={item} style={{ width: '100%', height: '100%' }} resizeMode="cover" />
+                    {item.type === 'video' ? (
+                      <View style={{ width: '100%', height: '100%', alignItems: 'center', justifyContent: 'center', backgroundColor: '#000' }}>
+                        <NetworkImage
+                          uri={item.url}
+                          style={{ width: '100%', height: '100%', position: 'absolute' }}
+                          resizeMode="cover"
+                          placeholderIcon="videocam"
+                          useLogoFallback={false}
+                        />
+                        <View style={{ width: 48, height: 48, borderRadius: 24, backgroundColor: 'rgba(0,0,0,0.6)', alignItems: 'center', justifyContent: 'center' }}>
+                          <MaterialIcons name="play-arrow" size={32} color="#FFFFFF" />
+                        </View>
+                      </View>
+                    ) : (
+                      <NetworkImage uri={item.url} style={{ width: '100%', height: '100%' }} resizeMode="cover" />
+                    )}
                   </TouchableOpacity>
                 )}
               />
-              {galleryImages.length > 1 && (
+              {galleryItems.length > 1 && (
                 <>
                   <TouchableOpacity
                     onPress={() => carouselRef.current?.prev()}
@@ -780,7 +807,7 @@ export default function VenueProfileScreen({ route, navigation }: Props) {
                       gap: 6,
                     }}
                   >
-                    {galleryImages.map((_, idx) => (
+                    {galleryItems.map((_, idx) => (
                       <View
                         key={idx}
                         style={{
@@ -804,7 +831,7 @@ export default function VenueProfileScreen({ route, navigation }: Props) {
             </View>
           )}
         </View>
-        {galleryImages.length > 1 && (
+        {galleryItems.length > 1 && (
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
@@ -812,47 +839,49 @@ export default function VenueProfileScreen({ route, navigation }: Props) {
             snapToInterval={80 + spacing.sm}
             decelerationRate="fast"
           >
-            {galleryImages.map((imageUrl, idx) => (
+            {galleryItems.map((item, idx) => (
               <TouchableOpacity
-                key={imageUrl + idx}
+                key={item.url + idx}
                 onPress={() => {
                   setGalleryIndex(idx);
                   carouselRef.current?.scrollTo({ index: idx });
                 }}
                 style={{ marginRight: spacing.sm }}
               >
-                <NetworkImage
-                  uri={imageUrl}
-                  style={{
-                    width: 80,
-                    height: 80,
-                    borderRadius: radii.md,
-                    backgroundColor: colors.surfaceMuted,
-                    borderWidth: idx === galleryIndex ? 2 : 0,
-                    borderColor: colors.textPrimary,
-                  }}
-                  resizeMode="cover"
-                />
+                <View style={{ position: 'relative' }}>
+                  <NetworkImage
+                    uri={item.url}
+                    style={{
+                      width: 80,
+                      height: 80,
+                      borderRadius: radii.md,
+                      backgroundColor: colors.surfaceMuted,
+                      borderWidth: idx === galleryIndex ? 2 : 0,
+                      borderColor: colors.textPrimary,
+                    }}
+                    resizeMode="cover"
+                    placeholderIcon={item.type === 'video' ? 'videocam' : 'image'}
+                    useLogoFallback={false}
+                  />
+                  {item.type === 'video' && (
+                    <View style={{ position: 'absolute', top: '50%', left: '50%', marginLeft: -10, marginTop: -10, width: 20, height: 20, borderRadius: 10, backgroundColor: 'rgba(0,0,0,0.6)', alignItems: 'center', justifyContent: 'center' }}>
+                      <MaterialIcons name="play-arrow" size={14} color="#FFFFFF" />
+                    </View>
+                  )}
+                </View>
               </TouchableOpacity>
             ))}
           </ScrollView>
         )}
       </View>
 
-      {/* Zoom Modal */}
-      <Modal visible={zoomVisible} transparent animationType="fade" onRequestClose={() => setZoomVisible(false)}>
-        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.92)', justifyContent: 'center', alignItems: 'center' }}>
-          <TouchableOpacity
-            onPress={() => setZoomVisible(false)}
-            style={{ position: 'absolute', top: 40, right: 20, zIndex: 10 }}
-          >
-            <MaterialIcons name="close" size={32} color="#FFFFFF" />
-          </TouchableOpacity>
-          {zoomImageUri && (
-            <Image source={{ uri: zoomImageUri }} style={{ width: '90%', height: '70%' }} resizeMode="contain" />
-          )}
-        </View>
-      </Modal>
+      {/* Zoom / Video Modal */}
+      <ImageZoomModal
+        visible={zoomVisible}
+        items={galleryItems}
+        initialIndex={zoomInitialIndex}
+        onClose={() => setZoomVisible(false)}
+      />
 
       {/* Tabs */}
       <View
@@ -981,8 +1010,8 @@ export default function VenueProfileScreen({ route, navigation }: Props) {
             </View>
           )}
 
-          {/* Features & Amenities */}
-          {(venue.amenities?.length || venue.event_types?.length || venue.venue_type) ? (
+          {/* Features & Hall Capacities */}
+          {(venue.venue_type || venue.venue_capacity || venue.event_types?.length || halls.length > 0) ? (
             <View
               style={{
                 marginBottom: spacing.lg,
@@ -994,7 +1023,7 @@ export default function VenueProfileScreen({ route, navigation }: Props) {
               }}
             >
               <Text style={{ ...headerTitleMedium, color: colors.textPrimary, marginBottom: spacing.md }}>
-                Features & Amenities
+                Features & Hall Capacities
               </Text>
               <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
                 <View style={{ width: '50%', paddingRight: spacing.sm }}>
@@ -1014,7 +1043,18 @@ export default function VenueProfileScreen({ route, navigation }: Props) {
                       <Text style={{ ...typography.body, color: colors.textPrimary }}>{venue.venue_capacity} guests</Text>
                     </View>
                   )}
-                  {renderBulletSection('Amenities', venue.amenities)}
+                  {halls.length > 0 && (
+                    <View style={{ marginBottom: spacing.sm }}>
+                      <Text style={{ ...typography.caption, color: colors.textSecondary, marginBottom: spacing.xs }}>
+                        Hall Capacities
+                      </Text>
+                      {halls.map((hall, idx) => (
+                        <Text key={idx} style={{ ...typography.body, color: colors.textPrimary }}>
+                          {hall.name ? `${hall.name}: ` : ''}{hall.capacity || 'TBC'}
+                        </Text>
+                      ))}
+                    </View>
+                  )}
                 </View>
                 <View style={{ width: '50%', paddingLeft: spacing.sm }}>
                   {renderBulletSection('Event Types', venue.event_types)}
@@ -1253,6 +1293,44 @@ export default function VenueProfileScreen({ route, navigation }: Props) {
 
       {activeTab === 'amenities' && (
         <View>
+          {halls.length > 0 && (
+            <View
+              style={{
+                marginBottom: spacing.lg,
+                padding: spacing.lg,
+                borderRadius: radii.lg,
+                backgroundColor: colors.surface,
+                borderWidth: 1,
+                borderColor: colors.borderSubtle,
+              }}
+            >
+              <Text style={{ ...headerTitleMedium, color: colors.textPrimary, marginBottom: spacing.md }}>
+                Halls & Spaces
+              </Text>
+              {halls.map((hall, idx) => (
+                <View
+                  key={idx}
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    marginBottom: spacing.sm,
+                    paddingVertical: spacing.sm,
+                    borderBottomWidth: idx < halls.length - 1 ? 1 : 0,
+                    borderBottomColor: colors.borderSubtle,
+                  }}
+                >
+                  <Text style={{ ...typography.body, color: colors.textPrimary, flex: 1 }}>
+                    {hall.name || `Hall ${idx + 1}`}
+                  </Text>
+                  <Text style={{ ...typography.body, color: colors.textSecondary }}>
+                    {hall.capacity || 'Capacity TBC'}
+                  </Text>
+                </View>
+              ))}
+            </View>
+          )}
+
           {venue.amenities && venue.amenities.length > 0 ? (
             <View
               style={{
@@ -1497,8 +1575,7 @@ export default function VenueProfileScreen({ route, navigation }: Props) {
                 Share your experience with this venue. Reviews help other users make informed decisions.
               </Text>
               <PrimaryButton
-                title={eligibilityLoading ? 'Checking eligibility...' : 'Add a review'}
-                disabled={!canLeaveReview || eligibilityLoading}
+                title="Add a review"
                 onPress={() =>
                   navigation.navigate('CreateReview', {
                     type: 'venue',
@@ -1507,11 +1584,6 @@ export default function VenueProfileScreen({ route, navigation }: Props) {
                   })
                 }
               />
-              {!eligibilityLoading && !canLeaveReview ? (
-                <Text style={{ ...typography.caption, color: colors.textMuted, marginTop: spacing.sm }}>
-                  You can leave a review once your tour booking or quote is accepted/finalised.
-                </Text>
-              ) : null}
             </View>
           ) : (
             <View

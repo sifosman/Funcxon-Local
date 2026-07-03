@@ -1,13 +1,9 @@
 import { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, Image, Platform, Linking, Dimensions, StyleSheet, KeyboardAvoidingView } from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView, Image, Platform, KeyboardAvoidingView } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import * as ImagePicker from 'expo-image-picker';
-import * as DocumentPicker from 'expo-document-picker';
-import * as FileSystem from 'expo-file-system/legacy';
-import { useFocusEffect } from '@react-navigation/native';
-import { useCallback } from 'react';
 import { useApplicationForm } from '../../context/ApplicationFormContext';
 import { validateStep3 } from '../../utils/formValidation';
 import { colors, spacing, radii, typography } from '../../theme';
@@ -28,17 +24,6 @@ type ProfileStackParamList = {
 
 const MAX_IMAGE_SIZE = 10 * 1024 * 1024; // 10MB
 const MAX_VIDEO_SIZE = 50 * 1024 * 1024; // 50MB
-const MAX_DOCUMENT_SIZE = 10 * 1024 * 1024; // 10MB
-
-type RequiredDocKey = 'id_copy' | 'company_logo';
-type DocKey = RequiredDocKey | 'cipro' | 'catalogue';
-
-const BUSINESS_DOCS: Array<{ key: DocKey; label: string; required: boolean; acceptLabel?: string }> = [
-  { key: 'id_copy', label: 'ID copy', required: true },
-  { key: 'cipro', label: 'CIPRO', required: false, acceptLabel: 'If applicable' },
-  { key: 'company_logo', label: 'Company Logo', required: true },
-  { key: 'catalogue', label: 'Upload Catalogue (PDF)', required: false, acceptLabel: 'Optional' },
-];
 
 export default function ApplicationStep3Screen() {
   const navigation = useNavigation<NativeStackNavigationProp<ProfileStackParamList>>();
@@ -206,163 +191,6 @@ export default function ApplicationStep3Screen() {
     }
   };
 
-  const getBusinessDoc = (key: DocKey) =>
-    state.step3.documents.find((d) => typeof d.name === 'string' && d.name.startsWith(`${key}__`));
-
-  const upsertBusinessDoc = (key: DocKey, doc: { uri: string; name: string; type: string; size: number }) => {
-    const prefix = `${key}__`;
-    const kept = state.step3.documents.filter((d) => !(typeof d.name === 'string' && d.name.startsWith(prefix)));
-    updateStep3({ documents: [...kept, doc] });
-  };
-
-  const handlePickDocumentFor = async (key: DocKey) => {
-    try {
-      const result = await DocumentPicker.getDocumentAsync({
-        type: [
-          'application/pdf',
-          'application/msword',
-          'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-        ],
-        copyToCacheDirectory: true,
-        multiple: false,
-      });
-
-      if (!result.canceled && result.assets) {
-        const asset = result.assets[0];
-        if (asset.size && asset.size > MAX_DOCUMENT_SIZE) {
-          setAlertState({ visible: true, title: 'File Too Large', message: `${asset.name} exceeds 10MB limit.` });
-          return;
-        }
-
-        let uri = asset.uri;
-        
-        // Convert blob URL to base64 for web
-        if (asset.uri.startsWith('blob:')) {
-          try {
-            uri = await convertBlobToBase64(asset.uri, asset.mimeType || 'application/pdf');
-          } catch (error) {
-            console.error('Failed to convert document to base64:', error);
-            // Fallback to original URI if conversion fails
-          }
-        }
-
-        const newDoc = {
-          uri,
-          name: `${key}__${asset.name}`,
-          type: asset.mimeType || 'application/pdf',
-          size: asset.size || 0,
-        };
-
-        upsertBusinessDoc(key, newDoc);
-
-        setAlertState({ visible: true, title: 'Success', message: `${asset.name} uploaded successfully.` });
-      }
-    } catch (error) {
-      console.error('Document picker error:', error);
-      setAlertState({ visible: true, title: 'Error', message: 'Failed to pick documents. Please try again.' });
-    }
-  };
-
-  const handlePickCompanyLogo = async () => {
-    try {
-      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-      if (status !== 'granted') {
-        setAlertState({ visible: true, title: 'Permission Required', message: 'Please grant access to your photo library to upload your company logo.', buttons: [{ text: 'OK', style: 'default', onPress: () => setAlertState(null) }] });
-        return;
-      }
-
-      const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ['images'],
-        allowsMultipleSelection: false,
-        allowsEditing: true,
-        quality: 1,
-      });
-
-      if (!result.canceled && result.assets?.[0]) {
-        const asset = result.assets[0];
-        const fileSize = asset.fileSize || 0;
-        if (fileSize > MAX_IMAGE_SIZE) {
-          setAlertState({ visible: true, title: 'File Too Large', message: `${asset.fileName || 'Logo'} exceeds 10MB limit.` });
-          return;
-        }
-
-        let uri = asset.uri;
-        
-        // Convert blob URL to base64 for web
-        if (asset.uri.startsWith('blob:')) {
-          try {
-            uri = await convertBlobToBase64(asset.uri, asset.mimeType || 'image/png');
-          } catch (error) {
-            console.error('Failed to convert logo to base64:', error);
-            // Fallback to original URI if conversion fails
-          }
-        }
-
-        const originalName = asset.fileName || 'company-logo.png';
-        const sanitizedBaseName = originalName.replace(/\.[^.]+$/, '') || 'company-logo';
-        const logoDoc = {
-          uri,
-          name: `company_logo__${sanitizedBaseName}.png`,
-          type: 'image/png',
-          size: fileSize,
-        };
-
-        upsertBusinessDoc('company_logo', logoDoc);
-        setAlertState({ visible: true, title: 'Success', message: 'Company logo uploaded successfully.' });
-      }
-    } catch (error) {
-      console.error('Company logo picker error:', error);
-      setAlertState({ visible: true, title: 'Error', message: 'Failed to pick the company logo. Please try again.' });
-    }
-  };
-
-  const handleRemoveBusinessDoc = (key: DocKey) => {
-    const prefix = `${key}__`;
-    const updated = state.step3.documents.filter((d) => !(typeof d.name === 'string' && d.name.startsWith(prefix)));
-    updateStep3({ documents: updated });
-  };
-
-  const handleDownloadBusinessDoc = async (key: DocKey) => {
-    const doc = getBusinessDoc(key);
-    if (!doc) return;
-
-    const originalName = doc.name.split('__').slice(1).join('__') || 'document';
-    const safeName = originalName.replace(/[\\/:*?"<>|]+/g, '_');
-
-    try {
-      if (Platform.OS === 'android') {
-        const permissions = await FileSystem.StorageAccessFramework.requestDirectoryPermissionsAsync();
-        if (!permissions.granted) {
-          return;
-        }
-
-        const fileUri = await FileSystem.StorageAccessFramework.createFileAsync(
-          permissions.directoryUri,
-          safeName,
-          doc.type || 'application/pdf',
-        );
-
-        const base64 = await FileSystem.readAsStringAsync(doc.uri, {
-          encoding: FileSystem.EncodingType.Base64,
-        });
-
-        await FileSystem.writeAsStringAsync(fileUri, base64, {
-          encoding: FileSystem.EncodingType.Base64,
-        });
-
-        const contentUri = await FileSystem.getContentUriAsync(fileUri);
-        await Linking.openURL(contentUri);
-        return;
-      }
-
-      const destUri = `${FileSystem.documentDirectory}${safeName}`;
-      await FileSystem.copyAsync({ from: doc.uri, to: destUri });
-      await Linking.openURL(destUri);
-    } catch {
-      setAlertState({ visible: true, title: 'Unable to download file', message: 'Please try again.' });
-    }
-  };
-
   const handlePickVideos = async () => {
     try {
       // Venue upload limit enforcement
@@ -519,7 +347,7 @@ export default function ApplicationStep3Screen() {
               <MaterialIcons name="cloud-upload" size={32} color={colors.textPrimary} />
               <View style={{ flex: 1 }}>
                 <Text style={{ ...typography.titleMedium, color: colors.textPrimary }}>
-                  Documents & Media
+                  Portfolio Media
                 </Text>
                 <Text style={{ ...typography.caption, color: colors.textMuted }}>
                   Page 3 of 4
@@ -774,166 +602,6 @@ export default function ApplicationStep3Screen() {
             </TouchableOpacity>
           </View>
 
-          {/* Documents */}
-          <View
-            style={{
-              backgroundColor: colors.surface,
-              borderRadius: radii.lg,
-              padding: spacing.lg,
-              marginBottom: spacing.lg,
-              borderWidth: 1,
-              borderColor: colors.borderSubtle,
-              shadowColor: '#000',
-              shadowOpacity: 0.05,
-              shadowRadius: 8,
-              shadowOffset: { width: 0, height: 2 },
-              elevation: 2,
-            }}
-          >
-            <Text style={{ ...typography.titleMedium, color: colors.textPrimary, marginBottom: spacing.xs }}>
-              Business Documents
-            </Text>
-            <Text style={{ ...typography.caption, color: colors.textMuted, marginBottom: spacing.md }}>
-              Upload the required business documents below.
-            </Text>
-
-            <View style={{ gap: spacing.sm }}>
-              {BUSINESS_DOCS.map((d) => {
-                const uploaded = getBusinessDoc(d.key);
-                const requiredTag = d.required ? 'Required' : d.acceptLabel || 'Optional';
-
-                const errorKey =
-                  d.key === 'id_copy'
-                    ? 'idCopy'
-                    : d.key === 'company_logo'
-                      ? 'companyLogo'
-                      : null;
-
-                const errorText = errorKey ? errors[errorKey] : undefined;
-
-                return (
-                  <View key={d.key}>
-                    <View
-                      style={{
-                        padding: spacing.md,
-                        borderRadius: radii.md,
-                        backgroundColor: colors.background,
-                        borderWidth: 1,
-                        borderColor: errorText ? '#EF4444' : colors.borderSubtle,
-                      }}
-                    >
-                      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.md }}>
-                        <View style={{ flex: 1 }}>
-                          <Text style={{ ...typography.bodySemiBold, color: colors.textPrimary }}>{d.label}</Text>
-                          <Text style={{ ...typography.caption, color: colors.textMuted, marginTop: 2 }}>
-                            {uploaded ? uploaded.name.split('__').slice(1).join('__') : requiredTag}
-                          </Text>
-                        </View>
-
-                        {uploaded ? (
-                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
-                            <MaterialIcons name="check-circle" size={20} color="#22C55E" />
-                            <TouchableOpacity
-                              onPress={() => handleDownloadBusinessDoc(d.key)}
-                              style={{
-                                paddingHorizontal: spacing.sm,
-                                paddingVertical: 6,
-                                borderRadius: radii.full,
-                                backgroundColor: '#f2f7ff',
-                                flexDirection: 'row',
-                                alignItems: 'center',
-                                gap: 6,
-                              }}
-                              activeOpacity={0.8}
-                            >
-                              <MaterialIcons name="download" size={16} color={colors.textPrimary} />
-                              <Text style={{ ...typography.captionBold, color: colors.textPrimary }}>Download</Text>
-                            </TouchableOpacity>
-                          </View>
-                        ) : (
-                          <View
-                            style={{
-                              paddingHorizontal: spacing.sm,
-                              paddingVertical: 6,
-                              borderRadius: radii.full,
-                              backgroundColor: d.required ? '#FEE2E2' : '#FEF3C7',
-                            }}
-                          >
-                            <Text style={{ ...typography.captionBold, color: d.required ? '#991B1B' : '#92400E' }}>
-                              {requiredTag}
-                            </Text>
-                          </View>
-                        )}
-                      </View>
-
-                      <View style={{ flexDirection: 'row', gap: spacing.sm, marginTop: spacing.md }}>
-                        <TouchableOpacity
-                          onPress={() => {
-                            if (d.key === 'company_logo') {
-                              handlePickCompanyLogo();
-                              return;
-                            }
-                            handlePickDocumentFor(d.key);
-                          }}
-                          style={{
-                            flex: 1,
-                            borderWidth: 1,
-                            borderColor: colors.textPrimary,
-                            borderRadius: radii.md,
-                            paddingVertical: spacing.sm,
-                            alignItems: 'center',
-                            flexDirection: 'row',
-                            justifyContent: 'center',
-                            gap: 6,
-                            backgroundColor: '#FFFFFF',
-                          }}
-                          activeOpacity={0.8}
-                        >
-                          <MaterialIcons name="upload-file" size={18} color={colors.textPrimary} />
-                          <Text style={{ ...typography.bodyBold, color: colors.textPrimary }}>
-                            {uploaded ? 'Replace' : 'Upload'}
-                          </Text>
-                        </TouchableOpacity>
-
-                        {uploaded && (
-                          <TouchableOpacity
-                            onPress={() => handleRemoveBusinessDoc(d.key)}
-                            style={{
-                              borderWidth: 1,
-                              borderColor: '#EF4444',
-                              borderRadius: radii.md,
-                              paddingVertical: spacing.sm,
-                              paddingHorizontal: spacing.md,
-                              alignItems: 'center',
-                              flexDirection: 'row',
-                              justifyContent: 'center',
-                              gap: 6,
-                              backgroundColor: '#FFFFFF',
-                            }}
-                            activeOpacity={0.8}
-                          >
-                            <MaterialIcons name="delete" size={18} color="#EF4444" />
-                            <Text style={{ ...typography.bodyBold, color: '#EF4444' }}>Remove</Text>
-                          </TouchableOpacity>
-                        )}
-                      </View>
-
-                      <Text style={{ ...typography.caption, color: colors.textMuted, marginTop: spacing.sm }}>
-                        {d.key === 'company_logo' ? 'PNG logo (Max 10MB)' : 'PDF, DOC, DOCX (Max 10MB)'}
-                      </Text>
-                    </View>
-
-                    {errorText && (
-                      <Text style={{ ...typography.caption, fontSize: 12, color: '#EF4444', marginTop: spacing.xs }}>
-                        {errorText}
-                      </Text>
-                    )}
-                  </View>
-                );
-              })}
-            </View>
-          </View>
-
           {/* Note about uploads */}
           <View
             style={{
@@ -947,7 +615,7 @@ export default function ApplicationStep3Screen() {
             <MaterialIcons name="info" size={20} color="#F59E0B" style={{ marginRight: spacing.sm }} />
             <View style={{ flex: 1 }}>
               <Text style={{ ...typography.caption, color: '#92400E' }}>
-              Note: Supported formats: JPG, PNG (max 10MB each), MP4, MOV (max 50MB each), PDF, DOC, DOCX (max 10MB each).
+              Note: Supported formats: JPG, PNG (max 10MB each), MP4, MOV (max 50MB each). Images are saved to your profile gallery.
               </Text>
             </View>
           </View>

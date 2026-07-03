@@ -45,37 +45,26 @@ export default function SubscriberLoginPage() {
       <div className="mx-auto max-w-md">
         <Link
           to="/"
-          className="mb-4 inline-flex items-center text-sm font-medium hover:underline"
-          style={{ color: '#123f5c' }}
+          className="mb-4 inline-flex items-center text-sm font-medium text-primary hover:underline"
         >
           <ArrowLeft className="mr-1 h-4 w-4" />
           Back to Home
         </Link>
 
-        <div
-          className="rounded-2xl border border-outline-variant bg-white p-8"
-          style={{ boxShadow: '0 4px 10px rgba(0,0,0,0.08)' }}
-        >
+        <div className="rounded-2xl border border-outline-variant bg-white p-8 shadow-sm">
           <div className="mb-4 flex justify-center">
             <img src={logoUrl} alt="Funxon" className="h-16 w-16 object-contain" />
           </div>
-          <h1
-            className="mb-2 text-center text-2xl font-bold"
-            style={{ color: '#123f5c' }}
-          >
+          <h1 className="mb-2 text-center text-2xl font-bold text-primary">
             Subscriber Portal
           </h1>
-          <p
-            className="mb-6 text-sm"
-            style={{ color: '#72787e' }}
-          >
+          <p className="mb-6 text-sm text-on-surface-variant">
             Access your business profile and manage your listings
           </p>
 
           {error && (
             <div
-              className="mb-4 flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700"
-              
+              className="mb-4 flex items-center gap-2 rounded-lg border border-error/30 bg-error-container/30 p-3 text-sm text-error"
             >
               <AlertCircle className="h-4 w-4 flex-shrink-0" />
               {error}
@@ -84,10 +73,7 @@ export default function SubscriberLoginPage() {
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label
-                className="mb-1 block text-sm font-medium"
-                style={{ color: '#123f5c' }}
-              >
+              <label className="mb-1 block text-sm font-medium text-primary">
                 Email
               </label>
               <div className="flex items-center rounded-lg border border-outline-variant px-3">
@@ -97,17 +83,13 @@ export default function SubscriberLoginPage() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="your@email.com"
-                  className="w-full border-none bg-transparent px-3 py-3 text-sm focus:outline-none"
-                  
+                  className="w-full border-none bg-transparent px-3 py-3 text-sm text-on-surface focus:outline-none"
                 />
               </div>
             </div>
 
             <div>
-              <label
-                className="mb-1 block text-sm font-medium"
-                style={{ color: '#123f5c' }}
-              >
+              <label className="mb-1 block text-sm font-medium text-primary">
                 Password
               </label>
               <div className="flex items-center rounded-lg border border-outline-variant px-3">
@@ -117,8 +99,7 @@ export default function SubscriberLoginPage() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••"
-                  className="w-full border-none bg-transparent px-3 py-3 text-sm focus:outline-none"
-                  
+                  className="w-full border-none bg-transparent px-3 py-3 text-sm text-on-surface focus:outline-none"
                 />
                 <button
                   type="button"
@@ -133,8 +114,7 @@ export default function SubscriberLoginPage() {
             <div className="text-right">
               <Link
                 to="/signin"
-                className="text-xs font-medium hover:underline"
-                style={{ color: '#123f5c' }}
+                className="text-xs font-medium text-primary hover:underline"
               >
                 Forgot password?
               </Link>
@@ -143,8 +123,7 @@ export default function SubscriberLoginPage() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full rounded-lg py-3 text-sm font-semibold text-white transition-all hover:opacity-90 disabled:opacity-60"
-              style={{ background: '#123f5c' }}
+              className="fx-btn-primary w-full disabled:opacity-60"
             >
               {loading ? 'Logging in...' : 'Login'}
             </button>
@@ -153,24 +132,19 @@ export default function SubscriberLoginPage() {
           <div className="mt-6 space-y-3">
             <Link
               to="/portfolio-type"
-              className="block w-full rounded-lg border border-outline-variant bg-white py-3 text-center text-sm font-semibold transition-colors hover:bg-surface-container-low"
-              style={{ color: '#123f5c' }}
+              className="block w-full rounded-lg border border-outline-variant bg-white py-3 text-center text-sm font-semibold text-primary transition-colors hover:bg-surface-container-low"
             >
               Register your venue
             </Link>
             <Link
               to="/portfolio-type"
-              className="block w-full rounded-lg border border-outline-variant bg-white py-3 text-center text-sm font-semibold transition-colors hover:bg-surface-container-low"
-              style={{ color: '#123f5c' }}
+              className="block w-full rounded-lg border border-outline-variant bg-white py-3 text-center text-sm font-semibold text-primary transition-colors hover:bg-surface-container-low"
             >
               Register your vendor/service business
             </Link>
           </div>
 
-          <p
-            className="mt-6 text-center text-xs"
-            style={{ color: '#72787e' }}
-          >
+          <p className="mt-6 text-center text-xs text-on-surface-variant">
             Login to access your subscriber profile, create portfolios, and manage your business listings.
           </p>
         </div>

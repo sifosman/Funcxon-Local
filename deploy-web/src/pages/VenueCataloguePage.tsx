@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowLeft, Plus, Trash2, Edit2, Upload, FileText, Loader2 } from 'lucide-react';
+import { ArrowLeft, Plus, Trash2, Edit2, Upload, Loader2 } from 'lucide-react';
 import { useAuth } from '../auth/AuthContext';
 import { supabase } from '../lib/supabaseClient';
 import { uploadFileToStorage } from '../lib/applicationService';
 import { AppAlert } from '../components/AppAlert';
+import { getCatalogueItemLimit, isCatalogueLimitReached } from '../lib/catalogue';
 
 type VenueListing = { id: number; name: string; subscription_plan?: string | null; subscription_status?: string | null };
 
@@ -20,23 +21,21 @@ type CatalogueItem = {
   image_url: string | null;
 };
 
-type PdfDocument = { id: number; document_url: string; file_name: string | null; created_at: string };
-
 export default function VenueCataloguePage() {
   const { user } = useAuth();
   const [loading, setLoading] = useState(true);
   const [listing, setListing] = useState<VenueListing | null>(null);
   const [items, setItems] = useState<CatalogueItem[]>([]);
-  const [pdfs, setPdfs] = useState<PdfDocument[]>([]);
   const [saving, setSaving] = useState(false);
   const [uploadingImage, setUploadingImage] = useState<number | null>(null);
-  const [uploadingPdf, setUploadingPdf] = useState(false);
-  const [alert, setAlert] = useState<{ title: string; message: string; type: 'error' | 'success' } | null>(null);
+  const [alert, setAlert] = useState<{ title: string; message: string; type: 'error' | 'success' | 'warning' } | null>(null);
+  const [itemLimit, setItemLimit] = useState<number>(0);
   const [editItem, setEditItem] = useState<CatalogueItem | null>(null);
   const [form, setForm] = useState({ title: '', description: '', price: '', is_active: true });
   const [showForm, setShowForm] = useState(false);
 
   const sortedItems = useMemo(() => [...items].sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0)), [items]);
+  const canAddMoreItems = useMemo(() => !isCatalogueLimitReached(items.length, itemLimit), [items.length, itemLimit]);
 
   const load = async () => {
     if (!user?.id) return;
@@ -50,14 +49,16 @@ export default function VenueCataloguePage() {
           listingRow = created;
         }
       }
-      if (!listingRow) { setListing(null); setItems([]); setPdfs([]); setLoading(false); return; }
+      if (!listingRow) { setListing(null); setItems([]); setLoading(false); return; }
       setListing(listingRow);
-      const [{ data: itemRows }, { data: pdfRows }] = await Promise.all([
-        supabase.from('venue_catalogue_items').select('id, listing_id, title, description, price, currency, sort_order, is_active, image_url').eq('listing_id', listingRow.id).order('sort_order', { ascending: true }),
-        supabase.from('venue_documents').select('id, document_url, file_name, created_at').eq('venue_id', listingRow.id).eq('document_type', 'catalogue_pdf').order('created_at', { ascending: false }),
-      ]);
+      const { data: itemRows } = await supabase
+        .from('venue_catalogue_items')
+        .select('id, listing_id, title, description, price, currency, sort_order, is_active, image_url')
+        .eq('listing_id', listingRow.id)
+        .order('sort_order', { ascending: true });
       setItems((itemRows || []) as CatalogueItem[]);
-      setPdfs((pdfRows || []) as PdfDocument[]);
+      const limit = await getCatalogueItemLimit('venue', listingRow.subscription_plan || 'get_started');
+      setItemLimit(limit);
     } catch (err: any) {
       setAlert({ title: 'Error', message: err?.message || 'Failed to load catalogue.', type: 'error' });
     } finally {
@@ -67,13 +68,20 @@ export default function VenueCataloguePage() {
 
   useEffect(() => { load(); }, [user?.id]);
 
-  const openNew = () => { setEditItem(null); setForm({ title: '', description: '', price: '', is_active: true }); setShowForm(true); };
+  const openNew = () => {
+    if (!canAddMoreItems) {
+      setAlert({ title: 'Catalogue Limit Reached', message: `Your plan allows up to ${itemLimit} catalogue items. Upgrade to add more.`, type: 'warning' });
+      return;
+    }
+    setEditItem(null); setForm({ title: '', description: '', price: '', is_active: true }); setShowForm(true);
+  };
   const openEdit = (item: CatalogueItem) => { setEditItem(item); setForm({ title: item.title, description: item.description || '', price: item.price != null ? String(item.price) : '', is_active: item.is_active }); setShowForm(true); };
   const closeForm = () => { setShowForm(false); setEditItem(null); };
 
   const handleSaveItem = async () => {
     if (!listing) { setAlert({ title: 'Error', message: 'Create a venue listing first.', type: 'error' }); return; }
     if (!form.title.trim()) { setAlert({ title: 'Required', message: 'Title is required.', type: 'error' }); return; }
+    if (!editItem && !canAddMoreItems) { setAlert({ title: 'Catalogue Limit Reached', message: `Your plan allows up to ${itemLimit} catalogue items. Upgrade to add more.`, type: 'warning' }); return; }
     const price = form.price.trim() ? Number(form.price.trim()) : null;
     if (form.price.trim() && (Number.isNaN(price) || price === null)) { setAlert({ title: 'Invalid', message: 'Price must be a number.', type: 'error' }); return; }
     setSaving(true);
@@ -107,24 +115,6 @@ export default function VenueCataloguePage() {
     } catch (err: any) { setAlert({ title: 'Upload Failed', message: err?.message || 'Could not upload image.', type: 'error' }); } finally { setUploadingImage(null); }
   };
 
-  const handlePdfUpload = async (files: FileList | null) => {
-    if (!files || files.length === 0 || !listing || !user?.id) return;
-    setUploadingPdf(true);
-    try {
-      const file = files[0];
-      const result = await uploadFileToStorage('business-documents', file, user.id);
-      if (result.success && result.url) {
-        await supabase.from('venue_documents').insert({ venue_id: listing.id, document_type: 'catalogue_pdf', document_url: result.url, file_name: file.name, mime_type: file.type });
-        await load();
-      }
-    } catch (err: any) { setAlert({ title: 'Upload Failed', message: err?.message || 'Could not upload PDF.', type: 'error' }); } finally { setUploadingPdf(false); }
-  };
-
-  const handleDeletePdf = async (doc: PdfDocument) => {
-    if (!confirm(`Remove PDF "${doc.file_name || 'catalogue'}"?`)) return;
-    try { await supabase.from('venue_documents').delete().eq('id', doc.id); setPdfs((prev) => prev.filter((d) => d.id !== doc.id)); } catch (err: any) { setAlert({ title: 'Error', message: err?.message || 'Failed to delete PDF.', type: 'error' }); }
-  };
-
   if (loading) return <div className="fx-container py-20 text-center"><div className="mx-auto h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" /></div>;
 
   return (
@@ -144,30 +134,12 @@ export default function VenueCataloguePage() {
         ) : (
           <div className="space-y-8">
             <div className="rounded-xl border border-outline-variant bg-white p-6 shadow-sm">
-              <h2 className="mb-4 font-display text-lg font-semibold" style={{ color: '#123f5c' }}>PDF Pricelist</h2>
-              {pdfs.length === 0 && <p className="mb-4 text-sm text-on-surface-variant">No PDF pricelist uploaded.</p>}
-              <div className="mb-4 space-y-2">
-                {pdfs.map((doc) => (
-                  <div key={doc.id} className="flex items-center justify-between rounded-lg border border-outline-variant p-3">
-                    <a href={doc.document_url} target="_blank" rel="noreferrer" className="flex items-center gap-2 text-sm text-primary hover:underline">
-                      <FileText className="h-4 w-4" /> {doc.file_name || 'Catalogue PDF'}
-                    </a>
-                    <button onClick={() => handleDeletePdf(doc)} className="text-on-surface-variant hover:text-error"><Trash2 className="h-4 w-4" /></button>
-                  </div>
-                ))}
-              </div>
-              <div className="rounded-lg border border-dashed border-outline-variant p-4 text-center">
-                <input type="file" accept="application/pdf" onChange={(e) => handlePdfUpload(e.target.files)} className="hidden" id="venue-pdf-upload" disabled={uploadingPdf} />
-                <label htmlFor="venue-pdf-upload" className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-outline-variant bg-white px-4 py-2 text-sm font-semibold text-on-surface hover:bg-surface-container-low disabled:opacity-60">
-                  <Upload className="h-4 w-4" /> {uploadingPdf ? 'Uploading...' : 'Add PDF Catalogue'}
-                </label>
-              </div>
-            </div>
-
-            <div className="rounded-xl border border-outline-variant bg-white p-6 shadow-sm">
               <div className="mb-4 flex items-center justify-between">
-                <h2 className="font-display text-lg font-semibold" style={{ color: '#123f5c' }}>Catalogue Items</h2>
-                <button onClick={openNew} className="inline-flex items-center gap-1 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white" style={{ background: '#123f5c' }}><Plus className="h-4 w-4" /> Add Item</button>
+                <div>
+                  <h2 className="font-display text-lg font-semibold" style={{ color: '#123f5c' }}>Catalogue Items</h2>
+                  <p className="text-sm text-on-surface-variant">{items.length} of {itemLimit} items used</p>
+                </div>
+                <button onClick={openNew} disabled={saving || (!editItem && !canAddMoreItems)} className="inline-flex items-center gap-1 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white disabled:opacity-60" style={{ background: '#123f5c' }}><Plus className="h-4 w-4" /> Add Item</button>
               </div>
 
               {showForm && (

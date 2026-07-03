@@ -44,12 +44,6 @@ export interface Step2Data {
 }
 
 export interface Step3Data {
-  documents: Array<{
-    uri: string;
-    name: string;
-    type: string;
-    size: number;
-  }>;
   images: Array<{
     uri: string;
     name: string;
@@ -127,7 +121,6 @@ const initialState: ApplicationFormState = {
     description: '',
   },
   step3: {
-    documents: [],
     images: [],
     videos: [],
   },

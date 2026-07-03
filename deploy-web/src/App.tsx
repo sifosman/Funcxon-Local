@@ -1,6 +1,7 @@
 import { Routes, Route } from 'react-router-dom';
 import { useState } from 'react';
 import Layout from './components/Layout';
+import ScrollToTop from './components/ScrollToTop';
 import { GuardedRoute } from './components/GuardedRoute';
 import { DataConsentModal } from './components/DataConsentModal';
 import { FloatingHelpButton } from './components/FloatingHelpButton';
@@ -12,8 +13,13 @@ import VenueProfilePage from './pages/VenueProfilePage';
 import VendorProfilePage from './pages/VendorProfilePage';
 import QuotesPage from './pages/QuotesPage';
 import QuoteDetailPage from './pages/QuoteDetailPage';
+import QuoteRequestPage from './pages/QuoteRequestPage';
 import PlannerPage from './pages/PlannerPage';
 import AccountPage from './pages/AccountPage';
+import AccountSettingsPage from './pages/AccountSettingsPage';
+import BillingPage from './pages/BillingPage';
+import ChangePasswordPage from './pages/ChangePasswordPage';
+import DeleteAccountPage from './pages/DeleteAccountPage';
 import FavouritesPage from './pages/FavouritesPage';
 import BlogListPage from './pages/BlogListPage';
 import BlogDetailPage from './pages/BlogDetailPage';
@@ -45,6 +51,7 @@ import VenueAnalyticsPage from './pages/VenueAnalyticsPage';
 import ActivityDashboardPage from './pages/ActivityDashboardPage';
 import BookingsPage from './pages/BookingsPage';
 import BookingDetailPage from './pages/BookingDetailPage';
+import MyToursPage from './pages/MyToursPage';
 import TourBookingsPage from './pages/TourBookingsPage';
 import CataloguePage from './pages/CataloguePage';
 import QuoteRequestsPage from './pages/QuoteRequestsPage';
@@ -62,6 +69,7 @@ import UpdatePortfolioPage from './pages/UpdatePortfolioPage';
 import UpdateVendorPortfolioPage from './pages/UpdateVendorPortfolioPage';
 import UpdateVenuePortfolioPage from './pages/UpdateVenuePortfolioPage';
 import VenueCataloguePage from './pages/VenueCataloguePage';
+import VenueCatalogueViewPage from './pages/VenueCatalogueViewPage';
 import VendorCataloguePage from './pages/VendorCataloguePage';
 import VenueQuoteRequestsPage from './pages/VenueQuoteRequestsPage';
 import VendorQuoteCreatePage from './pages/VendorQuoteCreatePage';
@@ -80,6 +88,7 @@ function App() {
       <HelpCenterModal open={helpOpen} onClose={() => setHelpOpen(false)} />
 
       <ErrorBoundary>
+      <ScrollToTop />
       <Routes>
         <Route element={<Layout />}>
           <Route index element={<HomePage />} />
@@ -92,13 +101,19 @@ function App() {
           {/* Attendee protected routes */}
           <Route path="quotes" element={<GuardedRoute label="quotes"><QuotesPage /></GuardedRoute>} />
           <Route path="quotes/:id" element={<GuardedRoute label="quote details"><QuoteDetailPage /></GuardedRoute>} />
+          <Route path="quote-request" element={<GuardedRoute label="quote request"><QuoteRequestPage /></GuardedRoute>} />
           <Route path="planner" element={<GuardedRoute label="planner"><PlannerPage /></GuardedRoute>} />
           <Route path="events" element={<GuardedRoute label="events"><EventListPage /></GuardedRoute>} />
           <Route path="bookings" element={<GuardedRoute label="bookings"><BookingsPage /></GuardedRoute>} />
           <Route path="bookings/:id" element={<GuardedRoute label="booking details"><BookingDetailPage /></GuardedRoute>} />
+          <Route path="my-tours" element={<GuardedRoute label="my tours"><MyToursPage /></GuardedRoute>} />
           <Route path="book-tour" element={<GuardedRoute label="book a tour"><BookTourPage /></GuardedRoute>} />
           <Route path="create-review" element={<GuardedRoute label="create review"><CreateReviewPage /></GuardedRoute>} />
           <Route path="account" element={<GuardedRoute label="account"><AccountPage /></GuardedRoute>} />
+          <Route path="account/settings" element={<GuardedRoute label="account settings"><AccountSettingsPage /></GuardedRoute>} />
+          <Route path="account/billing" element={<GuardedRoute label="billing"><BillingPage /></GuardedRoute>} />
+          <Route path="account/change-password" element={<GuardedRoute label="change password"><ChangePasswordPage /></GuardedRoute>} />
+          <Route path="account/delete" element={<GuardedRoute label="delete account"><DeleteAccountPage /></GuardedRoute>} />
           <Route path="account/favourites" element={<GuardedRoute label="favourites"><FavouritesPage /></GuardedRoute>} />
           <Route path="activity-dashboard" element={<GuardedRoute label="activity dashboard"><ActivityDashboardPage /></GuardedRoute>} />
 
@@ -137,6 +152,7 @@ function App() {
 
           {/* Catalogue, quote, tour, and analytics routes */}
           <Route path="catalogue/venue" element={<GuardedRoute label="venue catalogue"><VenueCataloguePage /></GuardedRoute>} />
+          <Route path="catalogue/venue/:id" element={<VenueCatalogueViewPage />} />
           <Route path="catalogue/vendor" element={<GuardedRoute label="vendor catalogue"><VendorCataloguePage /></GuardedRoute>} />
           <Route path="venue/quotes" element={<GuardedRoute label="venue quote requests"><VenueQuoteRequestsPage /></GuardedRoute>} />
           <Route path="vendor/quotes/create" element={<GuardedRoute label="create quote"><VendorQuoteCreatePage /></GuardedRoute>} />

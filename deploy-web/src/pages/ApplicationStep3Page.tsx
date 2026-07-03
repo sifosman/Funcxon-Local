@@ -23,10 +23,9 @@ export default function ApplicationStep3Page() {
   }, [state.portfolioType, navigate]);
 
   const uploadFiles = async (
-    bucket: 'portfolio-images' | 'portfolio-videos' | 'business-documents',
+    bucket: 'portfolio-images' | 'portfolio-videos',
     files: FileList | null,
-    key: 'images' | 'videos' | 'documents',
-    namePrefix?: string,
+    key: 'images' | 'videos',
   ) => {
     if (!files || files.length === 0) return;
     const {
@@ -41,8 +40,7 @@ export default function ApplicationStep3Page() {
       setUploading((prev) => ({ ...prev, [id]: false }));
       if (result.success && result.url) {
         const current = state.step3[key];
-        const storedName = namePrefix ? `${namePrefix}__${file.name}` : file.name;
-        const item = { uri: result.url, name: storedName, type: file.type, size: file.size };
+        const item = { uri: result.url, name: file.name, type: file.type };
         updateStep3({ [key]: [...current, item] });
       } else {
         setErrors((prev) => ({ ...prev, [key]: `Failed to upload ${file.name}: ${result.error}` }));
@@ -50,7 +48,7 @@ export default function ApplicationStep3Page() {
     }
   };
 
-  const removeFile = (key: 'images' | 'videos' | 'documents', index: number) => {
+  const removeFile = (key: 'images' | 'videos', index: number) => {
     const current = state.step3[key];
     updateStep3({ [key]: current.filter((_, i) => i !== index) });
   };
@@ -151,45 +149,6 @@ export default function ApplicationStep3Page() {
             </div>
           </div>
 
-          <div>
-            <label className="mb-2 block text-xs font-semibold uppercase tracking-wider text-on-surface-variant" >
-              Business Documents * <span className="font-normal normal-case">(ID copy and company logo required)</span>
-            </label>
-            <div className="grid gap-4 rounded-lg border border-dashed border-outline-variant p-6 md:grid-cols-2">
-              <div className="text-center">
-                <input
-                  type="file"
-                  onChange={(e) => uploadFiles('business-documents', e.target.files, 'documents', 'id_copy')}
-                  className="hidden"
-                  id="id-copy-upload"
-                />
-                <label htmlFor="id-copy-upload" className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-outline-variant bg-white px-4 py-2 text-sm font-semibold text-on-surface hover:bg-surface-container-low" >
-                  <Upload className="h-4 w-4" /> Upload ID Copy
-                </label>
-              </div>
-              <div className="text-center">
-                <input
-                  type="file"
-                  onChange={(e) => uploadFiles('business-documents', e.target.files, 'documents', 'company_logo')}
-                  className="hidden"
-                  id="logo-upload"
-                />
-                <label htmlFor="logo-upload" className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-outline-variant bg-white px-4 py-2 text-sm font-semibold text-on-surface hover:bg-surface-container-low" >
-                  <Upload className="h-4 w-4" /> Upload Company Logo
-                </label>
-              </div>
-            </div>
-            {errors.idCopy && <p className="mt-1 text-xs text-red-500">{errors.idCopy}</p>}
-            {errors.companyLogo && <p className="mt-1 text-xs text-red-500">{errors.companyLogo}</p>}
-            <div className="mt-3 space-y-2">
-              {state.step3.documents.map((doc, i) => (
-                <div key={i} className="flex items-center justify-between rounded-lg border border-outline-variant p-3">
-                  <span className="text-sm" >{doc.name}</span>
-                  <button type="button" onClick={() => removeFile('documents', i)} className="text-on-surface-variant"><X className="h-4 w-4" /></button>
-                </div>
-              ))}
-            </div>
-          </div>
         </div>
 
         <div className="mt-10 flex items-center justify-between">

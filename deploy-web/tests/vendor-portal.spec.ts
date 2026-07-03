@@ -8,17 +8,14 @@ test.describe('Vendor Portal Tests', () => {
     await gotoPage(page, '/listers-portal');
 
     // Hero heading
-    await expect(page.getByText('List Your Business on Funxon')).toBeVisible({ timeout: 5000 });
+    await expect(page.getByText('Welcome to Funxon')).toBeVisible({ timeout: 5000 });
 
-    // Benefits section
-    await expect(page.getByText('Why list with us?')).toBeVisible();
+    // About section
+    await expect(page.getByText('ABOUT').first()).toBeVisible();
 
-    // Stats section
-    await expect(page.getByText('500+')).toBeVisible();
-    await expect(page.getByText('10k+')).toBeVisible();
-
-    // CTA
-    await expect(page.getByText('Ready to grow your business?')).toBeVisible();
+    // CTA buttons
+    await expect(page.getByText('Register your venue portfolio now!').first()).toBeVisible();
+    await expect(page.getByText('Register your vendor/services now!').first()).toBeVisible();
   });
 
   test('visit /portfolio-type (signed in) → venue/vendor selection buttons present', async ({ page }) => {

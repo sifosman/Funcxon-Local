@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
   View,
   Text,
@@ -8,7 +8,7 @@ import {
   Image,
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '../auth/AuthContext';
@@ -53,7 +53,7 @@ const REVIEWS: Review[] = [
 
 export default function ListersPortalScreen() {
   const navigation = useNavigation<NavigationProp>();
-  const { session, user } = useAuth();
+  const { session, user, userRole } = useAuth();
   const [helpVisible, setHelpVisible] = useState(false);
   const [alertState, setAlertState] = useState<{visible: boolean; title: string; message: string} | null>(null);
 
@@ -68,6 +68,16 @@ export default function ListersPortalScreen() {
   };
 
   const username = getUsername();
+  const isLister = !!session && userRole === 'vendor';
+
+  useFocusEffect(
+    useCallback(() => {
+      if (isLister) {
+        const parentNav = navigation.getParent()?.getParent() as any;
+        parentNav?.navigate?.('Account');
+      }
+    }, [isLister, navigation])
+  );
 
   const renderStars = (rating: number) => {
     return Array.from({ length: 5 }, (_, i) => (

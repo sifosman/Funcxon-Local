@@ -1,13 +1,21 @@
 import { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { fetchBlogPostBySlug, type AppBlogPost } from '../lib/hubspotBlog';
-import { BookOpen, Calendar, ChevronLeft, User } from 'lucide-react';
+import { fetchBlogPostBySlug, fetchAllSlugs, type AppBlogPost } from '../lib/hubspotBlog';
+import { BookOpen, Calendar, ChevronLeft, User, ChevronRight } from 'lucide-react';
+
+interface PostRef {
+  id: string;
+  slug: string;
+  title: string;
+}
 
 export default function BlogDetailPage() {
   const { slug } = useParams<{ slug: string }>();
   const [post, setPost] = useState<AppBlogPost | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [prevPost, setPrevPost] = useState<PostRef | null>(null);
+  const [nextPost, setNextPost] = useState<PostRef | null>(null);
 
   useEffect(() => {
     if (slug) loadPost();
@@ -17,8 +25,20 @@ export default function BlogDetailPage() {
     setLoading(true);
     setError(null);
     try {
-      const data = await fetchBlogPostBySlug(slug!);
+      const [data, slugs] = await Promise.all([
+        fetchBlogPostBySlug(slug!),
+        fetchAllSlugs(),
+      ]);
       setPost(data);
+
+      // Find current post index and set prev/next
+      const currentIndex = slugs.findIndex(p => p.slug === slug);
+      if (currentIndex > 0) {
+        setPrevPost(slugs[currentIndex - 1]);
+      }
+      if (currentIndex < slugs.length - 1) {
+        setNextPost(slugs[currentIndex + 1]);
+      }
     } catch (err) {
       console.error('Error loading blog post:', err);
       setError('Unable to load this article. Please check your connection or try again later.');
@@ -89,6 +109,36 @@ export default function BlogDetailPage() {
               className="prose mt-6 max-w-none text-on-surface-variant"
               dangerouslySetInnerHTML={{ __html: post.content }}
             />
+          )}
+
+          {/* Prev/Next Navigation */}
+          {(prevPost || nextPost) && (
+            <div className="mt-12 grid gap-4 md:grid-cols-2">
+              {prevPost && (
+                <Link
+                  to={`/blog/${prevPost.slug}`}
+                  className="flex items-start gap-3 rounded-xl border border-outline-variant bg-white p-4 transition-shadow hover:shadow-md"
+                >
+                  <ChevronLeft className="mt-1 h-5 w-5 flex-shrink-0 text-primary" />
+                  <div className="flex-1">
+                    <p className="text-xs font-medium text-on-surface-variant">Previous</p>
+                    <p className="mt-1 font-display text-sm font-semibold text-on-surface line-clamp-2">{prevPost.title}</p>
+                  </div>
+                </Link>
+              )}
+              {nextPost && (
+                <Link
+                  to={`/blog/${nextPost.slug}`}
+                  className="flex items-start gap-3 rounded-xl border border-outline-variant bg-white p-4 transition-shadow hover:shadow-md md:text-right"
+                >
+                  <div className="flex-1">
+                    <p className="text-xs font-medium text-on-surface-variant">Next</p>
+                    <p className="mt-1 font-display text-sm font-semibold text-on-surface line-clamp-2">{nextPost.title}</p>
+                  </div>
+                  <ChevronRight className="mt-1 h-5 w-5 flex-shrink-0 text-primary" />
+                </Link>
+              )}
+            </div>
           )}
         </div>
       </div>

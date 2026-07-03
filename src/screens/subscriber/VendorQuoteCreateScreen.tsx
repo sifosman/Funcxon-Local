@@ -38,12 +38,16 @@ type QuoteRequest = {
   user_id: number;
   name: string;
   email: string;
+  contact_phone: string | null;
   status: string;
   details: string | null;
   event_type: string | null;
   event_date: string | null;
+  end_date: string | null;
   budget: string | null;
   quote_amount: number | null;
+  amended_message: string | null;
+  response_message: string | null;
   created_at: string;
 };
 
@@ -120,7 +124,8 @@ export default function VendorQuoteCreateScreen() {
         .eq('quote_request_id', quoteRequestId)
         .order('revision_number', { ascending: false });
 
-      setExistingRevisions((revisions || []) as QuoteRevision[]);
+      const revisionsList = (revisions || []) as QuoteRevision[];
+      setExistingRevisions(revisionsList);
 
       // Pre-fill if there's an existing draft revision
       const draftRevision = revisions?.find((r) => r.status === 'draft');
@@ -129,6 +134,15 @@ export default function VendorQuoteCreateScreen() {
         setDescription(draftRevision.description || '');
         setTerms(draftRevision.terms || '');
         setValidityDays(draftRevision.validity_days?.toString() || '7');
+      } else if (qr.status === 'amended') {
+        // Pre-fill from latest sent revision when responding to an amendment
+        const latestSent = revisionsList.find((r) => r.status === 'sent' || r.status === 'accepted');
+        if (latestSent) {
+          setAmount(latestSent.quote_amount?.toString() || '');
+          setDescription(latestSent.description || '');
+          setTerms(latestSent.terms || '');
+          setValidityDays(latestSent.validity_days?.toString() || '7');
+        }
       }
     } catch (err) {
       console.error('Error loading quote request:', err);
@@ -324,10 +338,11 @@ export default function VendorQuoteCreateScreen() {
       }
 
       // Update quote request status
+      const nextStatus = quoteRequest?.status === 'amended' ? 'quoted' : 'quoted';
       await supabase
         .from('quote_requests')
         .update({
-          status: 'quoted',
+          status: nextStatus,
           quote_amount: Number(amount),
         })
         .eq('id', quoteRequestId);
@@ -345,15 +360,17 @@ export default function VendorQuoteCreateScreen() {
 
   const sendClientNotification = async (revisionId: number, vendorName: string) => {
     try {
-      const revisionNumber = existingRevisions.filter((r) => r.status === 'sent').length + 1;
-      const isRevision = revisionNumber > 1;
+      const sentRevisions = existingRevisions.filter((r) => r.status === 'sent');
+      const revisionNumber = sentRevisions.length + 1;
+      const isAmendment = quoteRequest?.status === 'amended';
+      const isRevision = revisionNumber > 1 || isAmendment;
       const attachmentUrls = attachments
         .filter((a) => a.url)
         .map((a) => ({ url: a.url, name: a.name }));
 
       await supabase.functions.invoke('send-quote-notifications', {
         body: {
-          type: isRevision ? 'quote-revised-client' : 'quote-created-client',
+          type: isAmendment ? 'quote-revised-client' : isRevision ? 'quote-revised-client' : 'quote-created-client',
           quoteRequestId,
           quoteRevisionId: revisionId,
           clientName: quoteRequest?.name,
@@ -363,6 +380,7 @@ export default function VendorQuoteCreateScreen() {
           quoteDescription: description.trim(),
           revisionNumber,
           attachments: attachmentUrls,
+          isAmendment,
         },
       });
     } catch (err) {
@@ -424,8 +442,30 @@ export default function VendorQuoteCreateScreen() {
                 Event Date: {new Date(quoteRequest.event_date).toLocaleDateString()}
               </Text>
             ) : null}
+            {quoteRequest?.end_date ? (
+              <Text style={{ ...typography.caption, color: colors.textMuted }}>
+                End Date: {new Date(quoteRequest.end_date).toLocaleDateString()}
+              </Text>
+            ) : null}
+            {quoteRequest?.contact_phone ? (
+              <Text style={{ ...typography.caption, color: colors.textMuted }}>
+                Contact: {quoteRequest.contact_phone}
+              </Text>
+            ) : null}
             {quoteRequest?.budget ? (
               <Text style={{ ...typography.caption, color: colors.textMuted }}>Client Budget: {quoteRequest.budget}</Text>
+            ) : null}
+            {quoteRequest?.amended_message ? (
+              <View style={{ marginTop: spacing.sm, padding: spacing.sm, backgroundColor: '#FEF3C7', borderRadius: radii.md, borderLeftWidth: 3, borderLeftColor: '#D97706' }}>
+                <Text style={{ ...typography.captionSemiBold, color: '#92400E' }}>Amendment Request</Text>
+                <Text style={{ ...typography.caption, color: '#92400E', marginTop: 2 }}>{quoteRequest.amended_message}</Text>
+              </View>
+            ) : null}
+            {quoteRequest?.response_message ? (
+              <View style={{ marginTop: spacing.sm, padding: spacing.sm, backgroundColor: '#F0F9FF', borderRadius: radii.md, borderLeftWidth: 3, borderLeftColor: colors.primary }}>
+                <Text style={{ ...typography.captionSemiBold, color: colors.primary }}>Client Feedback</Text>
+                <Text style={{ ...typography.caption, color: colors.primary, marginTop: 2 }}>{quoteRequest.response_message}</Text>
+              </View>
             ) : null}
           </View>
         </View>

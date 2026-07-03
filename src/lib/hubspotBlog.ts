@@ -70,11 +70,15 @@ function stripHtmlToPlainText(html: string): string {
     .trim();
 }
 
+function normalizeSlug(slug: string): string {
+  return slug.replace(/^blog\//, '');
+}
+
 function mapHubSpotToAppPost(post: HubSpotBlogPost): AppBlogPost {
   return {
     id: post.id,
     title: post.name,
-    slug: post.slug,
+    slug: normalizeSlug(post.slug),
     excerpt: post.postSummary || post.metaDescription || '',
     content: stripHtmlToPlainText(post.postBody),
     cover_image_url: post.featuredImage || null,
@@ -238,7 +242,7 @@ export async function fetchHubSpotAllSlugs(): Promise<{ id: string; slug: string
     const posts: HubSpotBlogPost[] = data.results || [];
     return posts.map((p) => ({
       id: p.id,
-      slug: p.slug,
+      slug: normalizeSlug(p.slug),
       title: p.name,
     }));
   } catch (err) {

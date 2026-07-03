@@ -5,6 +5,7 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import DateTimePicker from '@react-native-community/datetimepicker';
 
 import { supabase } from '../lib/supabaseClient';
+import { createTourRequestedNotification } from '../lib/notifications';
 import type { AttendeeStackParamList } from '../navigation/AttendeeNavigator';
 import { colors, spacing, typography, radii } from '../theme';
 import { PrimaryButton, ThemedInput } from '../components/ui';
@@ -70,44 +71,14 @@ export default function BookTourScreen({ route, navigation }: Props) {
 
   async function sendTourNotification() {
     try {
-      // Get venue contact email for owner notification
-      const { data: venue, error: venueError } = await supabase
+      const { data: venue } = await supabase
         .from('venue_listings')
-        .select('contact_email, name')
+        .select('user_id, name')
         .eq('id', venueId)
         .maybeSingle();
 
-      if (venueError) {
-        console.log('Could not load venue email for tour notification');
-      }
-
-      const tourDetails = `Requested date: ${date.toLocaleDateString('en-ZA')}\nPhone: ${phone}\n${message ? `Message: ${message}` : ''}`;
-
-      // Notify admin
-      await supabase.functions.invoke('send-admin-notification', {
-        body: {
-          type: 'venue-tour-requested',
-          customerName: name,
-          customerEmail: email,
-          vendorName: venueName,
-          vendorEmail: venue?.contact_email || undefined,
-          eventDetails: tourDetails,
-        },
-      });
-
-      // Notify venue owner if email exists
-      if (venue?.contact_email) {
-        await supabase.functions.invoke('send-admin-notification', {
-          body: {
-            type: 'venue-tour-requested',
-            customerName: name,
-            customerEmail: email,
-            vendorName: venueName,
-            vendorEmail: venue.contact_email,
-            eventDetails: tourDetails,
-            adminEmail: venue.contact_email,
-          },
-        });
+      if (venue?.user_id) {
+        await createTourRequestedNotification(venue.user_id, name, date.toISOString().slice(0, 10));
       }
     } catch (err) {
       console.error('Failed to send tour notification:', err);

@@ -1,11 +1,10 @@
-import { PlaceholderPage } from '../components/PlaceholderPage';
+import { useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 
 export default function ApplyPage() {
-  return (
-    <PlaceholderPage
-      title="Listers Application"
-      description="Start your vendor or venue application to join the Funxon marketplace."
-      backTo={{ label: 'Listers Portal', href: '/listers-portal' }}
-    />
-  );
+  const navigate = useNavigate();
+  useEffect(() => {
+    navigate('/apply/step1', { replace: true });
+  }, [navigate]);
+  return null;
 }

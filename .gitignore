@@ -55,3 +55,6 @@ search-test-*.png
 
 # Landing page (separate repo)
 funcxon-landing/
+
+# Web app (separate repo)
+deploy-web/

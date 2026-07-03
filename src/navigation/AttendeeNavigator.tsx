@@ -16,6 +16,8 @@ import VenueCatalogueViewScreen from '../screens/VenueCatalogueViewScreen';
 import TermsAndPoliciesScreen from '../screens/TermsAndPoliciesScreen';
 import LegalDocumentScreen from '../screens/LegalDocumentScreen';
 import PortfolioAssistanceScreen from '../screens/PortfolioAssistanceScreen';
+import MyToursScreen from '../screens/MyToursScreen';
+import BookingDetailScreen from '../screens/BookingDetailScreen';
 
 export type AttendeeStackParamList = {
   VendorList: undefined;
@@ -39,6 +41,8 @@ export type AttendeeStackParamList = {
     initialLineItems?: Array<{ name: string; quantity: string; price: string }>;
   };
   BookTour: { venueId: number; venueName: string };
+  MyTours: undefined;
+  BookingDetail: { bookingId: number };
   CreateReview: { type: 'vendor' | 'venue' | 'app'; targetId?: number; targetName?: string };
   VenueCatalogueView: { venueId: number; venueName: string };
   Planner: undefined;
@@ -94,6 +98,16 @@ export function AttendeeNavigator() {
       <Stack.Screen
         name="BookTour"
         component={BookTourScreen}
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name="MyTours"
+        component={MyToursScreen}
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name="BookingDetail"
+        component={BookingDetailScreen}
         options={{ headerShown: false }}
       />
       <Stack.Screen

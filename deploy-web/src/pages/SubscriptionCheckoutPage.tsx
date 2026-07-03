@@ -33,7 +33,6 @@ interface ApplicationRecord {
   business_description?: string | null;
   portfolio_images?: string[] | null;
   portfolio_videos?: string[] | null;
-  business_documents?: string[] | null;
 }
 
 const normalizePayFastPhone = (value: string) => {
@@ -112,7 +111,13 @@ export default function SubscriptionCheckoutPage() {
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
   const [phoneError, setPhoneError] = useState('');
+  const [businessName, setBusinessName] = useState('');
+  const [vatNumber, setVatNumber] = useState('');
+  const [addressLine1, setAddressLine1] = useState('');
+  const [addressLine2, setAddressLine2] = useState('');
+  const [city, setCity] = useState('');
   const [province, setProvince] = useState('');
+  const [postalCode, setPostalCode] = useState('');
   const [termsAccepted, setTermsAccepted] = useState(false);
 
   const selectedTier = useMemo(() => {
@@ -133,14 +138,33 @@ export default function SubscriptionCheckoutPage() {
 
     async function load() {
       try {
-        const [tierData, appResult] = await Promise.all([
+        const { data: auth } = await supabase.auth.getUser();
+        const [tierData, appResult, userResult] = await Promise.all([
           getSubscriptionTiers(),
           getLatestUserApplicationByType(productType === 'venue' ? 'venue' : 'vendor'),
+          supabase
+            .from('users')
+            .select('full_name, email, phone, business_name, vat_number, address_line1, address_line2, city, province, postal_code')
+            .eq('auth_user_id', auth.user?.id)
+            .maybeSingle(),
         ]);
         if (cancelled) return;
         setTiers(tierData);
         if (appResult.success && appResult.data) {
           setApplication(appResult.data as ApplicationRecord);
+        }
+        const row = userResult.data as any;
+        if (row) {
+          if (row.full_name) setFullName(row.full_name);
+          if (row.email) setEmail(row.email);
+          if (row.phone) setPhone(row.phone);
+          if (row.business_name) setBusinessName(row.business_name);
+          if (row.vat_number) setVatNumber(row.vat_number);
+          if (row.address_line1) setAddressLine1(row.address_line1);
+          if (row.address_line2) setAddressLine2(row.address_line2);
+          if (row.city) setCity(row.city);
+          if (row.province) setProvince(row.province);
+          if (row.postal_code) setPostalCode(row.postal_code);
         }
       } catch (err) {
         console.error('Checkout load error:', err);
@@ -219,7 +243,7 @@ export default function SubscriptionCheckoutPage() {
     };
   };
 
-  const upsertSubscriptionRecord = async (payload: Record<string, any>, table: 'vendors' | 'venues') => {
+  const upsertSubscriptionRecord = async (payload: Record<string, any>, table: 'vendors' | 'venue_listings') => {
     const { data: existing } = await supabase
       .from(table)
       .select('id')
@@ -290,9 +314,22 @@ export default function SubscriptionCheckoutPage() {
       const userId = await getUserId();
       if (!userId || !application) throw new Error('Missing user or application details');
 
+      await supabase.from('users').update({
+        full_name: fullName.trim(),
+        email: email.trim(),
+        phone: phone,
+        business_name: businessName.trim() || null,
+        vat_number: vatNumber.trim() || null,
+        address_line1: addressLine1.trim() || null,
+        address_line2: addressLine2.trim() || null,
+        city: city.trim() || null,
+        province: province || null,
+        postal_code: postalCode.trim() || null,
+      }).eq('auth_user_id', userId);
+
       if (productType === 'venue') {
         const venuePayload = buildVenuePayload({ subscription_status: 'active' });
-        await upsertSubscriptionRecord(venuePayload, 'venues');
+        await upsertSubscriptionRecord(venuePayload, 'venue_listings');
       } else {
         const vendorPayload = buildVendorPayload({ subscription_status: 'active' });
         await upsertSubscriptionRecord(vendorPayload, 'vendors');
@@ -327,16 +364,20 @@ export default function SubscriptionCheckoutPage() {
       const userId = await getUserId();
       if (!userId || !application) throw new Error('Missing user or application details');
 
+      await supabase.from('users').update({
+        full_name: fullName.trim(),
+        email: email.trim(),
+        phone: phone,
+        business_name: businessName.trim() || null,
+        vat_number: vatNumber.trim() || null,
+        address_line1: addressLine1.trim() || null,
+        address_line2: addressLine2.trim() || null,
+        city: city.trim() || null,
+        province: province || null,
+        postal_code: postalCode.trim() || null,
+      }).eq('auth_user_id', userId);
+
       const payfastPaymentId = `pf_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
-
-      if (productType === 'venue') {
-        const venuePayload = buildVenuePayload({ subscription_status: 'inactive', pending_payment_id: payfastPaymentId });
-        await upsertSubscriptionRecord(venuePayload, 'venues');
-      } else {
-        const vendorPayload = buildVendorPayload({ subscription_status: 'inactive', pending_payment_id: payfastPaymentId });
-        await upsertSubscriptionRecord(vendorPayload, 'vendors');
-      }
-
       const nameParts = fullName.trim().split(' ');
       const paymentData = buildPayFastPaymentData({
         amount: price,
@@ -521,6 +562,56 @@ export default function SubscriptionCheckoutPage() {
                 {phoneError && <p className="mt-1 text-xs text-red-500">{phoneError}</p>}
               </div>
               <div>
+                <label className="mb-1 block text-sm font-medium text-on-surface">Business Name</label>
+                <input
+                  type="text"
+                  value={businessName}
+                  onChange={(e) => setBusinessName(e.target.value)}
+                  className="fx-input"
+                  placeholder="Your business"
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-sm font-medium text-on-surface">VAT Number</label>
+                <input
+                  type="text"
+                  value={vatNumber}
+                  onChange={(e) => setVatNumber(e.target.value)}
+                  className="fx-input"
+                  placeholder="Optional"
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-sm font-medium text-on-surface">Address Line 1</label>
+                <input
+                  type="text"
+                  value={addressLine1}
+                  onChange={(e) => setAddressLine1(e.target.value)}
+                  className="fx-input"
+                  placeholder="Street address"
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-sm font-medium text-on-surface">Address Line 2</label>
+                <input
+                  type="text"
+                  value={addressLine2}
+                  onChange={(e) => setAddressLine2(e.target.value)}
+                  className="fx-input"
+                  placeholder="Unit / Complex"
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-sm font-medium text-on-surface">City</label>
+                <input
+                  type="text"
+                  value={city}
+                  onChange={(e) => setCity(e.target.value)}
+                  className="fx-input"
+                  placeholder="City"
+                />
+              </div>
+              <div>
                 <label className="mb-1 block text-sm font-medium text-on-surface">Province</label>
                 <select
                   required
@@ -533,6 +624,16 @@ export default function SubscriptionCheckoutPage() {
                     <option key={p} value={p}>{p}</option>
                   ))}
                 </select>
+              </div>
+              <div>
+                <label className="mb-1 block text-sm font-medium text-on-surface">Postal Code</label>
+                <input
+                  type="text"
+                  value={postalCode}
+                  onChange={(e) => setPostalCode(e.target.value)}
+                  className="fx-input"
+                  placeholder="Postal code"
+                />
               </div>
               <label className="flex items-start gap-3">
                 <input

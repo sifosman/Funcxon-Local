@@ -8,6 +8,7 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '../lib/supabaseClient';
 import { colors, spacing, radii, typography } from '../theme';
 import ThemedAlert from '../components/ThemedAlert';
+import { quoteStatusLabel, isQuoteRespondable } from '../lib/quoting';
 import type { QuotesStackParamList } from '../navigation/QuotesNavigator';
 
 type LineItem = {
@@ -25,10 +26,13 @@ type QuoteRequest = {
   target_name?: string | null;
   name: string | null;
   email: string | null;
+  contact_phone?: string | null;
   status: string | null;
   details?: string | null;
   event_type?: string | null;
   event_date?: string | null;
+  end_date?: string | null;
+  selected_hall?: string | null;
   budget?: string | null;
   quote_amount?: number | null;
   created_at?: string | null;
@@ -74,6 +78,7 @@ export default function QuoteDetailScreen() {
   const navigation = useNavigation<any>();
   const route = useRoute<RouteProp<QuotesStackParamList, 'QuoteDetail'>>();
   const { quoteId } = route.params;
+  const from = (route.params as any)?.from ?? 'Quotes';
 
   const [catalogueItems, setCatalogueItems] = useState<CatalogueItem[]>([]);
   const [catalogueLoading, setCatalogueLoading] = useState(false);
@@ -97,7 +102,7 @@ export default function QuoteDetailScreen() {
       if (isVenueQuote) {
         const { data: venueQuoteRows, error: venueQuoteError } = await supabase
           .from('venue_quote_requests')
-          .select('id, listing_id, requester_name, requester_email, status, message, event_date, created_at, requirements, line_items')
+          .select('id, listing_id, requester_name, requester_email, requester_phone, contact_phone, status, message, event_date, end_date, selected_hall, created_at, requirements, line_items, quote_amount')
           .eq('id', resolvedQuoteId)
           .limit(1);
 
@@ -118,12 +123,15 @@ export default function QuoteDetailScreen() {
           target_id: venueQuote.listing_id,
           name: venueQuote.requester_name,
           email: venueQuote.requester_email,
+          contact_phone: venueQuote.contact_phone ?? venueQuote.requester_phone ?? null,
           status: venueQuote.status,
           details: venueQuote.message,
           event_type: 'Venue',
           event_date: venueQuote.event_date,
+          end_date: venueQuote.end_date,
+          selected_hall: venueQuote.selected_hall,
           budget: null,
-          quote_amount: null,
+          quote_amount: venueQuote.quote_amount,
           created_at: venueQuote.created_at,
           requirements: venueQuote.requirements ?? null,
         };
@@ -143,7 +151,7 @@ export default function QuoteDetailScreen() {
         const { data: quoteRows, error: quoteError } = await supabase
           .from('quote_requests')
           .select(
-            'id, vendor_id, name, email, status, details, event_type, event_date, budget, quote_amount, created_at, requirements, line_items',
+            'id, vendor_id, name, email, contact_phone, status, details, event_type, event_date, end_date, budget, quote_amount, created_at, requirements, line_items',
           )
           .eq('id', resolvedQuoteId)
           .limit(1);
@@ -208,7 +216,7 @@ export default function QuoteDetailScreen() {
     return parsedLineItems.reduce((sum: number, item: LineItem) => sum + item.quantity * item.price, 0);
   }, [parsedLineItems]);
 
-  const canCancel = quote?.status === 'pending' || quote?.status === 'quoted' || quote?.status === 'amended' || quote?.status === 'in_progress';
+  const canCancel = quote?.status === 'pending' || quote?.status === 'quoted' || quote?.status === 'amended';
 
   const handleCancel = () => {
     if (!quote?.original_id || !canCancel) return;
@@ -393,12 +401,67 @@ export default function QuoteDetailScreen() {
     navigation.navigate('Home', quote!.is_venue
       ? {
           screen: 'VenueProfile',
-          params: { venueId: profileTargetId, from: 'Quotes' },
+          params: { venueId: profileTargetId, from },
         }
       : {
           screen: 'VendorProfile',
-          params: { vendorId: profileTargetId, from: 'Quotes' },
+          params: { vendorId: profileTargetId, from },
         });
+  };
+
+  const handleGoBack = () => {
+    if (navigation.canGoBack()) {
+      navigation.goBack();
+    } else {
+      navigation.navigate('Home', { screen: 'Quotes' });
+    }
+  };
+
+  const handleAmend = () => {
+    const targetId = quote!.target_id ?? quote!.vendor_id;
+    if (!targetId) return;
+    navigation.navigate('Home', {
+      screen: 'QuoteRequest',
+      params: {
+        vendorId: targetId,
+        vendorName: quote!.target_name ?? 'Vendor',
+        type: quote!.is_venue ? 'venue' : 'vendor',
+        editMode: true,
+        quoteId: quote!.original_id ?? quote!.id,
+        from,
+      },
+    });
+  };
+
+  const handleAccept = async () => {
+    if (!quote?.original_id) return;
+    try {
+      const tableName = isVenueQuote ? 'venue_quote_requests' : 'quote_requests';
+      const { error } = await supabase
+        .from(tableName)
+        .update({ status: 'accepted', accepted_at: new Date().toISOString() })
+        .eq('id', quote.original_id);
+      if (error) throw error;
+      navigation.navigate('QuoteResponse', {
+        revisionId: null,
+        quoteRequestId: quote.id,
+        vendorName: quote.target_name ?? undefined,
+        amount: quote.quote_amount ?? undefined,
+        accepted: true,
+      });
+    } catch (err: any) {
+      setAlertState({ visible: true, title: 'Unable to accept', message: err?.message ?? 'Please try again.' });
+    }
+  };
+
+  const handleReject = () => {
+    navigation.navigate('QuoteResponse', {
+      revisionId: null,
+      quoteRequestId: quote!.id,
+      vendorName: quote!.target_name ?? undefined,
+      amount: quote!.quote_amount ?? undefined,
+      rejectOnly: true,
+    });
   };
 
   return (
@@ -416,7 +479,7 @@ export default function QuoteDetailScreen() {
         keyboardShouldPersistTaps="handled"
       >
         <TouchableOpacity
-          onPress={() => navigation.goBack()}
+          onPress={handleGoBack}
           style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.sm }}
         >
           <MaterialIcons name="arrow-back" size={20} color={colors.textPrimary} />
@@ -443,16 +506,38 @@ export default function QuoteDetailScreen() {
             Requested from: {linkedName}
           </Text>
           {quote!.status && (
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: spacing.xs }}>
+              <Text style={{ ...typography.caption, color: colors.textSecondary }}>
+                Status: {quoteStatusLabel(quote!.status)}
+              </Text>
+            </View>
+          )}
+          {quote!.name && (
             <Text style={{ ...typography.caption, color: colors.textSecondary, marginTop: spacing.xs }}>
-              Status: {quote!.status}
+              Requested by: {quote!.name} {quote!.email ? `(${quote!.email})` : ''}
+            </Text>
+          )}
+          {quote!.contact_phone && (
+            <Text style={{ ...typography.caption, color: colors.textSecondary, marginTop: spacing.xs }}>
+              Contact: {quote!.contact_phone}
             </Text>
           )}
           {requestedDate && (
             <Text style={{ ...typography.caption, color: colors.textSecondary, marginTop: spacing.xs }}>
-              Requested for: {requestedDate}
+              Event date: {requestedDate}
             </Text>
           )}
-          {quote!.email && (
+          {quote!.end_date && (
+            <Text style={{ ...typography.caption, color: colors.textSecondary, marginTop: spacing.xs }}>
+              End date: {new Date(quote!.end_date).toLocaleDateString('en-ZA')}
+            </Text>
+          )}
+          {quote!.selected_hall && (
+            <Text style={{ ...typography.caption, color: colors.textSecondary, marginTop: spacing.xs }}>
+              Hall: {quote!.selected_hall}
+            </Text>
+          )}
+          {quote!.email && !quote!.name && (
             <Text style={{ ...typography.caption, color: colors.textSecondary, marginTop: spacing.xs }}>
               {quote!.email}
             </Text>
@@ -524,13 +609,18 @@ export default function QuoteDetailScreen() {
           )}
           {typeof quote!.quote_amount === 'number' && (
             <Text style={{ ...typography.caption, color: colors.textSecondary, marginBottom: spacing.xs }}>
-              Quoted amount: {quote!.quote_amount.toLocaleString()}
+              Quoted amount: R {quote!.quote_amount.toLocaleString('en-ZA')}
             </Text>
           )}
           {quote!.details && (
-            <Text style={{ ...typography.body, color: colors.textPrimary, marginTop: spacing.sm }}>
-              {quote!.details}
-            </Text>
+            <>
+              <Text style={{ ...typography.caption, color: colors.textMuted, marginBottom: spacing.xs }}>
+                Additional comments/requests/enquiries:
+              </Text>
+              <Text style={{ ...typography.body, color: colors.textPrimary, marginBottom: spacing.xs }}>
+                {quote!.details}
+              </Text>
+            </>
           )}
         </View>
 
@@ -793,6 +883,57 @@ export default function QuoteDetailScreen() {
             </View>
           )}
         </View>
+
+        {isQuoteRespondable(quote!.status) && (
+          <View style={{ flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.md }}>
+            <TouchableOpacity
+              onPress={handleAccept}
+              style={{
+                flex: 1,
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'center',
+                paddingVertical: spacing.md,
+                borderRadius: radii.lg,
+                backgroundColor: '#16A34A',
+              }}
+            >
+              <MaterialIcons name="check-circle" size={20} color="#FFFFFF" style={{ marginRight: spacing.sm }} />
+              <Text style={{ ...typography.bodyBold, color: '#FFFFFF' }}>Accept Quote</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={handleAmend}
+              style={{
+                flex: 1,
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'center',
+                paddingVertical: spacing.md,
+                borderRadius: radii.lg,
+                backgroundColor: colors.primary,
+              }}
+            >
+              <MaterialIcons name="edit" size={20} color="#FFFFFF" style={{ marginRight: spacing.sm }} />
+              <Text style={{ ...typography.bodyBold, color: '#FFFFFF' }}>Amend</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={handleReject}
+              style={{
+                flex: 1,
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'center',
+                paddingVertical: spacing.md,
+                borderRadius: radii.lg,
+                borderWidth: 1,
+                borderColor: colors.destructive,
+              }}
+            >
+              <MaterialIcons name="cancel" size={20} color={colors.destructive} style={{ marginRight: spacing.sm }} />
+              <Text style={{ ...typography.bodyBold, color: colors.destructive }}>Reject</Text>
+            </TouchableOpacity>
+          </View>
+        )}
 
         {canCancel && (
           <TouchableOpacity

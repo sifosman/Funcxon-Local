@@ -37,6 +37,8 @@ import AccountSettingsScreen from '../screens/AccountSettingsScreen';
 import ChangePasswordScreen from '../screens/ChangePasswordScreen';
 import MarketingPermissionsScreen from '../screens/MarketingPermissionsScreen';
 import DebugUserScreen from '../screens/DebugUserScreen';
+import MyToursScreen from '../screens/MyToursScreen';
+import BookingDetailScreen from '../screens/BookingDetailScreen';
 
 export type ProfileStackParamList = {
     AccountMain: undefined;
@@ -69,6 +71,8 @@ export type ProfileStackParamList = {
     VendorCatalogue: undefined;
     VenueQuoteRequests: undefined;
     VenueTourBookings: undefined;
+    MyTours: undefined;
+    BookingDetail: { bookingId: number };
     VenueAnalytics: undefined;
     VendorAnalytics: undefined;
     VendorQuoteCreate: {
@@ -233,6 +237,16 @@ export function ProfileNavigator() {
             <Stack.Screen
                 name="VenueTourBookings"
                 component={VenueTourBookingsScreen}
+                options={{ headerShown: false }}
+            />
+            <Stack.Screen
+                name="MyTours"
+                component={MyToursScreen}
+                options={{ headerShown: false }}
+            />
+            <Stack.Screen
+                name="BookingDetail"
+                component={BookingDetailScreen}
                 options={{ headerShown: false }}
             />
             <Stack.Screen

@@ -3,6 +3,7 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { useAuth } from '../auth/AuthContext';
 import { colors, spacing, radii, typography } from '../theme';
+import NotificationBell from './NotificationBell';
 
 export default function AppHeader() {
   const { user, session, userRole } = useAuth();
@@ -59,6 +60,8 @@ export default function AppHeader() {
             style={styles.flagImage as any}
             resizeMode="contain"
           />
+
+          {session && <NotificationBell />}
 
           {session ? (
             <TouchableOpacity

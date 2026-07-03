@@ -9,6 +9,8 @@ import { supabase } from '../../lib/supabaseClient';
 import { uploadFileToStorage } from '../../lib/applicationService';
 import { useAuth } from '../../auth/AuthContext';
 import { getMyVenueEntitlement, isVenueFeatureEnabled } from '../../lib/venueSubscription';
+import { createGalleryMediaRecord } from '../../lib/mediaUpload';
+import { normalizePhoneNumber } from '../../utils/phoneNormalization';
 import ThemedAlert from '../../components/ThemedAlert';
 
 function buildLegacyLocation(parts: Array<string | null | undefined>) {
@@ -30,6 +32,7 @@ type ProfileStackParamList = {
   VenueQuoteRequests: undefined;
   VenueTourBookings: undefined;
   VenueAnalytics: undefined;
+  ListerPortfolio: undefined;
 };
 
 type VenueListing = {
@@ -66,15 +69,17 @@ export default function UpdateVenuePortfolioScreen() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [listing, setListing] = useState<VenueListing | null>(null);
-  const [canEditVenueLinks, setCanEditVenueLinks] = useState(true);
   const [canUseCatalogue, setCanUseCatalogue] = useState(true);
   const [canUseQuoteRequests, setCanUseQuoteRequests] = useState(true);
   const [canUseTourBookings, setCanUseTourBookings] = useState(true);
   const [canUseAnalytics, setCanUseAnalytics] = useState(true);
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [additionalPhotos, setAdditionalPhotos] = useState<string[]>([]);
+  const [videos, setVideos] = useState<string[]>([]);
   const [photoLimit, setPhotoLimit] = useState<number>(10);
+  const [videoLimit, setVideoLimit] = useState<number>(1);
   const [uploadingImage, setUploadingImage] = useState(false);
+  const [uploadingVideo, setUploadingVideo] = useState(false);
   const [alertState, setAlertState] = useState<{visible: boolean; title: string; message: string; buttons?: any[]} | null>(null);
 
   const [form, setForm] = useState({
@@ -115,17 +120,15 @@ export default function UpdateVenuePortfolioScreen() {
     [form.address_line_1, form.address_line_2, form.city, form.country, form.location, form.postal_code, form.province, form.suburb],
   );
 
-  const linksLocked = useMemo(() => !canEditVenueLinks, [canEditVenueLinks]);
-
   const loadEntitlement = useCallback(async () => {
     if (!user?.id) return;
     const ent = await getMyVenueEntitlement(user.id);
-    setCanEditVenueLinks(isVenueFeatureEnabled(ent, 'website_social_links'));
     setCanUseCatalogue(isVenueFeatureEnabled(ent, 'catalogue_pricelist'));
     setCanUseQuoteRequests(isVenueFeatureEnabled(ent, 'quote_requests'));
     setCanUseTourBookings(isVenueFeatureEnabled(ent, 'instant_tour_bookings'));
     setCanUseAnalytics(isVenueFeatureEnabled(ent, 'analytics'));
     setPhotoLimit(ent.photoUploadLimit);
+    setVideoLimit(ent.videoUploadLimit);
   }, [user?.id]);
 
   const loadListing = useCallback(async () => {
@@ -148,6 +151,17 @@ export default function UpdateVenuePortfolioScreen() {
         setListing(data as VenueListing);
         setImageUrl((data as VenueListing).image_url || null);
         setAdditionalPhotos((data as VenueListing).additional_photos || []);
+
+        const { data: gallery } = await supabase
+          .from('gallery_media')
+          .select('media_url, media_type')
+          .eq('venue_id', data.id)
+          .order('created_at', { ascending: false });
+        const videoUrls = (gallery || [])
+          .filter((g: any) => g.media_type === 'video')
+          .map((g: any) => g.media_url);
+        setVideos(videoUrls);
+
         setForm({
           name: data.name || '',
           description: data.description || '',
@@ -230,27 +244,9 @@ export default function UpdateVenuePortfolioScreen() {
   }, [loadEntitlement, loadListing]);
 
   const handleChange = (key: keyof typeof form, value: string) => {
-    const isLinksField =
-      key === 'website_url' ||
-      key === 'instagram_url' ||
-      key === 'facebook_url' ||
-      key === 'tiktok_url' ||
-      key === 'linkedin_url';
-
-    if (isLinksField && linksLocked) {
-      setAlertState({
-        visible: true,
-        title: 'Upgrade Required',
-        message: 'Website & social media links are available on paid venue plans. Please upgrade to add these links.',
-        buttons: [
-          { text: 'Not now', style: 'cancel', onPress: () => setAlertState(null) },
-          { text: 'View Plans', style: 'default', onPress: () => { setAlertState(null); navigation.navigate('VenueListingPlans'); } },
-        ],
-      });
-      return;
-    }
-
-    setForm((prev) => ({ ...prev, [key]: value }));
+    const isPhoneField = key === 'whatsapp_number';
+    const normalizedValue = isPhoneField ? normalizePhoneNumber(value) : value;
+    setForm((prev) => ({ ...prev, [key]: normalizedValue }));
   };
 
   const currentPhotoCount = (imageUrl ? 1 : 0) + additionalPhotos.length;
@@ -292,7 +288,12 @@ export default function UpdateVenuePortfolioScreen() {
       });
       if (result.canceled || !result.assets?.[0]) return;
       const url = await uploadPickedImage(result.assets[0]);
-      if (url) setImageUrl(url);
+      if (url) {
+        setImageUrl(url);
+        if (listing?.id) {
+          await createGalleryMediaRecord(url, 'image', { venueId: listing.id });
+        }
+      }
     } catch (err: any) {
       setAlertState({ visible: true, title: 'Upload failed', message: err?.message || 'Could not upload image.', buttons: [{ text: 'OK', style: 'default', onPress: () => setAlertState(null) }] });
     } finally {
@@ -320,7 +321,12 @@ export default function UpdateVenuePortfolioScreen() {
       const newUrls: string[] = [];
       for (const asset of result.assets.slice(0, remainingPhotoSlots)) {
         const url = await uploadPickedImage(asset);
-        if (url) newUrls.push(url);
+        if (url) {
+          newUrls.push(url);
+          if (listing?.id) {
+            await createGalleryMediaRecord(url, 'image', { venueId: listing.id });
+          }
+        }
       }
       setAdditionalPhotos((prev) => [...prev, ...newUrls]);
     } catch (err: any) {
@@ -336,6 +342,50 @@ export default function UpdateVenuePortfolioScreen() {
 
   const handleRemoveMainImage = () => {
     setImageUrl(null);
+  };
+
+  const currentVideoCount = videos.length;
+  const remainingVideoSlots = Math.max(0, videoLimit - currentVideoCount);
+
+  const handlePickVideos = async () => {
+    if (remainingVideoSlots <= 0) {
+      setAlertState({ visible: true, title: 'Video limit reached', message: `Your current plan allows up to ${videoLimit} video(s).`, buttons: [{ text: 'OK', style: 'default', onPress: () => setAlertState(null) }] });
+      return;
+    }
+    const permitted = await requestImagePermission();
+    if (!permitted) return;
+    try {
+      setUploadingVideo(true);
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ['videos'],
+        allowsMultipleSelection: true,
+        allowsEditing: false,
+        selectionLimit: Math.max(1, Math.min(5, remainingVideoSlots)),
+      });
+      if (result.canceled || !result.assets?.length || !user?.id || !listing?.id) return;
+      const newUrls: string[] = [];
+      for (const asset of result.assets.slice(0, remainingVideoSlots)) {
+        const file = {
+          uri: asset.uri,
+          name: asset.fileName || `video_${Date.now()}.mp4`,
+          type: asset.mimeType || 'video/mp4',
+        };
+        const uploadResult = await uploadFileToStorage('portfolio-videos', file, user.id);
+        if (uploadResult.success && uploadResult.url) {
+          await createGalleryMediaRecord(uploadResult.url, 'video', { venueId: listing.id });
+          newUrls.push(uploadResult.url);
+        }
+      }
+      setVideos((prev) => [...prev, ...newUrls]);
+    } catch (err: any) {
+      setAlertState({ visible: true, title: 'Upload failed', message: err?.message || 'Could not upload videos.', buttons: [{ text: 'OK', style: 'default', onPress: () => setAlertState(null) }] });
+    } finally {
+      setUploadingVideo(false);
+    }
+  };
+
+  const handleRemoveVideo = (index: number) => {
+    setVideos((prev) => prev.filter((_, i) => i !== index));
   };
 
   const handleSave = async () => {
@@ -378,11 +428,11 @@ export default function UpdateVenuePortfolioScreen() {
         longitude,
         contact_email: form.contact_email.trim() || null,
         whatsapp_number: form.whatsapp_number.trim() || null,
-        website_url: linksLocked ? null : (form.website_url.trim() || null),
-        instagram_url: linksLocked ? null : (form.instagram_url.trim() || null),
-        facebook_url: linksLocked ? null : (form.facebook_url.trim() || null),
-        tiktok_url: linksLocked ? null : (form.tiktok_url.trim() || null),
-        linkedin_url: linksLocked ? null : (form.linkedin_url.trim() || null),
+        website_url: form.website_url.trim() || null,
+        instagram_url: form.instagram_url.trim() || null,
+        facebook_url: form.facebook_url.trim() || null,
+        tiktok_url: form.tiktok_url.trim() || null,
+        linkedin_url: form.linkedin_url.trim() || null,
         venue_type: form.venue_type.trim() || null,
         venue_capacity: form.venue_capacity.trim() || null,
         image_url: imageUrl,
@@ -400,7 +450,12 @@ export default function UpdateVenuePortfolioScreen() {
       if (error) throw error;
 
       setListing(data as VenueListing);
-      setAlertState({ visible: true, title: 'Saved', message: 'Your venue listing has been updated.', buttons: [{ text: 'OK', style: 'default', onPress: () => setAlertState(null) }] });
+      setAlertState({
+        visible: true,
+        title: 'Saved',
+        message: 'Your venue listing has been updated.',
+        buttons: [{ text: 'OK', style: 'default', onPress: () => { setAlertState(null); navigation.navigate('ListerPortfolio'); } }],
+      });
     } catch (err: any) {
       setAlertState({ visible: true, title: 'Error', message: err?.message ?? 'Failed to save changes.', buttons: [{ text: 'OK', style: 'default', onPress: () => setAlertState(null) }] });
     } finally {
@@ -541,7 +596,7 @@ export default function UpdateVenuePortfolioScreen() {
                   Portfolio Photos
                 </Text>
                 <Text style={{ ...typography.caption, color: colors.textMuted, marginTop: 2 }}>
-                  {currentPhotoCount} of {photoLimit} photos used
+                  {currentPhotoCount} of {photoLimit} photos used. Your current subscription allows up to {photoLimit} photos.
                 </Text>
               </View>
               {listing && (
@@ -661,6 +716,73 @@ export default function UpdateVenuePortfolioScreen() {
                 <Text style={{ ...typography.caption, color: colors.textMuted }}>Uploading image...</Text>
               </View>
             )}
+
+            {/* Videos */}
+            <View style={{ marginTop: spacing.md }}>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.xs }}>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ ...typography.caption, color: colors.textMuted }}>
+                    Videos ({currentVideoCount} of {videoLimit})
+                  </Text>
+                </View>
+              </View>
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm }}>
+                {videos.map((url, idx) => (
+                  <View key={`${url}-${idx}`} style={{ position: 'relative' }}>
+                    <View
+                      style={{
+                        width: 80,
+                        height: 80,
+                        borderRadius: radii.md,
+                        backgroundColor: colors.background,
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                      }}
+                    >
+                      <MaterialIcons name="videocam" size={28} color={colors.textPrimary} />
+                    </View>
+                    <TouchableOpacity
+                      onPress={() => handleRemoveVideo(idx)}
+                      style={{
+                        position: 'absolute',
+                        top: 2,
+                        right: 2,
+                        backgroundColor: 'rgba(0,0,0,0.6)',
+                        borderRadius: radii.full,
+                        padding: 2,
+                      }}
+                    >
+                      <MaterialIcons name="delete" size={16} color="#FFFFFF" />
+                    </TouchableOpacity>
+                  </View>
+                ))}
+                {remainingVideoSlots > 0 && (
+                  <TouchableOpacity
+                    onPress={handlePickVideos}
+                    disabled={uploadingVideo}
+                    style={{
+                      width: 80,
+                      height: 80,
+                      borderRadius: radii.md,
+                      borderWidth: 1,
+                      borderColor: colors.borderSubtle,
+                      borderStyle: 'dashed',
+                      backgroundColor: colors.surfaceMuted,
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}
+                  >
+                    <MaterialIcons name="videocam" size={28} color={colors.textMuted} />
+                  </TouchableOpacity>
+                )}
+              </View>
+              {uploadingVideo && (
+                <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: spacing.md, gap: spacing.sm }}>
+                  <ActivityIndicator size="small" color={colors.primary} />
+                  <Text style={{ ...typography.caption, color: colors.textMuted }}>Uploading video...</Text>
+                </View>
+              )}
+            </View>
           </View>
 
           <View
@@ -970,48 +1092,11 @@ export default function UpdateVenuePortfolioScreen() {
             {renderField('Contact Email', 'contact_email', { keyboardType: 'email-address', placeholder: 'venue@example.com' })}
             {renderField('WhatsApp Number', 'whatsapp_number', { keyboardType: 'phone-pad', placeholder: '+27...' })}
 
-            {renderField('Website URL', 'website_url', { keyboardType: 'url', placeholder: 'https://...', disabled: linksLocked })}
-            {renderField('Instagram URL', 'instagram_url', { keyboardType: 'url', placeholder: 'https://instagram.com/...', disabled: linksLocked })}
-            {renderField('Facebook URL', 'facebook_url', { keyboardType: 'url', placeholder: 'https://facebook.com/...', disabled: linksLocked })}
-            {renderField('TikTok URL', 'tiktok_url', { keyboardType: 'url', placeholder: 'https://tiktok.com/@...', disabled: linksLocked })}
-            {renderField('LinkedIn URL', 'linkedin_url', { keyboardType: 'url', placeholder: 'https://linkedin.com/...', disabled: linksLocked })}
-
-            {linksLocked && (
-              <View
-                style={{
-                  marginTop: spacing.xs,
-                  padding: spacing.md,
-                  borderRadius: radii.md,
-                  backgroundColor: '#FFF7ED',
-                  borderWidth: 1,
-                  borderColor: '#FDBA74',
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  gap: spacing.md,
-                }}
-              >
-                <View style={{ flex: 1 }}>
-                  <Text style={{ ...typography.captionSemiBold, color: '#9A3412' }}>
-                    Upgrade required
-                  </Text>
-                  <Text style={{ ...typography.caption, color: '#9A3412', marginTop: 2 }}>
-                    Website & social media links are available on paid venue plans.
-                  </Text>
-                </View>
-                <TouchableOpacity
-                  onPress={() => navigation.navigate('VenueListingPlans')}
-                  style={{
-                    paddingHorizontal: spacing.md,
-                    paddingVertical: spacing.xs,
-                    borderRadius: radii.full,
-                    backgroundColor: colors.primary,
-                  }}
-                >
-                  <Text style={{ ...typography.captionSemiBold, color: '#FFFFFF' }}>Upgrade</Text>
-                </TouchableOpacity>
-              </View>
-            )}
+            {renderField('Website URL', 'website_url', { keyboardType: 'url', placeholder: 'https://...' })}
+            {renderField('Instagram URL', 'instagram_url', { keyboardType: 'url', placeholder: 'https://instagram.com/...' })}
+            {renderField('Facebook URL', 'facebook_url', { keyboardType: 'url', placeholder: 'https://facebook.com/...' })}
+            {renderField('TikTok URL', 'tiktok_url', { keyboardType: 'url', placeholder: 'https://tiktok.com/@...' })}
+            {renderField('LinkedIn URL', 'linkedin_url', { keyboardType: 'url', placeholder: 'https://linkedin.com/...' })}
           </View>
 
           <TouchableOpacity

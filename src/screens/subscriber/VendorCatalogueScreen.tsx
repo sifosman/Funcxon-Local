@@ -4,13 +4,13 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import * as ImagePicker from 'expo-image-picker';
-import * as DocumentPicker from 'expo-document-picker';
 import * as FileSystem from 'expo-file-system/legacy';
 import { decode } from 'base64-arraybuffer';
 import { colors, spacing, radii, typography } from '../../theme';
 import { supabase } from '../../lib/supabaseClient';
 import { useAuth } from '../../auth/AuthContext';
 import ThemedAlert from '../../components/ThemedAlert';
+import { getCatalogueItemLimit, isCatalogueLimitReached } from '../../lib/catalogue';
 
 type ProfileStackParamList = {
   UpdateVendorPortfolio: undefined;
@@ -26,13 +26,6 @@ type VendorRow = {
   subscription_expires_at: string | null;
 };
 
-type PdfDocument = {
-  id: number;
-  document_url: string;
-  file_name: string | null;
-  created_at: string;
-};
-
 type CatalogueItem = {
   id: number;
   vendor_id: number;
@@ -45,8 +38,6 @@ type CatalogueItem = {
   image_url: string | null;
 };
 
-const FREE_CATALOGUE_LIMIT = 10;
-
 export default function VendorCatalogueScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<ProfileStackParamList>>();
   const { user } = useAuth();
@@ -56,10 +47,9 @@ export default function VendorCatalogueScreen() {
 
   const [vendor, setVendor] = useState<VendorRow | null>(null);
   const [items, setItems] = useState<CatalogueItem[]>([]);
-  const [pdfDocs, setPdfDocs] = useState<PdfDocument[]>([]);
   const [uploadingImage, setUploadingImage] = useState<number | null>(null);
-  const [uploadingPdf, setUploadingPdf] = useState(false);
   const [alertState, setAlertState] = useState<{visible: boolean; title: string; message: string; buttons?: any[]} | null>(null);
+  const [itemLimit, setItemLimit] = useState<number>(0);
 
   const [editVisible, setEditVisible] = useState(false);
   const [editingItem, setEditingItem] = useState<CatalogueItem | null>(null);
@@ -71,15 +61,9 @@ export default function VendorCatalogueScreen() {
     image_url: null as string | null,
   });
 
-  const isFreeTier = useMemo(() => {
-    const tier = String(vendor?.subscription_tier ?? '').toLowerCase();
-    return tier === '' || tier === 'free' || tier === 'get_started' || tier === 'get started';
-  }, [vendor?.subscription_tier]);
-
   const canAddMoreItems = useMemo(() => {
-    if (!isFreeTier) return true;
-    return items.length < FREE_CATALOGUE_LIMIT;
-  }, [isFreeTier, items.length]);
+    return !isCatalogueLimitReached(items.length, itemLimit);
+  }, [items.length, itemLimit]);
 
   const loadVendorAndItems = useCallback(async () => {
     if (!user?.id) return;
@@ -111,20 +95,16 @@ export default function VendorCatalogueScreen() {
         .order('sort_order', { ascending: true })
         .order('created_at', { ascending: true });
 
-      const { data: pdfRows } = await supabase
-        .from('vendor_documents')
-        .select('id, document_url, file_name, created_at')
-        .eq('vendor_id', vendorRow.id)
-        .eq('document_type', 'catalogue_pdf')
-        .order('created_at', { ascending: false });
-
       if (itemsErr) {
         console.error('Failed to load vendor catalogue items:', itemsErr);
         setItems([]);
       } else {
         setItems((itemRows || []) as CatalogueItem[]);
       }
-      setPdfDocs((pdfRows || []) as PdfDocument[]);
+
+      // Load tier limit for catalogue items
+      const limit = await getCatalogueItemLimit('vendor', vendorRow.subscription_tier || 'free');
+      setItemLimit(limit);
     } finally {
       setLoading(false);
     }
@@ -148,7 +128,7 @@ export default function VendorCatalogueScreen() {
       setAlertState({
         visible: true,
         title: 'Catalogue Limit Reached',
-        message: `Your free plan allows up to ${FREE_CATALOGUE_LIMIT} catalogue items. Upgrade to add more.`,
+        message: `Your plan allows up to ${itemLimit} catalogue items. Upgrade to add more.`,
         buttons: [
           { text: 'Not now', style: 'cancel', onPress: () => setAlertState(null) },
           { text: 'View Plans', style: 'default', onPress: () => { setAlertState(null); navigation.navigate('SubscriptionPlans'); } },
@@ -194,7 +174,7 @@ export default function VendorCatalogueScreen() {
       setAlertState({
         visible: true,
         title: 'Catalogue Limit Reached',
-        message: `Your free plan allows up to ${FREE_CATALOGUE_LIMIT} catalogue items. Upgrade to add more.`,
+        message: `Your plan allows up to ${itemLimit} catalogue items. Upgrade to add more.`,
         buttons: [
           { text: 'Not now', style: 'cancel', onPress: () => setAlertState(null) },
           { text: 'View Plans', style: 'default', onPress: () => { setAlertState(null); navigation.navigate('SubscriptionPlans'); } },
@@ -287,70 +267,6 @@ export default function VendorCatalogueScreen() {
     } finally {
       setUploadingImage(null);
     }
-  };
-
-  const pickPdfCatalogue = async () => {
-    if (!vendor) return;
-    try {
-      const result = await DocumentPicker.getDocumentAsync({ type: ['application/pdf'] });
-      if (result.canceled || !result.assets?.[0]) return;
-      const asset = result.assets[0];
-      setUploadingPdf(true);
-      const fileName = `${user?.id}/${Date.now()}-${asset.name}`;
-      let fileBody: Blob | ArrayBuffer;
-      if (asset.uri.startsWith('data:')) {
-        const base64 = asset.uri.split(',')[1];
-        fileBody = decode(base64);
-      } else {
-        const base64 = await FileSystem.readAsStringAsync(asset.uri, { encoding: 'base64' });
-        fileBody = decode(base64);
-      }
-      const { error: uploadError } = await supabase.storage.from('vendor-documents').upload(fileName, fileBody, {
-        contentType: 'application/pdf',
-        cacheControl: '3600',
-        upsert: false,
-      });
-      if (uploadError) throw uploadError;
-      const { data: { publicUrl } } = supabase.storage.from('vendor-documents').getPublicUrl(fileName);
-      const { error: dbError } = await supabase.from('vendor_documents').insert({
-        vendor_id: vendor.id,
-        document_type: 'catalogue_pdf',
-        document_url: publicUrl,
-        file_name: asset.name,
-        mime_type: 'application/pdf',
-      });
-      if (dbError) throw dbError;
-      await loadVendorAndItems();
-    } catch (err: any) {
-      setAlertState({ visible: true, title: 'Upload failed', message: err?.message ?? 'Could not upload PDF.' });
-    } finally {
-      setUploadingPdf(false);
-    }
-  };
-
-  const deletePdf = async (doc: PdfDocument) => {
-    setAlertState({
-      visible: true,
-      title: 'Delete PDF',
-      message: `Remove "${doc.file_name || 'PDF'}"?`,
-      buttons: [
-        { text: 'Cancel', style: 'cancel', onPress: () => setAlertState(null) },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: async () => {
-            setAlertState(null);
-            try {
-              const { error } = await supabase.from('vendor_documents').delete().eq('id', doc.id);
-              if (error) throw error;
-              setPdfDocs((prev) => prev.filter((d) => d.id !== doc.id));
-            } catch (err: any) {
-              setAlertState({ visible: true, title: 'Error', message: err?.message ?? 'Failed to delete PDF.' });
-            }
-          },
-        },
-      ],
-    });
   };
 
   const handleDelete = async (item: CatalogueItem) => {
@@ -464,72 +380,13 @@ export default function VendorCatalogueScreen() {
           </Text>
         </View>
 
-        {/* Subscription Info Card */}
-        <View style={{ paddingHorizontal: spacing.lg, marginBottom: spacing.md }}>
-          <View style={{ backgroundColor: colors.surface, borderRadius: radii.lg, padding: spacing.lg, borderWidth: 1, borderColor: colors.borderSubtle }}>
-            <Text style={{ ...typography.titleMedium, color: colors.textPrimary, marginBottom: spacing.sm }}>Current Plan</Text>
-            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.xs }}>
-              <Text style={{ ...typography.body, color: colors.textMuted, width: 110 }}>Plan:</Text>
-              <Text style={{ ...typography.bodySemiBold, color: colors.textPrimary }}>
-                {vendor.subscription_tier ? vendor.subscription_tier.charAt(0).toUpperCase() + vendor.subscription_tier.slice(1) : 'Free'}
-              </Text>
-            </View>
-            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.sm }}>
-              <Text style={{ ...typography.body, color: colors.textMuted, width: 110 }}>Expiration:</Text>
-              <Text style={{ ...typography.body, color: colors.textPrimary }}>
-                {vendor.subscription_expires_at
-                  ? new Date(vendor.subscription_expires_at).toLocaleDateString('en-ZA')
-                  : '—'}
-              </Text>
-            </View>
-            <View style={{ flexDirection: 'row', gap: spacing.md, marginTop: spacing.sm }}>
-              <TouchableOpacity
-                onPress={() => navigation.navigate('SubscriptionPlans')}
-                style={{ flex: 1, borderWidth: 1, borderColor: colors.primary, borderRadius: radii.md, paddingVertical: spacing.sm, alignItems: 'center' }}
-              >
-                <Text style={{ ...typography.bodySemiBold, color: colors.primary }}>Renew</Text>
-              </TouchableOpacity>
-              {!isFreeTier && (
-                <TouchableOpacity
-                  onPress={() => navigation.navigate('SubscriptionPlans')}
-                  style={{ flex: 1, backgroundColor: colors.primary, borderRadius: radii.md, paddingVertical: spacing.sm, alignItems: 'center' }}
-                >
-                  <Text style={{ ...typography.bodySemiBold, color: '#FFFFFF' }}>Upgrade</Text>
-                </TouchableOpacity>
-              )}
-            </View>
-          </View>
-        </View>
-
-        {/* PDF Catalogue Section */}
-        <View style={{ paddingHorizontal: spacing.lg, marginBottom: spacing.md }}>
-          <View style={{ backgroundColor: colors.surface, borderRadius: radii.lg, padding: spacing.lg, borderWidth: 1, borderColor: colors.borderSubtle }}>
-            <Text style={{ ...typography.titleMedium, color: colors.textPrimary, marginBottom: spacing.md }}>PDF Catalogue</Text>
-            {pdfDocs.map((doc) => (
-              <View key={doc.id} style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: spacing.sm, borderBottomWidth: 1, borderBottomColor: colors.borderSubtle }}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
-                  <MaterialIcons name="picture-as-pdf" size={22} color={colors.destructive} style={{ marginRight: spacing.sm }} />
-                  <Text style={{ ...typography.body, color: colors.textPrimary }} numberOfLines={1}>{doc.file_name || 'Catalogue PDF'}</Text>
-                </View>
-                <TouchableOpacity onPress={() => deletePdf(doc)}>
-                  <MaterialIcons name="delete-outline" size={20} color={colors.destructive} />
-                </TouchableOpacity>
-              </View>
-            ))}
-            <TouchableOpacity
-              onPress={pickPdfCatalogue}
-              disabled={uploadingPdf}
-              style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginTop: spacing.md, paddingVertical: spacing.sm, borderWidth: 1, borderColor: colors.borderSubtle, borderRadius: radii.md, borderStyle: 'dashed' }}
-            >
-              <MaterialIcons name="upload-file" size={18} color={colors.textPrimary} style={{ marginRight: spacing.sm }} />
-              <Text style={{ ...typography.bodySemiBold, color: colors.textPrimary }}>
-                {uploadingPdf ? 'Uploading...' : 'Add PDF Catalogue'}
-              </Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-
         <View style={{ paddingHorizontal: spacing.lg }}>
+          <View style={{ marginBottom: spacing.md }}>
+            <Text style={{ ...typography.caption, color: colors.textMuted }}>
+              {items.length} of {itemLimit} items used
+            </Text>
+          </View>
+
           <TouchableOpacity
             onPress={openNew}
             disabled={saving || (!editingItem && !canAddMoreItems)}
@@ -549,26 +406,6 @@ export default function VendorCatalogueScreen() {
               Add Item
             </Text>
           </TouchableOpacity>
-
-          {isFreeTier && (
-            <View
-              style={{
-                backgroundColor: '#FFF7ED',
-                borderRadius: radii.lg,
-                padding: spacing.md,
-                borderWidth: 1,
-                borderColor: '#FDBA74',
-                marginBottom: spacing.md,
-              }}
-            >
-              <Text style={{ ...typography.captionSemiBold, color: '#9A3412' }}>
-                Free plan limit
-              </Text>
-              <Text style={{ ...typography.caption, color: '#9A3412', marginTop: 2 }}>
-                {items.length} of {FREE_CATALOGUE_LIMIT} items used.
-              </Text>
-            </View>
-          )}
 
           {sortedItems.length === 0 ? (
             <View

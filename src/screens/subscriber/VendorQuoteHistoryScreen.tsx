@@ -8,6 +8,7 @@ import { supabase } from '../../lib/supabaseClient';
 import { colors, spacing, radii, typography } from '../../theme';
 import { useAuth } from '../../auth/AuthContext';
 import ThemedAlert from '../../components/ThemedAlert';
+import { quoteStatusLabel } from '../../lib/quoting';
 
 type SubscriberStackParamList = {
   VendorQuoteHistory: { quoteRequestId: number };
@@ -56,6 +57,7 @@ export default function VendorQuoteHistoryScreen() {
   const [revisions, setRevisions] = useState<QuoteRevision[]>([]);
   const [comments, setComments] = useState<Record<number, QuoteComment[]>>({});
   const [expandedRevision, setExpandedRevision] = useState<number | null>(null);
+  const [quoteRequestStatus, setQuoteRequestStatus] = useState<string | null>(null);
   const [alertState, setAlertState] = useState<{visible: boolean; title: string; message: string} | null>(null);
 
   const loadHistory = useCallback(async () => {
@@ -73,6 +75,15 @@ export default function VendorQuoteHistoryScreen() {
         setAlertState({ visible: true, title: 'Error', message: 'Vendor profile not found' });
         return;
       }
+
+      // Load quote request status
+      const { data: qr } = await supabase
+        .from('quote_requests')
+        .select('status')
+        .eq('id', quoteRequestId)
+        .eq('vendor_id', vendor.id)
+        .maybeSingle();
+      setQuoteRequestStatus(qr?.status ?? null);
 
       // Load revisions
       const { data: revs, error: revError } = await supabase
@@ -123,6 +134,7 @@ export default function VendorQuoteHistoryScreen() {
       case 'rejected':
         return '#DC2626';
       case 'sent':
+      case 'quoted':
         return '#2B9EB3';
       case 'draft':
         return '#6B7280';
@@ -140,6 +152,7 @@ export default function VendorQuoteHistoryScreen() {
       case 'rejected':
         return '#FEE2E2';
       case 'sent':
+      case 'quoted':
         return '#E0F2FE';
       case 'draft':
         return '#F3F4F6';
@@ -235,7 +248,7 @@ export default function VendorQuoteHistoryScreen() {
                     }}
                   >
                     <Text style={{ ...typography.captionBold, color: getStatusColor(displayStatus), textTransform: 'uppercase' }}>
-                      {displayStatus}
+                      {quoteStatusLabel(displayStatus)}
                     </Text>
                   </View>
                 </View>
@@ -435,7 +448,7 @@ export default function VendorQuoteHistoryScreen() {
                   </TouchableOpacity>
                 )}
 
-                {rev.status === 'rejected' && index === 0 && (
+                {(rev.status === 'rejected' || quoteRequestStatus === 'amended') && index === 0 && (
                   <TouchableOpacity
                     onPress={() =>
                       navigation.navigate('VendorQuoteCreate', { quoteRequestId })
