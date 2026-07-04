@@ -1,4 +1,15 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import {
+  ActivityIndicator,
+  FlatList,
+  Keyboard,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from 'react-native';
+import { MaterialIcons } from '@expo/vector-icons';
+import { colors, radii, spacing, typography } from '../theme';
 import { supabase } from '../lib/supabaseClient';
 
 type Prediction = {
@@ -11,6 +22,7 @@ type Props = {
   placeholder: string;
   value: string;
   onChangeValue: (value: string) => void;
+  numberOfLines?: number;
   required?: boolean;
   error?: string;
 };
@@ -20,6 +32,7 @@ export function AddressAutocompleteInput({
   placeholder,
   value,
   onChangeValue,
+  numberOfLines = 2,
   required,
   error,
 }: Props) {
@@ -27,10 +40,9 @@ export function AddressAutocompleteInput({
   const [predictions, setPredictions] = useState<Prediction[]>([]);
   const [loading, setLoading] = useState(false);
   const [open, setOpen] = useState(false);
+  const [apiError, setApiError] = useState<string | null>(null);
   const requestSeq = useRef(0);
   const blurTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
-  const dropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     setQuery(value);
@@ -55,12 +67,14 @@ export function AddressAutocompleteInput({
 
     if (trimmed.length < 3) {
       setPredictions([]);
+      setApiError(null);
       return;
     }
 
     const seq = ++requestSeq.current;
     const handle = setTimeout(async () => {
       setLoading(true);
+      setApiError(null);
       try {
         const { data, error } = await supabase.functions.invoke('places-autocomplete', {
           body: { input: trimmed },
@@ -70,6 +84,14 @@ export function AddressAutocompleteInput({
 
         if (error) {
           console.error('Places autocomplete error:', error);
+          setApiError(error.message || 'Search service error');
+          setPredictions([]);
+          return;
+        }
+
+        if (data?.error) {
+          console.error('Places autocomplete API error:', data.error);
+          setApiError(data.error);
           setPredictions([]);
           return;
         }
@@ -81,9 +103,10 @@ export function AddressAutocompleteInput({
           : [];
 
         setPredictions(next);
-      } catch (err) {
+      } catch (err: any) {
         console.error('Places autocomplete exception:', err);
         if (seq === requestSeq.current) {
+          setApiError(err?.message || 'Network error');
           setPredictions([]);
         }
       } finally {
@@ -104,119 +127,141 @@ export function AddressAutocompleteInput({
     onChangeValue(prediction.description);
     setOpen(false);
     setPredictions([]);
+    Keyboard.dismiss();
   };
 
-  // Close dropdown when clicking outside
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (
-        dropdownRef.current &&
-        !dropdownRef.current.contains(event.target as Node) &&
-        inputRef.current &&
-        !inputRef.current.contains(event.target as Node)
-      ) {
-        setOpen(false);
-      }
-    };
-
-    if (open) {
-      document.addEventListener('mousedown', handleClickOutside);
-    }
-
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, [open]);
-
   return (
-    <div className="relative">
-      <label className="mb-1 block text-xs font-semibold uppercase tracking-wider text-on-surface-variant" >
+    <View>
+      <Text style={{ ...typography.bodyMedium, color: colors.textPrimary, marginBottom: spacing.xs }}>
         {label}
         {required ? ' *' : ''}
-      </label>
+      </Text>
 
-      <div className="relative">
-        <input
-          ref={inputRef}
-          type="text"
-          placeholder={placeholder}
-          value={query}
-          onChange={(e) => {
-            setQuery(e.target.value);
-            onChangeValue(e.target.value);
-            if (!open) {
+      <View
+        style={{
+          position: 'relative',
+          zIndex: 20,
+          borderWidth: 1,
+          borderColor: error ? '#EF4444' : colors.borderSubtle,
+          borderRadius: radii.md,
+          backgroundColor: colors.surface,
+          paddingHorizontal: spacing.md,
+          paddingVertical: spacing.sm,
+          flexDirection: 'row',
+          alignItems: 'flex-start',
+          gap: spacing.sm,
+        }}
+      >
+        <View style={{ flex: 1 }}>
+          <TextInput
+            placeholder={placeholder}
+            value={query}
+            onFocus={() => {
+              if (blurTimeoutRef.current) {
+                clearTimeout(blurTimeoutRef.current);
+                blurTimeoutRef.current = null;
+              }
               setOpen(true);
-            }
-          }}
-          onFocus={() => {
-            if (blurTimeoutRef.current) {
-              clearTimeout(blurTimeoutRef.current);
-              blurTimeoutRef.current = null;
-            }
-            setOpen(true);
-          }}
-          onBlur={() => {
-            blurTimeoutRef.current = setTimeout(() => {
-              setOpen(false);
-            }, 180);
-          }}
-          className={`w-full rounded-lg border px-4 py-3 text-sm outline-none transition-colors ${
-            error ? 'border-red-500' : 'border-outline-variant focus:border-primary'
-          }`}
-          
-        />
+            }}
+            onBlur={() => {
+              blurTimeoutRef.current = setTimeout(() => {
+                setOpen(false);
+              }, 180);
+            }}
+            onChangeText={(text) => {
+              setQuery(text);
+              onChangeValue(text);
+              if (!open) {
+                setOpen(true);
+              }
+            }}
+            multiline
+            numberOfLines={numberOfLines}
+            style={{
+              fontSize: 14,
+              color: colors.textPrimary,
+              textAlignVertical: 'top',
+              padding: 0,
+              margin: 0,
+              fontFamily: typography.body.fontFamily,
+            }}
+          />
+        </View>
 
-        <button
-          type="button"
-          onClick={() => {
-            setOpen(true);
-            inputRef.current?.focus();
-          }}
-          className="absolute right-3 top-1/2 -translate-y-1/2 text-on-surface-variant"
+        <TouchableOpacity
+          onPress={() => setOpen(true)}
+          style={{ paddingTop: 2 }}
+          activeOpacity={0.7}
         >
-          <span className="material-symbols-outlined text-[20px]">search</span>
-        </button>
-      </div>
+          <MaterialIcons name="search" size={20} color={colors.textPrimary} />
+        </TouchableOpacity>
+      </View>
 
-      {error && <p className="mt-1 text-xs text-red-500">{error}</p>}
+      {error && <Text style={{ ...typography.caption, fontSize: 12, color: '#EF4444', marginTop: 4 }}>{error}</Text>}
 
       {open && (
-        <div
-          ref={dropdownRef}
-          className="absolute z-50 mt-1 max-h-60 w-full overflow-auto rounded-lg border border-outline-variant bg-white shadow-lg"
+        <View
+          style={{
+            position: 'relative',
+            zIndex: 30,
+            marginTop: spacing.xs,
+            borderWidth: 1,
+            borderColor: colors.borderSubtle,
+            borderRadius: radii.md,
+            backgroundColor: colors.surface,
+            overflow: 'hidden',
+            maxHeight: 220,
+          }}
         >
           {loading && (
-            <div className="flex items-center gap-2 px-4 py-3">
-              <span className="material-symbols-outlined animate-spin text-primary">refresh</span>
-              <span className="text-xs text-on-surface-variant" >Searching…</span>
-            </div>
+            <View style={{ padding: spacing.md, flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
+              <ActivityIndicator size="small" color={colors.textPrimary} />
+              <Text style={{ ...typography.caption, color: colors.textMuted }}>Searching…</Text>
+            </View>
           )}
 
           {!loading && canSearch && predictions.length === 0 && (
-            <div className="px-4 py-3">
-              <p className="text-xs text-on-surface-variant" >No results</p>
-            </div>
+            <View style={{ padding: spacing.md }}>
+              {apiError ? (
+                <Text style={{ ...typography.caption, color: '#EF4444' }}>
+                  Error: {apiError}
+                </Text>
+              ) : (
+                <Text style={{ ...typography.caption, color: colors.textMuted }}>No results</Text>
+              )}
+            </View>
           )}
 
           {!loading && query.trim().length < 3 && (
-            <div className="px-4 py-3">
-              <p className="text-xs text-on-surface-variant" >Type at least 3 characters</p>
-            </div>
+            <View style={{ padding: spacing.md }}>
+              <Text style={{ ...typography.caption, color: colors.textMuted }}>Type at least 3 characters</Text>
+            </View>
           )}
 
-          {predictions.map((prediction) => (
-            <button
-              key={prediction.place_id}
-              type="button"
-              onClick={() => handleSelect(prediction)}
-              className="w-full border-t border-outline-variant px-4 py-3 text-left text-sm text-primary transition-colors hover:bg-surface-container-low"
-              
-            >
-              {prediction.description}
-            </button>
-          ))}
-        </div>
+          <FlatList
+            keyboardShouldPersistTaps="handled"
+            data={predictions}
+            keyExtractor={(item) => item.place_id}
+            nestedScrollEnabled
+            renderItem={({ item }) => (
+              <TouchableOpacity
+                onPress={() => handleSelect(item)}
+                style={{
+                  paddingHorizontal: spacing.md,
+                  paddingVertical: spacing.sm,
+                  borderTopWidth: 1,
+                  borderTopColor: colors.borderSubtle,
+                }}
+                activeOpacity={0.7}
+              >
+                <Text style={{ ...typography.body, color: colors.textPrimary, fontSize: 13 }}>
+                  {item.description}
+                </Text>
+              </TouchableOpacity>
+            )}
+          />
+        </View>
       )}
-    </div>
+    </View>
   );
 }

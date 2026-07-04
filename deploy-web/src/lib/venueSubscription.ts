@@ -1,4 +1,3 @@
-// WEB ONLY — deploy-web/src/lib/venueSubscription.ts
 import { supabase } from './supabaseClient';
 
 export type VenuePlanKey = 'get_started' | 'monthly' | '6_month' | '12_month';
@@ -92,7 +91,7 @@ export function isVenueFeatureEnabled(ent: VenueSubscriptionEntitlement, feature
     }
     case 'analytics': {
       const flag = readFeatureFlag(ent.features, ['analytics', 'analytics_stats']);
-      return flag ?? planBased;
+      return flag ?? true;
     }
     case 'quote_requests': {
       const flag = readFeatureFlag(ent.features, ['quote_requests', 'online_quote_requests']);

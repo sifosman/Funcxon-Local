@@ -1,81 +1,430 @@
-// WEB ONLY — deploy-web/src/components/MapRadiusSelector.tsx
-import { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  Modal,
+  TouchableOpacity,
+  ActivityIndicator,
+  Platform
+} from 'react-native';
+import { MaterialIcons } from '@expo/vector-icons';
+import { colors, spacing, radii, typography } from '../theme';
+import * as ExpoLocation from 'expo-location';
+import { WebView } from 'react-native-webview';
+import ThemedAlert from './ThemedAlert';
 
-interface MapRadiusSelectorProps {
+interface LatLng {
   latitude: number;
   longitude: number;
-  radiusKm: number;
-  onRadiusChange?: (radiusKm: number) => void;
-  className?: string;
 }
 
-export function MapRadiusSelector({
-  latitude,
-  longitude,
-  radiusKm,
-  onRadiusChange,
-  className = '',
-}: MapRadiusSelectorProps) {
-  const [radius, setRadius] = useState(radiusKm);
-  const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || '';
+interface MapRadiusSelectorProps {
+  visible: boolean;
+  onClose: () => void;
+  onLocationSelected: (location: LatLng, radiusKm: number) => void;
+  onClearSelection?: () => void;
+  initialLocation?: LatLng;
+  initialRadius?: number;
+}
 
-  const handleRadiusChange = (value: number) => {
-    setRadius(value);
-    onRadiusChange?.(value);
+export default function MapRadiusSelector({
+  visible,
+  onClose,
+  onLocationSelected,
+  onClearSelection,
+  initialLocation = { latitude: -26.2041, longitude: 28.0473 }, // Default: Johannesburg
+  initialRadius = 20
+}: MapRadiusSelectorProps) {
+  const [selectedLocation, setSelectedLocation] = useState<LatLng>(initialLocation);
+  const [radiusKm, setRadiusKm] = useState(initialRadius);
+  const [isLoading, setIsLoading] = useState(false);
+  const [alertState, setAlertState] = useState<{visible: boolean; title: string; message: string} | null>(null);
+  const webViewRef = useRef<any>(null);
+  const hasAutoDetected = useRef(false);
+
+  // Auto-detect user location when the modal opens
+  useEffect(() => {
+    if (visible && !hasAutoDetected.current) {
+      hasAutoDetected.current = true;
+      (async () => {
+        try {
+          const { status } = await ExpoLocation.requestForegroundPermissionsAsync();
+          if (status !== 'granted') return;
+          setIsLoading(true);
+          const loc = await ExpoLocation.getCurrentPositionAsync({ accuracy: ExpoLocation.Accuracy.Balanced });
+          const currentLocation = { latitude: loc.coords.latitude, longitude: loc.coords.longitude };
+          setSelectedLocation(currentLocation);
+            } catch {
+          // Silently fall back to default location
+        } finally {
+          setIsLoading(false);
+        }
+      })();
+    }
+  }, [visible]);
+
+  // Convert radius in km to meters for map circle
+  const radiusInMeters = radiusKm * 1000;
+
+  // Radius options (in km)
+  const radiusOptions = [5, 10, 20, 50, 100, 200];
+
+  const handleRadiusChange = (newRadius: number) => {
+    setRadiusKm(newRadius);
   };
 
-  // Google Maps Embed URL centred on the coordinates with a place marker.
-  const mapSrc =
-    `https://www.google.com/maps/embed/v1/place?key=${encodeURIComponent(apiKey)}` +
-    `&q=${encodeURIComponent(`${latitude},${longitude}`)}` +
-    `&zoom=12`;
+  const handleGetCurrentLocation = async () => {
+    setIsLoading(true);
+    try {
+      const { status } = await ExpoLocation.requestForegroundPermissionsAsync();
+      if (status !== 'granted') {
+        setAlertState({ visible: true, title: 'Permission Denied', message: 'Location permission is needed to detect your position.' });
+        return;
+      }
+      const loc = await ExpoLocation.getCurrentPositionAsync({ accuracy: ExpoLocation.Accuracy.Balanced });
+      const currentLocation = { latitude: loc.coords.latitude, longitude: loc.coords.longitude };
+      setSelectedLocation(currentLocation);
+      
+    } catch (error) {
+      setAlertState({ visible: true, title: 'Error', message: 'Unable to get your current location. Please try again.' });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleApply = () => {
+    onLocationSelected(selectedLocation, radiusKm);
+    onClose();
+  };
+
+  const handleAnyRadius = () => {
+    onLocationSelected(selectedLocation, 100);
+    onClose();
+  };
+
+  const handleCancelSelection = () => {
+    onClearSelection?.();
+    onClose();
+  };
+
+  const getRadiusDescription = () => {
+    if (radiusKm <= 10) return 'Very Local';
+    if (radiusKm <= 25) return 'Local Area';
+    if (radiusKm <= 75) return 'Extended Area';
+    if (radiusKm <= 150) return 'Wide Area';
+    return 'Very Wide Area';
+  };
 
   return (
-    <div className={className}>
-      <div className="relative aspect-video w-full overflow-hidden rounded-xl border border-outline-variant bg-surface-container">
-        {apiKey ? (
-          <iframe
-            title="Coverage map"
-            src={mapSrc}
-            className="absolute inset-0 h-full w-full border-0"
-            allowFullScreen
-            loading="lazy"
-            referrerPolicy="no-referrer-when-downgrade"
+    <Modal
+      visible={visible}
+      animationType="slide"
+      presentationStyle="fullScreen"
+      onRequestClose={onClose}
+    >
+      <View style={styles.container}>
+        {/* Header */}
+        <View style={styles.header}>
+          <TouchableOpacity onPress={onClose} style={styles.closeButton}>
+            <MaterialIcons name="close" size={24} color={colors.textPrimary} />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Search Area</Text>
+          <TouchableOpacity onPress={handleGetCurrentLocation} style={styles.locationButton}>
+            {isLoading ? (
+              <ActivityIndicator size="small" color={colors.primary} />
+            ) : (
+              <MaterialIcons name="my-location" size={24} color={colors.primary} />
+            )}
+          </TouchableOpacity>
+        </View>
+
+        {/* Map — use WebView-based Google Maps embed for reliability on all platforms */}
+        <View style={styles.mapContainer}>
+          {Platform.OS === 'web' ? (
+            <iframe
+              title="Google Map"
+              style={{ width: '100%', height: '100%', border: 'none' } as any}
+              src={`https://www.google.com/maps/embed/v1/place?key=AIzaSyBjd1KYtTaAzxzdw5ayGwwMu5Sex-gKQLI&q=${selectedLocation.latitude},${selectedLocation.longitude}&zoom=12`}
+              allowFullScreen
+            />
+          ) : (
+            <WebView
+              ref={webViewRef}
+              style={{ flex: 1 }}
+              originWhitelist={['*']}
+              javaScriptEnabled={true}
+              source={{
+                html: `
+                  <!DOCTYPE html>
+                  <html>
+                  <head>
+                    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+                    <style>html,body,#map{margin:0;padding:0;width:100%;height:100%;}</style>
+                  </head>
+                  <body>
+                    <div id="map"></div>
+                    <script>
+                      let map, marker, circle;
+                      function initMap() {
+                        const center = {lat: ${selectedLocation.latitude}, lng: ${selectedLocation.longitude}};
+                        map = new google.maps.Map(document.getElementById('map'), {
+                          center: center,
+                          zoom: 11,
+                          disableDefaultUI: true,
+                          zoomControl: true,
+                          gestureHandling: 'greedy',
+                        });
+                        marker = new google.maps.Marker({
+                          position: center,
+                          map: map,
+                          draggable: false,
+                        });
+                        circle = new google.maps.Circle({
+                          map: map,
+                          center: center,
+                          radius: ${radiusInMeters},
+                          fillColor: '${colors.primary}',
+                          fillOpacity: 0.15,
+                          strokeColor: '${colors.primary}',
+                          strokeWeight: 2,
+                        });
+                        map.addListener('click', function(e) {
+                          const lat = e.latLng.lat();
+                          const lng = e.latLng.lng();
+                          marker.setPosition({lat, lng});
+                          circle.setCenter({lat, lng});
+                          window.ReactNativeWebView.postMessage(JSON.stringify({lat, lng}));
+                        });
+                      }
+                    </script>
+                    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBjd1KYtTaAzxzdw5ayGwwMu5Sex-gKQLI&callback=initMap" async defer></script>
+                  </body>
+                  </html>
+                `,
+              }}
+              onMessage={(event) => {
+                try {
+                  const { lat, lng } = JSON.parse(event.nativeEvent.data);
+                  setSelectedLocation({ latitude: lat, longitude: lng });
+                } catch (e) {
+                  // ignore parse errors
+                }
+              }}
+            />
+          )}
+        </View>
+
+        {/* Radius Controls */}
+        <View style={styles.radiusControls}>
+          <View style={styles.radiusInfo}>
+            <Text style={styles.radiusTitle}>Search Radius</Text>
+            <Text style={styles.radiusValue}>{radiusKm} km</Text>
+            <Text style={styles.radiusDescription}>{getRadiusDescription()}</Text>
+          </View>
+
+          <View style={styles.radiusButtons}>
+            {radiusOptions.map((radius) => (
+              <TouchableOpacity
+                key={radius}
+                onPress={() => handleRadiusChange(radius)}
+                style={[
+                  styles.radiusButton,
+                  radiusKm === radius && styles.radiusButtonActive,
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.radiusButtonText,
+                    radiusKm === radius && styles.radiusButtonTextActive,
+                  ]}
+                >
+                  {radius}km
+                </Text>
+              </TouchableOpacity>
+            ))}
+            <TouchableOpacity
+              onPress={handleAnyRadius}
+              style={[
+                styles.radiusButton,
+                radiusKm === 100 && styles.radiusButtonActive,
+              ]}
+            >
+              <Text
+                style={[
+                  styles.radiusButtonText,
+                  radiusKm === 100 && styles.radiusButtonTextActive,
+                ]}
+              >
+                Any
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        {/* Bottom Actions */}
+        <View style={styles.bottomActions}>
+          <TouchableOpacity 
+            onPress={handleCancelSelection}
+            style={styles.clearButton}
+          >
+            <Text style={styles.clearButtonText}>Cancel Radius</Text>
+          </TouchableOpacity>
+          <TouchableOpacity 
+            onPress={handleApply}
+            style={styles.applyButton}
+          >
+            <Text style={styles.applyButtonText}>Apply Search Area</Text>
+          </TouchableOpacity>
+        </View>
+
+        {alertState && (
+          <ThemedAlert
+            visible={alertState.visible}
+            title={alertState.title}
+            message={alertState.message}
+            buttons={[{ text: 'OK', style: 'default', onPress: () => setAlertState(null) }]}
+            onDismiss={() => setAlertState(null)}
           />
-        ) : (
-          <div className="absolute inset-0 flex items-center justify-center text-sm text-on-surface-variant">
-            Map preview unavailable — no Google Maps API key configured
-          </div>
         )}
-
-        {/* Approximate radius overlay (very rough visual only) */}
-        <div
-          className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-dashed border-brand-teal/70 bg-brand-teal/10"
-          style={{
-            width: `${Math.min(80, Math.max(10, radius * 2))}%`,
-            height: `${Math.min(80, Math.max(10, radius * 2))}%`,
-          }}
-        />
-      </div>
-
-      <div className="mt-4 rounded-xl bg-surface-container-low p-4">
-        <div className="flex items-center justify-between text-sm">
-          <span className="text-on-surface">Search radius</span>
-          <span className="font-semibold text-brand-teal">{radius} km</span>
-        </div>
-        <input
-          type="range"
-          min={1}
-          max={100}
-          value={radius}
-          onChange={(e) => handleRadiusChange(Number(e.target.value))}
-          className="mt-3 w-full accent-brand-teal"
-        />
-        <div className="mt-2 flex justify-between text-xs text-on-surface-variant">
-          <span>1 km</span>
-          <span>100 km</span>
-        </div>
-      </div>
-    </div>
+      </View>
+    </Modal>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: colors.background,
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+    backgroundColor: colors.surface,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.borderSubtle,
+  },
+  closeButton: {
+    padding: spacing.sm,
+  },
+  headerTitle: {
+    ...typography.titleMedium,
+    color: colors.textPrimary,
+    fontWeight: '600',
+  },
+  locationButton: {
+    padding: spacing.sm,
+  },
+  mapContainer: {
+    flex: 1,
+  },
+  map: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  mapFallback: {
+    flex: 1,
+  },
+  marker: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  radiusControls: {
+    position: 'absolute',
+    bottom: 100,
+    left: spacing.lg,
+    right: spacing.lg,
+    backgroundColor: colors.surface,
+    borderRadius: radii.lg,
+    padding: spacing.lg,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  radiusInfo: {
+    alignItems: 'center',
+    marginBottom: spacing.md,
+  },
+  radiusTitle: {
+    ...typography.caption,
+    color: colors.textSecondary,
+    marginBottom: spacing.xs,
+  },
+  radiusValue: {
+    ...typography.titleLarge,
+    color: colors.textPrimary,
+    fontWeight: '600',
+  },
+  radiusDescription: {
+    ...typography.caption,
+    color: colors.textMuted,
+    marginTop: spacing.xs,
+  },
+  radiusButtons: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+    gap: spacing.sm,
+  },
+  radiusButton: {
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: radii.md,
+    borderWidth: 1,
+    borderColor: colors.borderSubtle,
+    backgroundColor: colors.surface,
+    minWidth: 60,
+    alignItems: 'center',
+  },
+  radiusButtonActive: {
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
+  },
+  radiusButtonText: {
+    ...typography.caption,
+    color: colors.textPrimary,
+    fontWeight: '500',
+  },
+  radiusButtonTextActive: {
+    color: '#FFFFFF',
+  },
+  bottomActions: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    padding: spacing.lg,
+    backgroundColor: colors.surface,
+    borderTopWidth: 1,
+    borderTopColor: colors.borderSubtle,
+    gap: spacing.sm,
+  },
+  clearButton: {
+    backgroundColor: colors.surface,
+    paddingVertical: spacing.md,
+    borderRadius: radii.md,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: colors.borderSubtle,
+  },
+  clearButtonText: {
+    ...typography.body,
+    color: colors.textPrimary,
+    fontWeight: '600',
+  },
+  applyButton: {
+    backgroundColor: colors.primary,
+    paddingVertical: spacing.md,
+    borderRadius: radii.md,
+    alignItems: 'center',
+  },
+  applyButtonText: {
+    ...typography.body,
+    color: '#FFFFFF',
+    fontWeight: '600',
+  },
+});

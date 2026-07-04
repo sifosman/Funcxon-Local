@@ -1,30 +1,20 @@
-import { createClient, SupabaseClient } from '@supabase/supabase-js';
+import 'react-native-url-polyfill/auto';
+import { createClient } from '@supabase/supabase-js';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || '';
-const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
+// Get environment variables with fallbacks for production builds
+export const SUPABASE_URL = process.env.EXPO_PUBLIC_SUPABASE_URL || 'https://fhlocaqndxawkbztncwo.supabase.co';
+const SUPABASE_ANON_KEY = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZobG9jYXFuZHhhd2tienRuY3dvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjMyOTQ1NzksImV4cCI6MjA3ODg3MDU3OX0.8vDYyxqe7AfHsvNnd2csFNIFaotjdcbUp9Tr2J3V9As';
 
-const isPlaceholder =
-  !SUPABASE_URL ||
-  SUPABASE_URL.includes('placeholder') ||
-  !SUPABASE_ANON_KEY ||
-  SUPABASE_ANON_KEY === 'placeholder';
-
-let supabase: SupabaseClient;
-
-if (isPlaceholder) {
-  console.warn('[Supabase] Missing or placeholder credentials. Using dummy client — Supabase features will be unavailable.');
-  // Dummy client to prevent runtime crashes
-  supabase = createClient('http://localhost:54321', 'dummy-key', {
-    auth: { autoRefreshToken: false, persistSession: false },
-  });
-} else {
-  supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-    auth: {
-      autoRefreshToken: true,
-      persistSession: true,
-      detectSessionInUrl: false,
-    },
-  });
+if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
+  console.warn('Supabase environment variables not found, using fallback values');
 }
 
-export { supabase, SUPABASE_URL };
+export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+  auth: {
+    storage: AsyncStorage,
+    autoRefreshToken: true,
+    persistSession: true,
+    detectSessionInUrl: false,
+  },
+});

@@ -2,6 +2,10 @@ import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '../auth/AuthContext';
 import { supabase } from '../lib/supabaseClient';
 
+/**
+ * Hook to determine if the current authenticated user is a vendor
+ * Tries multiple methods to identify vendor status based on database schema
+ */
 export function useVendorStatus() {
   const { user, userRole } = useAuth();
 
@@ -10,13 +14,15 @@ export function useVendorStatus() {
     queryFn: async () => {
       if (!user?.id) return null;
 
+      // Primary source of truth: AuthContext role detection
       if (userRole === 'vendor') {
         return { id: user.id, name: undefined, email: user.email } as any;
       }
       if (userRole === 'attendee') {
         return null;
       }
-
+      
+      // Fallback method 1: Check by user_id
       try {
         const { data, error } = await supabase
           .from('vendors')
@@ -31,6 +37,7 @@ export function useVendorStatus() {
         // No vendor found, try next method
       }
 
+      // Fallback method 2: Check by email
       try {
         const { data, error } = await supabase
           .from('vendors')
@@ -45,6 +52,7 @@ export function useVendorStatus() {
         // Column might not exist, try next method
       }
 
+      // Fallback method 3: Check if user email is in whatsapp_number field
       try {
         const { data, error } = await supabase
           .from('vendors')

@@ -1,5 +1,5 @@
-// WEB ONLY — deploy-web/src/context/ApplicationFormContext.tsx
-import { createContext, useContext, useReducer, useEffect, useState, ReactNode } from 'react';
+import React, { createContext, useContext, useReducer, useEffect } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export type PortfolioType = 'vendors' | 'venues' | null;
 
@@ -142,12 +142,15 @@ const initialState: ApplicationFormState = {
   },
 };
 
-function applicationFormReducer(state: ApplicationFormState, action: ApplicationFormAction): ApplicationFormState {
+function applicationFormReducer(
+  state: ApplicationFormState,
+  action: ApplicationFormAction
+): ApplicationFormState {
   switch (action.type) {
     case 'SET_EDITING_APPLICATION_ID':
       return { ...state, editingApplicationId: action.payload };
-    case 'SET_PORTFOLIO_TYPE': {
-      // If portfolio type is changing (and not being set for the first time),
+    case 'SET_PORTFOLIO_TYPE':
+      // If portfolio type is changing (and not being set for the first time), 
       // reset form data except step1 (company details)
       const isChangingType = state.portfolioType !== null && state.portfolioType !== action.payload;
       if (isChangingType) {
@@ -163,7 +166,6 @@ function applicationFormReducer(state: ApplicationFormState, action: Application
       }
       console.log('Setting portfolio type to', action.payload);
       return { ...state, portfolioType: action.payload };
-    }
     case 'UPDATE_STEP1':
       return { ...state, step1: { ...state.step1, ...action.payload } };
     case 'UPDATE_STEP2':
@@ -199,21 +201,21 @@ const ApplicationFormContext = createContext<ApplicationFormContextValue | undef
 
 const getStorageKey = (portfolioType: PortfolioType) => {
   if (portfolioType === 'venues') {
-    return 'funcxon_application_draft_venue';
+    return '@funcxon_application_draft_venue';
   } else if (portfolioType === 'vendors') {
-    return 'funcxon_application_draft_vendor';
+    return '@funcxon_application_draft_vendor';
   }
-  return 'funcxon_application_draft';
+  return '@funcxon_application_draft';
 };
 
-export function ApplicationFormProvider({ children }: { children: ReactNode }) {
+export function ApplicationFormProvider({ children }: { children: React.ReactNode }) {
   const [state, dispatch] = useReducer(applicationFormReducer, initialState);
-  const [hasHydrated, setHasHydrated] = useState(false);
+  const [hasHydrated, setHasHydrated] = React.useState(false);
 
   const saveDraft = async () => {
     try {
       const storageKey = getStorageKey(state.portfolioType);
-      localStorage.setItem(storageKey, JSON.stringify(state));
+      await AsyncStorage.setItem(storageKey, JSON.stringify(state));
     } catch (error) {
       console.error('Failed to save draft:', error);
     }
@@ -222,7 +224,7 @@ export function ApplicationFormProvider({ children }: { children: ReactNode }) {
   const loadDraft = async () => {
     try {
       const storageKey = getStorageKey(state.portfolioType);
-      const draft = localStorage.getItem(storageKey);
+      const draft = await AsyncStorage.getItem(storageKey);
       if (draft) {
         dispatch({ type: 'LOAD_DRAFT', payload: JSON.parse(draft) });
       }
@@ -238,7 +240,7 @@ export function ApplicationFormProvider({ children }: { children: ReactNode }) {
     const cleanup = async () => {
       try {
         // Remove old generic draft that might conflict
-        localStorage.removeItem('funcxon_application_draft');
+        await AsyncStorage.removeItem('@funcxon_application_draft');
         console.log('Cleaned up old draft storage');
       } catch (error) {
         console.error('Failed to cleanup old drafts:', error);
@@ -257,31 +259,29 @@ export function ApplicationFormProvider({ children }: { children: ReactNode }) {
   const resetForm = () => {
     const storageKey = getStorageKey(state.portfolioType);
     dispatch({ type: 'RESET_FORM' });
-    try {
-      localStorage.removeItem(storageKey);
-    } catch (error) {
+    AsyncStorage.removeItem(storageKey).catch((error) => {
       console.error('Failed to clear draft:', error);
-    }
+    });
   };
 
   const setPortfolioTypeAndLoadDraft = async (type: PortfolioType) => {
     console.log('=== setPortfolioTypeAndLoadDraft called with type:', type);
-
+    
     try {
       const storageKey = getStorageKey(type);
       console.log('Checking for draft at storage key:', storageKey);
-      const draft = localStorage.getItem(storageKey);
-
+      const draft = await AsyncStorage.getItem(storageKey);
+      
       if (draft) {
         const parsedDraft = JSON.parse(draft);
         console.log('Found saved draft with portfolioType:', parsedDraft.portfolioType);
-
+        
         // Only load if the draft matches the selected portfolio type
         if (parsedDraft.portfolioType === type) {
-          console.log('Draft matches selected type, loading it');
+          console.log('✓ Draft matches selected type, loading it');
           dispatch({ type: 'LOAD_DRAFT', payload: { ...parsedDraft, portfolioType: type } });
         } else {
-          console.log('Draft type mismatch! Ignoring it and starting fresh');
+          console.log('✗ Draft type mismatch! Ignoring it and starting fresh');
           dispatch({ type: 'SET_PORTFOLIO_TYPE', payload: type });
         }
       } else {
@@ -293,14 +293,13 @@ export function ApplicationFormProvider({ children }: { children: ReactNode }) {
       // On error, just set the portfolio type
       dispatch({ type: 'SET_PORTFOLIO_TYPE', payload: type });
     }
-
+    
     console.log('=== setPortfolioTypeAndLoadDraft completed');
   };
 
   const value: ApplicationFormContextValue = {
     state,
-    setEditingApplicationId: (applicationId) =>
-      dispatch({ type: 'SET_EDITING_APPLICATION_ID', payload: applicationId }),
+    setEditingApplicationId: (applicationId) => dispatch({ type: 'SET_EDITING_APPLICATION_ID', payload: applicationId }),
     setPortfolioType: setPortfolioTypeAndLoadDraft,
     updateStep1: (data) => dispatch({ type: 'UPDATE_STEP1', payload: data }),
     updateStep2: (data) => dispatch({ type: 'UPDATE_STEP2', payload: data }),
@@ -312,7 +311,11 @@ export function ApplicationFormProvider({ children }: { children: ReactNode }) {
     hydrateForm: (nextState) => dispatch({ type: 'LOAD_DRAFT', payload: nextState }),
   };
 
-  return <ApplicationFormContext.Provider value={value}>{children}</ApplicationFormContext.Provider>;
+  return (
+    <ApplicationFormContext.Provider value={value}>
+      {children}
+    </ApplicationFormContext.Provider>
+  );
 }
 
 export function useApplicationForm() {

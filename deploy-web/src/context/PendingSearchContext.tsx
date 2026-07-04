@@ -1,5 +1,5 @@
-// WEB ONLY — deploy-web/src/context/PendingSearchContext.tsx
-import { createContext, useContext, useEffect, useMemo, useState, ReactNode } from 'react';
+import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export type PendingSearchSnapshot = {
   search: string;
@@ -45,15 +45,17 @@ const PendingSearchContext = createContext<PendingSearchContextValue | undefined
 const PENDING_SEARCH_STORAGE_KEY = 'funcxon.pendingSearch';
 const PENDING_SEARCH_SHOULD_APPLY_KEY = 'funcxon.pendingSearch.shouldApply';
 
-export function PendingSearchProvider({ children }: { children: ReactNode }) {
+export function PendingSearchProvider({ children }: { children: React.ReactNode }) {
   const [pendingSearch, setPendingSearch] = useState<PendingSearchSnapshot | null>(null);
   const [shouldApplyPendingSearch, setShouldApplyPendingSearch] = useState(false);
 
   useEffect(() => {
-    const hydratePendingSearch = () => {
+    const hydratePendingSearch = async () => {
       try {
-        const storedSearch = localStorage.getItem(PENDING_SEARCH_STORAGE_KEY);
-        const storedShouldApply = localStorage.getItem(PENDING_SEARCH_SHOULD_APPLY_KEY);
+        const [storedSearch, storedShouldApply] = await Promise.all([
+          AsyncStorage.getItem(PENDING_SEARCH_STORAGE_KEY),
+          AsyncStorage.getItem(PENDING_SEARCH_SHOULD_APPLY_KEY),
+        ]);
 
         if (storedSearch) {
           setPendingSearch(JSON.parse(storedSearch) as PendingSearchSnapshot);
@@ -78,30 +80,19 @@ export function PendingSearchProvider({ children }: { children: ReactNode }) {
       savePendingSearch: (snapshot) => {
         setPendingSearch(snapshot);
         setShouldApplyPendingSearch(true);
-        try {
-          localStorage.setItem(PENDING_SEARCH_STORAGE_KEY, JSON.stringify(snapshot));
-          localStorage.setItem(PENDING_SEARCH_SHOULD_APPLY_KEY, 'true');
-        } catch {
-          // ignore storage errors
-        }
+        AsyncStorage.multiSet([
+          [PENDING_SEARCH_STORAGE_KEY, JSON.stringify(snapshot)],
+          [PENDING_SEARCH_SHOULD_APPLY_KEY, 'true'],
+        ]).catch(() => undefined);
       },
       clearPendingSearch: () => {
         setPendingSearch(null);
         setShouldApplyPendingSearch(false);
-        try {
-          localStorage.removeItem(PENDING_SEARCH_STORAGE_KEY);
-          localStorage.removeItem(PENDING_SEARCH_SHOULD_APPLY_KEY);
-        } catch {
-          // ignore storage errors
-        }
+        AsyncStorage.multiRemove([PENDING_SEARCH_STORAGE_KEY, PENDING_SEARCH_SHOULD_APPLY_KEY]).catch(() => undefined);
       },
       markPendingSearchConsumed: () => {
         setShouldApplyPendingSearch(false);
-        try {
-          localStorage.setItem(PENDING_SEARCH_SHOULD_APPLY_KEY, 'false');
-        } catch {
-          // ignore storage errors
-        }
+        AsyncStorage.setItem(PENDING_SEARCH_SHOULD_APPLY_KEY, 'false').catch(() => undefined);
       },
     }),
     [pendingSearch, shouldApplyPendingSearch],

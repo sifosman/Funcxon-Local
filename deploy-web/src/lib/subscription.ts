@@ -1,4 +1,3 @@
-// WEB ONLY — deploy-web/src/lib/subscription.ts
 import { supabase } from './supabaseClient';
 
 export type SubscriptionTier = {
@@ -30,31 +29,41 @@ export async function getSubscriptionTiers(): Promise<SubscriptionTier[]> {
 }
 
 export async function getVendorPhotoLimit(vendorId: number): Promise<number> {
-  const { data, error } = await supabase.from('vendors').select('subscription_tier').eq('id', vendorId).single();
+  const { data, error } = await supabase
+    .from('vendors')
+    .select('subscription_tier')
+    .eq('id', vendorId)
+    .single();
 
   if (error) return 5; // fallback to free tier limit
-
-  const { data: tier } = await supabase.rpc('get_vendor_photo_limit', {
-    vendor_tier: data.subscription_tier || 'get_started',
-  });
+  
+  const { data: tier } = await supabase
+    .rpc('get_vendor_photo_limit', { vendor_tier: data.subscription_tier || 'get_started' });
 
   return tier || 5;
 }
 
 export async function getVendorVideoLimit(vendorId: number): Promise<number> {
-  const { data, error } = await supabase.from('vendors').select('subscription_tier').eq('id', vendorId).single();
+  const { data, error } = await supabase
+    .from('vendors')
+    .select('subscription_tier')
+    .eq('id', vendorId)
+    .single();
 
   if (error) return 0;
 
-  const { data: limit } = await supabase.rpc('get_vendor_video_limit', {
-    vendor_tier: data.subscription_tier || 'get_started',
-  });
+  const { data: limit } = await supabase
+    .rpc('get_vendor_video_limit', { vendor_tier: data.subscription_tier || 'get_started' });
 
   return limit || 0;
 }
 
 export async function getVendorPhotoCount(vendorId: number): Promise<number> {
-  const { data, error } = await supabase.from('vendors').select('photo_count').eq('id', vendorId).single();
+  const { data, error } = await supabase
+    .from('vendors')
+    .select('photo_count')
+    .eq('id', vendorId)
+    .single();
 
   if (error) return 0;
   return data?.photo_count || 0;
@@ -71,12 +80,18 @@ export async function decrementVendorPhotoCount(vendorId: number): Promise<void>
 }
 
 export async function canUploadMorePhotos(vendorId: number): Promise<boolean> {
-  const [limit, count] = await Promise.all([getVendorPhotoLimit(vendorId), getVendorPhotoCount(vendorId)]);
+  const [limit, count] = await Promise.all([
+    getVendorPhotoLimit(vendorId),
+    getVendorPhotoCount(vendorId),
+  ]);
   return count < limit;
 }
 
 export async function getRemainingPhotoSlots(vendorId: number): Promise<number> {
-  const [limit, count] = await Promise.all([getVendorPhotoLimit(vendorId), getVendorPhotoCount(vendorId)]);
+  const [limit, count] = await Promise.all([
+    getVendorPhotoLimit(vendorId),
+    getVendorPhotoCount(vendorId),
+  ]);
   return Math.max(0, limit - count);
 }
 

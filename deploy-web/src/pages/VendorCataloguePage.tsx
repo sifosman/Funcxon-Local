@@ -7,8 +7,6 @@ import { uploadFileToStorage } from '../lib/applicationService';
 import { AppAlert } from '../components/AppAlert';
 import { getCatalogueItemLimit, isCatalogueLimitReached } from '../lib/catalogue';
 
-const MAX_IMAGE_SIZE = 10 * 1024 * 1024; // 10MB
-
 type VendorRow = { id: number; name: string; subscription_tier?: string | null; subscription_status?: string | null };
 
 type CatalogueItem = {
@@ -35,8 +33,6 @@ export default function VendorCataloguePage() {
   const [editItem, setEditItem] = useState<CatalogueItem | null>(null);
   const [form, setForm] = useState({ title: '', description: '', price: '', is_active: true });
   const [showForm, setShowForm] = useState(false);
-  const [pickedFile, setPickedFile] = useState<File | null>(null);
-  const [pickedPreview, setPickedPreview] = useState<string | null>(null);
 
   const canAddMoreItems = useMemo(() => !isCatalogueLimitReached(items.length, itemLimit), [items.length, itemLimit]);
 
@@ -71,30 +67,10 @@ export default function VendorCataloguePage() {
       setAlert({ title: 'Catalogue Limit Reached', message: `Your plan allows up to ${itemLimit} catalogue items. Upgrade to add more.`, type: 'warning' });
       return;
     }
-    setEditItem(null); setForm({ title: '', description: '', price: '', is_active: true }); setPickedFile(null); setPickedPreview(null); setShowForm(true);
+    setEditItem(null); setForm({ title: '', description: '', price: '', is_active: true }); setShowForm(true);
   };
-  const openEdit = (item: CatalogueItem) => { setEditItem(item); setForm({ title: item.title, description: item.description || '', price: item.price != null ? String(item.price) : '', is_active: item.is_active }); setPickedFile(null); setPickedPreview(null); setShowForm(true); };
-  const closeForm = () => { setShowForm(false); setEditItem(null); setPickedFile(null); setPickedPreview(null); };
-
-  const handlePickFile = (files: FileList | null) => {
-    if (!files || files.length === 0) return;
-    const file = files[0];
-    if (file.size > MAX_IMAGE_SIZE) {
-      setAlert({ title: 'Image Too Large', message: `${file.name} is ${(file.size / 1024 / 1024).toFixed(1)}MB. Maximum allowed is 10MB.`, type: 'error' });
-      return;
-    }
-    setPickedFile(file);
-    setPickedPreview(URL.createObjectURL(file));
-  };
-
-  const uploadCatalogueImage = async (file: File, itemId: number) => {
-    const result = await uploadFileToStorage('portfolio-images', file, user!.id);
-    if (result.success && result.url) {
-      await supabase.from('vendor_catalogue_items').update({ image_url: result.url }).eq('id', itemId);
-    } else {
-      throw new Error(result.error || 'Upload failed');
-    }
-  };
+  const openEdit = (item: CatalogueItem) => { setEditItem(item); setForm({ title: item.title, description: item.description || '', price: item.price != null ? String(item.price) : '', is_active: item.is_active }); setShowForm(true); };
+  const closeForm = () => { setShowForm(false); setEditItem(null); };
 
   const handleSaveItem = async () => {
     if (!vendor) { setAlert({ title: 'Error', message: 'Create a vendor profile first.', type: 'error' }); return; }
@@ -106,11 +82,9 @@ export default function VendorCataloguePage() {
     try {
       if (editItem) {
         await supabase.from('vendor_catalogue_items').update({ title: form.title.trim(), description: form.description.trim() || null, price, is_active: form.is_active }).eq('id', editItem.id);
-        if (pickedFile) { await uploadCatalogueImage(pickedFile, editItem.id); }
       } else {
         const nextSort = items.length > 0 ? Math.max(...items.map((i) => i.sort_order || 0)) + 1 : 0;
-        const { data: insertedRow } = await supabase.from('vendor_catalogue_items').insert({ vendor_id: vendor.id, title: form.title.trim(), description: form.description.trim() || null, price, currency: 'ZAR', sort_order: nextSort, is_active: form.is_active }).select('id').single();
-        if (pickedFile && insertedRow) { await uploadCatalogueImage(pickedFile, insertedRow.id); }
+        await supabase.from('vendor_catalogue_items').insert({ vendor_id: vendor.id, title: form.title.trim(), description: form.description.trim() || null, price, currency: 'ZAR', sort_order: nextSort, is_active: form.is_active });
       }
       closeForm();
       await load();
@@ -124,13 +98,9 @@ export default function VendorCataloguePage() {
 
   const handleImageUpload = async (itemId: number, files: FileList | null) => {
     if (!files || files.length === 0 || !user?.id) return;
-    const file = files[0];
-    if (file.size > MAX_IMAGE_SIZE) {
-      setAlert({ title: 'Image Too Large', message: `${file.name} is ${(file.size / 1024 / 1024).toFixed(1)}MB. Maximum allowed is 10MB.`, type: 'error' });
-      return;
-    }
     setUploadingImage(itemId);
     try {
+      const file = files[0];
       const result = await uploadFileToStorage('portfolio-images', file, user.id);
       if (result.success && result.url) {
         await supabase.from('vendor_catalogue_items').update({ image_url: result.url }).eq('id', itemId);
@@ -180,24 +150,6 @@ export default function VendorCataloguePage() {
                     <div className="md:col-span-2">
                       <label className="mb-1 block text-xs font-semibold uppercase tracking-wider text-on-surface-variant">Description</label>
                       <textarea value={form.description} onChange={(e) => setForm((p) => ({ ...p, description: e.target.value }))} rows={3} className="w-full rounded-lg border border-outline-variant px-4 py-2 text-sm outline-none focus:border-primary" />
-                    </div>
-                    <div className="md:col-span-2">
-                      <label className="mb-1 block text-xs font-semibold uppercase tracking-wider text-on-surface-variant">Image (max 10MB)</label>
-                      <div className="flex items-center gap-4">
-                        <label className="flex h-24 w-24 cursor-pointer items-center justify-center overflow-hidden rounded-lg border border-outline-variant bg-surface-container">
-                          {pickedPreview ? (
-                            <img src={pickedPreview} alt="" className="h-full w-full object-cover" />
-                          ) : editItem?.image_url ? (
-                            <img src={editItem.image_url} alt="" className="h-full w-full object-cover" />
-                          ) : (
-                            <Upload className="h-5 w-5 text-on-surface-variant" />
-                          )}
-                          <input type="file" accept="image/*" onChange={(e) => handlePickFile(e.target.files)} className="hidden" />
-                        </label>
-                        {pickedFile && (
-                          <button onClick={() => { setPickedFile(null); setPickedPreview(null); }} className="text-sm text-error hover:underline">Remove image</button>
-                        )}
-                      </div>
                     </div>
                   </div>
                   <div className="mt-4 flex items-center gap-3">

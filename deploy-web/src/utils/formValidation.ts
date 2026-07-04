@@ -1,4 +1,3 @@
-// WEB ONLY — deploy-web/src/utils/formValidation.ts
 import { Step1Data, Step2Data, Step3Data, Step4Data } from '../context/ApplicationFormContext';
 
 export function validateEmail(email: string): boolean {
@@ -67,10 +66,7 @@ export function validateStep1(data: Step1Data): ValidationResult {
   };
 }
 
-export function validateStep2(
-  data: Step2Data,
-  portfolioType: 'vendors' | 'venues' | null,
-): ValidationResult {
+export function validateStep2(data: Step2Data, portfolioType: 'vendors' | 'venues' | null): ValidationResult {
   const errors: Record<string, string> = {};
 
   if (portfolioType === 'venues') {

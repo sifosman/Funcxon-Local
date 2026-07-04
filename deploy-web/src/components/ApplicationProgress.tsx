@@ -1,4 +1,6 @@
-// WEB ONLY — deploy-web/src/components/ApplicationProgress.tsx
+import { View, Text } from 'react-native';
+import { colors, spacing } from '../theme';
+
 interface ApplicationProgressProps {
   currentStep: number;
   totalSteps?: number;
@@ -6,27 +8,27 @@ interface ApplicationProgressProps {
 
 export function ApplicationProgress({ currentStep, totalSteps = 4 }: ApplicationProgressProps) {
   return (
-    <div className="flex items-center gap-1.5">
+    <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
       {Array.from({ length: totalSteps }, (_, index) => {
         const step = index + 1;
         const isCompleted = step < currentStep;
         const isCurrent = step === currentStep;
+        const isPending = step > currentStep;
 
         return (
-          <div
+          <View
             key={step}
-            className={cn(
-              'h-2 w-8 rounded-full transition-colors',
-              isCompleted || isCurrent ? 'bg-primary' : 'bg-surface-container-highest',
-            )}
+            style={{
+              width: 32,
+              height: 8,
+              borderRadius: 4,
+              backgroundColor: isCompleted || isCurrent 
+                ? colors.textPrimary 
+                : colors.borderSubtle,
+            }}
           />
         );
       })}
-    </div>
+    </View>
   );
-}
-
-// Simple local cn helper until a shared utility exists
-function cn(...classes: Array<string | false | null | undefined>) {
-  return classes.filter(Boolean).join(' ');
 }

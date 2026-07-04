@@ -1,21 +1,15 @@
 /**
  * HubSpot CMS Blog integration
  *
- * Uses Vercel serverless function proxy to avoid CORS issues when calling HubSpot API from browser.
- * The serverless function stores the token server-side.
- * Falls back to Supabase blog_posts table when the proxy is unavailable.
+ * Auth: Generate a Service Key in HubSpot Settings > Account Defaults > Service Keys
+ * (Private App tokens also work, but Service Keys are HubSpot's recommended path.)
+ * Required scope for blog read access: content
  */
-
+import { getEnv } from './env';
 import { supabase } from './supabaseClient';
 
-const getProxyUrl = (): string => {
-  // On web, use relative path to the same domain
-  if (typeof window !== 'undefined') {
-    return '/api/hubspot-blog-proxy';
-  }
-  // On native, use the deployed Vercel API
-  return 'https://funxon-web.vercel.app/api/hubspot-blog-proxy';
-};
+const HUBSPOT_API_BASE = 'https://api.hubapi.com/cms/blogs/2026-03/posts';
+const HUBSPOT_ACCESS_TOKEN = getEnv('EXPO_PUBLIC_HUBSPOT_ACCESS_TOKEN') || getEnv('HUBSPOT_ACCESS_TOKEN');
 
 export interface HubSpotBlogPost {
   id: string;
@@ -96,160 +90,168 @@ function mapHubSpotToAppPost(post: HubSpotBlogPost): AppBlogPost {
   };
 }
 
-export async function fetchHubSpotBlogPosts(limit = 20): Promise<AppBlogPost[]> {
-  const proxyUrl = getProxyUrl();
-
-  const response = await fetch(
-    `${proxyUrl}?action=list&limit=${limit}`,
-    {
-      headers: {
-        'Content-Type': 'application/json',
-      },
-    }
-  );
-
-  if (!response.ok) {
-    const errorData = await response.json().catch(() => ({}));
-    throw new Error(errorData.error || `HubSpot API error: ${response.status} ${response.statusText}`);
-  }
-
-  const data = await response.json();
-  const posts: HubSpotBlogPost[] = data.results || [];
-  return posts.map(mapHubSpotToAppPost);
-}
-
-export async function fetchHubSpotBlogPostBySlug(slug: string): Promise<AppBlogPost | null> {
-  const proxyUrl = getProxyUrl();
-
-  const response = await fetch(
-    `${proxyUrl}?action=slug&slug=${encodeURIComponent(`blog/${slug}`)}`,
-    {
-      headers: {
-        'Content-Type': 'application/json',
-      },
-    }
-  );
-
-  if (!response.ok) {
-    const errorData = await response.json().catch(() => ({}));
-    throw new Error(errorData.error || `HubSpot API error: ${response.status} ${response.statusText}`);
-  }
-
-  const data = await response.json();
-  const post: HubSpotBlogPost | undefined = data.results?.[0];
-  if (!post) return null;
-  return mapHubSpotToAppPost(post);
-}
-
-export async function fetchHubSpotAllSlugs(): Promise<{ id: string; slug: string; title: string }[]> {
-  const proxyUrl = getProxyUrl();
-
-  const response = await fetch(
-    `${proxyUrl}?action=slugs`,
-    {
-      headers: {
-        'Content-Type': 'application/json',
-      },
-    }
-  );
-
-  if (!response.ok) {
-    const errorData = await response.json().catch(() => ({}));
-    throw new Error(errorData.error || `HubSpot API error: ${response.status} ${response.statusText}`);
-  }
-
-  const data = await response.json();
-  const posts: HubSpotBlogPost[] = data.results || [];
-  return posts.map((p) => ({
-    id: p.id,
-    slug: normalizeSlug(p.slug),
-    title: p.name,
-  }));
-}
-
-export async function fetchHubSpotRelatedPosts(currentId: string, limit = 2): Promise<AppBlogPost[]> {
-  const allPosts = await fetchHubSpotBlogPosts(20);
-  return allPosts.filter((p) => p.id !== currentId).slice(0, limit);
-}
-
-// ── Supabase fallback ──
-// Used when the HubSpot proxy is unavailable (e.g. dev mode without API key).
-// Reads from the public.blog_posts table.
-
-interface SupabaseBlogPost {
-  id: number;
-  title: string;
-  slug: string;
-  excerpt?: string;
-  content?: string;
-  cover_image_url?: string;
-  author_name?: string;
-  published_at?: string;
-}
-
-function mapSupabaseToAppPost(post: SupabaseBlogPost): AppBlogPost {
+function mapSupabaseToAppPost(post: any): AppBlogPost {
   return {
-    id: String(post.id),
+    id: post.id,
     title: post.title,
     slug: post.slug,
     excerpt: post.excerpt || '',
     content: post.content || '',
     cover_image_url: post.cover_image_url || null,
-    author_name: post.author_name || 'Funxon Team',
-    category: 'Blog',
-    published_at: post.published_at || '',
-    read_time_minutes: Math.max(1, Math.ceil((post.content || '').split(/\s+/).length / 200)),
-    tags: [],
+    author_name: post.author_name || 'Funxons Team',
+    category: post.category || 'Blog',
+    published_at: post.published_at,
+    read_time_minutes: post.read_time_minutes || 5,
+    author_avatar_url: post.author_avatar_url || null,
+    tags: post.tags || [],
   };
 }
 
-export async function fetchBlogPosts(limit = 20): Promise<AppBlogPost[]> {
+async function fetchSupabaseBlogPosts(limit = 20): Promise<AppBlogPost[]> {
+  const { data, error } = await supabase
+    .from('blog_posts')
+    .select('*')
+    .eq('is_published', true)
+    .order('published_at', { ascending: false })
+    .limit(limit);
+
+  if (error) {
+    throw new Error(`Supabase blog fetch error: ${error.message}`);
+  }
+
+  return (data || []).map(mapSupabaseToAppPost);
+}
+
+async function fetchSupabaseBlogPostBySlug(slug: string): Promise<AppBlogPost | null> {
+  const { data, error } = await supabase
+    .from('blog_posts')
+    .select('*')
+    .eq('slug', slug)
+    .eq('is_published', true)
+    .single();
+
+  if (error) {
+    if (error.code === 'PGRST116') return null;
+    throw new Error(`Supabase blog fetch error: ${error.message}`);
+  }
+
+  return data ? mapSupabaseToAppPost(data) : null;
+}
+
+async function fetchSupabaseAllSlugs(): Promise<{ id: string; slug: string; title: string }[]> {
+  const { data, error } = await supabase
+    .from('blog_posts')
+    .select('id, slug, title')
+    .eq('is_published', true)
+    .order('published_at', { ascending: false });
+
+  if (error) {
+    throw new Error(`Supabase blog fetch error: ${error.message}`);
+  }
+
+  return (data || []).map((p: any) => ({
+    id: p.id,
+    slug: p.slug,
+    title: p.title,
+  }));
+}
+
+export async function fetchHubSpotBlogPosts(limit = 20): Promise<AppBlogPost[]> {
+  if (!HUBSPOT_ACCESS_TOKEN) {
+    console.warn('HubSpot access token not configured; falling back to Supabase blog_posts');
+    return fetchSupabaseBlogPosts(limit);
+  }
+
   try {
-    return await fetchHubSpotBlogPosts(limit);
-  } catch {
-    const { data, error } = await supabase
-      .from('blog_posts')
-      .select('id, title, slug, excerpt, content, cover_image_url, author_name, published_at')
-      .order('published_at', { ascending: false })
-      .limit(limit);
-    if (error) throw error;
-    return (data || []).map(mapSupabaseToAppPost);
+    const response = await fetch(
+      `${HUBSPOT_API_BASE}?state__eq=PUBLISHED&limit=${limit}&sort=-publishDate`,
+      {
+        headers: {
+          Authorization: `Bearer ${HUBSPOT_ACCESS_TOKEN}`,
+          'Content-Type': 'application/json',
+        },
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error(`HubSpot API error: ${response.status} ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    const posts: HubSpotBlogPost[] = data.results || [];
+    return posts.map(mapHubSpotToAppPost);
+  } catch (err) {
+    console.warn('HubSpot fetch failed; falling back to Supabase blog_posts:', err);
+    return fetchSupabaseBlogPosts(limit);
   }
 }
 
-export async function fetchBlogPostBySlug(slug: string): Promise<AppBlogPost | null> {
+export async function fetchHubSpotBlogPostBySlug(slug: string): Promise<AppBlogPost | null> {
+  if (!HUBSPOT_ACCESS_TOKEN) {
+    console.warn('HubSpot access token not configured; falling back to Supabase blog_posts');
+    return fetchSupabaseBlogPostBySlug(slug);
+  }
+
   try {
-    return await fetchHubSpotBlogPostBySlug(slug);
-  } catch {
-    const { data, error } = await supabase
-      .from('blog_posts')
-      .select('id, title, slug, excerpt, content, cover_image_url, author_name, published_at')
-      .eq('slug', slug)
-      .maybeSingle();
-    if (error) throw error;
-    if (!data) return null;
-    return mapSupabaseToAppPost(data);
+    const response = await fetch(
+      `${HUBSPOT_API_BASE}?slug__eq=${encodeURIComponent(slug)}&state__eq=PUBLISHED&limit=1`,
+      {
+        headers: {
+          Authorization: `Bearer ${HUBSPOT_ACCESS_TOKEN}`,
+          'Content-Type': 'application/json',
+        },
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error(`HubSpot API error: ${response.status} ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    const post: HubSpotBlogPost | undefined = data.results?.[0];
+    if (!post) return null;
+    return mapHubSpotToAppPost(post);
+  } catch (err) {
+    console.warn('HubSpot fetch failed; falling back to Supabase blog_posts:', err);
+    return fetchSupabaseBlogPostBySlug(slug);
   }
 }
 
-export async function fetchAllSlugs(): Promise<{ id: string; slug: string; title: string }[]> {
+export async function fetchHubSpotAllSlugs(): Promise<{ id: string; slug: string; title: string }[]> {
+  if (!HUBSPOT_ACCESS_TOKEN) {
+    console.warn('HubSpot access token not configured; falling back to Supabase blog_posts');
+    return fetchSupabaseAllSlugs();
+  }
+
   try {
-    return await fetchHubSpotAllSlugs();
-  } catch {
-    const { data, error } = await supabase
-      .from('blog_posts')
-      .select('id, title, slug')
-      .order('published_at', { ascending: false });
-    if (error) throw error;
-    return (data || []).map((p: any) => ({ id: String(p.id), slug: p.slug, title: p.title }));
+    const response = await fetch(
+      `${HUBSPOT_API_BASE}?state__eq=PUBLISHED&limit=100&sort=-publishDate`,
+      {
+        headers: {
+          Authorization: `Bearer ${HUBSPOT_ACCESS_TOKEN}`,
+          'Content-Type': 'application/json',
+        },
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error(`HubSpot API error: ${response.status} ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    const posts: HubSpotBlogPost[] = data.results || [];
+    return posts.map((p) => ({
+      id: p.id,
+      slug: normalizeSlug(p.slug),
+      title: p.name,
+    }));
+  } catch (err) {
+    console.warn('HubSpot fetch failed; falling back to Supabase blog_posts:', err);
+    return fetchSupabaseAllSlugs();
   }
 }
 
-export async function fetchRelatedPosts(currentId: string, limit = 2): Promise<AppBlogPost[]> {
-  try {
-    return await fetchHubSpotRelatedPosts(currentId, limit);
-  } catch {
-    const posts = await fetchBlogPosts(limit + 1);
-    return posts.filter((p) => p.id !== currentId).slice(0, limit);
-  }
+export async function fetchHubSpotRelatedPosts(currentId: string, limit = 2): Promise<AppBlogPost[]> {
+  const allPosts = await fetchHubSpotBlogPosts(20);
+  return allPosts.filter((p) => p.id !== currentId).slice(0, limit);
 }

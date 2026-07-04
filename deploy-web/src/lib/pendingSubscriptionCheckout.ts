@@ -1,23 +1,16 @@
-// WEB ONLY — deploy-web/src/lib/pendingSubscriptionCheckout.ts
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import type { ProfileStackParamList } from '../navigation/ProfileNavigator';
 
 const PENDING_SUBSCRIPTION_CHECKOUT_KEY = 'pending_subscription_checkout';
 
-export type PendingSubscriptionCheckoutParams = {
-  vendorId?: number;
-  venueId?: number;
-  planId?: number;
-  planKey?: string;
-  tierName?: string;
-  billingPeriod?: 'monthly' | 'yearly' | '6_month' | '12_month';
-  returnPath?: string;
-};
+type PendingSubscriptionCheckoutParams = ProfileStackParamList['SubscriptionCheckout'];
 
-export function savePendingSubscriptionCheckout(params: PendingSubscriptionCheckoutParams) {
-  localStorage.setItem(PENDING_SUBSCRIPTION_CHECKOUT_KEY, JSON.stringify(params));
+export async function savePendingSubscriptionCheckout(params: PendingSubscriptionCheckoutParams) {
+  await AsyncStorage.setItem(PENDING_SUBSCRIPTION_CHECKOUT_KEY, JSON.stringify(params));
 }
 
-export function getPendingSubscriptionCheckout(): PendingSubscriptionCheckoutParams | null {
-  const rawValue = localStorage.getItem(PENDING_SUBSCRIPTION_CHECKOUT_KEY);
+export async function getPendingSubscriptionCheckout(): Promise<PendingSubscriptionCheckoutParams | null> {
+  const rawValue = await AsyncStorage.getItem(PENDING_SUBSCRIPTION_CHECKOUT_KEY);
   if (!rawValue) {
     return null;
   }
@@ -25,11 +18,11 @@ export function getPendingSubscriptionCheckout(): PendingSubscriptionCheckoutPar
   try {
     return JSON.parse(rawValue) as PendingSubscriptionCheckoutParams;
   } catch {
-    localStorage.removeItem(PENDING_SUBSCRIPTION_CHECKOUT_KEY);
+    await AsyncStorage.removeItem(PENDING_SUBSCRIPTION_CHECKOUT_KEY);
     return null;
   }
 }
 
-export function clearPendingSubscriptionCheckout() {
-  localStorage.removeItem(PENDING_SUBSCRIPTION_CHECKOUT_KEY);
+export async function clearPendingSubscriptionCheckout() {
+  await AsyncStorage.removeItem(PENDING_SUBSCRIPTION_CHECKOUT_KEY);
 }

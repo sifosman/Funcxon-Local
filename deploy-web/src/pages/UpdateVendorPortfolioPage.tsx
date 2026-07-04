@@ -5,7 +5,7 @@ import { useAuth } from '../auth/AuthContext';
 import { supabase } from '../lib/supabaseClient';
 import { uploadFileToStorage } from '../lib/applicationService';
 import { createGalleryMediaRecord } from '../lib/mediaUpload';
-import { getVendorPhotoLimit, getVendorVideoLimit } from '../lib/subscription';
+import { getVendorPhotoLimit } from '../lib/subscription';
 import { AddressAutocompleteInput } from '../components/AddressAutocompleteInput';
 import { AppAlert } from '../components/AppAlert';
 import { normalizePhoneNumber } from '../utils/phoneNormalization';
@@ -18,7 +18,7 @@ export default function UpdateVendorPortfolioPage() {
   const [saved, setSaved] = useState(false);
   const [vendorId, setVendorId] = useState<number | null>(null);
   const [photoLimit, setPhotoLimit] = useState(8);
-  const [videoLimit, setVideoLimit] = useState(0);
+  const [videoLimit] = useState(3);
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [additionalPhotos, setAdditionalPhotos] = useState<string[]>([]);
   const [videos, setVideos] = useState<string[]>([]);
@@ -52,8 +52,6 @@ export default function UpdateVendorPortfolioPage() {
           setAdditionalPhotos(data.additional_photos || []);
           const limit = await getVendorPhotoLimit(data.id);
           setPhotoLimit(limit);
-          const videoLimit = await getVendorVideoLimit(data.id);
-          setVideoLimit(videoLimit);
           const { data: galleryRows } = await supabase
             .from('gallery_media')
             .select('media_url, media_type')

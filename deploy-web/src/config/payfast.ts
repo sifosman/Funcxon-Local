@@ -1,7 +1,7 @@
 // PayFast Payment Gateway Configuration
 // Docs: https://developers.payfast.co.za/docs
 
-import { PAYFAST_MERCHANT_ID, PAYFAST_MERCHANT_KEY, PAYFAST_PASSPHRASE, PAYFAST_SANDBOX } from '../utils/env';
+import { PAYFAST_SANDBOX, PAYFAST_MERCHANT_ID, PAYFAST_MERCHANT_KEY, PAYFAST_PASSPHRASE } from '../utils/env';
 import { md5 } from '../utils/md5';
 
 const SANDBOX_TEST_MERCHANT_ID = '10000100';

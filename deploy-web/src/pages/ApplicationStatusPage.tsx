@@ -84,7 +84,6 @@ export default function ApplicationStatusPage() {
       step3: {
         images: (application.portfolio_images ?? []).map((uri) => ({ uri, name: 'image', type: 'image/jpeg' })),
         videos: (application.portfolio_videos ?? []).map((uri) => ({ uri, name: 'video', type: 'video/mp4' })),
-        documents: (application.business_documents ?? []).map((uri) => ({ uri, name: 'document', type: 'application/octet-stream', docType: 'id_copy' as const })),
       },
       step4: {
         subscriptionPlan: application.subscription_tier || '',

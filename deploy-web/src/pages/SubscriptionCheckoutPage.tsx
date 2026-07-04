@@ -6,7 +6,6 @@ import { buildPayFastPaymentData, getPayFastCheckoutUrl } from '../config/payfas
 import { supabase, SUPABASE_URL } from '../lib/supabaseClient';
 import { getSubscriptionTiers, type SubscriptionTier } from '../lib/subscription';
 import { getLatestUserApplicationByType, updateUserRoleToVendor } from '../lib/applicationService';
-import { createGalleryMediaRecord } from '../lib/mediaUpload';
 
 const SOUTH_AFRICAN_PROVINCES = [
   'Eastern Cape',
@@ -251,39 +250,12 @@ export default function SubscriptionCheckoutPage() {
       .eq('user_id', payload.user_id)
       .maybeSingle();
 
-    let recordId: number | null = null;
-
     if (existing) {
       const { error } = await supabase.from(table).update(payload).eq('id', existing.id);
       if (error) throw error;
-      recordId = existing.id;
     } else {
-      const { data: inserted, error } = await supabase.from(table).insert(payload).select('id').single();
+      const { error } = await supabase.from(table).insert(payload);
       if (error) throw error;
-      recordId = inserted?.id ?? null;
-    }
-
-    return recordId;
-  };
-
-  const createGalleryMediaFromApplication = async (recordId: number | null, isVenue: boolean) => {
-    if (!recordId || !application) return;
-    const owner = isVenue ? { venueId: recordId } : { vendorId: recordId };
-    const images = application.portfolio_images ?? [];
-    const videos = application.portfolio_videos ?? [];
-    for (const imageUrl of images) {
-      try {
-        await createGalleryMediaRecord(imageUrl, 'image', owner);
-      } catch (e) {
-        console.error('Failed to create gallery_media for image:', e);
-      }
-    }
-    for (const videoUrl of videos) {
-      try {
-        await createGalleryMediaRecord(videoUrl, 'video', owner);
-      } catch (e) {
-        console.error('Failed to create gallery_media for video:', e);
-      }
     }
   };
 
@@ -357,12 +329,10 @@ export default function SubscriptionCheckoutPage() {
 
       if (productType === 'venue') {
         const venuePayload = buildVenuePayload({ subscription_status: 'active' });
-        const venueId = await upsertSubscriptionRecord(venuePayload, 'venue_listings');
-        await createGalleryMediaFromApplication(venueId, true);
+        await upsertSubscriptionRecord(venuePayload, 'venue_listings');
       } else {
         const vendorPayload = buildVendorPayload({ subscription_status: 'active' });
-        const vendorId = await upsertSubscriptionRecord(vendorPayload, 'vendors');
-        await createGalleryMediaFromApplication(vendorId, false);
+        await upsertSubscriptionRecord(vendorPayload, 'vendors');
       }
 
       await finalizeActivation();
@@ -442,16 +412,6 @@ export default function SubscriptionCheckoutPage() {
     try {
       const userId = await getUserId();
       if (!userId || !application) throw new Error('Missing user or application details');
-
-      if (productType === 'venue') {
-        const venuePayload = buildVenuePayload({ subscription_status: 'active' });
-        const venueId = await upsertSubscriptionRecord(venuePayload, 'venue_listings');
-        await createGalleryMediaFromApplication(venueId, true);
-      } else {
-        const vendorPayload = buildVendorPayload({ subscription_status: 'active' });
-        const vendorId = await upsertSubscriptionRecord(vendorPayload, 'vendors');
-        await createGalleryMediaFromApplication(vendorId, false);
-      }
 
       await finalizeActivation();
       const nextRoute = productType === 'venue' ? '/portfolio/venue' : '/portfolio/vendor';

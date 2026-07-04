@@ -12,8 +12,7 @@ export default function CreateReviewPage() {
   const { user } = useAuth();
   const [rating, setRating] = useState(0);
   const [hoverRating, setHoverRating] = useState(0);
-  const [reviewTitle, setReviewTitle] = useState('');
-  const [reviewText, setReviewText] = useState('');
+  const [comment, setComment] = useState('');
   const [submitted, setSubmitted] = useState(false);
   const [saving, setSaving] = useState(false);
   const [alert, setAlert] = useState<{ title: string; message: string; type: 'error' | 'success' } | null>(null);
@@ -25,11 +24,9 @@ export default function CreateReviewPage() {
     try {
       let payload: Record<string, unknown> = {
         rating,
-        title: reviewTitle.trim() || null,
-        review_text: reviewText.trim() || null,
+        comment,
         is_verified: false,
         review_source: 'public',
-        status: 'pending',
       };
       if (type === 'vendor') {
         const { data: internalUser } = await supabase
@@ -118,22 +115,13 @@ export default function CreateReviewPage() {
               </div>
             </div>
             <div>
-              <label className="mb-1 block text-sm font-medium text-on-surface">Title (optional)</label>
-              <input
-                type="text"
-                value={reviewTitle}
-                onChange={e => setReviewTitle(e.target.value)}
-                className="fx-input"
-                placeholder="e.g. Great experience"
-              />
-            </div>
-            <div>
-              <label className="mb-1 block text-sm font-medium text-on-surface">Review (optional)</label>
+              <label className="mb-1 block text-sm font-medium text-on-surface">Comment</label>
               <textarea
-                value={reviewText}
-                onChange={e => setReviewText(e.target.value)}
+                value={comment}
+                onChange={e => setComment(e.target.value)}
                 className="fx-input min-h-[120px]"
                 placeholder="Share your experience..."
+                required
               />
             </div>
             <button type="submit" disabled={rating === 0 || saving} className="fx-btn-primary w-full disabled:opacity-50">
