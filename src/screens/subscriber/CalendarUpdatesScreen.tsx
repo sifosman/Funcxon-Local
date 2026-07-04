@@ -123,7 +123,7 @@ export default function CalendarUpdatesScreen() {
 
     const groupedEvents = events.reduce<Record<string, CalendarEvent[]>>((acc, event) => {
         const month = event.event_date
-            ? new Date(event.event_date).toLocaleDateString('en-ZA', { year: 'numeric', month: 'long' })
+            ? new Date(event.event_date).toLocaleDateString('en-ZA', { month: 'long', year: 'numeric' })
             : 'No Date';
         if (!acc[month]) acc[month] = [];
         acc[month].push(event);

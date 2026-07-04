@@ -9,8 +9,6 @@ import ThemedAlert from '../components/ThemedAlert';
 
 type PlannerProps = NativeStackScreenProps<AttendeeStackParamList, 'Planner'>;
 
-const pieColors = ['#0F766E', '#3B82F6', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899', '#14B8A6', '#F97316'];
-
 function WebDateInput({
   value,
   onChange,
@@ -43,12 +41,12 @@ function BudgetPieChart({
   budgetItems,
   total,
 }: {
-  budgetItems: { name: string; total: number }[];
+  budgetItems: { name: string; total: number; color?: string }[];
   total: number;
 }) {
   const activeItems = budgetItems.filter((b) => b.total > 0);
   let cumulative = 0;
-  const segments = activeItems.map((item, i) => {
+  const segments = activeItems.map((item) => {
     const startAngle = (cumulative / total) * 360;
     cumulative += item.total;
     const endAngle = (cumulative / total) * 360;
@@ -59,7 +57,7 @@ function BudgetPieChart({
     const x2 = 50 + 45 * Math.cos(endRad);
     const y2 = 50 + 45 * Math.sin(endRad);
     const largeArc = endAngle - startAngle > 180 ? 1 : 0;
-    const color = pieColors[i % pieColors.length];
+    const color = item.color || colors.primary;
     return {
       path: `M50,50 L${x1.toFixed(2)},${y1.toFixed(2)} A45,45 0 ${largeArc},1 ${x2.toFixed(2)},${y2.toFixed(2)} Z`,
       color,
@@ -221,25 +219,6 @@ export default function PlannerScreen({ navigation }: PlannerProps) {
               />
             </View>
             <View>
-              <Text style={{ ...typography.caption, color: colors.textMuted }}>My Event Theme</Text>
-              <TextInput
-                value={eventDetails.theme}
-                onChangeText={(value) => setEventDetails((prev) => ({ ...prev, theme: value }))}
-                placeholder="Enter event theme"
-                placeholderTextColor={colors.textMuted}
-                style={{
-                  marginTop: spacing.xs,
-                  borderWidth: 1,
-                  borderColor: colors.borderSubtle,
-                  borderRadius: radii.md,
-                  paddingHorizontal: spacing.md,
-                  paddingVertical: spacing.sm,
-                  backgroundColor: colors.surfaceMuted,
-                  color: colors.textPrimary,
-                }}
-              />
-            </View>
-            <View>
               <Text style={{ ...typography.caption, color: colors.textMuted }}>My Event Type</Text>
               <TouchableOpacity
                 onPress={() => setShowEventTypeModal(true)}
@@ -324,8 +303,230 @@ export default function PlannerScreen({ navigation }: PlannerProps) {
           }}
         >
           <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.md }}>
+            <MaterialIcons name="savings" size={20} color={colors.primary} style={{ marginRight: spacing.sm }} />
+            <Text style={{ ...typography.titleMedium, color: colors.textPrimary }}>Budget</Text>
+          </View>
+          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.md }}>
+            {/* Pie Chart */}
+            {budgetTotals.total > 0 && (
+              <View style={{ width: 110, height: 110, marginRight: spacing.md }}>
+                <BudgetPieChart budgetItems={budgetItems} total={budgetTotals.total} />
+              </View>
+            )}
+
+            {/* Budget Summary */}
+            <View style={{ flex: 1 }}>
+              <Text style={{ ...typography.caption, color: colors.textMuted }}>Total Budget:</Text>
+              <Text style={{ ...typography.bodySemiBold, color: colors.textPrimary }}>
+                R {budgetTotals.total.toLocaleString('en-ZA')}
+              </Text>
+              <Text style={{ ...typography.caption, color: colors.textMuted, marginTop: spacing.xs }}>Total Spent:</Text>
+              <Text style={{ ...typography.bodySemiBold, color: colors.textPrimary }}>
+                R {budgetTotals.spent.toLocaleString('en-ZA')}
+              </Text>
+              <Text style={{ ...typography.caption, color: colors.textMuted, marginTop: spacing.xs }}>Remaining:</Text>
+              <Text style={{ ...typography.bodySemiBold, color: '#16A34A' }}>
+                R {budgetTotals.remaining.toLocaleString('en-ZA')}
+              </Text>
+            </View>
+          </View>
+
+          {budgetItems.map((item, idx) => {
+            const progress = item.total === 0 ? 0 : Math.min(item.spent / item.total, 1);
+            return (
+              <View
+                key={`${item.name}-${idx}`}
+                style={{
+                  borderWidth: 1,
+                  borderColor: colors.borderSubtle,
+                  borderRadius: radii.md,
+                  padding: spacing.md,
+                  marginBottom: spacing.sm,
+                  backgroundColor: colors.surfaceMuted,
+                }}
+              >
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.xs }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                    <View
+                      style={{
+                        width: 8,
+                        height: 8,
+                        borderRadius: radii.full,
+                        backgroundColor: item.color || colors.primary,
+                        marginRight: spacing.sm,
+                      }}
+                    />
+                    <Text style={{ ...typography.body, color: colors.textPrimary }}>{item.name}</Text>
+                  </View>
+                  <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                    <Text style={{ ...typography.caption, color: colors.textSecondary, marginRight: spacing.sm }}>
+                      R{item.spent.toLocaleString('en-ZA')} / R{item.total.toLocaleString('en-ZA')}
+                    </Text>
+                    <TouchableOpacity onPress={() => handleEditBudget(idx)} style={{ marginRight: spacing.xs }}>
+                      <MaterialIcons name="edit" size={16} color={colors.primary} />
+                    </TouchableOpacity>
+                    <TouchableOpacity onPress={() => handleDeleteBudgetItem(idx)}>
+                      <MaterialIcons name="delete" size={16} color={colors.textMuted} />
+                    </TouchableOpacity>
+                  </View>
+                </View>
+                <View style={{ height: 6, backgroundColor: colors.borderSubtle, borderRadius: radii.full }}>
+                  <View
+                    style={{
+                      height: 6,
+                      width: `${progress * 100}%`,
+                      backgroundColor: item.color || colors.primary,
+                      borderRadius: radii.full,
+                    }}
+                  />
+                </View>
+              </View>
+            );
+          })}
+
+          <TouchableOpacity
+            onPress={handleAddBudgetItem}
+            style={{
+              marginTop: spacing.sm,
+              alignItems: 'center',
+              paddingVertical: spacing.sm,
+              borderRadius: radii.md,
+              borderWidth: 1,
+              borderColor: colors.borderSubtle,
+              backgroundColor: colors.surface,
+            }}
+          >
+            <Text style={{ ...typography.bodySemiBold, color: colors.textPrimary }}>+ Add Budget Item</Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* Edit Budget Modal */}
+        <Modal visible={editingBudgetIdx !== null} transparent animationType="fade" onRequestClose={() => setEditingBudgetIdx(null)}>
+          <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)' }}>
+            <ScrollView
+              contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', alignItems: 'center', padding: spacing.lg }}
+              keyboardShouldPersistTaps="handled"
+            >
+              <View style={{ backgroundColor: colors.surface, borderRadius: radii.lg, padding: spacing.lg, width: '100%', maxWidth: 400 }}>
+                <Text style={{ ...typography.titleMedium, color: colors.textPrimary, marginBottom: spacing.md }}>Edit Budget Item</Text>
+                <Text style={{ ...typography.caption, color: colors.textMuted, marginBottom: spacing.xs }}>Name</Text>
+                <TextInput
+                  value={editBudgetForm.name}
+                  onChangeText={(v) => setEditBudgetForm((p) => ({ ...p, name: v }))}
+                  placeholder="Item name"
+                  placeholderTextColor={colors.textMuted}
+                  style={{
+                    borderWidth: 1,
+                    borderColor: colors.borderSubtle,
+                    borderRadius: radii.md,
+                    paddingHorizontal: spacing.md,
+                    paddingVertical: spacing.sm,
+                    backgroundColor: colors.surfaceMuted,
+                    color: colors.textPrimary,
+                    marginBottom: spacing.md,
+                  }}
+                />
+                <Text style={{ ...typography.caption, color: colors.textMuted, marginBottom: spacing.xs }}>Total Budget (R)</Text>
+                <TextInput
+                  value={editBudgetForm.total}
+                  onChangeText={(v) => setEditBudgetForm((p) => ({ ...p, total: v }))}
+                  placeholder="0"
+                  keyboardType="numeric"
+                  placeholderTextColor={colors.textMuted}
+                  style={{
+                    borderWidth: 1,
+                    borderColor: colors.borderSubtle,
+                    borderRadius: radii.md,
+                    paddingHorizontal: spacing.md,
+                    paddingVertical: spacing.sm,
+                    backgroundColor: colors.surfaceMuted,
+                    color: colors.textPrimary,
+                    marginBottom: spacing.md,
+                  }}
+                />
+                <Text style={{ ...typography.caption, color: colors.textMuted, marginBottom: spacing.xs }}>Amount Spent (R)</Text>
+                <TextInput
+                  value={editBudgetForm.spent}
+                  onChangeText={(v) => setEditBudgetForm((p) => ({ ...p, spent: v }))}
+                  placeholder="0"
+                  keyboardType="numeric"
+                  placeholderTextColor={colors.textMuted}
+                  style={{
+                    borderWidth: 1,
+                    borderColor: colors.borderSubtle,
+                    borderRadius: radii.md,
+                    paddingHorizontal: spacing.md,
+                    paddingVertical: spacing.sm,
+                    backgroundColor: colors.surfaceMuted,
+                    color: colors.textPrimary,
+                    marginBottom: spacing.md,
+                  }}
+                />
+                <Text style={{ ...typography.caption, color: colors.textMuted, marginBottom: spacing.xs }}>Balance Remaining (R)</Text>
+                <View
+                  style={{
+                    borderWidth: 1,
+                    borderColor: colors.borderSubtle,
+                    borderRadius: radii.md,
+                    paddingHorizontal: spacing.md,
+                    paddingVertical: spacing.sm,
+                    backgroundColor: colors.surfaceMuted,
+                    marginBottom: spacing.md,
+                  }}
+                >
+                  <Text style={{ ...typography.body, color: colors.textPrimary }}>
+                    R{((parseFloat(editBudgetForm.total) || 0) - (parseFloat(editBudgetForm.spent) || 0)).toLocaleString('en-ZA')}
+                  </Text>
+                </View>
+                <View style={{ flexDirection: 'row', gap: spacing.sm }}>
+                  <TouchableOpacity
+                    onPress={() => setEditingBudgetIdx(null)}
+                    style={{
+                      flex: 1,
+                      paddingVertical: spacing.sm,
+                      borderRadius: radii.md,
+                      borderWidth: 1,
+                      borderColor: colors.borderSubtle,
+                      alignItems: 'center',
+                    }}
+                  >
+                    <Text style={{ ...typography.body, color: colors.textPrimary }}>Cancel</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    onPress={handleSaveBudget}
+                    style={{
+                      flex: 1,
+                      paddingVertical: spacing.sm,
+                      borderRadius: radii.md,
+                      backgroundColor: colors.primary,
+                      alignItems: 'center',
+                    }}
+                  >
+                    <Text style={{ ...typography.bodySemiBold, color: '#FFFFFF' }}>Save</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </ScrollView>
+          </View>
+        </Modal>
+
+        <View
+          style={{
+            backgroundColor: colors.surface,
+            borderRadius: radii.lg,
+            borderWidth: 1,
+            borderColor: colors.borderSubtle,
+            padding: spacing.lg,
+            marginBottom: spacing.lg,
+            shadowColor: '#000',
+            shadowOpacity: 0.06,
+            shadowRadius: 6,
+            shadowOffset: { width: 0, height: 3 },
+          }}
+        >
+          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.md }}>
             <MaterialIcons name="checklist" size={20} color={colors.primary} style={{ marginRight: spacing.sm }} />
-            <Text style={{ ...typography.titleMedium, color: colors.textPrimary }}>Task List</Text>
+            <Text style={{ ...typography.titleMedium, color: colors.textPrimary }}>To Do List</Text>
           </View>
           <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.md }}>
             <TextInput
@@ -361,7 +562,7 @@ export default function PlannerScreen({ navigation }: PlannerProps) {
           )}
 
           {tasks.map((item) => {
-            const due = item.due_date ? new Date(item.due_date).toLocaleDateString('en-ZA') : 'No due date';
+            const due = item.due_date ? new Date(item.due_date).toLocaleDateString('en-ZA', { day: 'numeric', month: 'long', year: 'numeric' }) : 'No due date';
             const completed = item.status === 'completed';
             return (
               <View
@@ -471,196 +672,6 @@ export default function PlannerScreen({ navigation }: PlannerProps) {
             borderWidth: 1,
             borderColor: colors.borderSubtle,
             padding: spacing.lg,
-            marginBottom: spacing.lg,
-            shadowColor: '#000',
-            shadowOpacity: 0.06,
-            shadowRadius: 6,
-            shadowOffset: { width: 0, height: 3 },
-          }}
-        >
-          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.md }}>
-            <MaterialIcons name="savings" size={20} color={colors.primary} style={{ marginRight: spacing.sm }} />
-            <Text style={{ ...typography.titleMedium, color: colors.textPrimary }}>Budget</Text>
-          </View>
-          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.md }}>
-            {/* Pie Chart */}
-            {budgetTotals.total > 0 && (
-              <View style={{ width: 110, height: 110, marginRight: spacing.md }}>
-                <BudgetPieChart budgetItems={budgetItems} total={budgetTotals.total} />
-              </View>
-            )}
-
-            {/* Budget Summary */}
-            <View style={{ flex: 1 }}>
-              <Text style={{ ...typography.caption, color: colors.textMuted }}>Total Budget:</Text>
-              <Text style={{ ...typography.bodySemiBold, color: colors.textPrimary }}>
-                R {budgetTotals.total.toLocaleString('en-ZA')}
-              </Text>
-              <Text style={{ ...typography.caption, color: colors.textMuted, marginTop: spacing.xs }}>Total Spent:</Text>
-              <Text style={{ ...typography.bodySemiBold, color: colors.textPrimary }}>
-                R {budgetTotals.spent.toLocaleString('en-ZA')}
-              </Text>
-              <Text style={{ ...typography.caption, color: colors.textMuted, marginTop: spacing.xs }}>Remaining:</Text>
-              <Text style={{ ...typography.bodySemiBold, color: '#16A34A' }}>
-                R {budgetTotals.remaining.toLocaleString('en-ZA')}
-              </Text>
-            </View>
-          </View>
-
-          {budgetItems.map((item, idx) => {
-            const progress = item.total === 0 ? 0 : Math.min(item.spent / item.total, 1);
-            return (
-              <View
-                key={`${item.name}-${idx}`}
-                style={{
-                  borderWidth: 1,
-                  borderColor: colors.borderSubtle,
-                  borderRadius: radii.md,
-                  padding: spacing.md,
-                  marginBottom: spacing.sm,
-                  backgroundColor: colors.surfaceMuted,
-                }}
-              >
-                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.xs }}>
-                  <Text style={{ ...typography.body, color: colors.textPrimary }}>{item.name}</Text>
-                  <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                    <Text style={{ ...typography.caption, color: colors.textSecondary, marginRight: spacing.sm }}>
-                      R{item.spent.toLocaleString('en-ZA')} / R{item.total.toLocaleString('en-ZA')}
-                    </Text>
-                    <TouchableOpacity onPress={() => handleEditBudget(idx)} style={{ marginRight: spacing.xs }}>
-                      <MaterialIcons name="edit" size={16} color={colors.primary} />
-                    </TouchableOpacity>
-                    <TouchableOpacity onPress={() => handleDeleteBudgetItem(idx)}>
-                      <MaterialIcons name="delete" size={16} color={colors.textMuted} />
-                    </TouchableOpacity>
-                  </View>
-                </View>
-                <View style={{ height: 6, backgroundColor: colors.borderSubtle, borderRadius: radii.full }}>
-                  <View
-                    style={{
-                      height: 6,
-                      width: `${progress * 100}%`,
-                      backgroundColor: colors.primary,
-                      borderRadius: radii.full,
-                    }}
-                  />
-                </View>
-              </View>
-            );
-          })}
-
-          <TouchableOpacity
-            onPress={handleAddBudgetItem}
-            style={{
-              marginTop: spacing.sm,
-              alignItems: 'center',
-              paddingVertical: spacing.sm,
-              borderRadius: radii.md,
-              borderWidth: 1,
-              borderColor: colors.borderSubtle,
-              backgroundColor: colors.surface,
-            }}
-          >
-            <Text style={{ ...typography.bodySemiBold, color: colors.textPrimary }}>+ Add Budget Item</Text>
-          </TouchableOpacity>
-        </View>
-
-        {/* Edit Budget Modal */}
-        <Modal visible={editingBudgetIdx !== null} transparent animationType="fade" onRequestClose={() => setEditingBudgetIdx(null)}>
-          <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center', padding: spacing.lg }}>
-            <View style={{ backgroundColor: colors.surface, borderRadius: radii.lg, padding: spacing.lg, width: '100%', maxWidth: 400 }}>
-              <Text style={{ ...typography.titleMedium, color: colors.textPrimary, marginBottom: spacing.md }}>Edit Budget Item</Text>
-              <Text style={{ ...typography.caption, color: colors.textMuted, marginBottom: spacing.xs }}>Name</Text>
-              <TextInput
-                value={editBudgetForm.name}
-                onChangeText={(v) => setEditBudgetForm((p) => ({ ...p, name: v }))}
-                placeholder="Item name"
-                placeholderTextColor={colors.textMuted}
-                style={{
-                  borderWidth: 1,
-                  borderColor: colors.borderSubtle,
-                  borderRadius: radii.md,
-                  paddingHorizontal: spacing.md,
-                  paddingVertical: spacing.sm,
-                  backgroundColor: colors.surfaceMuted,
-                  color: colors.textPrimary,
-                  marginBottom: spacing.md,
-                }}
-              />
-              <Text style={{ ...typography.caption, color: colors.textMuted, marginBottom: spacing.xs }}>Amount Spent (R)</Text>
-              <TextInput
-                value={editBudgetForm.spent}
-                onChangeText={(v) => setEditBudgetForm((p) => ({ ...p, spent: v }))}
-                placeholder="0"
-                keyboardType="numeric"
-                placeholderTextColor={colors.textMuted}
-                style={{
-                  borderWidth: 1,
-                  borderColor: colors.borderSubtle,
-                  borderRadius: radii.md,
-                  paddingHorizontal: spacing.md,
-                  paddingVertical: spacing.sm,
-                  backgroundColor: colors.surfaceMuted,
-                  color: colors.textPrimary,
-                  marginBottom: spacing.md,
-                }}
-              />
-              <Text style={{ ...typography.caption, color: colors.textMuted, marginBottom: spacing.xs }}>Total Budget (R)</Text>
-              <TextInput
-                value={editBudgetForm.total}
-                onChangeText={(v) => setEditBudgetForm((p) => ({ ...p, total: v }))}
-                placeholder="0"
-                keyboardType="numeric"
-                placeholderTextColor={colors.textMuted}
-                style={{
-                  borderWidth: 1,
-                  borderColor: colors.borderSubtle,
-                  borderRadius: radii.md,
-                  paddingHorizontal: spacing.md,
-                  paddingVertical: spacing.sm,
-                  backgroundColor: colors.surfaceMuted,
-                  color: colors.textPrimary,
-                  marginBottom: spacing.md,
-                }}
-              />
-              <View style={{ flexDirection: 'row', gap: spacing.sm }}>
-                <TouchableOpacity
-                  onPress={() => setEditingBudgetIdx(null)}
-                  style={{
-                    flex: 1,
-                    paddingVertical: spacing.sm,
-                    borderRadius: radii.md,
-                    borderWidth: 1,
-                    borderColor: colors.borderSubtle,
-                    alignItems: 'center',
-                  }}
-                >
-                  <Text style={{ ...typography.body, color: colors.textPrimary }}>Cancel</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  onPress={handleSaveBudget}
-                  style={{
-                    flex: 1,
-                    paddingVertical: spacing.sm,
-                    borderRadius: radii.md,
-                    backgroundColor: colors.primary,
-                    alignItems: 'center',
-                  }}
-                >
-                  <Text style={{ ...typography.bodySemiBold, color: '#FFFFFF' }}>Save</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-          </View>
-        </Modal>
-
-        <View
-          style={{
-            backgroundColor: colors.surface,
-            borderRadius: radii.lg,
-            borderWidth: 1,
-            borderColor: colors.borderSubtle,
-            padding: spacing.lg,
             shadowColor: '#000',
             shadowOpacity: 0.06,
             shadowRadius: 6,
@@ -669,7 +680,7 @@ export default function PlannerScreen({ navigation }: PlannerProps) {
         >
           <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.md }}>
             <MaterialIcons name="calendar-today" size={20} color={colors.primary} style={{ marginRight: spacing.sm }} />
-            <Text style={{ ...typography.titleMedium, color: colors.textPrimary }}>Calendar Items</Text>
+            <Text style={{ ...typography.titleMedium, color: colors.textPrimary }}>Diary</Text>
           </View>
 
           {calendarItems.map((item) => (
@@ -728,7 +739,7 @@ export default function PlannerScreen({ navigation }: PlannerProps) {
           </TouchableOpacity>
         </View>
 
-        {/* Edit Calendar Item Modal */}
+        {/* Edit Diary Item Modal */}
         <Modal visible={editingItem !== null} transparent animationType="slide" onRequestClose={() => setEditingItem(null)}>
           <View
             style={{

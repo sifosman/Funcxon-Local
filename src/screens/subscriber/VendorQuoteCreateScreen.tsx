@@ -439,12 +439,12 @@ export default function VendorQuoteCreateScreen() {
             ) : null}
             {quoteRequest?.event_date ? (
               <Text style={{ ...typography.caption, color: colors.textMuted }}>
-                Event Date: {new Date(quoteRequest.event_date).toLocaleDateString()}
+                Event Date: {new Date(quoteRequest.event_date).toLocaleDateString('en-ZA', { day: 'numeric', month: 'long', year: 'numeric' })}
               </Text>
             ) : null}
             {quoteRequest?.end_date ? (
               <Text style={{ ...typography.caption, color: colors.textMuted }}>
-                End Date: {new Date(quoteRequest.end_date).toLocaleDateString()}
+                End Date: {new Date(quoteRequest.end_date).toLocaleDateString('en-ZA', { day: 'numeric', month: 'long', year: 'numeric' })}
               </Text>
             ) : null}
             {quoteRequest?.contact_phone ? (

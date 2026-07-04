@@ -183,7 +183,6 @@ export default function VenueProfileScreen({ route, navigation }: Props) {
         .from('venue_reviews')
         .select('id, rating, title, review_text, is_verified, created_at, status')
         .eq('venue_id', venueId)
-        .or('status.is.null,status.eq.approved')
         .order('created_at', { ascending: false })
         .limit(50);
 
@@ -382,11 +381,21 @@ export default function VenueProfileScreen({ route, navigation }: Props) {
   }, [mapCoordinates, mapSearchTarget, venue?.name]);
 
   const galleryItems = useMemo<GalleryItem[]>(() => {
-    if (galleryMedia && galleryMedia.length > 0) {
-      return galleryMedia.map((m) => ({ url: m.media_url, type: m.media_type }));
-    }
     const legacyImages = [venue?.image_url, ...(venue?.additional_photos ?? [])].filter(Boolean) as string[];
-    return legacyImages.map((url) => ({ url, type: 'image' as const }));
+    const legacyItems = legacyImages.map((url) => ({ url, type: 'image' as const }));
+    const mediaItems = (galleryMedia ?? []).map((m) => ({ url: m.media_url, type: m.media_type }));
+    const merged = [...legacyItems, ...mediaItems];
+    const seen = new Set<string>();
+    const deduped = merged.filter((item) => {
+      if (seen.has(item.url)) return false;
+      seen.add(item.url);
+      return true;
+    });
+    return deduped.sort((a, b) => {
+      if (a.type === 'video' && b.type !== 'video') return 1;
+      if (a.type !== 'video' && b.type === 'video') return -1;
+      return 0;
+    });
   }, [galleryMedia, venue?.image_url, venue?.additional_photos]);
 
   const halls = useMemo(() => {
@@ -1474,6 +1483,23 @@ export default function VenueProfileScreen({ route, navigation }: Props) {
                           </Text>
                         </View>
                       ) : null}
+                      {review.status === 'pending' ? (
+                        <View
+                          style={{
+                            marginLeft: spacing.sm,
+                            backgroundColor: '#FEF3C7',
+                            paddingHorizontal: spacing.sm,
+                            paddingVertical: 4,
+                            borderRadius: radii.full,
+                            borderWidth: 1,
+                            borderColor: '#FDE68A',
+                          }}
+                        >
+                          <Text style={{ ...typography.captionSemiBold, color: '#92400E' }}>
+                            Pending
+                          </Text>
+                        </View>
+                      ) : null}
                     </View>
                   </View>
 
@@ -1501,7 +1527,7 @@ export default function VenueProfileScreen({ route, navigation }: Props) {
 
                   {review.created_at ? (
                     <Text style={{ ...typography.caption, color: colors.textMuted, marginTop: spacing.sm }}>
-                      {new Date(review.created_at).toLocaleDateString()}
+                      {new Date(review.created_at).toLocaleDateString('en-ZA', { day: 'numeric', month: 'long', year: 'numeric' })}
                     </Text>
                   ) : null}
                 </View>

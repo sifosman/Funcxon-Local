@@ -18,17 +18,20 @@ test.describe('Funcxon web smoke', () => {
 
     await expect(page.getByText('Need help?', { exact: true })).toBeVisible();
     await expect(page.getByText('Contact Support', { exact: true })).toBeVisible();
-    await expect(page.getByText('Request a manager (coming soon)', { exact: true })).toBeVisible();
+    await expect(page.getByText('Request a manager', { exact: true })).toBeVisible();
   });
 
   test('authenticated users can reach the account vendor flow entry points', async ({ page }) => {
     await goToWelcomeFromHomeSearch(page);
     await loginFromWelcome(page);
 
+    // Navigate via Account → Lister Portfolio Dashboard → Capture new portfolio application
+    // (The old "Become a Vendor" menu item no longer exists; the portfolio creation
+    // flow is now reached through the Lister Portfolio Dashboard.)
     await openAccountTab(page);
-    await openAccountMenuItem(page, 'My Profile');
-    await openAccountMenuItem(page, 'Become a Vendor');
+    await openAccountMenuItem(page, 'Lister Portfolio Dashboard');
+    await openAccountMenuItem(page, 'Capture new portfolio application');
 
-    await expect(page.getByText(/Subscription Plans|Select your portfolio type/i)).toBeVisible();
+    await expect(page.getByText(/Create Portfolio|Select your portfolio type/i)).toBeVisible();
   });
 });

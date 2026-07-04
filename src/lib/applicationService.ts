@@ -45,6 +45,7 @@ export type ApplicationSubmission = {
   business_description: string;
   portfolio_images: string[];
   portfolio_videos: string[];
+  business_documents: string[];
   subscription_tier: string;
   terms_accepted: boolean;
   privacy_accepted: boolean;
@@ -66,6 +67,7 @@ export type SubscriberApplication = {
   business_description?: string | null;
   portfolio_images?: string[] | null;
   portfolio_videos?: string[] | null;
+  business_documents?: string[] | null;
   terms_accepted?: boolean | null;
   privacy_accepted?: boolean | null;
   marketing_consent?: boolean | null;
@@ -89,6 +91,7 @@ export async function submitApplication(data: ApplicationSubmission) {
       business_description: data.business_description,
       portfolio_images: data.portfolio_images,
       portfolio_videos: data.portfolio_videos,
+      business_documents: data.business_documents,
       subscription_tier: data.subscription_tier,
       terms_accepted: data.terms_accepted,
       privacy_accepted: data.privacy_accepted,
@@ -155,7 +158,7 @@ export async function submitApplication(data: ApplicationSubmission) {
 }
 
 export async function uploadFileToStorage(
-  bucket: 'portfolio-images' | 'portfolio-videos' | 'quote-attachments',
+  bucket: 'portfolio-images' | 'portfolio-videos' | 'quote-attachments' | 'business-documents',
   file: { uri: string; name: string; type: string },
   userId: string
 ) {
@@ -236,7 +239,7 @@ export async function uploadFileToStorage(
 }
 
 export async function deleteFileFromStorage(
-  bucket: 'portfolio-images' | 'portfolio-videos' | 'quote-attachments',
+  bucket: 'portfolio-images' | 'portfolio-videos' | 'quote-attachments' | 'business-documents',
   path: string
 ) {
   try {
@@ -347,6 +350,39 @@ export async function getLatestUserApplicationByType(portfolioType: 'venue' | 'v
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Failed to get latest application',
+    };
+  }
+}
+
+export async function getApprovedUserApplicationByType(portfolioType: 'venue' | 'vendor') {
+  try {
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+
+    if (authError || !user) {
+      throw new Error('User not authenticated');
+    }
+
+    const { data, error } = await supabase
+      .from('subscriber_applications')
+      .select('*')
+      .eq('user_id', user.id)
+      .eq('portfolio_type', portfolioType)
+      .eq('status', 'approved')
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle<SubscriberApplication>();
+
+    if (error) {
+      console.error('Get approved application by type error:', error);
+      throw new Error(error.message);
+    }
+
+    return { success: true, data: data ?? null };
+  } catch (error) {
+    console.error('Get approved application by type error:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to get approved application',
     };
   }
 }

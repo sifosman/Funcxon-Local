@@ -25,10 +25,10 @@ const formatDate = (value?: string | null) => {
   if (!value) return 'Recently submitted';
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return 'Recently submitted';
-  return date.toLocaleDateString(undefined, {
-    year: 'numeric',
-    month: 'long',
+  return date.toLocaleDateString('en-ZA', {
     day: 'numeric',
+    month: 'long',
+    year: 'numeric',
   });
 };
 

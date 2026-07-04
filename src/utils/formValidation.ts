@@ -112,6 +112,16 @@ export function validateStep3(data: Step3Data): ValidationResult {
     errors.images = 'Please upload at least one image';
   }
 
+  const hasIdCopy = data.documents.some((d) => d.docType === 'id_copy');
+  if (!hasIdCopy) {
+    errors.id_copy = 'ID copy is required';
+  }
+
+  const hasCompanyLogo = data.documents.some((d) => d.docType === 'company_logo');
+  if (!hasCompanyLogo) {
+    errors.company_logo = 'Company logo is required';
+  }
+
   return {
     isValid: Object.keys(errors).length === 0,
     errors,

@@ -190,7 +190,7 @@ export default function BookTourScreen({ route, navigation }: Props) {
             }}
           >
             <Text style={{ ...typography.body, color: colors.textPrimary }}>
-              {date.toLocaleDateString()}
+              {date.toLocaleDateString('en-ZA', { day: 'numeric', month: 'long', year: 'numeric' })}
             </Text>
           </TouchableOpacity>
           {showDatePicker && (

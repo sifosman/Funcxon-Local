@@ -58,3 +58,19 @@ funcxon-landing/
 
 # Web app (separate repo)
 deploy-web/
+
+# Logs and temp files
+*.log
+tsc-output.txt
+tsc.log
+typecheck.log
+lib_diff.txt
+expo-web.log
+playwright-install.log
+playwright-output.log
+0f92cb86.txt
+6af603b7.txt
+788d67ec.txt
+branding_matches.txt
+build-qr.png
+debug-amenities.js

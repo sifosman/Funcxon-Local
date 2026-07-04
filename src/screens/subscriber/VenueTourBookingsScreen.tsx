@@ -527,7 +527,7 @@ export default function VenueTourBookingsScreen() {
               }}
             >
               <Text style={{ ...typography.body, color: colors.textPrimary }}>
-                {counterDate.toLocaleDateString('en-ZA')}
+                {counterDate.toLocaleDateString('en-ZA', { day: 'numeric', month: 'long', year: 'numeric' })}
               </Text>
             </TouchableOpacity>
             {showDatePicker && (

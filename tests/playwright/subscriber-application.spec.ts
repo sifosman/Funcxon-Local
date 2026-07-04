@@ -34,9 +34,11 @@ test.describe('Subscriber "Become a Vendor" Application E2E Flow', () => {
     await goToWelcomeFromHomeSearch(page);
     await loginFromWelcome(page);
 
-    // 2. Navigate to "Become a Vendor" from Account menu
+    // 2. Navigate to portfolio creation via Account → Lister Portfolio Dashboard →
+    // Capture new portfolio application (the old "Become a Vendor" menu item no longer exists)
     await openAccountTab(page);
-    await openAccountMenuItem(page, 'Become a Vendor');
+    await openAccountMenuItem(page, 'Lister Portfolio Dashboard');
+    await openAccountMenuItem(page, 'Capture new portfolio application');
 
     // Assert Portfolio selection screen
     await expect(page.getByText('Create Portfolio', { exact: true })).toBeVisible();

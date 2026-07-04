@@ -102,7 +102,7 @@ export default function QuoteDetailScreen() {
       if (isVenueQuote) {
         const { data: venueQuoteRows, error: venueQuoteError } = await supabase
           .from('venue_quote_requests')
-          .select('id, listing_id, requester_name, requester_email, requester_phone, contact_phone, status, message, event_date, end_date, selected_hall, created_at, requirements, line_items, quote_amount')
+          .select('id, listing_id, requester_name, requester_email, requester_phone, contact_phone, status, message, event_date, end_date, selected_hall, created_at, requirements, line_items, quoted_amount')
           .eq('id', resolvedQuoteId)
           .limit(1);
 
@@ -131,7 +131,7 @@ export default function QuoteDetailScreen() {
           end_date: venueQuote.end_date,
           selected_hall: venueQuote.selected_hall,
           budget: null,
-          quote_amount: venueQuote.quote_amount,
+          quote_amount: venueQuote.quoted_amount,
           created_at: venueQuote.created_at,
           requirements: venueQuote.requirements ?? null,
         };
@@ -201,7 +201,7 @@ export default function QuoteDetailScreen() {
       const parsed = JSON.parse(quote.line_items);
       if (Array.isArray(parsed)) {
         return parsed.map((item: any) => ({
-          name: String(item.name ?? ''),
+          name: String(item.title ?? item.name ?? ''),
           quantity: typeof item.quantity === 'number' ? item.quantity : parseFloat(item.quantity) || 1,
           price: typeof item.price === 'number' ? item.price : parseFloat(item.price) || 0,
         }));
@@ -382,7 +382,7 @@ export default function QuoteDetailScreen() {
 
   const requestedDate =
     quote!.event_date || quote!.created_at
-      ? new Date(quote!.event_date || quote!.created_at || '').toLocaleDateString()
+      ? new Date(quote!.event_date || quote!.created_at || '').toLocaleDateString('en-ZA', { day: 'numeric', month: 'long', year: 'numeric' })
       : null;
 
   const linkedName = venue?.name ?? vendor?.name ?? quote!.target_name ?? 'Listing';
@@ -529,7 +529,7 @@ export default function QuoteDetailScreen() {
           )}
           {quote!.end_date && (
             <Text style={{ ...typography.caption, color: colors.textSecondary, marginTop: spacing.xs }}>
-              End date: {new Date(quote!.end_date).toLocaleDateString('en-ZA')}
+              End date: {new Date(quote!.end_date).toLocaleDateString('en-ZA', { day: 'numeric', month: 'long', year: 'numeric' })}
             </Text>
           )}
           {quote!.selected_hall && (

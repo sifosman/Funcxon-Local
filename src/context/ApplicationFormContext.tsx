@@ -43,6 +43,8 @@ export interface Step2Data {
   description: string;
 }
 
+export type DocKey = 'id_copy' | 'cipro' | 'company_logo';
+
 export interface Step3Data {
   images: Array<{
     uri: string;
@@ -53,6 +55,12 @@ export interface Step3Data {
     uri: string;
     name: string;
     type: string;
+  }>;
+  documents: Array<{
+    uri: string;
+    name: string;
+    type: string;
+    docType: DocKey;
   }>;
 }
 
@@ -123,6 +131,7 @@ const initialState: ApplicationFormState = {
   step3: {
     images: [],
     videos: [],
+    documents: [],
   },
   step4: {
     subscriptionPlan: '',

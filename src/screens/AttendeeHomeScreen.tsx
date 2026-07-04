@@ -47,6 +47,7 @@ export type VendorListItem = {
   province?: string | null;
   city?: string | null;
   location?: string | null;
+  address_line_1?: string | null;
   category_id?: number | null;
   venue_type?: string | null;
   venue_capacity?: string | null;
@@ -506,7 +507,7 @@ export default function AttendeeHomeScreen() {
             <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: spacing.xs }}>
               <MaterialIcons name="place" size={16} color={colors.textSecondary} />
               <Text style={{ ...typography.caption, color: colors.textSecondary, marginLeft: spacing.xs, flex: 1 }} numberOfLines={2}>
-                {[item.city, item.province].filter(Boolean).join(', ') || item.location || 'Location available on profile'}
+                {[item.address_line_1, item.city].filter(Boolean).join(', ') || [item.city, item.province].filter(Boolean).join(', ') || item.location || 'Location available on profile'}
               </Text>
             </View>
 
@@ -694,7 +695,7 @@ export default function AttendeeHomeScreen() {
       // Fetch vendors
       const { data: vendors, error: vendorError } = await supabase
         .from('vendors')
-        .select('id, name, price_range, rating, review_count, image_url, location, description, category_id, service_options, vendor_tags')
+        .select('id, name, price_range, rating, review_count, image_url, location, description, category_id, service_options, vendor_tags, address_line_1, city, province')
         .limit(50);
 
       if (vendorError) throw vendorError;
@@ -702,7 +703,7 @@ export default function AttendeeHomeScreen() {
       // Fetch venues
       const { data: venues, error: venueError } = await supabase
         .from('venue_listings')
-        .select('id, name, rating, review_count, image_url, location, description, venue_type, venue_capacity, amenities, features')
+        .select('id, name, rating, review_count, image_url, location, description, venue_type, venue_capacity, amenities, features, address_line_1, city, province')
         .limit(50);
 
       if (venueError) throw venueError;
@@ -720,6 +721,7 @@ export default function AttendeeHomeScreen() {
           province: v.province ?? parsedLocation.province,
           city: v.city ?? parsedLocation.city,
           location: v.location,
+          address_line_1: v.address_line_1 ?? null,
           category_id: v.category_id,
           service_options: v.service_options ?? null,
           vendor_tags: v.vendor_tags ?? null,
@@ -742,6 +744,7 @@ export default function AttendeeHomeScreen() {
           province: v.province ?? parsedLocation.province,
           city: v.city ?? parsedLocation.city,
           location: v.location,
+          address_line_1: v.address_line_1 ?? null,
           category_id: null, // Venues are their own category effectively
           venue_type: v.venue_type ?? null,
           amenities: Array.isArray(v.amenities) ? v.amenities : null,
@@ -764,7 +767,7 @@ export default function AttendeeHomeScreen() {
     queryFn: async () => {
       const { data: vendors, error: vendorError } = await supabase
         .from('vendors')
-        .select('id, name, price_range, rating, review_count, image_url, location, description, category_id, featured_listing')
+        .select('id, name, price_range, rating, review_count, image_url, location, description, category_id, featured_listing, address_line_1, city, province')
         .eq('featured_listing', true)
         .limit(20);
 
@@ -772,7 +775,7 @@ export default function AttendeeHomeScreen() {
 
       const { data: venues, error: venueError } = await supabase
         .from('venue_listings')
-        .select('id, name, rating, review_count, image_url, location, description, venue_type, venue_capacity, amenities, features')
+        .select('id, name, rating, review_count, image_url, location, description, venue_type, venue_capacity, amenities, features, address_line_1, city, province')
         .limit(20);
 
       if (venueError) throw venueError;
@@ -790,6 +793,7 @@ export default function AttendeeHomeScreen() {
           province: v.province ?? parsedLocation.province,
           city: v.city ?? parsedLocation.city,
           location: v.location,
+          address_line_1: v.address_line_1 ?? null,
           category_id: v.category_id,
           type: 'vendor',
         };
@@ -811,6 +815,7 @@ export default function AttendeeHomeScreen() {
             province: v.province ?? parsedLocation.province,
             city: v.city ?? parsedLocation.city,
             location: v.location,
+            address_line_1: v.address_line_1 ?? null,
             category_id: null,
             capacity: v.venue_capacity ?? null,
             features: v.features ?? null,

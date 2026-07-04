@@ -33,7 +33,7 @@ type QuoteRequestRow = {
   selected_hall: string | null;
   message: string | null;
   line_items: string | null;
-  quote_amount: number | null;
+  quoted_amount: number | null;
   response_message: string | null;
   amended_message: string | null;
   status: string;
@@ -85,7 +85,7 @@ export default function VenueQuoteRequestsScreen() {
 
       const { data: reqRows, error: reqErr } = await supabase
         .from('venue_quote_requests')
-        .select('id, listing_id, requester_name, requester_email, requester_phone, contact_phone, event_date, end_date, selected_hall, message, line_items, quote_amount, response_message, amended_message, status, created_at')
+        .select('id, listing_id, requester_name, requester_email, requester_phone, contact_phone, event_date, end_date, selected_hall, message, line_items, quoted_amount, response_message, amended_message, status, created_at')
         .eq('listing_id', listingRow.id)
         .order('created_at', { ascending: false })
         .limit(100);
@@ -173,7 +173,7 @@ export default function VenueQuoteRequestsScreen() {
 
   const startRespond = (req: QuoteRequestRow) => {
     setRespondingId(req.id);
-    setResponseAmount(req.quote_amount?.toString() ?? '');
+    setResponseAmount(req.quoted_amount?.toString() ?? '');
     setResponseMessage(req.amended_message ?? req.response_message ?? '');
   };
 
@@ -192,11 +192,11 @@ export default function VenueQuoteRequestsScreen() {
     try {
       const { error } = await supabase.from('venue_quote_requests').update({
         status: 'quoted',
-        quote_amount: Number(responseAmount),
+        quoted_amount: Number(responseAmount),
         response_message: responseMessage.trim() || null,
       }).eq('id', req.id);
       if (error) throw error;
-      setRequests((prev) => prev.map((r) => (r.id === req.id ? { ...r, status: 'quoted', quote_amount: Number(responseAmount), response_message: responseMessage.trim() || null } : r)));
+      setRequests((prev) => prev.map((r) => (r.id === req.id ? { ...r, status: 'quoted', quoted_amount: Number(responseAmount), response_message: responseMessage.trim() || null } : r)));
       cancelRespond();
       // Send notification to client
       await supabase.functions.invoke('send-quote-notifications', {
@@ -469,11 +469,11 @@ export default function VenueQuoteRequestsScreen() {
                   </View>
                 )}
 
-                {typeof req.quote_amount === 'number' && (
+                {typeof req.quoted_amount === 'number' && (
                   <View style={{ marginTop: spacing.md }}>
                     <Text style={{ ...typography.caption, color: colors.textMuted }}>Quoted Amount</Text>
                     <Text style={{ ...typography.titleMedium, color: colors.textPrimary, marginTop: spacing.xs }}>
-                      R {req.quote_amount.toLocaleString('en-ZA')}
+                      R {req.quoted_amount.toLocaleString('en-ZA')}
                     </Text>
                   </View>
                 )}

@@ -30,9 +30,9 @@ const BlogPostCard = ({ post }: { post: BlogPost }) => {
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', {
-      month: 'short',
+    return date.toLocaleDateString('en-ZA', {
       day: 'numeric',
+      month: 'short',
       year: 'numeric',
     });
   };

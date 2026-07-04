@@ -19,6 +19,7 @@ interface EmailRequest {
   businessName?: string;
   tierName: string;
   applicationUrl: string;
+  catalogueUrl?: string;
 }
 
 interface BrevoEmailPayload {
@@ -53,7 +54,7 @@ Deno.serve(async (req: Request) => {
     }
 
     // Parse request body
-    const { email, fullName, businessName, tierName, applicationUrl }: EmailRequest = await req.json();
+    const { email, fullName, businessName, tierName, applicationUrl, catalogueUrl }: EmailRequest = await req.json();
 
     if (!email || !fullName || !tierName) {
       return new Response(
@@ -99,6 +100,24 @@ Deno.serve(async (req: Request) => {
           
           <hr style="border: none; border-top: 1px solid #e0e0e0; margin: 30px 0;">
           
+          <div style="background: #f0f7f5; padding: 20px; border-radius: 8px; margin: 25px 0; border: 1px solid #d0e0db;">
+            <h3 style="margin-top: 0; color: #2D5A4C;">Set Up Your Catalogue / Pricelist</h3>
+            <p style="margin-bottom: 15px; color: #333;">Add catalogue items (like an online store) so customers can see your offerings when they request a quote. Upload an image, add a product name and price for each item. Customers will be able to select items and quantities, and a total is calculated automatically.</p>
+            <p style="margin-bottom: 0; color: #555; font-size: 14px;">The number of items you can add depends on your plan: <strong>${tierName}</strong>.</p>
+          </div>
+          
+          ${catalogueUrl ? `
+          <div style="text-align: center; margin: 30px 0;">
+            <a href="${catalogueUrl}"
+               style="background: #4A7C6F; color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; font-weight: bold; display: inline-block;">
+              Add Catalogue Items
+            </a>
+          </div>
+          <p style="font-size: 14px; color: #666;">Or copy and paste this link: <a href="${catalogueUrl}" style="color: #2D5A4C;">${catalogueUrl}</a></p>
+          ` : ''}
+          
+          <hr style="border: none; border-top: 1px solid #e0e0e0; margin: 30px 0;">
+          
           <p style="font-size: 14px; color: #666; margin-bottom: 5px;">Need help? Contact us at <a href="mailto:support@funxon.co.za" style="color: #2D5A4C;">support@funxon.co.za</a></p>
           <p style="font-size: 14px; color: #666; margin-top: 5px;">The Funxon Team</p>
         </div>
@@ -117,6 +136,11 @@ What's Next?
 Complete your vendor application to set up your profile, add your services, and start receiving bookings.
 
 Complete Your Application: ${applicationUrl}
+
+Set Up Your Catalogue / Pricelist
+Add catalogue items (like an online store) so customers can see your offerings when they request a quote. Upload an image, add a product name and price for each item. Customers will be able to select items and quantities, and a total is calculated automatically.
+The number of items you can add depends on your plan: ${tierName}.
+${catalogueUrl ? `Add Catalogue Items: ${catalogueUrl}` : ''}
 
 Need help? Contact us at support@funxon.co.za
 

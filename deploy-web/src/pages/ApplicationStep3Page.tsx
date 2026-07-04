@@ -1,11 +1,20 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { ArrowLeft, X, Upload, Loader2 } from 'lucide-react';
+import { ArrowLeft, X, Upload, Loader2, FileText, CheckCircle2, Trash2 } from 'lucide-react';
 import { useApplicationForm } from '../context/ApplicationFormContext';
+import type { DocKey } from '../context/ApplicationFormContext';
 import { validateStep3 } from '../utils/formValidation';
 import { uploadFileToStorage } from '../lib/applicationService';
 import { ApplicationProgress } from '../components/ApplicationProgress';
 import { supabase } from '../lib/supabaseClient';
+
+const MAX_DOC_SIZE = 10 * 1024 * 1024; // 10MB
+
+const BUSINESS_DOCS: Array<{ key: DocKey; label: string; required: boolean; acceptLabel?: string }> = [
+  { key: 'id_copy', label: 'ID Copy', required: true },
+  { key: 'cipro', label: 'CIPRO / Company Registration', required: false, acceptLabel: 'If applicable' },
+  { key: 'company_logo', label: 'Company Logo', required: true },
+];
 
 export default function ApplicationStep3Page() {
   const navigate = useNavigate();
@@ -51,6 +60,38 @@ export default function ApplicationStep3Page() {
   const removeFile = (key: 'images' | 'videos', index: number) => {
     const current = state.step3[key];
     updateStep3({ [key]: current.filter((_, i) => i !== index) });
+  };
+
+  const uploadDocument = async (docType: DocKey, file: File | null) => {
+    if (!file) return;
+    if (file.size > MAX_DOC_SIZE) {
+      setErrors((prev) => ({ ...prev, [docType]: `${file.name} exceeds 10MB limit` }));
+      return;
+    }
+
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) return;
+
+    setUploading((prev) => ({ ...prev, [docType]: true }));
+    const isImage = file.type.startsWith('image/');
+    const bucket = isImage ? 'portfolio-images' : 'business-documents';
+    const result = await uploadFileToStorage(bucket, file, user.id);
+    setUploading((prev) => ({ ...prev, [docType]: false }));
+
+    if (result.success && result.url) {
+      const filtered = state.step3.documents.filter((d) => d.docType !== docType);
+      const newDoc = { uri: result.url, name: file.name, type: file.type, docType };
+      updateStep3({ documents: [...filtered, newDoc] });
+      setErrors((prev) => { const next = { ...prev }; delete next[docType]; return next; });
+    } else {
+      setErrors((prev) => ({ ...prev, [docType]: `Failed to upload ${file.name}: ${result.error}` }));
+    }
+  };
+
+  const removeDocument = (docType: DocKey) => {
+    updateStep3({ documents: state.step3.documents.filter((d) => d.docType !== docType) });
   };
 
   const handleNext = () => {
@@ -146,6 +187,75 @@ export default function ApplicationStep3Page() {
                   <button type="button" onClick={() => removeFile('videos', i)} className="text-on-surface-variant"><X className="h-4 w-4" /></button>
                 </div>
               ))}
+            </div>
+          </div>
+
+          {/* Business Documents */}
+          <div>
+            <label className="mb-2 block text-xs font-semibold uppercase tracking-wider text-on-surface-variant">
+              Business Documents
+            </label>
+            <p className="mb-4 text-sm text-on-surface-variant">
+              Upload required business documents (PDF, DOC, DOCX, PNG, JPG — max 10MB each)
+            </p>
+            <div className="space-y-4">
+              {BUSINESS_DOCS.map((doc) => {
+                const existing = state.step3.documents.find((d) => d.docType === doc.key);
+                const isUploading = uploading[doc.key];
+                const hasError = errors[doc.key];
+                return (
+                  <div key={doc.key}>
+                    <div className="mb-1 flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <FileText className="h-4 w-4 text-on-surface-variant" />
+                        <span className="text-sm font-medium text-on-surface">
+                          {doc.label}{doc.required ? ' *' : ''}
+                        </span>
+                      </div>
+                      {doc.acceptLabel && !existing && (
+                        <span className="text-xs italic text-on-surface-variant">{doc.acceptLabel}</span>
+                      )}
+                    </div>
+
+                    {existing ? (
+                      <div className="flex items-center justify-between rounded-lg border border-outline-variant bg-surface-container-low p-3">
+                        <div className="flex items-center gap-2">
+                          <CheckCircle2 className="h-4 w-4 text-green-600" />
+                          <span className="text-sm text-on-surface">{existing.name}</span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => removeDocument(doc.key)}
+                          className="text-red-500 hover:text-red-700"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </div>
+                    ) : (
+                      <div className={`rounded-lg border border-dashed p-4 text-center ${hasError ? 'border-red-400' : 'border-outline-variant'}`}>
+                        <input
+                          type="file"
+                          accept=".pdf,.doc,.docx,image/*"
+                          className="hidden"
+                          id={`doc-upload-${doc.key}`}
+                          onChange={(e) => uploadDocument(doc.key, e.target.files?.[0] ?? null)}
+                        />
+                        <label
+                          htmlFor={`doc-upload-${doc.key}`}
+                          className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-outline-variant bg-white px-4 py-2 text-sm font-semibold text-on-surface hover:bg-surface-container-low"
+                        >
+                          {isUploading ? (
+                            <><Loader2 className="h-4 w-4 animate-spin" /> Uploading...</>
+                          ) : (
+                            <><Upload className="h-4 w-4" /> Tap to upload</>
+                          )}
+                        </label>
+                      </div>
+                    )}
+                    {hasError && <p className="mt-1 text-xs text-red-500">{hasError}</p>}
+                  </div>
+                );
+              })}
             </div>
           </div>
 

@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, Animated, KeyboardAvoidingView, Modal, Platform, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Animated, Dimensions, KeyboardAvoidingView, Modal, Platform, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RouteProp } from '@react-navigation/native';
@@ -38,6 +38,16 @@ export default function DiscoverScreen() {
   const navigation = useNavigation<DiscoverNavigation>();
   const route = useRoute<DiscoverRoute>();
   const [search, setSearch] = useState(route.params?.initialSearch ?? '');
+
+  const [screenHeight, setScreenHeight] = useState(Dimensions.get('window').height);
+  const cardImageHeight = Math.max(120, Math.round(screenHeight / 2.5 - 200));
+  useEffect(() => {
+    const subscription = Dimensions.addEventListener('change', ({ window }) => {
+      setScreenHeight(window.height);
+    });
+    return () => subscription?.remove();
+  }, []);
+
   const [minRating, setMinRating] = useState<number | null>(null);
   const [onlyWithPrice, setOnlyWithPrice] = useState(false);
   const [featuredOnly, setFeaturedOnly] = useState(route.params?.presetFilter === 'featured');
@@ -264,14 +274,14 @@ export default function DiscoverScreen() {
     queryFn: async () => {
       const { data: vendors, error: vendorError } = await supabase
         .from('vendors')
-        .select('id, name, price_range, rating, review_count, image_url, location, description, category_id, service_options, vendor_tags, featured_listing')
+        .select('id, name, price_range, rating, review_count, image_url, location, description, category_id, service_options, vendor_tags, featured_listing, address_line_1, city, province')
         .limit(60);
 
       if (vendorError) throw vendorError;
 
       const { data: venues, error: venueError } = await supabase
         .from('venue_listings')
-        .select('id, name, rating, review_count, image_url, location, description, venue_type, venue_capacity, amenities, features')
+        .select('id, name, rating, review_count, image_url, location, description, venue_type, venue_capacity, amenities, features, address_line_1, city, province')
         .limit(60);
 
       if (venueError) throw venueError;
@@ -280,8 +290,9 @@ export default function DiscoverScreen() {
         const locationParts = parseLocationParts(vendor.location);
         return {
           ...vendor,
-          city: locationParts.city,
-          province: locationParts.province,
+          city: vendor.city ?? locationParts.city,
+          province: vendor.province ?? locationParts.province,
+          address_line_1: vendor.address_line_1 ?? null,
           type: 'vendor',
         };
       });
@@ -297,8 +308,9 @@ export default function DiscoverScreen() {
           image_url: venue.image_url,
           description: venue.description,
           location: venue.location,
-          city: locationParts.city,
-          province: locationParts.province,
+          city: venue.city ?? locationParts.city,
+          province: venue.province ?? locationParts.province,
+          address_line_1: venue.address_line_1 ?? null,
           venue_type: venue.venue_type,
           venue_capacity: venue.venue_capacity,
           amenities: venue.amenities,
@@ -755,7 +767,7 @@ export default function DiscoverScreen() {
         <View>
           <NetworkImage
             uri={item.image_url}
-            style={{ width: '100%', height: featuredCard ? 150 : 190 }}
+            style={{ width: '100%', height: featuredCard ? 150 : cardImageHeight }}
             resizeMode="cover"
           />
           <TouchableOpacity
@@ -830,8 +842,8 @@ export default function DiscoverScreen() {
 
           <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.sm }}>
             <MaterialIcons name="place" size={16} color={colors.textSecondary} />
-            <Text style={{ ...typography.caption, color: colors.textSecondary, marginLeft: spacing.xs }} numberOfLines={1}>
-              {[item.city, item.province].filter(Boolean).join(', ') || item.location || 'Location available on profile'}
+            <Text style={{ ...typography.caption, color: colors.textSecondary, marginLeft: spacing.xs }} numberOfLines={2}>
+              {[item.address_line_1, item.city].filter(Boolean).join(', ') || [item.city, item.province].filter(Boolean).join(', ') || item.location || 'Location available on profile'}
             </Text>
           </View>
 
@@ -1330,7 +1342,7 @@ export default function DiscoverScreen() {
                   </>
                 )}
 
-                {(category === 'all' || category === 'vendors' || category === 'services') && (
+                {(category === 'vendors' || category === 'services') && (
                   <>
                     {/* Province Dropdown */}
                     <Text style={{ ...typography.caption, color: colors.textMuted, marginBottom: spacing.xs }}>Select preferred provinces</Text>

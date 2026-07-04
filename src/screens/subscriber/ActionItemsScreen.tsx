@@ -207,7 +207,7 @@ export default function ActionItemsScreen() {
 
                     {items.map((item) => {
                         const completed = item.status === 'completed';
-                        const due = item.due_date ? new Date(item.due_date).toLocaleDateString('en-ZA') : null;
+                        const due = item.due_date ? new Date(item.due_date).toLocaleDateString('en-ZA', { day: 'numeric', month: 'long', year: 'numeric' }) : null;
                         return (
                             <View
                                 key={item.id}

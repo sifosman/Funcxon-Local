@@ -431,6 +431,7 @@ export default function QuoteRequestScreen({ route, navigation }: Props) {
           vendorEmail: vendor.email,
           eventDetails: additionalComments || undefined,
           eventDate: formatDateInput(eventDate),
+          lineItems: selectedItems.length > 0 ? selectedItems.map((item) => ({ title: item.title, quantity: item.quantity, price: item.price ?? 0 })) : undefined,
         },
       });
     } catch (err) {
@@ -459,6 +460,7 @@ export default function QuoteRequestScreen({ route, navigation }: Props) {
           vendorEmail: venue.contact_email,
           eventDetails: additionalComments || undefined,
           eventDate: formatDateInput(eventDate),
+          lineItems: selectedItems.length > 0 ? selectedItems.map((item) => ({ title: item.title, quantity: item.quantity, price: item.price ?? 0 })) : undefined,
         },
       });
     } catch (err) {

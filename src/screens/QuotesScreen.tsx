@@ -144,7 +144,7 @@ export default function QuotesScreen() {
 
       const { data: venueQuotes, error: venueError } = await supabase
         .from('venue_quote_requests')
-        .select('id, listing_id, requester_name, requester_email, status, message, event_date, created_at, line_items, quote_amount')
+        .select('id, listing_id, requester_name, requester_email, status, message, event_date, created_at, line_items, quoted_amount')
         .eq('requester_user_id', user.id) // venue requests use the auth.uid
         .order('id', { ascending: false })
         .limit(50);
@@ -187,7 +187,7 @@ export default function QuotesScreen() {
         event_type: 'Venues',
         event_date: q.event_date,
         budget: null,
-        quote_amount: q.quote_amount,
+        quote_amount: q.quoted_amount,
         created_at: q.created_at,
         requirements: null,
         notes: null,
@@ -636,7 +636,7 @@ export default function QuotesScreen() {
         }
         renderItem={({ item }) => {
           const requestedDate = item.event_date || item.created_at
-            ? new Date(item.event_date || item.created_at || '').toLocaleDateString('en-ZA')
+            ? new Date(item.event_date || item.created_at || '').toLocaleDateString('en-ZA', { day: 'numeric', month: 'long', year: 'numeric' })
             : null;
           const actionLabel = item.status === 'cancelled'
             ? 'View Details'

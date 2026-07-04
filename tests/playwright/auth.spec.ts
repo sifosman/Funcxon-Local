@@ -1,10 +1,16 @@
 import { expect, test } from '@playwright/test';
-import { gotoApp, goToWelcomeFromHomeSearch } from './helpers';
+import { gotoApp } from './helpers';
 
 test.describe('Authentication and Field Validation Tests', () => {
   test.beforeEach(async ({ page }) => {
-    // Start at the home/welcome flow
-    await goToWelcomeFromHomeSearch(page);
+    // Clear persisted auth state so the auth tests always start logged out
+    await gotoApp(page, '/');
+    await page.evaluate(() => {
+      localStorage.clear();
+      sessionStorage.clear();
+    });
+    // Navigate directly to the Auth route to reach the welcome/login screen
+    await gotoApp(page, '/auth');
   });
 
   test('should display validation errors on invalid sign-in attempt', async ({ page }) => {
@@ -30,19 +36,19 @@ test.describe('Authentication and Field Validation Tests', () => {
     // Verify Sign Up form fields are visible
     await expect(page.getByPlaceholder('Name')).toBeVisible();
     await expect(page.getByPlaceholder('Email')).toBeVisible();
-    await expect(page.getByPlaceholder('Password')).toBeVisible();
+    await expect(page.getByPlaceholder('Password').first()).toBeVisible();
     await expect(page.getByPlaceholder('Confirm Password')).toBeVisible();
 
     // Fill sign up fields to test interactive text inputs
     await page.getByPlaceholder('Name').fill('John Doe');
     await page.getByPlaceholder('Email').fill('john.doe@example.com');
-    await page.getByPlaceholder('Password').fill('SecurePassword123!');
+    await page.getByPlaceholder('Password').first().fill('SecurePassword123!');
     await page.getByPlaceholder('Confirm Password').fill('SecurePassword123!');
 
     // Assert that fields have the correct values
     await expect(page.getByPlaceholder('Name')).toHaveValue('John Doe');
     await expect(page.getByPlaceholder('Email')).toHaveValue('john.doe@example.com');
-    await expect(page.getByPlaceholder('Password')).toHaveValue('SecurePassword123!');
+    await expect(page.getByPlaceholder('Password').first()).toHaveValue('SecurePassword123!');
     await expect(page.getByPlaceholder('Confirm Password')).toHaveValue('SecurePassword123!');
 
     // Click register button

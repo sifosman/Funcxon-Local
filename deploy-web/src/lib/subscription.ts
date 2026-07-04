@@ -41,6 +41,18 @@ export async function getVendorPhotoLimit(vendorId: number): Promise<number> {
   return tier || 5;
 }
 
+export async function getVendorVideoLimit(vendorId: number): Promise<number> {
+  const { data, error } = await supabase.from('vendors').select('subscription_tier').eq('id', vendorId).single();
+
+  if (error) return 0;
+
+  const { data: limit } = await supabase.rpc('get_vendor_video_limit', {
+    vendor_tier: data.subscription_tier || 'get_started',
+  });
+
+  return limit || 0;
+}
+
 export async function getVendorPhotoCount(vendorId: number): Promise<number> {
   const { data, error } = await supabase.from('vendors').select('photo_count').eq('id', vendorId).single();
 

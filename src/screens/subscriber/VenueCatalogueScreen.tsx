@@ -13,6 +13,8 @@ import ThemedAlert from '../../components/ThemedAlert';
 import { getMyVenueEntitlement, isVenueFeatureEnabled } from '../../lib/venueSubscription';
 import { getCatalogueItemLimit, isCatalogueLimitReached } from '../../lib/catalogue';
 
+const MAX_IMAGE_SIZE = 10 * 1024 * 1024; // 10MB
+
 type ProfileStackParamList = {
   UpdateVenuePortfolio: undefined;
   VenueCatalogue: undefined;
@@ -64,6 +66,35 @@ export default function VenueCatalogueScreen() {
     is_active: true,
     image_url: null as string | null,
   });
+
+  const [pickedImage, setPickedImage] = useState<ImagePicker.ImagePickerAsset | null>(null);
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+  const [quantities, setQuantities] = useState<Record<number, number>>({});
+
+  const toggleItem = (id: number) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+    setQuantities((prev) => ({ ...prev, [id]: prev[id] || 1 }));
+  };
+
+  const updateQuantity = (id: number, delta: number) => {
+    setQuantities((prev) => {
+      const current = prev[id] || 1;
+      return { ...prev, [id]: Math.max(1, current + delta) };
+    });
+  };
+
+  const clearSelection = () => {
+    setSelectedIds(new Set());
+    setQuantities({});
+  };
 
   const loadEntitlement = useCallback(async () => {
     if (!user?.id) return;
@@ -172,6 +203,16 @@ export default function VenueCatalogueScreen() {
     return [...items].sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0));
   }, [items]);
 
+  const selectedItems = useMemo(() => {
+    return sortedItems
+      .filter((item) => selectedIds.has(item.id))
+      .map((item) => ({ ...item, quantity: quantities[item.id] || 1 }));
+  }, [sortedItems, selectedIds, quantities]);
+
+  const total = useMemo(() => {
+    return selectedItems.reduce((sum, item) => sum + (item.price ?? 0) * item.quantity, 0);
+  }, [selectedItems]);
+
   const openNew = () => {
     if (isCatalogueLimitReached(items.length, itemLimit)) {
       setAlertState({
@@ -186,12 +227,14 @@ export default function VenueCatalogueScreen() {
       return;
     }
     setEditingItem(null);
+    setPickedImage(null);
     setEditForm({ title: '', description: '', price: '', is_active: true, image_url: null });
     setEditVisible(true);
   };
 
   const openEdit = (item: CatalogueItem) => {
     setEditingItem(item);
+    setPickedImage(null);
     setEditForm({
       title: item.title,
       description: item.description || '',
@@ -205,6 +248,54 @@ export default function VenueCatalogueScreen() {
   const closeEdit = () => {
     setEditVisible(false);
     setEditingItem(null);
+    setPickedImage(null);
+  };
+
+  const uploadCatalogueImage = async (asset: ImagePicker.ImagePickerAsset, itemId: number) => {
+    const fileName = `${user?.id}/${Date.now()}-catalogue-${itemId}.jpg`;
+    let fileBody: Blob | ArrayBuffer;
+    if (asset.uri.startsWith('data:')) {
+      const base64 = asset.uri.split(',')[1];
+      fileBody = decode(base64);
+    } else {
+      const base64 = await FileSystem.readAsStringAsync(asset.uri, { encoding: 'base64' });
+      fileBody = decode(base64);
+    }
+    const { error: uploadError } = await supabase.storage.from('portfolio-images').upload(fileName, fileBody, {
+      contentType: 'image/jpeg',
+      cacheControl: '3600',
+      upsert: false,
+    });
+    if (uploadError) throw uploadError;
+    const { data: { publicUrl } } = supabase.storage.from('portfolio-images').getPublicUrl(fileName);
+    const { error: updateError } = await supabase.from('venue_catalogue_items').update({ image_url: publicUrl }).eq('id', itemId);
+    if (updateError) throw updateError;
+  };
+
+  const pickImageForForm = async () => {
+    try {
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== 'granted') {
+        setAlertState({ visible: true, title: 'Permission Required', message: 'Please allow access to your photo library to upload images.' });
+        return;
+      }
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ['images'],
+        allowsMultipleSelection: false,
+        allowsEditing: false,
+        quality: 0.8,
+      });
+      if (result.canceled || !result.assets?.[0]) return;
+      const asset = result.assets[0];
+      const fileSize = asset.fileSize || 0;
+      if (fileSize > MAX_IMAGE_SIZE) {
+        setAlertState({ visible: true, title: 'Image Too Large', message: `${asset.fileName || 'Image'} is ${(fileSize / 1024 / 1024).toFixed(1)}MB. Maximum allowed is 10MB.` });
+        return;
+      }
+      setPickedImage(asset);
+    } catch (err: any) {
+      setAlertState({ visible: true, title: 'Error', message: err?.message ?? 'Could not pick image.' });
+    }
   };
 
   const handleSave = async () => {
@@ -251,9 +342,13 @@ export default function VenueCatalogueScreen() {
           .eq('id', editingItem.id);
 
         if (error) throw error;
+
+        if (pickedImage) {
+          await uploadCatalogueImage(pickedImage, editingItem.id);
+        }
       } else {
         const nextSort = items.length > 0 ? Math.max(...items.map((i) => i.sort_order || 0)) + 1 : 0;
-        const { error } = await supabase.from('venue_catalogue_items').insert({
+        const { data: insertedRow, error } = await supabase.from('venue_catalogue_items').insert({
           listing_id: listing.id,
           title: editForm.title.trim(),
           description: editForm.description.trim() || null,
@@ -261,9 +356,13 @@ export default function VenueCatalogueScreen() {
           currency: 'ZAR',
           sort_order: nextSort,
           is_active: editForm.is_active,
-        });
+        }).select('id').single();
 
         if (error) throw error;
+
+        if (pickedImage && insertedRow) {
+          await uploadCatalogueImage(pickedImage, insertedRow.id);
+        }
       }
 
       closeEdit();
@@ -285,30 +384,18 @@ export default function VenueCatalogueScreen() {
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ['images'],
         allowsMultipleSelection: false,
-        allowsEditing: true,
+        allowsEditing: false,
         quality: 0.8,
       });
       if (result.canceled || !result.assets?.[0]) return;
       const asset = result.assets[0];
-      setUploadingImage(itemId);
-      const fileName = `${user?.id}/${Date.now()}-catalogue-${itemId}.jpg`;
-      let fileBody: Blob | ArrayBuffer;
-      if (asset.uri.startsWith('data:')) {
-        const base64 = asset.uri.split(',')[1];
-        fileBody = decode(base64);
-      } else {
-        const base64 = await FileSystem.readAsStringAsync(asset.uri, { encoding: 'base64' });
-        fileBody = decode(base64);
+      const fileSize = asset.fileSize || 0;
+      if (fileSize > MAX_IMAGE_SIZE) {
+        setAlertState({ visible: true, title: 'Image Too Large', message: `${asset.fileName || 'Image'} is ${(fileSize / 1024 / 1024).toFixed(1)}MB. Maximum allowed is 10MB.` });
+        return;
       }
-      const { error: uploadError } = await supabase.storage.from('portfolio-images').upload(fileName, fileBody, {
-        contentType: 'image/jpeg',
-        cacheControl: '3600',
-        upsert: false,
-      });
-      if (uploadError) throw uploadError;
-      const { data: { publicUrl } } = supabase.storage.from('portfolio-images').getPublicUrl(fileName);
-      const { error: updateError } = await supabase.from('venue_catalogue_items').update({ image_url: publicUrl }).eq('id', itemId);
-      if (updateError) throw updateError;
+      setUploadingImage(itemId);
+      await uploadCatalogueImage(asset, itemId);
       await loadListingAndItems();
     } catch (err: any) {
       setAlertState({ visible: true, title: 'Upload failed', message: err?.message ?? 'Could not upload image.' });
@@ -508,6 +595,51 @@ export default function VenueCatalogueScreen() {
             <Text style={{ ...typography.bodyBold, color: '#FFFFFF' }}>Add Item</Text>
           </TouchableOpacity>
 
+          {selectedItems.length > 0 && (
+            <View
+              style={{
+                backgroundColor: colors.surface,
+                borderRadius: radii.lg,
+                borderWidth: 1,
+                borderColor: colors.borderSubtle,
+                padding: spacing.md,
+                marginBottom: spacing.md,
+              }}
+            >
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.sm }}>
+                <Text style={{ ...typography.titleMedium, color: colors.textPrimary }}>Your Selection</Text>
+                <TouchableOpacity onPress={clearSelection}>
+                  <Text style={{ ...typography.captionSemiBold, color: colors.textMuted }}>Clear</Text>
+                </TouchableOpacity>
+              </View>
+              {selectedItems.map((item) => (
+                <View key={item.id} style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: spacing.xs }}>
+                  <Text style={{ ...typography.body, color: colors.textPrimary }}>
+                    {item.title} x{item.quantity}
+                  </Text>
+                  <Text style={{ ...typography.body, color: colors.textPrimary }}>
+                    R{Number((item.price ?? 0) * item.quantity).toLocaleString()}
+                  </Text>
+                </View>
+              ))}
+              <View
+                style={{
+                  borderTopWidth: 1,
+                  borderColor: colors.borderSubtle,
+                  marginTop: spacing.sm,
+                  paddingTop: spacing.sm,
+                  flexDirection: 'row',
+                  justifyContent: 'space-between',
+                }}
+              >
+                <Text style={{ ...typography.titleMedium, color: colors.textPrimary }}>Total</Text>
+                <Text style={{ ...typography.titleMedium, color: colors.primary }}>
+                  R{Number(total).toLocaleString()}
+                </Text>
+              </View>
+            </View>
+          )}
+
           {sortedItems.length === 0 ? (
             <View
               style={{
@@ -537,7 +669,14 @@ export default function VenueCatalogueScreen() {
                   overflow: 'hidden',
                 }}
               >
-                <View style={{ flexDirection: 'row' }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                  <TouchableOpacity onPress={() => toggleItem(item.id)} style={{ padding: spacing.sm }}>
+                    <MaterialIcons
+                      name={selectedIds.has(item.id) ? 'check-box' : 'check-box-outline-blank'}
+                      size={24}
+                      color={selectedIds.has(item.id) ? colors.primary : colors.textMuted}
+                    />
+                  </TouchableOpacity>
                   <TouchableOpacity
                     onPress={() => pickCatalogueImage(item.id)}
                     style={{ width: 100, height: 100, backgroundColor: colors.backgroundAlt, alignItems: 'center', justifyContent: 'center' }}
@@ -563,6 +702,39 @@ export default function VenueCatalogueScreen() {
                     <Text style={{ ...typography.bodyBold, color: colors.textPrimary, marginTop: spacing.sm }}>
                       {item.price === null || item.price === undefined ? '—' : `R${Number(item.price).toLocaleString()}`}
                     </Text>
+                    {selectedIds.has(item.id) && (
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginTop: spacing.sm }}>
+                        <TouchableOpacity
+                          onPress={() => updateQuantity(item.id, -1)}
+                          style={{
+                            width: 28,
+                            height: 28,
+                            borderRadius: radii.md,
+                            backgroundColor: colors.surfaceMuted,
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                          }}
+                        >
+                          <MaterialIcons name="remove" size={18} color={colors.textPrimary} />
+                        </TouchableOpacity>
+                        <Text style={{ ...typography.bodyBold, color: colors.textPrimary, minWidth: 24, textAlign: 'center' }}>
+                          {quantities[item.id] || 1}
+                        </Text>
+                        <TouchableOpacity
+                          onPress={() => updateQuantity(item.id, 1)}
+                          style={{
+                            width: 28,
+                            height: 28,
+                            borderRadius: radii.md,
+                            backgroundColor: colors.surfaceMuted,
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                          }}
+                        >
+                          <MaterialIcons name="add" size={18} color={colors.textPrimary} />
+                        </TouchableOpacity>
+                      </View>
+                    )}
                     {!item.is_active && (
                       <Text style={{ ...typography.caption, color: colors.textMuted, marginTop: spacing.xs }}>
                         Inactive
@@ -676,6 +848,41 @@ export default function VenueCatalogueScreen() {
                 Active
               </Text>
             </TouchableOpacity>
+
+            <Text style={{ ...typography.caption, color: colors.textMuted, marginBottom: spacing.xs }}>Image (max 10MB)</Text>
+            <TouchableOpacity
+              onPress={pickImageForForm}
+              style={{
+                borderWidth: 1,
+                borderColor: colors.borderSubtle,
+                borderRadius: radii.md,
+                backgroundColor: colors.surfaceMuted,
+                alignItems: 'center',
+                justifyContent: 'center',
+                padding: spacing.md,
+                minHeight: 120,
+                marginBottom: spacing.xs,
+              }}
+            >
+              {pickedImage ? (
+                <Image source={{ uri: pickedImage.uri }} style={{ width: 100, height: 100, borderRadius: radii.md }} resizeMode="cover" />
+              ) : editingItem?.image_url ? (
+                <Image source={{ uri: editingItem.image_url }} style={{ width: 100, height: 100, borderRadius: radii.md }} resizeMode="cover" />
+              ) : (
+                <>
+                  <MaterialIcons name="add-photo-alternate" size={28} color={colors.textMuted} />
+                  <Text style={{ ...typography.caption, color: colors.textMuted, marginTop: spacing.xs }}>Tap to add image</Text>
+                </>
+              )}
+            </TouchableOpacity>
+            {pickedImage && (
+              <TouchableOpacity
+                onPress={() => setPickedImage(null)}
+                style={{ alignSelf: 'center', marginBottom: spacing.md }}
+              >
+                <Text style={{ ...typography.caption, color: colors.destructive }}>Remove image</Text>
+              </TouchableOpacity>
+            )}
 
             <TouchableOpacity
               onPress={handleSave}

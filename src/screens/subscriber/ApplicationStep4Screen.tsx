@@ -157,6 +157,7 @@ export default function ApplicationStep4Screen() {
       // Upload files to Supabase Storage first
       const uploadedImages = [];
       const uploadedVideos = [];
+      const uploadedDocuments = [];
       const uploadErrors = [];
 
       // Upload images
@@ -179,6 +180,18 @@ export default function ApplicationStep4Screen() {
         }
       }
 
+      // Upload business documents
+      for (const doc of state.step3.documents) {
+        const isImage = doc.type.startsWith('image/');
+        const bucket = isImage ? 'portfolio-images' : 'business-documents';
+        const result = await uploadFileToStorage(bucket, doc, user.id);
+        if (result.success && result.url) {
+          uploadedDocuments.push(result.url);
+        } else {
+          uploadErrors.push(`Document "${doc.name}": ${result.error || 'Upload failed'}`);
+        }
+      }
+
       // If any uploads failed, show error and prevent submission
       if (uploadErrors.length > 0) {
         console.error('Upload errors:', uploadErrors);
@@ -186,7 +199,7 @@ export default function ApplicationStep4Screen() {
         return;
       }
 
-      console.log(`Successfully uploaded ${uploadedImages.length} images, ${uploadedVideos.length} videos`);
+      console.log(`Successfully uploaded ${uploadedImages.length} images, ${uploadedVideos.length} videos, ${uploadedDocuments.length} documents`);
 
       // Submit application to database
       const portfolioType = state.portfolioType === 'venues' ? 'venue' as const : 'vendor' as const;
@@ -201,6 +214,7 @@ export default function ApplicationStep4Screen() {
         business_description: state.step2.description,
         portfolio_images: uploadedImages,
         portfolio_videos: uploadedVideos,
+        business_documents: uploadedDocuments,
         subscription_tier: state.step4.subscriptionPlan,
         terms_accepted: state.step4.termsAccepted,
         privacy_accepted: state.step4.privacyAccepted,
@@ -460,14 +474,18 @@ export default function ApplicationStep4Screen() {
       const businessName = submission.company_details?.tradingName || submission.company_details?.registeredBusinessName || profileRecord?.name || '';
 
       // Call the Supabase Edge Function to send confirmation email
+      const isVenue = state.portfolioType === 'venues';
+      const catalogueUrl = isVenue ? 'funxon://venue-catalogue' : 'funxon://vendor-catalogue';
+
       const { data, error } = await supabase.functions.invoke('send-application-status-email', {
         body: {
           email: user.email,
           fullName: fullName,
           businessName: businessName || undefined,
-          tierName: submission.subscription_tier || (state.portfolioType === 'venues' ? 'Venue' : 'Vendor'),
+          tierName: submission.subscription_tier || (isVenue ? 'Venue' : 'Vendor'),
           applicationUrl: 'funxon://application-status',
           status: 'approved',
+          catalogueUrl,
         },
       });
 

@@ -90,7 +90,7 @@ export const amenitiesList = [
   "Water Features/Fountains",
   "Wheel Chair Accessable",
   "WiFi - high speed"
-];
+].sort((a, b) => a.localeCompare(b));
 
 export const venueCapacityOptions = [
   "Under 50",

@@ -11,6 +11,8 @@ import { buildPayFastPaymentData, getPayFastCheckoutUrl, payfastConfig } from '.
 import { supabase } from '../lib/supabaseClient';
 import { useAuth } from '../auth/AuthContext';
 import ThemedAlert from '../components/ThemedAlert';
+import { getApprovedUserApplicationByType, getLatestUserApplicationByType } from '../lib/applicationService';
+import { normalizePhone } from '../lib/phone';
 
 const payfastLogo = require('../../assets/payfast.webp');
 
@@ -208,6 +210,61 @@ const Field = ({
   </View>
 );
 
+const PhoneField = ({
+  value,
+  onChangeText,
+  error,
+}: {
+  value: string;
+  onChangeText: (t: string) => void;
+  error?: string;
+}) => {
+  const suffix = value.startsWith('+27') ? value.slice(3) : value.replace(/^0+/, '');
+
+  const handleChange = (text: string) => {
+    let digits = text.replace(/\D/g, '');
+    digits = digits.replace(/^0+/, '');
+    onChangeText(`+27${digits}`);
+  };
+
+  return (
+    <View style={{ marginBottom: spacing.md }}>
+      <Text style={{ ...typography.caption, color: error ? '#EF4444' : colors.textSecondary, marginBottom: spacing.xs }}>
+        Phone *
+      </Text>
+      <View
+        style={{
+          flexDirection: 'row',
+          borderWidth: 1,
+          borderColor: error ? '#EF4444' : colors.borderSubtle,
+          backgroundColor: colors.surface,
+          borderRadius: radii.md,
+          paddingHorizontal: spacing.md,
+          paddingVertical: spacing.sm,
+          alignItems: 'center',
+        }}
+      >
+        <Text style={{ ...typography.body, color: colors.textMuted, marginRight: spacing.xs }}>+27</Text>
+        <TextInput
+          value={suffix}
+          onChangeText={handleChange}
+          placeholder="821234567"
+          placeholderTextColor={colors.textMuted}
+          keyboardType="phone-pad"
+          style={{
+            flex: 1,
+            color: colors.textPrimary,
+            paddingVertical: 0,
+          }}
+        />
+      </View>
+      {error && (
+        <Text style={{ ...typography.caption, color: '#EF4444', marginTop: spacing.xs }}>{error}</Text>
+      )}
+    </View>
+  );
+};
+
 type RouteParams = {
   tierName: string;
   billing: 'monthly' | 'yearly' | '6_month' | '12_month';
@@ -228,7 +285,7 @@ export default function SubscriptionCheckoutScreen() {
 
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
-  const [phone, setPhone] = useState('');
+  const [phone, setPhone] = useState('+27');
   const [businessName, setBusinessName] = useState('');
   const [vatNumber, setVatNumber] = useState('');
 
@@ -245,11 +302,34 @@ export default function SubscriptionCheckoutScreen() {
   const scrollViewRef = useRef<ScrollView>(null);
   const fieldLayouts = useRef<Record<string, number>>({});
 
-  const notifyUrl = `${process.env.EXPO_PUBLIC_SUPABASE_URL || 'https://fhlocaqndxawkbztncwo.supabase.co'}/functions/v1/payfast-itn`;
+  const supabaseBaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL || 'https://fhlocaqndxawkbztncwo.supabase.co';
+  const notifyUrl = `${supabaseBaseUrl}/functions/v1/payfast-itn`;
+  const returnUrl = `${supabaseBaseUrl}/functions/v1/payfast-redirect?type=success`;
+  const cancelUrl = `${supabaseBaseUrl}/functions/v1/payfast-redirect?type=cancel`;
 
   useEffect(() => {
     if (!user?.id) return;
-    const loadUser = async () => {
+
+    const applyApplicationData = (application: any) => {
+      const details = application?.company_details ?? {};
+      const coverageProvinces = application?.coverage_provinces ?? [];
+      const coverageCities = application?.coverage_cities ?? [];
+
+      if (details.ownersName?.trim()) setFullName(details.ownersName.trim());
+      if (details.email?.trim()) setEmail(details.email.trim());
+      else if (details.userEmail?.trim()) setEmail(details.userEmail.trim());
+      if (details.contactPhoneNumber?.trim()) setPhone(normalizePhone(details.contactPhoneNumber.trim()));
+      else if (details.userWhatsapp?.trim()) setPhone(normalizePhone(details.userWhatsapp.trim()));
+      if (details.tradingName?.trim()) setBusinessName(details.tradingName.trim());
+      else if (details.registeredBusinessName?.trim()) setBusinessName(details.registeredBusinessName.trim());
+      if (details.vatNumber?.trim()) setVatNumber(details.vatNumber.trim());
+      if (details.billingAddress?.trim()) setAddressLine1(details.billingAddress.trim());
+      else if (details.businessPhysicalAddress?.trim()) setAddressLine1(details.businessPhysicalAddress.trim());
+      if (coverageCities[0]?.trim()) setCity(coverageCities[0].trim());
+      if (coverageProvinces[0]?.trim()) setProvince(coverageProvinces[0].trim());
+    };
+
+    const loadUserFallback = async () => {
       const { data: auth } = await supabase.auth.getUser();
       const { data: userRow } = await supabase
         .from('users')
@@ -260,7 +340,7 @@ export default function SubscriptionCheckoutScreen() {
       const row = userRow as any;
       if (row.full_name) setFullName(row.full_name);
       if (row.email) setEmail(row.email);
-      if (row.phone) setPhone(row.phone);
+      if (row.phone) setPhone(normalizePhone(row.phone));
       if (row.business_name) setBusinessName(row.business_name);
       if (row.vat_number) setVatNumber(row.vat_number);
       if (row.address_line1) setAddressLine1(row.address_line1);
@@ -269,8 +349,154 @@ export default function SubscriptionCheckoutScreen() {
       if (row.province) setProvince(row.province);
       if (row.postal_code) setPostalCode(row.postal_code);
     };
-    loadUser();
-  }, [user?.id]);
+
+    const loadBillingDetails = async () => {
+      const portfolioType = productType === 'venue' ? 'venue' : 'vendor';
+      const approved = await getApprovedUserApplicationByType(portfolioType);
+      if (approved.success && approved.data) {
+        applyApplicationData(approved.data);
+        return;
+      }
+      const latest = await getLatestUserApplicationByType(portfolioType);
+      if (latest.success && latest.data) {
+        applyApplicationData(latest.data);
+        return;
+      }
+      await loadUserFallback();
+    };
+
+    loadBillingDetails();
+  }, [user?.id, productType]);
+
+  const populatePortfolioFromApplication = async (portfolioType: 'venue' | 'vendor') => {
+    if (!user?.id) return;
+    const { data: application } = await getLatestUserApplicationByType(portfolioType);
+    if (!application) return;
+
+    const details = (application.company_details ?? {}) as any;
+    const serviceCategories = (application.service_categories ?? {}) as any;
+    const listingName =
+      details.tradingName?.trim() ||
+      details.registeredBusinessName?.trim() ||
+      (portfolioType === 'venue' ? 'Venue Listing' : 'Vendor Listing');
+
+    if (portfolioType === 'venue') {
+      const parseCapacityNumber = (value: string): number | null => {
+        const numbers = (value ?? '').match(/\d[\d,]*/g);
+        if (!numbers || numbers.length === 0) return null;
+        const last = numbers[numbers.length - 1];
+        const parsed = parseInt(last.replace(/,/g, ''), 10);
+        return Number.isFinite(parsed) ? parsed : null;
+      };
+      const halls = (serviceCategories.halls ?? []).map((h: any) => ({
+        name: (h?.name ?? '').trim(),
+        capacity: (h?.capacity ?? '').trim(),
+      }));
+      const hallCapacities = halls
+        .map((h: any) => parseCapacityNumber(h.capacity))
+        .filter((n: any): n is number => typeof n === 'number' && Number.isFinite(n));
+      const maxHallCapacity = hallCapacities.length ? Math.max(...hallCapacities) : null;
+
+      const { data: existing } = await supabase
+        .from('venue_listings')
+        .select('features')
+        .eq('user_id', user.id)
+        .maybeSingle();
+      const existingFeatures = (existing as any)?.features ?? {};
+      const nextFeatures = {
+        ...(existingFeatures ?? {}),
+        halls,
+        maxHallCapacity,
+        venueTypes: serviceCategories.venueType,
+      };
+
+      await supabase.from('venue_listings').upsert(
+        {
+          user_id: user.id,
+          name: listingName,
+          description: application.business_description?.trim() || null,
+          location: details.businessPhysicalAddress?.trim() || null,
+          address_line_1: details.businessPhysicalAddress?.trim() || null,
+          city: application.coverage_cities?.[0] || null,
+          province: application.coverage_provinces?.[0] || null,
+          country: 'South Africa',
+          contact_email: details.email?.trim() || details.userEmail?.trim() || null,
+          whatsapp_number: details.userWhatsapp?.trim() || details.contactPhoneNumber?.trim() || null,
+          instagram_url: details.instagram?.trim() || null,
+          facebook_url: details.facebook?.trim() || null,
+          tiktok_url: details.tiktok?.trim() || null,
+          venue_type: (serviceCategories.venueType ?? []).join(', ') || null,
+          venue_capacity: serviceCategories.venueCapacity ?? null,
+          amenities: serviceCategories.amenities,
+          event_types: serviceCategories.eventTypes,
+          provinces: application.coverage_provinces,
+          cities: application.coverage_cities,
+          features: nextFeatures,
+          image_url: application.portfolio_images?.[0] || null,
+          subscription_plan: application.subscription_tier,
+          subscription_status: 'active',
+        } as any,
+        { onConflict: 'user_id' },
+      );
+
+      await supabase.from('venues').upsert(
+        {
+          user_id: user.id,
+          name: listingName,
+          description: application.business_description?.trim() || null,
+          location: details.businessPhysicalAddress?.trim() || null,
+          subscription_plan_key: application.subscription_tier,
+          subscription_status: 'active',
+          billing_period: billing || 'monthly',
+          billing_email: details.email?.trim() || null,
+          billing_name: details.ownersName?.trim() || null,
+          billing_phone: details.contactPhoneNumber?.trim() || null,
+          subscription_started_at: new Date().toISOString(),
+        },
+        { onConflict: 'user_id' },
+      );
+    } else {
+      const vendorPayload = {
+        user_id: user.id,
+        name: listingName,
+        description: application.business_description?.trim() || null,
+        location: details.businessPhysicalAddress?.trim() || null,
+        address_line_1: details.businessPhysicalAddress?.trim() || null,
+        city: application.coverage_cities?.[0] || null,
+        province: application.coverage_provinces?.[0] || null,
+        email: details.email?.trim() || null,
+        whatsapp_number: details.contactPhoneNumber?.trim() || null,
+        instagram_url: details.instagram?.trim() || null,
+        facebook_url: details.facebook?.trim() || null,
+        tiktok_url: details.tiktok?.trim() || null,
+        image_url: application.portfolio_images?.[0] || null,
+        subscription_tier: normalizeVendorTierKey(application.subscription_tier ?? tierName),
+        subscription_status: 'active',
+        billing_period: billing || 'monthly',
+        billing_email: details.email?.trim() || null,
+        billing_name: details.ownersName?.trim() || null,
+        billing_phone: details.contactPhoneNumber?.trim() || null,
+        subscription_started_at: new Date().toISOString(),
+        service_options: serviceCategories.serviceCategories ?? [],
+        vendor_tags: serviceCategories.serviceSubcategories ?? [],
+        amenities: serviceCategories.amenities ?? [],
+        accepted_payment_methods: serviceCategories.paymentMethods ?? [],
+      };
+
+      const { data: existingVendor } = await supabase
+        .from('vendors')
+        .select('id')
+        .eq('user_id', user.id)
+        .maybeSingle();
+      const vendorId = existingVendor?.id ?? null;
+
+      if (vendorId) {
+        await supabase.from('vendors').update(vendorPayload).eq('id', vendorId);
+      } else {
+        await supabase.from('vendors').insert(vendorPayload);
+      }
+    }
+  };
 
   const summary = useMemo(() => {
     const planLabel = (tierName || '').toUpperCase();
@@ -463,8 +689,8 @@ export default function SubscriptionCheckoutScreen() {
       frequency: billing === 'yearly' ? '6' : '3',
       recurringAmount: billing === '6_month' || billing === '12_month' ? undefined : priceNum,
       cycles: billing === '6_month' || billing === '12_month' ? undefined : 0,
-      returnUrl: 'funxon://payment/success',
-      cancelUrl: 'funxon://payment/cancel',
+      returnUrl,
+      cancelUrl,
       notifyUrl,
     });
 
@@ -531,6 +757,11 @@ export default function SubscriptionCheckoutScreen() {
       const portfolioType = productType === 'venue' ? 'venues' : 'vendors';
       console.log('SubscriptionCheckoutScreen - Setting portfolio type to:', portfolioType);
       await setPortfolioType(portfolioType);
+
+      // Populate vendor/venue record with application data so portfolio is not empty
+      const portfolioTypeForPopulate = productType === 'venue' ? 'venue' : 'vendor';
+      await populatePortfolioFromApplication(portfolioTypeForPopulate);
+
       console.log('SubscriptionCheckoutScreen - Navigating to portfolio management');
 
       const nextRoute = productType === 'venue' ? 'UpdateVenuePortfolio' : 'UpdateVendorPortfolio';
@@ -545,15 +776,17 @@ export default function SubscriptionCheckoutScreen() {
 
   const sendWelcomeEmail = async () => {
     try {
-      // Call the Supabase Edge Function to send welcome email
-      const functionName = productType === 'venue' ? 'send-vendor-welcome-email' : 'send-vendor-welcome-email';
+      const isVenue = productType === 'venue';
+      const functionName = isVenue ? 'send-venue-welcome-email' : 'send-vendor-welcome-email';
+      const catalogueUrl = isVenue ? 'funxon://venue-catalogue' : 'funxon://vendor-catalogue';
       const { data, error } = await supabase.functions.invoke(functionName, {
         body: {
           email: email.trim(),
           fullName: fullName.trim(),
           businessName: businessName.trim() || undefined,
           tierName: tierName,
-          applicationUrl: 'https://funxon.co.za/vendor-application',
+          applicationUrl: isVenue ? 'https://funxon.co.za/venue-application' : 'https://funxon.co.za/vendor-application',
+          catalogueUrl,
         },
       });
 
@@ -685,8 +918,7 @@ export default function SubscriptionCheckoutScreen() {
               />
             </View>
             <View onLayout={(e) => { fieldLayouts.current.phone = e.nativeEvent.layout.y; }}>
-              <Field
-                label="Phone *"
+              <PhoneField
                 value={phone}
                 onChangeText={(text) => {
                   setPhone(text);
@@ -694,8 +926,6 @@ export default function SubscriptionCheckoutScreen() {
                     setErrors((prev) => ({ ...prev, phone: validateField('phone', text) }));
                   }
                 }}
-                placeholder="+27"
-                keyboardType="phone-pad"
                 error={touched.phone ? errors.phone : undefined}
               />
             </View>

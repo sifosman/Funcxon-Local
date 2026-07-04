@@ -34,6 +34,9 @@ interface NotificationPayload {
   eventDetails?: string;
   eventDate?: string;
 
+  // Line items (catalogue selections)
+  lineItems?: { title: string; quantity: number; price: number }[];
+
   // Response details (kept for backwards compatibility, no longer displayed in email)
   clientNotes?: string;
   revisionNumber?: number;
@@ -161,24 +164,61 @@ function generateEmailContent(payload: NotificationPayload): { subject: string; 
 }
 
 function generateQuoteRequestedToVendorEmail(payload: NotificationPayload) {
-  const { vendorBusinessName } = payload;
+  const { vendorBusinessName, lineItems, eventDate } = payload;
   const subject = 'New Quote Request';
   const deepLink = 'funxon://vendor/quotes';
+
+  const itemsHtml = lineItems && lineItems.length > 0
+    ? `
+      <div style="background: #F5F1E8; padding: 20px; border-radius: 8px; margin: 20px 0; border: 1px solid #D4CFBD;">
+        <h3 style="margin-top: 0; color: #2B9EB3;">Requested Items</h3>
+        <table style="width: 100%; border-collapse: collapse;">
+          <thead>
+            <tr style="border-bottom: 1px solid #D4CFBD;">
+              <th style="text-align: left; padding: 8px 0; color: #2B3840; font-size: 14px;">Item</th>
+              <th style="text-align: center; padding: 8px 0; color: #2B3840; font-size: 14px;">Qty</th>
+              <th style="text-align: right; padding: 8px 0; color: #2B3840; font-size: 14px;">Price</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${lineItems.map((item) => `
+              <tr style="border-bottom: 1px solid #E8E4D7;">
+                <td style="padding: 8px 0; color: #2B3840; font-size: 15px;">${escapeHtml(item.title)}</td>
+                <td style="text-align: center; padding: 8px 0; color: #2B3840; font-size: 15px;">${item.quantity}</td>
+                <td style="text-align: right; padding: 8px 0; color: #2B3840; font-size: 15px;">R${(item.price * item.quantity).toLocaleString('en-ZA')}</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+        <div style="text-align: right; margin-top: 12px; padding-top: 8px; border-top: 2px solid #2B9EB3;">
+          <strong style="color: #2B9EB3; font-size: 16px;">Estimated Total: R${lineItems.reduce((sum, item) => sum + item.price * item.quantity, 0).toLocaleString('en-ZA')}</strong>
+        </div>
+      </div>
+    `
+    : '';
+
+  const itemsText = lineItems && lineItems.length > 0
+    ? `\nRequested Items:\n${lineItems.map((item) => `  - ${item.title} (Qty: ${item.quantity}) - R${(item.price * item.quantity).toLocaleString('en-ZA')}`).join('\n')}\nEstimated Total: R${lineItems.reduce((sum, item) => sum + item.price * item.quantity, 0).toLocaleString('en-ZA')}\n`
+    : '';
+
+  const eventDateText = eventDate ? `Event date: ${eventDate}\n` : '';
 
   const htmlContent = genericEmailHtml({
     title: 'New Quote Request',
     greeting: `Hi ${vendorBusinessName || 'there'},`,
-    message: 'You have received a new quote request. Open the Funxon app to view the details and respond.',
+    message: `You have received a new quote request.${eventDate ? ` Event date: ${eventDate}.` : ''} Open the Funxon app to view the details and respond.`,
     deepLink,
     cta: 'Open the Funxon App',
     accentColor: '#2B9EB3',
+    extraContent: itemsHtml,
   });
 
   const textContent = genericEmailText({
     title: 'New Quote Request',
     greeting: `Hi ${vendorBusinessName || 'there'},`,
-    message: 'You have received a new quote request. Open the Funxon app to view the details and respond.',
+    message: `You have received a new quote request.${eventDate ? ` Event date: ${eventDate}.` : ''} Open the Funxon app to view the details and respond.`,
     deepLink,
+    extraContent: eventDateText + itemsText,
   });
 
   return { subject, htmlContent, textContent };
@@ -280,6 +320,15 @@ function generateQuoteRevisedToClientEmail(payload: NotificationPayload) {
   return { subject, htmlContent, textContent };
 }
 
+function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
 interface GenericEmailOptions {
   title: string;
   greeting: string;
@@ -287,10 +336,11 @@ interface GenericEmailOptions {
   deepLink: string;
   cta?: string;
   accentColor?: string;
+  extraContent?: string;
 }
 
 function genericEmailHtml(options: GenericEmailOptions): string {
-  const { title, greeting, message, deepLink, cta = 'Open the Funxon App', accentColor = '#2B9EB3' } = options;
+  const { title, greeting, message, deepLink, cta = 'Open the Funxon App', accentColor = '#2B9EB3', extraContent = '' } = options;
   return `
     <!DOCTYPE html>
     <html>
@@ -306,6 +356,7 @@ function genericEmailHtml(options: GenericEmailOptions): string {
       <div style="background: #ffffff; padding: 30px; border: 1px solid #D4CFBD; border-top: none; border-radius: 0 0 10px 10px;">
         <p style="font-size: 16px; margin-bottom: 20px; color: #2B3840;">${greeting}</p>
         <p style="font-size: 16px; margin-bottom: 20px; color: #2B3840;">${message}</p>
+        ${extraContent}
         <div style="text-align: center; margin: 30px 0;">
           <a href="${deepLink}"
              style="background: ${accentColor}; color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; font-weight: bold; display: inline-block;">
@@ -322,14 +373,14 @@ function genericEmailHtml(options: GenericEmailOptions): string {
 }
 
 function genericEmailText(options: GenericEmailOptions): string {
-  const { title, greeting, message, deepLink } = options;
+  const { title, greeting, message, deepLink, extraContent = '' } = options;
   return `
 ${title}
 
 ${greeting}
 
 ${message}
-
+${extraContent}
 Open the Funxon app to view the details:
 ${deepLink}
 

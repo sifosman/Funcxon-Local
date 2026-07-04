@@ -172,14 +172,15 @@ export default function ImageZoomModal({
                     <!DOCTYPE html>
                     <html>
                       <head>
-                        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+                        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
                         <style>
-                          body { margin: 0; background: #000; display: flex; align-items: center; justify-content: center; height: 100vh; }
-                          video { max-width: 100%; max-height: 100%; }
+                          * { margin: 0; padding: 0; box-sizing: border-box; }
+                          body { background: #000; display: flex; align-items: center; justify-content: center; height: 100vh; width: 100vw; overflow: hidden; }
+                          video { width: 100%; height: 100%; object-fit: contain; }
                         </style>
                       </head>
                       <body>
-                        <video controls autoplay playsinline src="${currentItem.url}"></video>
+                        <video controls playsinline webkit-playsinline preload="auto" src="${currentItem.url}" style="background:#000;"></video>
                       </body>
                     </html>
                   `,
@@ -191,6 +192,7 @@ export default function ImageZoomModal({
                 allowsInlineMediaPlayback
                 mediaPlaybackRequiresUserAction={false}
                 startInLoadingState
+                allowsFullscreen
               />
             ) : (
               <GestureDetector gesture={composed}>

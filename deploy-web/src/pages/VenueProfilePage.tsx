@@ -117,7 +117,19 @@ export default function VenueProfilePage() {
       } catch (err) {
         console.warn('gallery_media fetch failed, falling back to legacy photos:', err);
       }
-      const items = mediaItems.length > 0 ? mediaItems : legacyImages.map((url: string) => ({ url, type: 'image' as const }));
+      const legacyItems = legacyImages.map((url: string) => ({ url, type: 'image' as const }));
+      const seen = new Set<string>();
+      const items = [...legacyItems, ...mediaItems]
+        .filter((item) => {
+          if (seen.has(item.url)) return false;
+          seen.add(item.url);
+          return true;
+        })
+        .sort((a, b) => {
+          if (a.type === 'video' && b.type !== 'video') return 1;
+          if (a.type !== 'video' && b.type === 'video') return -1;
+          return 0;
+        });
       setGalleryItems(items);
       setSelectedImage(items[0]?.url || null);
 

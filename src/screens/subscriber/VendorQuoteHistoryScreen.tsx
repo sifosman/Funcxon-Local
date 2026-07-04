@@ -414,7 +414,7 @@ export default function VendorQuoteHistoryScreen() {
                                 {comment.is_internal && ' (Internal)'}
                               </Text>
                               <Text style={{ ...typography.caption, color: colors.textMuted }}>
-                                {new Date(comment.created_at).toLocaleDateString()}
+                                {new Date(comment.created_at).toLocaleDateString('en-ZA', { day: 'numeric', month: 'long', year: 'numeric' })}
                               </Text>
                             </View>
                             <Text style={{ ...typography.body, color: colors.textPrimary, marginTop: 2 }}>

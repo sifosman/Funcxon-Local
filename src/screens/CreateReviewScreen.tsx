@@ -5,6 +5,7 @@ import { MaterialIcons } from '@expo/vector-icons';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 
 import type { AttendeeStackParamList } from '../navigation/AttendeeNavigator';
+import { useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../lib/supabaseClient';
 import { useAuth } from '../auth/AuthContext';
 import { colors, radii, spacing, typography } from '../theme';
@@ -15,6 +16,7 @@ type Props = NativeStackScreenProps<AttendeeStackParamList, 'CreateReview'>;
 export default function CreateReviewScreen({ route, navigation }: Props) {
   const { type, targetId, targetName } = route.params;
   const { user } = useAuth();
+  const queryClient = useQueryClient();
   const isAppReview = type === 'app';
 
   const [rating, setRating] = useState<number>(0);
@@ -88,6 +90,10 @@ export default function CreateReviewScreen({ route, navigation }: Props) {
 
         if (error) throw error;
       }
+
+      queryClient.invalidateQueries({ queryKey: ['reviews'] });
+      queryClient.invalidateQueries({ queryKey: ['venue-reviews'] });
+      queryClient.invalidateQueries({ queryKey: ['vendor-dashboard-reviews'] });
 
       setAlertState({ visible: true, title: 'Review submitted', message: 'Thanks! Your review is pending approval.' });
       navigation.goBack();

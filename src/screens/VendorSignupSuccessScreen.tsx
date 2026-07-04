@@ -40,6 +40,7 @@ export default function VendorSignupSuccessScreen() {
       const isVenue = productType === 'venue';
       const functionName = isVenue ? 'send-venue-welcome-email' : 'send-vendor-welcome-email';
       const applicationUrl = isVenue ? 'https://funxon.co.za/venue-application' : 'https://funxon.co.za/vendor-application';
+      const catalogueUrl = isVenue ? 'funxon://venue-catalogue' : 'funxon://vendor-catalogue';
 
       const { data, error } = await supabase.functions.invoke(functionName, {
         body: {
@@ -47,6 +48,7 @@ export default function VendorSignupSuccessScreen() {
           fullName,
           tierName,
           applicationUrl,
+          catalogueUrl,
         },
       });
 

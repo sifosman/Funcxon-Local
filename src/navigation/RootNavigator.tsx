@@ -17,7 +17,7 @@ export type RootTabParamList = {
   Favourites: undefined;
   Quotes: undefined;
   Planner: undefined;
-  Account: undefined;
+  Account: { screen: string } | undefined;
 };
 
 const Tab = createBottomTabNavigator<RootTabParamList>();
@@ -131,6 +131,12 @@ export function RootNavigator() {
       <Tab.Screen
         name="Account"
         options={{ headerShown: false, tabBarLabel: 'Account' }}
+        listeners={({ navigation }) => ({
+          tabPress: (e) => {
+            e.preventDefault();
+            navigation.navigate('Account', { screen: 'AccountMain' });
+          },
+        })}
       >
         {() => <GuardedScreen component={ProfileNavigator} label="Account" />}
       </Tab.Screen>

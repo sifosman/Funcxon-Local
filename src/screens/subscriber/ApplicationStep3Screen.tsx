@@ -4,7 +4,9 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import * as ImagePicker from 'expo-image-picker';
+import * as DocumentPicker from 'expo-document-picker';
 import { useApplicationForm } from '../../context/ApplicationFormContext';
+import type { DocKey } from '../../context/ApplicationFormContext';
 import { validateStep3 } from '../../utils/formValidation';
 import { colors, spacing, radii, typography } from '../../theme';
 import { convertBlobToBase64 } from '../../lib/applicationService';
@@ -24,6 +26,13 @@ type ProfileStackParamList = {
 
 const MAX_IMAGE_SIZE = 10 * 1024 * 1024; // 10MB
 const MAX_VIDEO_SIZE = 50 * 1024 * 1024; // 50MB
+const MAX_DOC_SIZE = 10 * 1024 * 1024; // 10MB
+
+const BUSINESS_DOCS: Array<{ key: DocKey; label: string; required: boolean; acceptLabel?: string }> = [
+  { key: 'id_copy', label: 'ID Copy', required: true },
+  { key: 'cipro', label: 'CIPRO / Company Registration', required: false, acceptLabel: 'If applicable' },
+  { key: 'company_logo', label: 'Company Logo', required: true },
+];
 
 export default function ApplicationStep3Screen() {
   const navigation = useNavigation<NativeStackNavigationProp<ProfileStackParamList>>();
@@ -303,6 +312,43 @@ export default function ApplicationStep3Screen() {
   const handleRemoveVideo = (index: number) => {
     const newVideos = state.step3.videos.filter((_, i) => i !== index);
     updateStep3({ videos: newVideos });
+  };
+
+  const handlePickDocument = async (docType: DocKey) => {
+    try {
+      const result = await DocumentPicker.getDocumentAsync({
+        type: ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'image/*'],
+        copyToCacheDirectory: true,
+      });
+
+      if (result.canceled || !result.assets || result.assets.length === 0) return;
+
+      const asset = result.assets[0];
+      const fileSize = asset.size || 0;
+      if (fileSize > MAX_DOC_SIZE) {
+        setAlertState({ visible: true, title: 'File Too Large', message: `${asset.name} exceeds 10MB limit.`, buttons: [{ text: 'OK', style: 'default', onPress: () => setAlertState(null) }] });
+        return;
+      }
+
+      // Remove any existing document of the same type (one per type)
+      const filtered = state.step3.documents.filter((d) => d.docType !== docType);
+      const newDoc = {
+        uri: asset.uri,
+        name: asset.name,
+        type: asset.mimeType || 'application/octet-stream',
+        docType,
+      };
+      updateStep3({ documents: [...filtered, newDoc] });
+      setAlertState({ visible: true, title: 'Success', message: `${BUSINESS_DOCS.find((d) => d.key === docType)?.label} uploaded successfully.`, buttons: [{ text: 'OK', style: 'default', onPress: () => setAlertState(null) }] });
+    } catch (error) {
+      console.error('Document picker error:', error);
+      setAlertState({ visible: true, title: 'Error', message: 'Failed to pick document. Please try again.', buttons: [{ text: 'OK', style: 'default', onPress: () => setAlertState(null) }] });
+    }
+  };
+
+  const handleRemoveDocument = (docType: DocKey) => {
+    const newDocs = state.step3.documents.filter((d) => d.docType !== docType);
+    updateStep3({ documents: newDocs });
   };
 
   const handleNext = () => {
@@ -602,6 +648,105 @@ export default function ApplicationStep3Screen() {
             </TouchableOpacity>
           </View>
 
+          {/* Business Documents */}
+          <View
+            style={{
+              backgroundColor: colors.surface,
+              borderRadius: radii.lg,
+              padding: spacing.lg,
+              marginBottom: spacing.lg,
+              borderWidth: 1,
+              borderColor: colors.borderSubtle,
+              shadowColor: '#000',
+              shadowOpacity: 0.05,
+              shadowRadius: 8,
+              shadowOffset: { width: 0, height: 2 },
+              elevation: 2,
+            }}
+          >
+            <Text style={{ ...typography.titleMedium, color: colors.textPrimary, marginBottom: spacing.xs }}>
+              Business Documents
+            </Text>
+            <Text style={{ ...typography.caption, color: colors.textMuted, marginBottom: spacing.md }}>
+              Upload required business documents (PDF, DOC, DOCX, PNG, JPG — max 10MB each)
+            </Text>
+
+            {BUSINESS_DOCS.map((doc) => {
+              const existing = state.step3.documents.find((d) => d.docType === doc.key);
+              const hasError = errors[doc.key];
+              return (
+                <View key={doc.key} style={{ marginBottom: spacing.md }}>
+                  <View
+                    style={{
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      marginBottom: spacing.xs,
+                    }}
+                  >
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, flex: 1 }}>
+                      <MaterialIcons name="description" size={18} color={colors.textPrimary} />
+                      <Text style={{ ...typography.body, color: colors.textPrimary }}>
+                        {doc.label}{doc.required ? ' *' : ''}
+                      </Text>
+                    </View>
+                    {doc.acceptLabel && !existing && (
+                      <Text style={{ ...typography.caption, color: colors.textMuted, fontStyle: 'italic' }}>
+                        {doc.acceptLabel}
+                      </Text>
+                    )}
+                  </View>
+
+                  {existing ? (
+                    <View
+                      style={{
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        padding: spacing.md,
+                        backgroundColor: colors.background,
+                        borderRadius: radii.md,
+                      }}
+                    >
+                      <MaterialIcons name="check-circle" size={20} color="#22C55E" />
+                      <Text
+                        style={{ ...typography.body, color: colors.textPrimary, marginLeft: spacing.sm, flex: 1 }}
+                        numberOfLines={1}
+                      >
+                        {existing.name}
+                      </Text>
+                      <TouchableOpacity onPress={() => handleRemoveDocument(doc.key)}>
+                        <MaterialIcons name="delete" size={20} color="#EF4444" />
+                      </TouchableOpacity>
+                    </View>
+                  ) : (
+                    <TouchableOpacity
+                      onPress={() => handlePickDocument(doc.key)}
+                      style={{
+                        borderWidth: 2,
+                        borderColor: hasError ? '#EF4444' : colors.borderSubtle,
+                        borderStyle: 'dashed',
+                        borderRadius: radii.md,
+                        padding: spacing.md,
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                      }}
+                    >
+                      <MaterialIcons name="upload-file" size={28} color={colors.textMuted} />
+                      <Text style={{ ...typography.caption, color: colors.textMuted, marginTop: 4 }}>
+                        Tap to upload
+                      </Text>
+                    </TouchableOpacity>
+                  )}
+                  {hasError && (
+                    <Text style={{ ...typography.caption, fontSize: 12, color: '#EF4444', marginTop: spacing.xs }}>
+                      {hasError}
+                    </Text>
+                  )}
+                </View>
+              );
+            })}
+          </View>
+
           {/* Note about uploads */}
           <View
             style={{
@@ -615,7 +760,7 @@ export default function ApplicationStep3Screen() {
             <MaterialIcons name="info" size={20} color="#F59E0B" style={{ marginRight: spacing.sm }} />
             <View style={{ flex: 1 }}>
               <Text style={{ ...typography.caption, color: '#92400E' }}>
-              Note: Supported formats: JPG, PNG (max 10MB each), MP4, MOV (max 50MB each). Images are saved to your profile gallery.
+              Note: Supported formats: JPG, PNG (max 10MB each), MP4, MOV (max 50MB each), PDF, DOC, DOCX (max 10MB each). Images are saved to your profile gallery.
               </Text>
             </View>
           </View>

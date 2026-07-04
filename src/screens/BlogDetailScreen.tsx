@@ -76,9 +76,9 @@ export default function BlogDetailScreen() {
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', {
-      month: 'long',
+    return date.toLocaleDateString('en-ZA', {
       day: 'numeric',
+      month: 'long',
       year: 'numeric',
     });
   };

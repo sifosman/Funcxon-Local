@@ -7,7 +7,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { colors, spacing, radii, typography } from '../../theme';
 import { supabase } from '../../lib/supabaseClient';
 import { uploadFileToStorage } from '../../lib/applicationService';
-import { getVendorPhotoLimit } from '../../lib/subscription';
+import { getVendorPhotoLimit, getVendorVideoLimit } from '../../lib/subscription';
 import { createGalleryMediaRecord } from '../../lib/mediaUpload';
 import { normalizePhoneNumber } from '../../utils/phoneNormalization';
 import { useAuth } from '../../auth/AuthContext';
@@ -22,6 +22,17 @@ function parseCoordinate(value: string) {
     if (!trimmed) return null;
     const parsed = Number(trimmed);
     return Number.isFinite(parsed) ? parsed : null;
+}
+
+function arrayToString(arr: string[] | null | undefined): string {
+    return (arr || []).filter(Boolean).join(', ');
+}
+
+function stringToArray(value: string): string[] {
+    return value
+        .split(',')
+        .map((v) => v.trim())
+        .filter(Boolean);
 }
 
 type ProfileStackParamList = {
@@ -52,11 +63,16 @@ type VendorListing = {
     whatsapp_number: string | null;
     website_url: string | null;
     instagram_url: string | null;
+    facebook_url: string | null;
+    tiktok_url: string | null;
+    twitter_url: string | null;
+    youtube_url: string | null;
     subscription_tier: string | null;
     subscription_status: string | null;
     service_options: string[] | null;
     amenities: string[] | null;
     vendor_tags: string[] | null;
+    accepted_payment_methods: string[] | null;
     image_url: string | null;
     additional_photos: string[] | null;
     photo_count: number | null;
@@ -94,6 +110,14 @@ export default function UpdateVendorPortfolioScreen() {
         whatsapp_number: '',
         website_url: '',
         instagram_url: '',
+        facebook_url: '',
+        tiktok_url: '',
+        twitter_url: '',
+        youtube_url: '',
+        service_categories: '',
+        service_subcategories: '',
+        amenities: '',
+        accepted_payment_methods: '',
     });
 
     const derivedLocationPreview = useMemo(
@@ -116,7 +140,7 @@ export default function UpdateVendorPortfolioScreen() {
         try {
             const { data: vendorData, error } = await supabase
                 .from('vendors')
-                .select('id, name, description, location, address_line_1, address_line_2, suburb, city, province, postal_code, country, latitude, longitude, price_range, email, whatsapp_number, website_url, instagram_url, subscription_tier, subscription_status, service_options, amenities, vendor_tags, image_url, additional_photos, photo_count')
+                .select('id, name, description, location, address_line_1, address_line_2, suburb, city, province, postal_code, country, latitude, longitude, price_range, email, whatsapp_number, website_url, instagram_url, facebook_url, tiktok_url, twitter_url, youtube_url, subscription_tier, subscription_status, service_options, amenities, vendor_tags, accepted_payment_methods, image_url, additional_photos, photo_count')
                 .eq('user_id', user.id)
                 .maybeSingle();
 
@@ -131,8 +155,8 @@ export default function UpdateVendorPortfolioScreen() {
                 setAdditionalPhotos((vendorData as VendorListing).additional_photos || []);
                 const limit = await getVendorPhotoLimit((vendorData as VendorListing).id);
                 setPhotoLimit(limit);
-                // Vendor tiers don't currently expose a video limit; default to 0 until supported
-                setVideoLimit(0);
+                const videoLimit = await getVendorVideoLimit((vendorData as VendorListing).id);
+                setVideoLimit(videoLimit);
 
                 const { data: gallery } = await supabase
                     .from('gallery_media')
@@ -162,6 +186,14 @@ export default function UpdateVendorPortfolioScreen() {
                     whatsapp_number: vendorData.whatsapp_number || '',
                     website_url: vendorData.website_url || '',
                     instagram_url: vendorData.instagram_url || '',
+                    facebook_url: (vendorData as VendorListing).facebook_url || '',
+                    tiktok_url: (vendorData as VendorListing).tiktok_url || '',
+                    twitter_url: (vendorData as VendorListing).twitter_url || '',
+                    youtube_url: (vendorData as VendorListing).youtube_url || '',
+                    service_categories: arrayToString((vendorData as VendorListing).service_options),
+                    service_subcategories: arrayToString((vendorData as VendorListing).vendor_tags),
+                    amenities: arrayToString((vendorData as VendorListing).amenities),
+                    accepted_payment_methods: arrayToString((vendorData as VendorListing).accepted_payment_methods),
                 });
             }
         } catch (err) {
@@ -363,6 +395,14 @@ export default function UpdateVendorPortfolioScreen() {
                 whatsapp_number: form.whatsapp_number.trim() || null,
                 website_url: form.website_url.trim() || null,
                 instagram_url: form.instagram_url.trim() || null,
+                facebook_url: form.facebook_url.trim() || null,
+                tiktok_url: form.tiktok_url.trim() || null,
+                twitter_url: form.twitter_url.trim() || null,
+                youtube_url: form.youtube_url.trim() || null,
+                service_options: stringToArray(form.service_categories),
+                vendor_tags: stringToArray(form.service_subcategories),
+                amenities: stringToArray(form.amenities),
+                accepted_payment_methods: stringToArray(form.accepted_payment_methods),
                 image_url: imageUrl,
                 additional_photos: additionalPhotos.length > 0 ? additionalPhotos : null,
                 photo_count: currentPhotoCount,
@@ -404,11 +444,16 @@ export default function UpdateVendorPortfolioScreen() {
                         whatsapp_number: form.whatsapp_number.trim() || null,
                         website_url: form.website_url.trim() || null,
                         instagram_url: form.instagram_url.trim() || null,
+                        facebook_url: form.facebook_url.trim() || null,
+                        tiktok_url: form.tiktok_url.trim() || null,
+                        twitter_url: form.twitter_url.trim() || null,
+                        youtube_url: form.youtube_url.trim() || null,
                         subscription_tier: null,
                         subscription_status: null,
-                        service_options: null,
-                        amenities: null,
-                        vendor_tags: null,
+                        service_options: stringToArray(form.service_categories),
+                        amenities: stringToArray(form.amenities),
+                        vendor_tags: stringToArray(form.service_subcategories),
+                        accepted_payment_methods: stringToArray(form.accepted_payment_methods),
                         image_url: imageUrl,
                         additional_photos: additionalPhotos.length > 0 ? additionalPhotos : null,
                         photo_count: currentPhotoCount,
@@ -861,8 +906,8 @@ export default function UpdateVendorPortfolioScreen() {
                             {renderField('Address Line 1', 'address_line_1', { placeholder: 'Street address' })}
                             {renderField('Address Line 2', 'address_line_2', { placeholder: 'Building, unit, suite (optional)' })}
                             {renderField('Suburb', 'suburb', { placeholder: 'e.g. Gardens' })}
-                            {renderField('City', 'city', { placeholder: 'e.g. Cape Town' })}
-                            {renderField('Province', 'province', { placeholder: 'e.g. Western Cape' })}
+                            {renderField('Coverage City / Cities', 'city', { placeholder: 'e.g. Cape Town, Johannesburg' })}
+                            {renderField('Coverage Province / Provinces', 'province', { placeholder: 'e.g. Western Cape, Gauteng' })}
                             {renderField('Postal Code', 'postal_code', { placeholder: 'e.g. 8001', keyboardType: 'number-pad' })}
                             {renderField('Country', 'country', { placeholder: 'e.g. South Africa' })}
                             {renderField('Latitude', 'latitude', { placeholder: 'e.g. -33.9249', keyboardType: 'numeric' })}
@@ -904,6 +949,29 @@ export default function UpdateVendorPortfolioScreen() {
                             {renderField('WhatsApp Number', 'whatsapp_number', { keyboardType: 'phone-pad', placeholder: '+27...' })}
                             {renderField('Website URL', 'website_url', { keyboardType: 'url', placeholder: 'https://...' })}
                             {renderField('Instagram URL', 'instagram_url', { keyboardType: 'url', placeholder: 'https://instagram.com/...' })}
+                            {renderField('Facebook URL', 'facebook_url', { keyboardType: 'url', placeholder: 'https://facebook.com/...' })}
+                            {renderField('TikTok URL', 'tiktok_url', { keyboardType: 'url', placeholder: 'https://tiktok.com/...' })}
+                            {renderField('Twitter URL', 'twitter_url', { keyboardType: 'url', placeholder: 'https://twitter.com/...' })}
+                            {renderField('YouTube URL', 'youtube_url', { keyboardType: 'url', placeholder: 'https://youtube.com/...' })}
+                        </View>
+
+                        <View
+                            style={{
+                                backgroundColor: colors.surface,
+                                borderRadius: radii.lg,
+                                padding: spacing.lg,
+                                borderWidth: 1,
+                                borderColor: colors.borderSubtle,
+                                marginTop: spacing.md,
+                            }}
+                        >
+                            <Text style={{ ...typography.titleMedium, color: colors.textPrimary, marginBottom: spacing.md }}>
+                                Services, Coverage & Payment Methods
+                            </Text>
+                            {renderField('Service Categories', 'service_categories', { placeholder: 'e.g. Catering, Photography, Decor (comma separated)' })}
+                            {renderField('Service Subcategories', 'service_subcategories', { placeholder: 'e.g. Wedding cakes, Event photography (comma separated)' })}
+                            {renderField('Amenities', 'amenities', { placeholder: 'e.g. Wi-Fi, Parking, Catering (comma separated)' })}
+                            {renderField('Accepted Payment Methods', 'accepted_payment_methods', { placeholder: 'e.g. EFT, Cash, PayFast (comma separated)' })}
                         </View>
 
                         {/* Tags display */}

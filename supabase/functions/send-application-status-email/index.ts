@@ -10,6 +10,7 @@ interface EmailRequest {
   applicationUrl: string;
   status?: string;
   adminNotes?: string;
+  catalogueUrl?: string;
 }
 
 interface BrevoEmailPayload {
@@ -111,7 +112,7 @@ Deno.serve(async (req: Request) => {
       throw new Error('BREVO_API_KEY environment variable is not set');
     }
 
-    const { email, fullName, businessName, tierName, applicationUrl, status, adminNotes }: EmailRequest = await req.json();
+    const { email, fullName, businessName, tierName, applicationUrl, status, adminNotes, catalogueUrl }: EmailRequest = await req.json();
 
     if (!email || !fullName || !tierName || !applicationUrl) {
       return new Response(
@@ -126,6 +127,7 @@ Deno.serve(async (req: Request) => {
     const safeTierName = escapeHtml(tierName);
     const safeApplicationUrl = escapeHtml(applicationUrl);
     const safeAdminNotes = adminNotes ? escapeHtml(adminNotes) : '';
+    const safeCatalogueUrl = catalogueUrl ? escapeHtml(catalogueUrl) : '';
 
     const htmlContent = `
       <!DOCTYPE html>
@@ -151,6 +153,20 @@ Deno.serve(async (req: Request) => {
             <p style="margin-bottom: 0; color: #2B3840;">${escapeHtml(emailTemplate.nextSteps)}</p>
           </div>
           ${safeAdminNotes ? `<div style="background: #FFF7ED; padding: 20px; border-radius: 8px; margin: 25px 0; border: 1px solid #FDBA74;"><h3 style="margin-top: 0; color: #C2410C;">Admin Notes</h3><p style="margin-bottom: 0; color: #2B3840; white-space: pre-wrap;">${safeAdminNotes}</p></div>` : ''}
+          ${(status === 'approved' || status === 'submitted' || status === 'under_review' || status === 'pending') ? `
+          <div style="background: #E8F5F0; padding: 20px; border-radius: 8px; margin: 25px 0; border: 1px solid #B3D9CC;">
+            <h3 style="margin-top: 0; color: #2B9EB3;">Set Up Your Catalogue / Pricelist</h3>
+            <p style="margin-bottom: 15px; color: #2B3840;">Add catalogue items (like an online store) so customers can see your offerings when they request a quote. Upload an image, add a product name and price for each item. Customers can select items and quantities, and a total is calculated automatically.</p>
+            <p style="margin-bottom: 0; color: #2B3840; font-size: 14px;">The number of items you can add depends on your plan: <strong>${safeTierName}</strong>.</p>
+          </div>
+          ${safeCatalogueUrl ? `
+          <div style="text-align: center; margin: 25px 0;">
+            <a href="${safeCatalogueUrl}" style="background: #2B9EB3; color: white; padding: 12px 28px; text-decoration: none; border-radius: 5px; font-weight: bold; display: inline-block;">
+              Add Catalogue Items
+            </a>
+          </div>
+          ` : ''}
+          ` : ''}
           <div style="text-align: center; margin: 30px 0;">
             <a href="${safeApplicationUrl}" style="background: #2B9EB3; color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; font-weight: bold; display: inline-block;">
               ${escapeHtml(emailTemplate.buttonLabel)}
@@ -175,6 +191,11 @@ ${emailTemplate.intro}
 ${emailTemplate.nextSteps}
 
 ${emailTemplate.buttonLabel}: ${safeApplicationUrl}
+${(status === 'approved' || status === 'submitted' || status === 'under_review' || status === 'pending') ? `
+Set Up Your Catalogue / Pricelist
+Add catalogue items (like an online store) so customers can see your offerings when they request a quote. Upload an image, add a product name and price for each item.
+The number of items you can add depends on your plan: ${safeTierName}.
+${safeCatalogueUrl ? `Add Catalogue Items: ${safeCatalogueUrl}` : ''}` : ''}
 ${adminNotes ? `
 Admin Notes:
 ${safeAdminNotes}` : ''}

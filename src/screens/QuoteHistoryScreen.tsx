@@ -358,7 +358,7 @@ export default function QuoteHistoryScreen() {
                                 {comment.author_type === 'vendor' ? vendor?.name || 'Vendor' : 'You'}
                               </Text>
                               <Text style={{ ...typography.caption, color: colors.textMuted }}>
-                                {new Date(comment.created_at).toLocaleDateString()}
+                                {new Date(comment.created_at).toLocaleDateString('en-ZA', { day: 'numeric', month: 'long', year: 'numeric' })}
                               </Text>
                             </View>
                             <Text style={{ ...typography.body, color: colors.textPrimary, marginTop: 2 }}>

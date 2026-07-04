@@ -61,7 +61,12 @@ const linking: any = {
               ApplicationStatus: 'application-status',
               VenueQuoteRequests: 'vendor/quotes',
               VendorQuoteCreate: 'vendor/quote/:quoteRequestId',
-              Billing: ['payment/success', 'payment/cancel'],
+              VendorCatalogue: 'vendor-catalogue',
+              VenueCatalogue: 'venue-catalogue',
+              Billing: {
+                path: 'payment/success',
+                alias: ['payment/cancel'],
+              },
             },
           },
         },

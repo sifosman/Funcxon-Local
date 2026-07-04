@@ -192,8 +192,8 @@ export default function BillingScreen() {
                 lastName: nameParts.slice(1).join(' ') || '',
                 email: billing.billing_email || '',
                 phone: billing.billing_phone || '',
-                returnUrl: 'funxon://payment/success',
-                cancelUrl: 'funxon://payment/cancel',
+                returnUrl: `${SUPABASE_URL}/functions/v1/payfast-redirect?type=success`,
+                cancelUrl: `${SUPABASE_URL}/functions/v1/payfast-redirect?type=cancel`,
                 notifyUrl: `${SUPABASE_URL}/functions/v1/payfast-itn`,
             });
 

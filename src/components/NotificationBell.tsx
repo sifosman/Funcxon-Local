@@ -75,7 +75,7 @@ export default function NotificationBell() {
   const formatTime = (s: string) => {
     const d = new Date(s);
     if (Number.isNaN(d.getTime())) return '';
-    return d.toLocaleString('en-ZA', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+    return d.toLocaleString('en-ZA', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
   };
 
   if (!userId) return null;

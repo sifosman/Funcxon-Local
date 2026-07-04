@@ -71,6 +71,7 @@ export default function ApplicationStep4Page() {
         business_description: state.step2.description,
         portfolio_images: state.step3.images.map((i) => i.uri),
         portfolio_videos: state.step3.videos.map((v) => v.uri),
+        business_documents: state.step3.documents.map((d) => d.uri),
         subscription_tier: state.step4.subscriptionPlan,
         terms_accepted: state.step4.termsAccepted,
         privacy_accepted: state.step4.privacyAccepted,

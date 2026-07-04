@@ -49,6 +49,7 @@ export type ApplicationSubmission = {
   business_description: string;
   portfolio_images: string[];
   portfolio_videos: string[];
+  business_documents: string[];
   subscription_tier: string;
   terms_accepted: boolean;
   privacy_accepted: boolean;
@@ -70,6 +71,7 @@ export type SubscriberApplication = {
   business_description?: string | null;
   portfolio_images?: string[] | null;
   portfolio_videos?: string[] | null;
+  business_documents?: string[] | null;
   terms_accepted?: boolean | null;
   privacy_accepted?: boolean | null;
   marketing_consent?: boolean | null;
@@ -96,6 +98,7 @@ export async function submitApplication(data: ApplicationSubmission) {
       business_description: data.business_description,
       portfolio_images: data.portfolio_images,
       portfolio_videos: data.portfolio_videos,
+      business_documents: data.business_documents,
       subscription_tier: data.subscription_tier,
       terms_accepted: data.terms_accepted,
       privacy_accepted: data.privacy_accepted,
@@ -158,7 +161,7 @@ export async function submitApplication(data: ApplicationSubmission) {
 }
 
 export async function uploadFileToStorage(
-  bucket: 'portfolio-images' | 'portfolio-videos' | 'quote-attachments',
+  bucket: 'portfolio-images' | 'portfolio-videos' | 'quote-attachments' | 'business-documents',
   file: { uri: string; name: string; type: string } | File,
   userId: string,
 ) {
@@ -206,7 +209,7 @@ export async function uploadFileToStorage(
 }
 
 export async function deleteFileFromStorage(
-  bucket: 'portfolio-images' | 'portfolio-videos' | 'quote-attachments',
+  bucket: 'portfolio-images' | 'portfolio-videos' | 'quote-attachments' | 'business-documents',
   path: string,
 ) {
   try {

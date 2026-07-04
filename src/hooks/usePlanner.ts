@@ -48,10 +48,22 @@ export const tagOptions = [
   { label: 'Task', value: 'task', color: '#8B5CF6' },
 ];
 
+export const BUDGET_COLORS = [
+  '#3B82F6', // blue
+  '#22C55E', // green
+  '#F59E0B', // amber
+  '#EF4444', // red
+  '#8B5CF6', // purple
+  '#EC4899', // pink
+  '#14B8A6', // teal
+  '#F97316', // orange
+];
+
 export type BudgetItem = {
   name: string;
   spent: number;
   total: number;
+  color?: string;
 };
 
 export type AlertState = {
@@ -67,7 +79,6 @@ export function usePlanner() {
 
   const [eventDetails, setEventDetails] = useState({
     name: '',
-    theme: '',
     type: '',
     otherType: '',
     date: '',
@@ -80,10 +91,10 @@ export function usePlanner() {
   const [addingTask, setAddingTask] = useState(false);
   const [alertState, setAlertState] = useState<AlertState | null>(null);
   const [budgetItems, setBudgetItems] = useState<BudgetItem[]>([
-    { name: 'Venue', spent: 0, total: 0 },
-    { name: 'Catering', spent: 0, total: 0 },
-    { name: 'Photography', spent: 0, total: 0 },
-    { name: 'Flowers', spent: 0, total: 0 },
+    { name: 'Venue', spent: 0, total: 0, color: BUDGET_COLORS[0] },
+    { name: 'Catering', spent: 0, total: 0, color: BUDGET_COLORS[1] },
+    { name: 'Photography', spent: 0, total: 0, color: BUDGET_COLORS[2] },
+    { name: 'Flowers', spent: 0, total: 0, color: BUDGET_COLORS[3] },
   ]);
   const [editingBudgetIdx, setEditingBudgetIdx] = useState<number | null>(null);
   const [editBudgetForm, setEditBudgetForm] = useState({ name: '', spent: '', total: '' });
@@ -306,6 +317,7 @@ export function usePlanner() {
       prev.map((item, i) =>
         i === editingBudgetIdx
           ? {
+              ...item,
               name: editBudgetForm.name || item.name,
               spent: parseFloat(editBudgetForm.spent) || 0,
               total: parseFloat(editBudgetForm.total) || 0,
@@ -317,7 +329,8 @@ export function usePlanner() {
   };
 
   const handleAddBudgetItem = () => {
-    setBudgetItems((prev) => [...prev, { name: 'New Item', spent: 0, total: 0 }]);
+    const newColor = BUDGET_COLORS[budgetItems.length % BUDGET_COLORS.length];
+    setBudgetItems((prev) => [...prev, { name: 'New Item', spent: 0, total: 0, color: newColor }]);
     const newIdx = budgetItems.length;
     setEditingBudgetIdx(newIdx);
     setEditBudgetForm({ name: 'New Item', spent: '0', total: '0' });

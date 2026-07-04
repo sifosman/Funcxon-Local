@@ -66,6 +66,10 @@ type VendorRecord = {
 type Review = {
   id: number;
   rating: number;
+  title: string | null;
+  review_text: string | null;
+  is_verified: boolean | null;
+  created_at: string | null;
   status: string | null;
 };
 
@@ -191,8 +195,9 @@ export default function VendorProfileScreen({ route, navigation }: Props) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('reviews')
-        .select('id, rating, status')
+        .select('id, rating, title, review_text, is_verified, created_at, status')
         .eq('vendor_id', vendorId)
+        .order('created_at', { ascending: false })
         .limit(20);
 
       if (error) {
@@ -390,11 +395,21 @@ export default function VendorProfileScreen({ route, navigation }: Props) {
   }, [mapCoordinates, mapSearchTarget, vendor?.name]);
 
   const galleryItems = useMemo<GalleryItem[]>(() => {
-    if (galleryMedia && galleryMedia.length > 0) {
-      return galleryMedia.map((m) => ({ url: m.media_url, type: m.media_type }));
-    }
     const legacyImages = [vendor?.image_url, ...(Array.isArray(vendor?.additional_photos) ? vendor.additional_photos : [])].filter(Boolean) as string[];
-    return legacyImages.map((url) => ({ url, type: 'image' as const }));
+    const legacyItems = legacyImages.map((url) => ({ url, type: 'image' as const }));
+    const mediaItems = (galleryMedia ?? []).map((m) => ({ url: m.media_url, type: m.media_type }));
+    const merged = [...legacyItems, ...mediaItems];
+    const seen = new Set<string>();
+    const deduped = merged.filter((item) => {
+      if (seen.has(item.url)) return false;
+      seen.add(item.url);
+      return true;
+    });
+    return deduped.sort((a, b) => {
+      if (a.type === 'video' && b.type !== 'video') return 1;
+      if (a.type !== 'video' && b.type === 'video') return -1;
+      return 0;
+    });
   }, [galleryMedia, vendor?.image_url, vendor?.additional_photos]);
 
   const tagArrays: string[][] = [
@@ -655,11 +670,6 @@ export default function VendorProfileScreen({ route, navigation }: Props) {
         <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
           <View style={{ flex: 1, paddingRight: spacing.md }}>
             <Text style={{ ...typography.titleLarge, color: colors.primary }}>{name}</Text>
-            {vendor.subscription_tier && (
-              <Text style={{ ...typography.caption, color: colors.textMuted, marginTop: 4 }}>
-                Subscription: {vendor.subscription_tier}
-              </Text>
-            )}
           </View>
           <View style={{ flexDirection: 'row', alignItems: 'center' }}>
             <TouchableOpacity
@@ -1398,8 +1408,141 @@ export default function VendorProfileScreen({ route, navigation }: Props) {
             </View>
           )}
 
-          {/* Review functionality removed - only users who have used the service can leave reviews */}
-          {/* This feature will be re-implemented with proper booking verification */}
+          {reviewsLoading ? (
+            <View style={{ paddingVertical: spacing.lg, alignItems: 'center' }}>
+              <ActivityIndicator />
+            </View>
+          ) : reviewsError instanceof Error ? (
+            <View
+              style={{
+                marginBottom: spacing.lg,
+                padding: spacing.lg,
+                borderRadius: radii.lg,
+                backgroundColor: colors.surface,
+                borderWidth: 1,
+                borderColor: colors.borderSubtle,
+              }}
+            >
+              <Text style={{ ...typography.titleMedium, color: colors.textPrimary, marginBottom: spacing.sm }}>
+                Failed to load reviews
+              </Text>
+              <Text style={{ ...typography.body, color: colors.textMuted }}>{reviewsError.message}</Text>
+            </View>
+          ) : !reviews || reviews.length === 0 ? (
+            <View
+              style={{
+                marginBottom: spacing.lg,
+                padding: spacing.lg,
+                borderRadius: radii.lg,
+                backgroundColor: colors.surface,
+                borderWidth: 1,
+                borderColor: colors.borderSubtle,
+                alignItems: 'center',
+              }}
+            >
+              <MaterialIcons name="rate-review" size={48} color={colors.textMuted} />
+              <Text
+                style={{
+                  ...typography.body,
+                  color: colors.textSecondary,
+                  marginTop: spacing.md,
+                  textAlign: 'center',
+                }}
+              >
+                No reviews yet.
+              </Text>
+            </View>
+          ) : (
+            <View style={{ gap: spacing.md, marginBottom: spacing.lg }}>
+              {reviews.map((review) => (
+                <View
+                  key={review.id}
+                  style={{
+                    padding: spacing.lg,
+                    borderRadius: radii.lg,
+                    backgroundColor: colors.surface,
+                    borderWidth: 1,
+                    borderColor: colors.borderSubtle,
+                  }}
+                >
+                  <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                      {Array.from({ length: 5 }).map((_, idx) => (
+                        <MaterialIcons
+                          key={idx}
+                          name={review.rating >= idx + 1 ? 'star' : 'star-border'}
+                          size={16}
+                          color="#F59E0B"
+                        />
+                      ))}
+                      {review.is_verified ? (
+                        <View
+                          style={{
+                            marginLeft: spacing.sm,
+                            backgroundColor: '#DCFCE7',
+                            paddingHorizontal: spacing.sm,
+                            paddingVertical: 4,
+                            borderRadius: radii.full,
+                            borderWidth: 1,
+                            borderColor: '#BBF7D0',
+                          }}
+                        >
+                          <Text style={{ ...typography.captionSemiBold, color: '#166534' }}>
+                            Verified
+                          </Text>
+                        </View>
+                      ) : null}
+                      {review.status === 'pending' ? (
+                        <View
+                          style={{
+                            marginLeft: spacing.sm,
+                            backgroundColor: '#FEF3C7',
+                            paddingHorizontal: spacing.sm,
+                            paddingVertical: 4,
+                            borderRadius: radii.full,
+                            borderWidth: 1,
+                            borderColor: '#FDE68A',
+                          }}
+                        >
+                          <Text style={{ ...typography.captionSemiBold, color: '#92400E' }}>
+                            Pending
+                          </Text>
+                        </View>
+                      ) : null}
+                    </View>
+                  </View>
+
+                  {review.title ? (
+                    <Text
+                      style={{
+                        ...typography.titleMedium,
+                        color: colors.textPrimary,
+                        marginTop: spacing.sm,
+                      }}
+                    >
+                      {review.title}
+                    </Text>
+                  ) : null}
+
+                  {review.review_text ? (
+                    <Text style={{ ...typography.body, color: colors.textSecondary, marginTop: spacing.sm, lineHeight: 20 }}>
+                      {review.review_text}
+                    </Text>
+                  ) : (
+                    <Text style={{ ...typography.body, color: colors.textMuted, marginTop: spacing.sm }}>
+                      No written review provided.
+                    </Text>
+                  )}
+
+                  {review.created_at ? (
+                    <Text style={{ ...typography.caption, color: colors.textMuted, marginTop: spacing.sm }}>
+                      {new Date(review.created_at).toLocaleDateString('en-ZA', { day: 'numeric', month: 'long', year: 'numeric' })}
+                    </Text>
+                  ) : null}
+                </View>
+              ))}
+            </View>
+          )}
         </View>
       )}
 

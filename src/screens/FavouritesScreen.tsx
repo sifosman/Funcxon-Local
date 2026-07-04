@@ -1,5 +1,5 @@
-import { useCallback, useRef, useState } from 'react';
-import { ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { ActivityIndicator, Dimensions, KeyboardAvoidingView, Platform, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { useQuery } from '@tanstack/react-query';
 import { MaterialIcons } from '@expo/vector-icons';
@@ -13,6 +13,8 @@ import NetworkImage from '../components/NetworkImage';
 export default function FavouritesScreen() {
   const navigation = useNavigation<any>();
   const { user } = useAuth();
+
+  const cardImageHeight = Math.max(120, Math.round(Dimensions.get('window').height / 2.5 - 220));
   const [favouriteIds, setFavouriteIds] = useState<{ vendorIds: number[], venueIds: number[] }>({ vendorIds: [], venueIds: [] });
   const [loadingIds, setLoadingIds] = useState(true);
   const [noteDrafts, setNoteDrafts] = useState<Record<number, string>>({});
@@ -28,18 +30,6 @@ export default function FavouritesScreen() {
     setLoadingIds(false);
   }, [user]);
 
-  useFocusEffect(
-    useCallback(() => {
-      loadFavourites();
-      if (pendingRestoreRef.current) {
-        pendingRestoreRef.current = false;
-        requestAnimationFrame(() => {
-          scrollViewRef.current?.scrollTo({ y: lastOffsetRef.current, animated: false });
-        });
-      }
-    }, [loadFavourites]),
-  );
-
   const {
     data: shortlistEntries,
     isLoading: shortlistsLoading,
@@ -50,6 +40,13 @@ export default function FavouritesScreen() {
     queryFn: () => getShortlists(user),
     enabled: !!user?.id,
   });
+
+  useFocusEffect(
+    useCallback(() => {
+      loadFavourites();
+      refetchShortlists();
+    }, [loadFavourites, refetchShortlists]),
+  );
 
   const {
     data: favouriteItems,
@@ -66,7 +63,7 @@ export default function FavouritesScreen() {
       if (favouriteIds.vendorIds.length > 0) {
         const { data: vendors, error: vendorError } = await supabase
           .from('vendors')
-          .select('id, name, price_range, rating, review_count, image_url, description, city, province')
+          .select('id, name, price_range, rating, review_count, image_url, description, city, province, address_line_1')
           .in('id', favouriteIds.vendorIds);
           
         if (vendorError) throw vendorError;
@@ -79,7 +76,7 @@ export default function FavouritesScreen() {
       if (favouriteIds.venueIds.length > 0) {
         const { data: venues, error: venueError } = await supabase
           .from('venue_listings')
-          .select('id, name, rating, image_url, description, city, province')
+          .select('id, name, rating, image_url, description, city, province, address_line_1')
           .in('id', favouriteIds.venueIds);
           
         if (venueError) throw venueError;
@@ -95,6 +92,7 @@ export default function FavouritesScreen() {
             description: v.description,
             province: v.province,
             city: v.city,
+            address_line_1: v.address_line_1 ?? null,
             category_id: null,
             type: 'venue' as const
           })));
@@ -107,6 +105,15 @@ export default function FavouritesScreen() {
   });
 
   const hasFavourites = favouriteIds.vendorIds.length > 0 || favouriteIds.venueIds.length > 0;
+
+  useEffect(() => {
+    if (pendingRestoreRef.current && !loadingIds && !isLoading && !shortlistsLoading && favouriteItems) {
+      pendingRestoreRef.current = false;
+      requestAnimationFrame(() => {
+        scrollViewRef.current?.scrollTo({ y: lastOffsetRef.current, animated: false });
+      });
+    }
+  }, [loadingIds, isLoading, shortlistsLoading, favouriteItems]);
 
   const handleRemove = async (id: number, type: 'vendor' | 'venue') => {
     if (!user?.id) return;
@@ -195,9 +202,10 @@ export default function FavouritesScreen() {
             </View>
             {favouriteItems.map((item) => (
               (() => {
-                const shortlistEntry = shortlistEntries?.find((entry) => 
-                  item.type === 'venue' ? entry.venueId === item.id : entry.vendorId === item.id
-                );
+                const shortlistEntry = shortlistEntries?.find((entry) => {
+                  const entryId = item.type === 'venue' ? entry.venueId : entry.vendorId;
+                  return entryId != null && Number(entryId) === Number(item.id);
+                });
                 const shortlistId = shortlistEntry?.id;
                 const noteValue = shortlistId != null
                   ? noteDrafts[shortlistId] ?? shortlistEntry?.notes ?? ''
@@ -217,7 +225,7 @@ export default function FavouritesScreen() {
               >
                 <NetworkImage
                   uri={item.image_url}
-                  style={{ width: '100%', height: 160 }}
+                  style={{ width: '100%', height: cardImageHeight }}
                 />
                 <TouchableOpacity
                   onPress={() => handleRemove(item.id, item.type)}
@@ -260,6 +268,12 @@ export default function FavouritesScreen() {
                       </Text>
                     </View>
                   </View>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: spacing.xs }}>
+                    <MaterialIcons name="place" size={16} color={colors.textSecondary} />
+                    <Text style={{ ...typography.caption, color: colors.textSecondary, marginLeft: spacing.xs, flex: 1 }} numberOfLines={2}>
+                      {[item.address_line_1, item.city].filter(Boolean).join(', ') || [item.city, item.province].filter(Boolean).join(', ') || item.location || 'Location available on profile'}
+                    </Text>
+                  </View>
                   {shortlistId != null ? (
                     <View
                       style={{
@@ -267,6 +281,8 @@ export default function FavouritesScreen() {
                         padding: spacing.md,
                         borderRadius: radii.md,
                         backgroundColor: colors.surfaceMuted,
+                        borderWidth: 1,
+                        borderColor: colors.borderSubtle,
                       }}
                     >
                       <Text style={{ ...typography.captionSemiBold, color: colors.textSecondary }}>
