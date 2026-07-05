@@ -54,6 +54,21 @@ export const colors = {
   chart3: '#b9c4eb', // light lavender
   chart4: '#f7f5f0', // cream
   chart5: '#aa7478', // dusty rose
+
+  // Desktop design system ( Heritage Premium)
+  onSurfaceVariant: '#42474d',
+  onSurface: '#1b1c19',
+  gold: '#ffd700',
+  surfaceBg: '#fbf9f4',
+  surfaceContainerLowest: '#ffffff',
+  surfaceContainerLow: '#f5f3ee',
+  surfaceContainer: '#f0eee9',
+  surfaceContainerHigh: '#eae8e3',
+  surfaceContainerHighest: '#e4e2dd',
+  outline: '#72787e',
+  outlineVariant: '#c2c7ce',
+  dustyRose: '#aa7478',
+  secondaryBlue: '#306382',
 };
 
 export const spacing = {
@@ -63,6 +78,15 @@ export const spacing = {
   lg: 16,
   xl: 24,
   xxl: 32,
+  // Desktop design system
+  maxWidth: 1200,
+  sectionPadding: 80,
+  gutter: 24,
+  marginDesktop: 48,
+  marginMobile: 20,
+  stackSm: 8,
+  stackMd: 16,
+  stackLg: 32,
 };
 
 export const radii = {
@@ -145,5 +169,57 @@ export const typography = {
     fontSize: 12,
     fontWeight: '600' as const,
     fontFamily: 'Montserrat_600SemiBold',
+  },
+  // Desktop typography (Montserrat — same as mobile app)
+  displayLg: {
+    fontSize: 56,
+    fontWeight: '700' as const,
+    fontFamily: 'Montserrat_700Bold',
+    lineHeight: 64,
+    letterSpacing: -0.02,
+  },
+  headlineLg: {
+    fontSize: 40,
+    fontWeight: '700' as const,
+    fontFamily: 'Montserrat_700Bold',
+    lineHeight: 48,
+  },
+  headlineMd: {
+    fontSize: 32,
+    fontWeight: '600' as const,
+    fontFamily: 'Montserrat_600SemiBold',
+    lineHeight: 40,
+  },
+  headlineSm: {
+    fontSize: 24,
+    fontWeight: '600' as const,
+    fontFamily: 'Montserrat_600SemiBold',
+    lineHeight: 32,
+  },
+  bodyLg: {
+    fontSize: 18,
+    fontWeight: '400' as const,
+    fontFamily: 'Montserrat_400Regular',
+    lineHeight: 28,
+  },
+  bodyMd: {
+    fontSize: 16,
+    fontWeight: '400' as const,
+    fontFamily: 'Montserrat_400Regular',
+    lineHeight: 24,
+  },
+  labelLg: {
+    fontSize: 14,
+    fontWeight: '600' as const,
+    fontFamily: 'Montserrat_600SemiBold',
+    lineHeight: 16,
+    letterSpacing: 0.05,
+  },
+  labelMd: {
+    fontSize: 12,
+    fontWeight: '600' as const,
+    fontFamily: 'Montserrat_600SemiBold',
+    lineHeight: 16,
+    letterSpacing: 0.05,
   },
 };

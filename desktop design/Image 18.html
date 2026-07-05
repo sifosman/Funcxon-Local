@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Funxon - South Africa's Premier Event Marketplace</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600&amp;family=Playfair+Display:wght@600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "surface-container-lowest": "#ffffff",
+                        "on-primary-fixed": "#001e30",
+                        "secondary-fixed-dim": "#9bcdf0",
+                        "on-error-container": "#93000a",
+                        "tertiary-container": "#303b5b",
+                        "tertiary-fixed-dim": "#bac5ec",
+                        "on-primary-container": "#83aacc",
+                        "on-surface-variant": "#42474d",
+                        "on-secondary-fixed": "#001e2e",
+                        "primary-fixed": "#cbe6ff",
+                        "inverse-on-surface": "#f2f1ec",
+                        "surface-container-highest": "#e4e2dd",
+                        "secondary": "#306382",
+                        "on-tertiary-container": "#9aa5cb",
+                        "outline": "#72787e",
+                        "surface-variant": "#e4e2dd",
+                        "surface": "#fbf9f4",
+                        "on-tertiary-fixed-variant": "#3b4666",
+                        "gold": "#ffd700",
+                        "destructive": "#dc2626",
+                        "surface-container-low": "#f5f3ee",
+                        "surface-bright": "#fbf9f4",
+                        "on-tertiary": "#ffffff",
+                        "outline-variant": "#c2c7ce",
+                        "inverse-surface": "#30312e",
+                        "surface-container-high": "#eae8e3",
+                        "on-surface": "#1b1c19",
+                        "primary-container": "#123f5c",
+                        "surface-container": "#f0eee9",
+                        "secondary-fixed": "#c7e7ff",
+                        "on-secondary": "#ffffff",
+                        "on-primary": "#ffffff",
+                        "on-secondary-fixed-variant": "#104c69",
+                        "on-background": "#1b1c19",
+                        "primary-fixed-dim": "#a3cbee",
+                        "tertiary-fixed": "#dae1ff",
+                        "inverse-primary": "#a3cbee",
+                        "primary": "#002940",
+                        "on-error": "#ffffff",
+                        "brand-cream": "#f7f5f0",
+                        "error": "#ba1a1a",
+                        "on-secondary-container": "#2c617f",
+                        "surface-dim": "#dbdad5",
+                        "surface-tint": "#3b6281",
+                        "on-tertiary-fixed": "#0e1a38",
+                        "secondary-container": "#a9dbfe",
+                        "dusty-rose": "#aa7478",
+                        "background": "#fbf9f4",
+                        "error-container": "#ffdad6",
+                        "on-primary-fixed-variant": "#204a68",
+                        "tertiary": "#1a2544"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "margin-mobile": "20px",
+                        "max-width": "1200px",
+                        "section-padding": "80px",
+                        "gutter": "24px",
+                        "stack-lg": "32px",
+                        "margin-desktop": "48px",
+                        "stack-sm": "8px",
+                        "stack-md": "16px"
+                    },
+                    "fontFamily": {
+                        "headline-sm": ["Playfair Display"],
+                        "headline-lg-mobile": ["Playfair Display"],
+                        "body-sm": ["Montserrat"],
+                        "label-md": ["Montserrat"],
+                        "headline-lg": ["Playfair Display"],
+                        "body-md": ["Montserrat"],
+                        "body-lg": ["Montserrat"],
+                        "display-lg": ["Playfair Display"],
+                        "label-lg": ["Montserrat"],
+                        "headline-md": ["Playfair Display"]
+                    },
+                    "fontSize": {
+                        "headline-sm": ["24px", { "lineHeight": "32px", "fontWeight": "600" }],
+                        "headline-lg-mobile": ["32px", { "lineHeight": "40px", "fontWeight": "700" }],
+                        "body-sm": ["14px", { "lineHeight": "20px", "fontWeight": "400" }],
+                        "label-md": ["12px", { "lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "600" }],
+                        "headline-lg": ["40px", { "lineHeight": "48px", "fontWeight": "700" }],
+                        "body-md": ["16px", { "lineHeight": "24px", "fontWeight": "400" }],
+                        "body-lg": ["18px", { "lineHeight": "28px", "fontWeight": "400" }],
+                        "display-lg": ["56px", { "lineHeight": "64px", "letterSpacing": "-0.02em", "fontWeight": "700" }],
+                        "label-lg": ["14px", { "lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "600" }],
+                        "headline-md": ["32px", { "lineHeight": "40px", "fontWeight": "600" }]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .material-symbols-outlined[data-weight="fill"] {
+            font-variation-settings: 'FILL' 1;
+        }
+    </style>
+</head>
+<body class="bg-background text-on-background font-body-md antialiased flex flex-col min-h-screen">
+<!-- TopNavBar -->
+<header class="bg-brand-cream border-b border-surface-container-highest shadow-sm docked full-width top-0 z-50">
+<div class="flex justify-between items-center w-full px-margin-desktop max-w-max-width mx-auto h-20">
+<!-- Brand -->
+<a class="font-headline-md text-headline-md font-bold text-primary flex items-center gap-2" href="#">
+<span class="material-symbols-outlined" data-weight="fill">festival</span>
+                Funxon
+            </a>
+<!-- Navigation Links (Web) -->
+<nav class="hidden md:flex gap-8 items-center">
+<a class="text-primary font-bold border-b-2 border-primary pb-1 font-label-lg text-label-lg" href="#">Home</a>
+<a class="text-on-surface-variant hover:text-primary transition-colors font-label-lg text-label-lg hover:bg-surface-container-low transition-all duration-200 px-3 py-2 rounded" href="#">Venues</a>
+<a class="text-on-surface-variant hover:text-primary transition-colors font-label-lg text-label-lg hover:bg-surface-container-low transition-all duration-200 px-3 py-2 rounded" href="#">Vendors</a>
+<a class="text-on-surface-variant hover:text-primary transition-colors font-label-lg text-label-lg hover:bg-surface-container-low transition-all duration-200 px-3 py-2 rounded" href="#">Listers Portal</a>
+<a class="text-on-surface-variant hover:text-primary transition-colors font-label-lg text-label-lg hover:bg-surface-container-low transition-all duration-200 px-3 py-2 rounded" href="#">Blog</a>
+</nav>
+<!-- Trailing Actions -->
+<div class="flex items-center gap-4">
+<button aria-label="notifications" class="text-on-surface-variant hover:text-primary transition-colors p-2 rounded-full hover:bg-surface-container-low">
+<span class="material-symbols-outlined">notifications</span>
+</button>
+<button class="w-10 h-10 rounded-full bg-surface-container-high border-2 border-brand-cream overflow-hidden flex items-center justify-center">
+<img alt="User profile avatar" class="w-full h-full object-cover" data-alt="A highly detailed close-up portrait of a stylish, modern professional individual smiling warmly. The lighting is soft and flattering, suitable for a premium corporate or luxury lifestyle context. The background is a subtle, out-of-focus high-end interior, maintaining a sophisticated, light-mode aesthetic with creamy tones." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBxVi1GHoXKKHIBB49xte1vs5dXvriy03yR_8eJO8N6Ihnb0xtLjMOwkyuFI_AKC_ScpQYylWrh-DufqP3P26vzWFWa9glwHbtvB8EVc4iI0gevailBtp9o4-c5USh6uLRBXNVZv_-Z7R4Z195Ev0MGT7lOH0DEra3UPrIBr0Uv55qWfUV0mHzwuOB71fIZxJJkSN-j3ONt2VO0tD5v3elhCYzcvz5xtG5y--6T82VCXSH-e0xTTQ"/>
+</button>
+<button class="md:hidden text-on-surface-variant">
+<span class="material-symbols-outlined">menu</span>
+</button>
+</div>
+</div>
+</header>
+<!-- Main Content Canvas -->
+<main class="flex-grow flex flex-col">
+<!-- Hero Section -->
+<section class="relative w-full h-[600px] flex items-center justify-center bg-surface-container">
+<div class="absolute inset-0 z-0">
+<img alt="Luxurious South African event setting" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida/AP1WRLtrxtBQfFedYZOQD_N8blXDCR3xY5E1o07oBTCif2M0nXib9igDuh_FaQV9SRHqoO3lgUw91wg3wyHB2MEE0XynGsUDbwlenX9xnVD90Rq54gz--HWTKHqukn-8FnKNb6yeSTrn8Lx9WDMQUIYBPG40IsahrnRUQbTb4cpgezQdJ3gRu44b8QXo4qSQQLv-BOkbfypK30vX-n_VKtvluIU19mka-wzK4B89qkDN4mTekt--54aJ_0Vd"/>
+<div class="absolute inset-0 bg-primary/40 mix-blend-multiply"></div>
+</div>
+<div class="relative z-10 w-full max-w-max-width px-margin-desktop flex flex-col items-center text-center">
+<h1 class="font-display-lg text-display-lg text-on-primary mb-stack-md drop-shadow-md">Curate Your Perfect Event</h1>
+<p class="font-body-lg text-body-lg text-on-primary/90 mb-stack-lg max-w-2xl drop-shadow">Discover the most exquisite venues and top-tier vendors across South Africa for your next celebration.</p>
+<!-- Search Bar -->
+<div class="w-full max-w-3xl bg-surface-container-lowest rounded-lg shadow-[0_4px_16px_rgba(0,0,0,0.12)] p-2 flex flex-col sm:flex-row gap-2">
+<div class="flex-1 relative flex items-center bg-surface-container-lowest border border-brand-cream rounded-md px-4 py-3">
+<span class="material-symbols-outlined text-outline mr-3">search</span>
+<input class="w-full bg-transparent border-none focus:ring-0 font-body-md text-on-surface placeholder-outline p-0" placeholder="Search venues, vendors, locations..." type="text"/>
+</div>
+<div class="flex gap-2">
+<div class="relative flex items-center bg-surface-container-lowest border border-brand-cream rounded-md px-4 py-3 min-w-[150px]">
+<span class="material-symbols-outlined text-outline mr-2">calendar_today</span>
+<input class="w-full bg-transparent border-none focus:ring-0 font-body-md text-on-surface placeholder-outline p-0 text-sm" placeholder="Dates" type="text"/>
+</div>
+<button class="bg-primary text-on-primary px-8 py-3 rounded-md font-label-md text-label-md hover:bg-primary/90 transition-colors shadow-sm flex items-center gap-2">
+                            Search
+                        </button>
+</div>
+</div>
+</div>
+</section>
+<!-- Content Container -->
+<div class="w-full max-w-max-width mx-auto px-margin-desktop py-section-padding flex flex-col gap-section-padding">
+<!-- Featured Venues -->
+<section class="flex flex-col gap-stack-lg">
+<div class="flex justify-between items-end">
+<div>
+<h2 class="font-headline-lg text-headline-lg text-primary">Featured Venues</h2>
+<p class="font-body-md text-body-md text-on-surface-variant mt-2">Exclusive spaces for unforgettable moments.</p>
+</div>
+<a class="text-secondary hover:text-primary font-label-md text-label-md flex items-center gap-1 transition-colors" href="#">
+                        View All <span class="material-symbols-outlined text-[16px]">arrow_forward</span>
+</a>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-3 gap-gutter">
+<!-- Card 1 -->
+<div class="bg-surface-container-lowest border border-brand-cream rounded-lg overflow-hidden shadow-[0_2px_8px_rgba(0,0,0,0.08)] hover:shadow-[0_4px_16px_rgba(0,0,0,0.12)] transition-shadow duration-300 group cursor-pointer flex flex-col">
+<div class="relative aspect-[4/3] overflow-hidden">
+<img class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" data-alt="A breathtaking, wide-angle shot of a luxurious Cape Dutch style wine estate nestled in a lush, green valley during golden hour. The sunlight casts warm, inviting glows on the whitewashed walls and expansive vineyards. The scene exudes an old-world elegance combined with high-end modern hospitality, perfect for a premium corporate event or upscale wedding." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDnozyLGWaQtqtMI6oHcTpi_5lV4u0k3ukgb9lw621b8cmR_WimvAM6oY8gucfQfadRgLV5Et5R5cq8u2l2DlVJrhkLnPTZnsE_7tITDgfoLGP9lYWtCadR8Jwn-BMBZO_hrt8uW-b_2gZ_3o1VrjjsmH1F4lv3sm28AvZCfQ2yW0PGa4DddIbh28kc0BUT2ZfVGdB0eTKGzKcNZFJrvNN7XZR9DmMRezjBzUnLkHJdikZoITo2Ng"/>
+<div class="absolute top-4 right-4 bg-surface-container-lowest/90 backdrop-blur-sm px-3 py-1 rounded-full border border-brand-cream/50">
+<span class="font-label-md text-label-md text-primary flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px] text-gold" data-weight="fill">star</span> 4.9
+                                </span>
+</div>
+</div>
+<div class="p-6 flex flex-col flex-grow">
+<div class="flex justify-between items-start mb-2">
+<h3 class="font-headline-sm text-headline-sm text-on-surface">The Stellenbosch Estate</h3>
+<span class="font-label-md text-label-md text-secondary bg-brand-cream px-2 py-1 rounded-sm">Estate</span>
+</div>
+<p class="font-body-sm text-body-sm text-on-surface-variant mb-4 flex items-center gap-1">
+<span class="material-symbols-outlined text-[16px]">location_on</span> Western Cape
+                            </p>
+<div class="mt-auto pt-4 border-t border-brand-cream flex justify-between items-center">
+<span class="font-body-md text-body-md text-on-surface"><strong class="font-semibold">R15,000</strong> / day</span>
+<span class="material-symbols-outlined text-outline group-hover:text-primary transition-colors">favorite_border</span>
+</div>
+</div>
+</div>
+<!-- Card 2 -->
+<div class="bg-surface-container-lowest border border-brand-cream rounded-lg overflow-hidden shadow-[0_2px_8px_rgba(0,0,0,0.08)] hover:shadow-[0_4px_16px_rgba(0,0,0,0.12)] transition-shadow duration-300 group cursor-pointer flex flex-col">
+<div class="relative aspect-[4/3] overflow-hidden">
+<img class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" data-alt="An expansive, modern industrial chic loft space in the heart of Johannesburg, featuring exposed brick walls, massive steel-framed windows, and sleek polished concrete floors. The space is styled for a sophisticated cocktail party, illuminated by warm, ambient Edison bulbs and natural daylight pouring in. The aesthetic is contemporary African luxury." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBZsnWnSl6oc3rtQdGrPNIVD_cBRCbsj1EWnrYLGeTVTnkIfp7ucw1cW4ruVBCfxp64CXGADSXIoc4Td-u8pvP3VOhyqs-gI75BwhNduQjuDGRwcNF5vBaxHdQR86faWK3PUk5wmO7VD2k-t1klGFO1N8c4Pqm-MTSkbfuQBsvfXfQ5aqymg2BmeCRNOfPa7TO_Ogq5r7FQLFcvsP2nXzDiDWr3QbLX01pqUup2Qqdg8SUvOcaWOQ"/>
+</div>
+<div class="p-6 flex flex-col flex-grow">
+<div class="flex justify-between items-start mb-2">
+<h3 class="font-headline-sm text-headline-sm text-on-surface">Urban Chic Loft</h3>
+<span class="font-label-md text-label-md text-secondary bg-brand-cream px-2 py-1 rounded-sm">Loft</span>
+</div>
+<p class="font-body-sm text-body-sm text-on-surface-variant mb-4 flex items-center gap-1">
+<span class="material-symbols-outlined text-[16px]">location_on</span> Maboneng, JHB
+                            </p>
+<div class="mt-auto pt-4 border-t border-brand-cream flex justify-between items-center">
+<span class="font-body-md text-body-md text-on-surface"><strong class="font-semibold">R8,500</strong> / day</span>
+<span class="material-symbols-outlined text-outline group-hover:text-primary transition-colors">favorite_border</span>
+</div>
+</div>
+</div>
+<!-- Card 3 -->
+<div class="bg-surface-container-lowest border border-brand-cream rounded-lg overflow-hidden shadow-[0_2px_8px_rgba(0,0,0,0.08)] hover:shadow-[0_4px_16px_rgba(0,0,0,0.12)] transition-shadow duration-300 group cursor-pointer flex flex-col">
+<div class="relative aspect-[4/3] overflow-hidden">
+<img class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" data-alt="A serene, luxurious coastal villa in Camps Bay overlooking the turquoise ocean. The setting features a pristine white terrace, an infinity pool reflecting the clear blue sky, and minimalist modern furniture. The lighting is bright and high-key, emphasizing a clean, premium, and exclusive light-mode aesthetic perfect for intimate, high-end gatherings." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAZI7uIBwcDiOwYb_-zeWD0cl_Hwhn0-bmzrHCC-yibIg2xKhapTrth2C48SD3GbihDOPruGslhggSrGEnylkOrsjcaye5Exp7snRi-p4wbpzbCHgMJIejL6EI_0E7mTpaMSqTuW6dObVL11oUxUPBE-cPub5ampT3P2vfVDLtzVDBMBGD63OK-noNShrCU5YhXhrEqKW8mRfmPdUhQAOLbGpO_G71gPLh5Vilk-N1IpYpBd4xJDQ"/>
+<div class="absolute top-4 left-4 bg-brand-cream px-3 py-1 rounded-sm">
+<span class="font-label-md text-label-md text-primary">New</span>
+</div>
+</div>
+<div class="p-6 flex flex-col flex-grow">
+<div class="flex justify-between items-start mb-2">
+<h3 class="font-headline-sm text-headline-sm text-on-surface">Azure Coastal Villa</h3>
+<span class="font-label-md text-label-md text-secondary bg-brand-cream px-2 py-1 rounded-sm">Villa</span>
+</div>
+<p class="font-body-sm text-body-sm text-on-surface-variant mb-4 flex items-center gap-1">
+<span class="material-symbols-outlined text-[16px]">location_on</span> Camps Bay, CPT
+                            </p>
+<div class="mt-auto pt-4 border-t border-brand-cream flex justify-between items-center">
+<span class="font-body-md text-body-md text-on-surface"><strong class="font-semibold">R22,000</strong> / day</span>
+<span class="material-symbols-outlined text-outline group-hover:text-primary transition-colors">favorite_border</span>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- Top Vendors -->
+<section class="flex flex-col gap-stack-lg">
+<div class="flex justify-between items-end">
+<div>
+<h2 class="font-headline-lg text-headline-lg text-primary">Top Vendors</h2>
+<p class="font-body-md text-body-md text-on-surface-variant mt-2">Masters of their craft, ready to elevate your event.</p>
+</div>
+<a class="text-secondary hover:text-primary font-label-md text-label-md flex items-center gap-1 transition-colors" href="#">
+                        View All <span class="material-symbols-outlined text-[16px]">arrow_forward</span>
+</a>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-3 gap-gutter">
+<!-- Vendor 1 -->
+<div class="bg-surface-container-lowest border border-brand-cream rounded-lg p-6 shadow-[0_2px_8px_rgba(0,0,0,0.08)] hover:shadow-[0_4px_16px_rgba(0,0,0,0.12)] transition-shadow flex items-start gap-4">
+<div class="w-20 h-20 rounded-full overflow-hidden flex-shrink-0 bg-brand-cream">
+<img class="w-full h-full object-cover" data-alt="A close-up, beautifully styled plate of gourmet contemporary African cuisine. The dish features vibrant colors, intricate plating, and delicate garnishes, resting on a rustic yet elegant ceramic plate. The lighting is soft and directional, highlighting the textures of the food against a clean, light-mode background, conveying culinary excellence." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCyZhnT_18595uh47qDgYWabmrJ2x3Ykyuop8yX-ZGLZVhCjd6weNmy-Yk_hT8siMkNaXALzf6sjxovetH4FDjdvMfW_D0GNyGgnTNA7Vvp8V0PzndFWgcD1Y0hxcEWiFZ9T5xlJVTQsWx04BtXnapgvvP_jhcQtMhmJEUaqWOVomDaRMNhzydyxHZHusk-qwkSImF4j5gJbsybpjeG5WSPugXFjYuu9j5QfFNb_ZtMw5A4NULsOw"/>
+</div>
+<div class="flex flex-col flex-grow">
+<h3 class="font-headline-sm text-headline-sm text-on-surface text-lg">Culinary Canvas</h3>
+<p class="font-body-sm text-body-sm text-secondary mb-2">Gourmet Catering</p>
+<div class="flex items-center gap-1 mb-3">
+<span class="material-symbols-outlined text-[14px] text-gold" data-weight="fill">star</span>
+<span class="material-symbols-outlined text-[14px] text-gold" data-weight="fill">star</span>
+<span class="material-symbols-outlined text-[14px] text-gold" data-weight="fill">star</span>
+<span class="material-symbols-outlined text-[14px] text-gold" data-weight="fill">star</span>
+<span class="material-symbols-outlined text-[14px] text-gold" data-weight="fill">star</span>
+<span class="font-label-md text-label-md text-on-surface-variant ml-1">(42)</span>
+</div>
+<button class="text-primary font-label-md text-label-md self-start hover:underline mt-auto">View Profile</button>
+</div>
+</div>
+<!-- Vendor 2 -->
+<div class="bg-surface-container-lowest border border-brand-cream rounded-lg p-6 shadow-[0_2px_8px_rgba(0,0,0,0.08)] hover:shadow-[0_4px_16px_rgba(0,0,0,0.12)] transition-shadow flex items-start gap-4">
+<div class="w-20 h-20 rounded-full overflow-hidden flex-shrink-0 bg-brand-cream">
+<img class="w-full h-full object-cover" data-alt="An elegant, minimalist floral arrangement featuring native South African proteas mixed with delicate white imported blooms. The bouquet sits in a clear glass vase on a pristine white marble surface. The lighting is airy and bright, creating a serene, luxurious aesthetic typical of high-end wedding floristry." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAj4d_B8VoAhSkiMHiaKNWORfZAcS0nDVQ2uf8g9amvDvaNV2_qZHpxOxBjxLjmma-MXvQ0Ip_ONzzDOSiRpjOduLUkxnJcOV2blosOi-dBhu2BlPcqwlUVv35zX8540xcvX5Fns2_8f6Sd0gQfFiIhq9KeF6cElu7lsva2WldxMXXszkFVw05mFfamX-wpSHpqf_IPDJOMj7R-EG8ZaYBKnaLRUyqSaYxZM1XftOw1innaLltDRQ"/>
+</div>
+<div class="flex flex-col flex-grow">
+<h3 class="font-headline-sm text-headline-sm text-on-surface text-lg">Bloem &amp; Co.</h3>
+<p class="font-body-sm text-body-sm text-secondary mb-2">Floral Design</p>
+<div class="flex items-center gap-1 mb-3">
+<span class="material-symbols-outlined text-[14px] text-gold" data-weight="fill">star</span>
+<span class="material-symbols-outlined text-[14px] text-gold" data-weight="fill">star</span>
+<span class="material-symbols-outlined text-[14px] text-gold" data-weight="fill">star</span>
+<span class="material-symbols-outlined text-[14px] text-gold" data-weight="fill">star</span>
+<span class="material-symbols-outlined text-[14px] text-outline">star</span>
+<span class="font-label-md text-label-md text-on-surface-variant ml-1">(18)</span>
+</div>
+<button class="text-primary font-label-md text-label-md self-start hover:underline mt-auto">View Profile</button>
+</div>
+</div>
+<!-- Vendor 3 -->
+<div class="bg-surface-container-lowest border border-brand-cream rounded-lg p-6 shadow-[0_2px_8px_rgba(0,0,0,0.08)] hover:shadow-[0_4px_16px_rgba(0,0,0,0.12)] transition-shadow flex items-start gap-4">
+<div class="w-20 h-20 rounded-full overflow-hidden flex-shrink-0 bg-brand-cream">
+<img class="w-full h-full object-cover" data-alt="A high-quality action shot of a professional DJ mixing on a sleek, modern turntable setup. The scene is bathed in subtle, atmospheric warm lighting against a clean, light-mode environment. The focus is sharp on the equipment and the DJ's hands, conveying professionalism and an upbeat, premium event atmosphere." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDRy1Fr9JRlnr8idYrgHbYgmGTiXC6v2Rq-qr3d_EEgCMDFmufJAglLovBnXIvhDX2alJV-DWFbb8o1oWWfKeK1xE5_QCIJ7UZfg155nMTXfWB2cuW0WwueoaX1VhQR8rv7Xg8Aq1_HbuBA3Lz1_hUvyb953gR0MFvloZJ0UxAJ5YOFA4qrwQEGqrtrMBgTd_elRKqCLsw0378FBlwsfqEUmOy7BDLBVuq9_xwv3-2C2nYtKqyZiw"/>
+</div>
+<div class="flex flex-col flex-grow">
+<h3 class="font-headline-sm text-headline-sm text-on-surface text-lg">Sonic Waves</h3>
+<p class="font-body-sm text-body-sm text-secondary mb-2">Entertainment</p>
+<div class="flex items-center gap-1 mb-3">
+<span class="material-symbols-outlined text-[14px] text-gold" data-weight="fill">star</span>
+<span class="material-symbols-outlined text-[14px] text-gold" data-weight="fill">star</span>
+<span class="material-symbols-outlined text-[14px] text-gold" data-weight="fill">star</span>
+<span class="material-symbols-outlined text-[14px] text-gold" data-weight="fill">star</span>
+<span class="material-symbols-outlined text-[14px] text-gold" data-weight="fill">star_half</span>
+<span class="font-label-md text-label-md text-on-surface-variant ml-1">(56)</span>
+</div>
+<button class="text-primary font-label-md text-label-md self-start hover:underline mt-auto">View Profile</button>
+</div>
+</div>
+</div>
+</section>
+</div>
+</main>
+<!-- Footer -->
+<footer class="bg-surface border-t border-surface-container-highest full-width mt-auto">
+<div class="grid grid-cols-1 md:grid-cols-4 gap-gutter w-full px-margin-desktop py-section-padding max-w-max-width mx-auto">
+<!-- Brand Column -->
+<div class="flex flex-col gap-4 md:col-span-1">
+<a class="font-headline-sm text-headline-sm font-bold text-primary flex items-center gap-2" href="#">
+<span class="material-symbols-outlined" data-weight="fill">festival</span>
+                    Funxon
+                </a>
+<p class="font-body-sm text-body-sm text-on-surface-variant mt-2 max-w-xs">
+                    South Africa's Premier Event Marketplace. Connecting visionary hosts with extraordinary spaces and talent.
+                </p>
+</div>
+<!-- Links Columns -->
+<div class="flex flex-col gap-3">
+<h4 class="font-label-md text-label-md text-primary mb-2">Discover</h4>
+<a class="font-body-sm text-body-sm text-on-surface-variant hover:text-primary transition-colors" href="#">Explore Venues</a>
+<a class="font-body-sm text-body-sm text-on-surface-variant hover:text-primary transition-colors" href="#">Explore Vendors</a>
+</div>
+<div class="flex flex-col gap-3">
+<h4 class="font-label-md text-label-md text-primary mb-2">For Partners</h4>
+<a class="font-body-sm text-body-sm text-on-surface-variant hover:text-primary transition-colors" href="#">List Your Space</a>
+<a class="font-body-sm text-body-sm text-on-surface-variant hover:text-primary transition-colors" href="#">Vendor Registration</a>
+</div>
+<div class="flex flex-col gap-3">
+<h4 class="font-label-md text-label-md text-primary mb-2">Legal &amp; Help</h4>
+<a class="font-body-sm text-body-sm text-on-surface-variant hover:text-primary transition-colors" href="#">Support Center</a>
+<a class="font-body-sm text-body-sm text-on-surface-variant hover:text-primary transition-colors" href="#">Privacy Policy</a>
+<a class="font-body-sm text-body-sm text-on-surface-variant hover:text-primary transition-colors" href="#">Terms of Service</a>
+</div>
+</div>
+<!-- Copyright Banner -->
+<div class="w-full bg-brand-cream border-t border-surface-container-highest py-4 text-center">
+<p class="font-body-sm text-body-sm text-on-surface-variant">
+                © 2024 Funxon. South Africa's Premier Event Marketplace.
+            </p>
+</div>
+</footer>
+</body></html>

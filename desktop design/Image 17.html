@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Funxon - Sarah's Wedding Planner</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600&amp;family=Playfair+Display:wght@600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "surface-container-lowest": "#ffffff",
+                        "on-primary-fixed": "#001e30",
+                        "secondary-fixed-dim": "#9bcdf0",
+                        "on-error-container": "#93000a",
+                        "tertiary-container": "#303b5b",
+                        "tertiary-fixed-dim": "#bac5ec",
+                        "on-primary-container": "#83aacc",
+                        "on-surface-variant": "#42474d",
+                        "on-secondary-fixed": "#001e2e",
+                        "primary-fixed": "#cbe6ff",
+                        "inverse-on-surface": "#f2f1ec",
+                        "surface-container-highest": "#e4e2dd",
+                        "secondary": "#306382",
+                        "on-tertiary-container": "#9aa5cb",
+                        "outline": "#72787e",
+                        "surface-variant": "#e4e2dd",
+                        "surface": "#fbf9f4",
+                        "on-tertiary-fixed-variant": "#3b4666",
+                        "gold": "#ffd700",
+                        "destructive": "#dc2626",
+                        "surface-container-low": "#f5f3ee",
+                        "surface-bright": "#fbf9f4",
+                        "on-tertiary": "#ffffff",
+                        "outline-variant": "#c2c7ce",
+                        "inverse-surface": "#30312e",
+                        "surface-container-high": "#eae8e3",
+                        "on-surface": "#1b1c19",
+                        "primary-container": "#123f5c",
+                        "surface-container": "#f0eee9",
+                        "secondary-fixed": "#c7e7ff",
+                        "on-secondary": "#ffffff",
+                        "on-primary": "#ffffff",
+                        "on-secondary-fixed-variant": "#104c69",
+                        "on-background": "#1b1c19",
+                        "primary-fixed-dim": "#a3cbee",
+                        "tertiary-fixed": "#dae1ff",
+                        "inverse-primary": "#a3cbee",
+                        "primary": "#002940",
+                        "on-error": "#ffffff",
+                        "brand-cream": "#f7f5f0",
+                        "error": "#ba1a1a",
+                        "on-secondary-container": "#2c617f",
+                        "surface-dim": "#dbdad5",
+                        "surface-tint": "#3b6281",
+                        "on-tertiary-fixed": "#0e1a38",
+                        "secondary-container": "#a9dbfe",
+                        "dusty-rose": "#aa7478",
+                        "background": "#fbf9f4",
+                        "error-container": "#ffdad6",
+                        "on-primary-fixed-variant": "#204a68",
+                        "tertiary": "#1a2544"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "margin-mobile": "20px",
+                        "max-width": "1200px",
+                        "section-padding": "80px",
+                        "gutter": "24px",
+                        "stack-lg": "32px",
+                        "margin-desktop": "48px",
+                        "stack-sm": "8px",
+                        "stack-md": "16px"
+                    },
+                    "fontFamily": {
+                        "headline-sm": ["Playfair Display"],
+                        "headline-lg-mobile": ["Playfair Display"],
+                        "body-sm": ["Montserrat"],
+                        "label-md": ["Montserrat"],
+                        "headline-lg": ["Playfair Display"],
+                        "body-md": ["Montserrat"],
+                        "body-lg": ["Montserrat"],
+                        "display-lg": ["Playfair Display"],
+                        "label-lg": ["Montserrat"],
+                        "headline-md": ["Playfair Display"]
+                    },
+                    "fontSize": {
+                        "headline-sm": ["24px", {"lineHeight": "32px", "fontWeight": "600"}],
+                        "headline-lg-mobile": ["32px", {"lineHeight": "40px", "fontWeight": "700"}],
+                        "body-sm": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                        "label-md": ["12px", {"lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "600"}],
+                        "headline-lg": ["40px", {"lineHeight": "48px", "fontWeight": "700"}],
+                        "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                        "body-lg": ["18px", {"lineHeight": "28px", "fontWeight": "400"}],
+                        "display-lg": ["56px", {"lineHeight": "64px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                        "label-lg": ["14px", {"lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "600"}],
+                        "headline-md": ["32px", {"lineHeight": "40px", "fontWeight": "600"}]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        body { background-color: #f7f5f0; } /* brand-cream */
+    </style>
+</head>
+<body class="bg-brand-cream text-on-surface antialiased min-h-screen flex flex-col">
+<!-- TopNavBar -->
+<header class="bg-brand-cream border-b border-surface-container-highest shadow-sm docked full-width top-0 z-50 sticky">
+<div class="flex justify-between items-center w-full px-margin-desktop max-w-max-width mx-auto h-20">
+<div class="flex items-center gap-8">
+<a class="font-headline-md text-headline-md font-bold text-primary" href="#">Funxon</a>
+<nav class="hidden md:flex gap-6">
+<a class="font-label-lg text-label-lg text-on-surface-variant hover:text-primary transition-colors" href="#">Home</a>
+<a class="font-label-lg text-label-lg text-on-surface-variant hover:text-primary transition-colors" href="#">Venues</a>
+<a class="font-label-lg text-label-lg text-on-surface-variant hover:text-primary transition-colors" href="#">Vendors</a>
+<a class="font-label-lg text-label-lg text-on-surface-variant hover:text-primary transition-colors" href="#">Listers Portal</a>
+<a class="font-label-lg text-label-lg text-on-surface-variant hover:text-primary transition-colors" href="#">Blog</a>
+</nav>
+</div>
+<div class="flex items-center gap-4">
+<button aria-label="Notifications" class="p-2 text-on-surface-variant hover:bg-surface-container-low transition-all duration-200 rounded-full">
+<span class="material-symbols-outlined">notifications</span>
+</button>
+<img alt="User profile avatar" class="w-10 h-10 rounded-full object-cover border border-outline-variant" data-alt="A small, circular profile picture of a young professional woman with brown hair, smiling warmly. The image is bright and well-lit, conveying a sense of trustworthiness and approachability typical for a high-end service platform. The background is a soft, out-of-focus neutral tone." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBO-_nNCSQa_S_v-5On0YsCd6xKZH1W0KEA5vO32Stv4623Vqy1DQ9AkP5yFFcf1Dq7-adGpzrkGecLCWMPZqLINJV1IBHn8xdI5-yAiHQUobcyvRSQc7zbqgVW8WjaA0jUkmjNA31HDVq9Z_c07Y4m4LmGSp-02r7HVrSzoy9i8JBIswSv7do9ney-tbIpPEgY5EnmZf1dVqVkFRrBmP0e4cOjUt25l4EnDEi-QmTYOlzFwnHm0g"/>
+</div>
+</div>
+</header>
+<main class="flex-grow w-full max-w-max-width mx-auto px-margin-desktop py-stack-lg">
+<!-- Page Header -->
+<div class="mb-stack-lg flex justify-between items-end">
+<div>
+<p class="font-label-lg text-label-lg text-dusty-rose mb-stack-sm uppercase tracking-wider">Event Dashboard</p>
+<h1 class="font-headline-lg text-headline-lg text-primary">Sarah's Wedding Planner</h1>
+</div>
+<div class="flex gap-4">
+<button class="px-6 py-2 border-2 border-primary text-primary font-label-md text-label-md rounded-lg hover:bg-brand-cream transition-colors">
+                    Edit Event
+                </button>
+<button class="px-6 py-2 bg-primary text-on-primary font-label-md text-label-md rounded-lg hover:bg-primary-container transition-colors shadow-sm">
+                    Invite Collaborators
+                </button>
+</div>
+</div>
+<!-- 2-Column Layout -->
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-gutter">
+<!-- Left Column: Details & Calendar (7 cols) -->
+<div class="lg:col-span-7 flex flex-col gap-gutter">
+<!-- Event Details Card -->
+<div class="bg-surface-container-lowest rounded-lg shadow-sm p-stack-md border border-surface-container-highest">
+<div class="relative w-full h-48 rounded-lg mb-stack-md overflow-hidden" data-alt="A stunning, wide-angle photograph of a lush, high-end outdoor wedding venue in South Africa. The scene features rolling green hills in the background, elegant white marquee tents, and beautifully arranged floral arches. The lighting is golden hour, casting a warm, romantic glow over the entire setting, embodying a premium and exclusive atmosphere." style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuCiEVc60t4y4hvaRlbzcWsJl0pOdWVuxr0hmcxyFUOvixzi50RvY0qzsjsesXWVoVVVkru77W11HDWBWd9aVwpFptf02wR6tg2Ds04PyRjE7gPK4itFAtE5cDT0Eol5Y0c_M4VJkKGqmogKEAOy8UaQyeFpCmswn61iaMbOFzjdE6589MOuKhC6WPg8JKPKK-Prig4HVt085zMU4kehMY9ZMCxxAWNZ_OxjRv9XtFY4_OEoq9E5wg')">
+<div class="absolute inset-0 bg-gradient-to-t from-primary/80 to-transparent flex items-end p-4">
+<h2 class="font-headline-sm text-headline-sm text-on-primary">The Grand Estate, Stellenbosch</h2>
+</div>
+</div>
+<div class="grid grid-cols-2 gap-stack-md">
+<div class="flex items-start gap-3">
+<span class="material-symbols-outlined text-dusty-rose">calendar_today</span>
+<div>
+<p class="font-label-md text-label-md text-on-surface-variant">Date</p>
+<p class="font-body-md text-body-md text-primary">October 15, 2024</p>
+</div>
+</div>
+<div class="flex items-start gap-3">
+<span class="material-symbols-outlined text-dusty-rose">schedule</span>
+<div>
+<p class="font-label-md text-label-md text-on-surface-variant">Time</p>
+<p class="font-body-md text-body-md text-primary">2:00 PM - 11:30 PM</p>
+</div>
+</div>
+<div class="flex items-start gap-3">
+<span class="material-symbols-outlined text-dusty-rose">group</span>
+<div>
+<p class="font-label-md text-label-md text-on-surface-variant">Guests</p>
+<p class="font-body-md text-body-md text-primary">150 Confirmed</p>
+</div>
+</div>
+<div class="flex items-start gap-3">
+<span class="material-symbols-outlined text-dusty-rose">location_on</span>
+<div>
+<p class="font-label-md text-label-md text-on-surface-variant">Location</p>
+<p class="font-body-md text-body-md text-primary">Stellenbosch, WC</p>
+</div>
+</div>
+</div>
+</div>
+<!-- Calendar Widget (Simplified) -->
+<div class="bg-surface-container-lowest rounded-lg shadow-sm p-stack-md border border-surface-container-highest">
+<div class="flex justify-between items-center mb-stack-md">
+<h3 class="font-headline-sm text-headline-sm text-primary">Upcoming Milestones</h3>
+<button class="text-dusty-rose hover:text-primary transition-colors font-label-md text-label-md">View Full Calendar</button>
+</div>
+<div class="flex flex-col gap-4">
+<!-- Milestone Item -->
+<div class="flex items-center gap-4 p-4 bg-surface rounded-lg border border-surface-container-high">
+<div class="flex flex-col items-center justify-center bg-brand-cream rounded-md p-2 w-16 h-16 border border-surface-container-highest">
+<span class="font-label-lg text-label-lg text-dusty-rose uppercase">Aug</span>
+<span class="font-headline-sm text-headline-sm text-primary">12</span>
+</div>
+<div class="flex-grow">
+<h4 class="font-label-lg text-label-lg text-primary">Finalize Catering Menu</h4>
+<p class="font-body-sm text-body-sm text-on-surface-variant">Meeting with Chef Jaco at 10:00 AM</p>
+</div>
+<button class="p-2 text-outline hover:text-primary transition-colors">
+<span class="material-symbols-outlined">more_vert</span>
+</button>
+</div>
+<!-- Milestone Item -->
+<div class="flex items-center gap-4 p-4 bg-surface rounded-lg border border-surface-container-high">
+<div class="flex flex-col items-center justify-center bg-brand-cream rounded-md p-2 w-16 h-16 border border-surface-container-highest">
+<span class="font-label-lg text-label-lg text-dusty-rose uppercase">Sep</span>
+<span class="font-headline-sm text-headline-sm text-primary">05</span>
+</div>
+<div class="flex-grow">
+<h4 class="font-label-lg text-label-lg text-primary">Send Formal Invitations</h4>
+<p class="font-body-sm text-body-sm text-on-surface-variant">All RSVPs required by Oct 1st</p>
+</div>
+<button class="p-2 text-outline hover:text-primary transition-colors">
+<span class="material-symbols-outlined">more_vert</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+<!-- Right Column: Tasks & Budget (5 cols) -->
+<div class="lg:col-span-5 flex flex-col gap-gutter">
+<!-- Overall Progress -->
+<div class="bg-surface-container-lowest rounded-lg shadow-sm p-stack-md border border-surface-container-highest">
+<h3 class="font-headline-sm text-headline-sm text-primary mb-4">Planning Progress</h3>
+<div class="w-full bg-surface-container-high rounded-full h-3 mb-2 overflow-hidden">
+<div class="bg-dusty-rose h-3 rounded-full" style="width: 65%"></div>
+</div>
+<div class="flex justify-between font-label-md text-label-md">
+<span class="text-on-surface-variant">65% Completed</span>
+<span class="text-primary">35 Days Left</span>
+</div>
+</div>
+<!-- Budget Summary -->
+<div class="bg-surface-container-lowest rounded-lg shadow-sm p-stack-md border border-surface-container-highest">
+<div class="flex justify-between items-center mb-stack-md">
+<h3 class="font-headline-sm text-headline-sm text-primary">Budget Summary</h3>
+<span class="material-symbols-outlined text-dusty-rose">account_balance_wallet</span>
+</div>
+<div class="mb-6">
+<p class="font-label-md text-label-md text-on-surface-variant mb-1">Total Estimated</p>
+<p class="font-headline-md text-headline-md text-primary">R 250,000</p>
+</div>
+<div class="space-y-4">
+<div>
+<div class="flex justify-between font-label-md text-label-md mb-1">
+<span class="text-primary">Venue &amp; Catering</span>
+<span class="text-on-surface-variant">R 120,000</span>
+</div>
+<div class="w-full bg-surface-container-high rounded-full h-1.5">
+<div class="bg-primary h-1.5 rounded-full" style="width: 48%"></div>
+</div>
+</div>
+<div>
+<div class="flex justify-between font-label-md text-label-md mb-1">
+<span class="text-primary">Photography</span>
+<span class="text-on-surface-variant">R 35,000</span>
+</div>
+<div class="w-full bg-surface-container-high rounded-full h-1.5">
+<div class="bg-primary-container h-1.5 rounded-full" style="width: 14%"></div>
+</div>
+</div>
+<div>
+<div class="flex justify-between font-label-md text-label-md mb-1">
+<span class="text-primary">Decor &amp; Floral</span>
+<span class="text-on-surface-variant">R 45,000</span>
+</div>
+<div class="w-full bg-surface-container-high rounded-full h-1.5">
+<div class="bg-secondary h-1.5 rounded-full" style="width: 18%"></div>
+</div>
+</div>
+</div>
+<button class="w-full mt-stack-md py-2 text-center font-label-md text-label-md text-dusty-rose hover:bg-brand-cream rounded-lg transition-colors border border-surface-container-highest">
+                        View Detailed Budget
+                    </button>
+</div>
+<!-- Tasks List -->
+<div class="bg-surface-container-lowest rounded-lg shadow-sm p-stack-md border border-surface-container-highest flex-grow">
+<div class="flex justify-between items-center mb-stack-md">
+<h3 class="font-headline-sm text-headline-sm text-primary">High Priority Tasks</h3>
+<button aria-label="Add Task" class="p-1 text-primary hover:bg-surface-container-low rounded-md transition-colors">
+<span class="material-symbols-outlined">add</span>
+</button>
+</div>
+<div class="space-y-3">
+<!-- Task Item -->
+<label class="flex items-start gap-3 p-3 rounded-lg hover:bg-surface transition-colors cursor-pointer group">
+<input class="mt-1 w-5 h-5 rounded border-outline-variant text-dusty-rose focus:ring-dusty-rose" type="checkbox"/>
+<div class="flex-grow">
+<p class="font-label-md text-label-md text-primary group-hover:text-dusty-rose transition-colors">Book Florist</p>
+<p class="font-body-sm text-body-sm text-on-surface-variant">Due this week</p>
+</div>
+</label>
+<!-- Task Item -->
+<label class="flex items-start gap-3 p-3 rounded-lg hover:bg-surface transition-colors cursor-pointer group">
+<input class="mt-1 w-5 h-5 rounded border-outline-variant text-dusty-rose focus:ring-dusty-rose" type="checkbox"/>
+<div class="flex-grow">
+<p class="font-label-md text-label-md text-primary group-hover:text-dusty-rose transition-colors">Confirm Guest Count with Venue</p>
+<p class="font-body-sm text-body-sm text-on-surface-variant">Due in 14 days</p>
+</div>
+</label>
+<!-- Task Item (Completed) -->
+<label class="flex items-start gap-3 p-3 rounded-lg opacity-60 cursor-pointer">
+<input checked="" class="mt-1 w-5 h-5 rounded border-outline-variant text-dusty-rose focus:ring-dusty-rose" type="checkbox"/>
+<div class="flex-grow">
+<p class="font-label-md text-label-md text-on-surface-variant line-through">Select Photographer</p>
+<p class="font-body-sm text-body-sm text-on-surface-variant">Completed Aug 5</p>
+</div>
+</label>
+</div>
+</div>
+</div>
+</div>
+</main>
+<!-- Footer -->
+<footer class="bg-surface border-t border-surface-container-highest full-width mt-auto">
+<div class="grid grid-cols-1 md:grid-cols-4 gap-gutter w-full px-margin-desktop py-section-padding max-w-max-width mx-auto">
+<div class="col-span-1 md:col-span-1">
+<span class="font-headline-sm text-headline-sm font-bold text-primary block mb-4">Funxon</span>
+<p class="font-body-sm text-body-sm text-on-surface-variant">© 2024 Funxon. South Africa's Premier Event Marketplace.</p>
+</div>
+<div class="col-span-1 md:col-span-3 flex flex-wrap gap-6 justify-end">
+<a class="font-label-md text-label-md text-on-surface-variant hover:text-primary transition-colors" href="#">Explore Venues</a>
+<a class="font-label-md text-label-md text-on-surface-variant hover:text-primary transition-colors" href="#">Explore Vendors</a>
+<a class="font-label-md text-label-md text-on-surface-variant hover:text-primary transition-colors" href="#">List Your Space</a>
+<a class="font-label-md text-label-md text-on-surface-variant hover:text-primary transition-colors" href="#">Support Center</a>
+<a class="font-label-md text-label-md text-on-surface-variant hover:text-primary transition-colors" href="#">Privacy Policy</a>
+<a class="font-label-md text-label-md text-on-surface-variant hover:text-primary transition-colors" href="#">Terms of Service</a>
+</div>
+</div>
+</footer>
+</body></html>
