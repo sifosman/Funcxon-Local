@@ -11,6 +11,7 @@ import type { ProfileStackParamList } from '../navigation/ProfileNavigator';
 import { HelpCenterModal } from '../components/HelpCenterModal';
 import ThemedAlert from '../components/ThemedAlert';
 import { useApplicationForm } from '../context/ApplicationFormContext';
+import { useIsDesktop } from '../hooks/useIsDesktop';
 
 type MenuItem = {
     id: string;
@@ -26,6 +27,7 @@ export default function AccountScreen() {
     const navigation = useNavigation<NativeStackNavigationProp<ProfileStackParamList>>();
     const { signOut, user, userRole } = useAuth();
     const { resetForm } = useApplicationForm();
+    const isDesktop = useIsDesktop();
     const [expandedMenus, setExpandedMenus] = useState<Set<string>>(new Set());
     const [helpVisible, setHelpVisible] = useState(false);
     const [deleteAlertVisible, setDeleteAlertVisible] = useState(false);
@@ -369,88 +371,181 @@ export default function AccountScreen() {
     };
 
     return (
-        <View style={{ flex: 1, backgroundColor: colors.background }}>
+        <View style={{ flex: 1, backgroundColor: isDesktop ? colors.surfaceBg : colors.background }}>
             <ScrollView contentContainerStyle={{ paddingBottom: spacing.xl }}>
-                <View style={{ paddingHorizontal: spacing.lg, paddingTop: spacing.xl, paddingBottom: spacing.lg }}>
-                    <Text style={{ ...typography.displayMedium, color: colors.textPrimary }}>
-                        Hello{user?.email ? `, ${user.email.split('@')[0]}` : ''}
-                    </Text>
-                    {user && (
-                        <View style={{ marginTop: spacing.sm }}>
-                            <Text style={{ ...typography.caption, color: colors.textSecondary, marginBottom: spacing.xs }}>
-                                {user.email}
-                            </Text>
-                            <View style={{ flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: spacing.xs }}>
+                {isDesktop ? (
+                    <View style={{ maxWidth: 1200, width: '100%', alignSelf: 'center', paddingHorizontal: 48, paddingTop: spacing.sm, paddingBottom: spacing.xl }}>
+                        <View style={{ flexDirection: 'row', gap: spacing.gutter } as any}>
+                            <View style={{ width: 320, gap: spacing.gutter } as any}>
                                 <View
                                     style={{
-                                        paddingHorizontal: spacing.md,
-                                        paddingVertical: spacing.xs,
-                                        borderRadius: radii.full,
-                                        backgroundColor: userRole === 'vendor' ? colors.textPrimary : colors.accent,
+                                        borderRadius: radii.lg,
+                                        overflow: 'hidden',
+                                        backgroundColor: colors.surfaceContainerLowest,
+                                        borderWidth: 1,
+                                        borderColor: colors.outlineVariant,
                                     }}
                                 >
-                                    <Text
-                                        style={{
-                                            ...typography.caption,
-                                            fontWeight: '700',
-                                            color: userRole === 'vendor' ? '#FFFFFF' : colors.textPrimary,
-                                        }}
-                                    >
-                                        {userRole === 'vendor' ? 'Vendor' : 'Attendee'}
-                                    </Text>
+                                    {menuItems
+                                        .filter((item) => item.id !== 'lister-portfolio' || hasSubscriberAccess)
+                                        .map((item) => renderMenuItem(item))}
                                 </View>
-                                {currentPlan && (
-                                    <View
-                                        style={{
-                                            paddingHorizontal: spacing.md,
-                                            paddingVertical: spacing.xs,
-                                            borderRadius: radii.full,
-                                            backgroundColor: currentPlan === 'free' ? '#9CA3AF' : currentPlan === 'premium' ? '#8B5CF6' : currentPlan === 'enterprise' ? '#DC2626' : colors.primary,
-                                        }}
-                                    >
-                                        <Text style={{ ...typography.captionBold, color: '#FFFFFF' }}>
-                                            {currentPlan.charAt(0).toUpperCase() + currentPlan.slice(1)} Plan
-                                        </Text>
-                                    </View>
-                                )}
-                                {currentPlan && currentPlan !== 'enterprise' && (
-                                    <TouchableOpacity
-                                        onPress={() => navigation.navigate('SubscriptionPlans')}
-                                        style={{
-                                            paddingHorizontal: spacing.sm,
-                                            paddingVertical: spacing.xs,
-                                            borderRadius: radii.full,
-                                            borderWidth: 1,
-                                            borderColor: colors.textPrimary,
-                                        }}
-                                    >
-                                        <Text style={{ ...typography.captionSemiBold, color: colors.textPrimary, fontSize: 10 }}>Upgrade</Text>
-                                    </TouchableOpacity>
-                                )}
+                            </View>
+                            <View style={{ flex: 1, gap: spacing.gutter } as any}>
+                                <View
+                                    style={{
+                                        backgroundColor: colors.surfaceContainerLowest,
+                                        borderRadius: radii.lg,
+                                        borderWidth: 1,
+                                        borderColor: colors.outlineVariant,
+                                        padding: spacing.xl,
+                                    }}
+                                >
+                                    <Text style={{ ...typography.headlineMd, color: colors.textPrimary }}>
+                                        Hello{user?.email ? `, ${user.email.split('@')[0]}` : ''}
+                                    </Text>
+                                    {user && (
+                                        <View style={{ marginTop: spacing.md }}>
+                                            <Text style={{ ...typography.bodyMd, color: colors.onSurfaceVariant, marginBottom: spacing.sm }}>
+                                                {user.email}
+                                            </Text>
+                                            <View style={{ flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: spacing.sm }}>
+                                                <View
+                                                    style={{
+                                                        paddingHorizontal: spacing.md,
+                                                        paddingVertical: spacing.xs,
+                                                        borderRadius: radii.full,
+                                                        backgroundColor: userRole === 'vendor' ? colors.textPrimary : colors.accent,
+                                                    }}
+                                                >
+                                                    <Text
+                                                        style={{
+                                                            ...typography.labelMd,
+                                                            color: userRole === 'vendor' ? '#FFFFFF' : colors.textPrimary,
+                                                        }}
+                                                    >
+                                                        {userRole === 'vendor' ? 'Vendor' : 'Attendee'}
+                                                    </Text>
+                                                </View>
+                                                {currentPlan && (
+                                                    <View
+                                                        style={{
+                                                            paddingHorizontal: spacing.md,
+                                                            paddingVertical: spacing.xs,
+                                                            borderRadius: radii.full,
+                                                            backgroundColor: currentPlan === 'free' ? '#9CA3AF' : currentPlan === 'premium' ? '#8B5CF6' : currentPlan === 'enterprise' ? '#DC2626' : colors.primary,
+                                                        }}
+                                                    >
+                                                        <Text style={{ ...typography.labelMd, color: '#FFFFFF' }}>
+                                                            {currentPlan.charAt(0).toUpperCase() + currentPlan.slice(1)} Plan
+                                                        </Text>
+                                                    </View>
+                                                )}
+                                                {currentPlan && currentPlan !== 'enterprise' && (
+                                                    <TouchableOpacity
+                                                        onPress={() => navigation.navigate('SubscriptionPlans')}
+                                                        style={{
+                                                            paddingHorizontal: spacing.sm,
+                                                            paddingVertical: spacing.xs,
+                                                            borderRadius: radii.full,
+                                                            borderWidth: 1,
+                                                            borderColor: colors.textPrimary,
+                                                        }}
+                                                    >
+                                                        <Text style={{ ...typography.labelMd, color: colors.textPrimary }}>Upgrade</Text>
+                                                    </TouchableOpacity>
+                                                )}
+                                            </View>
+                                        </View>
+                                    )}
+                                </View>
                             </View>
                         </View>
-                    )}
-                </View>
+                    </View>
+                ) : (
+                    <>
+                        <View style={{ paddingHorizontal: spacing.lg, paddingTop: spacing.xl, paddingBottom: spacing.lg }}>
+                            <Text style={{ ...typography.displayMedium, color: colors.textPrimary }}>
+                                Hello{user?.email ? `, ${user.email.split('@')[0]}` : ''}
+                            </Text>
+                            {user && (
+                                <View style={{ marginTop: spacing.sm }}>
+                                    <Text style={{ ...typography.caption, color: colors.textSecondary, marginBottom: spacing.xs }}>
+                                        {user.email}
+                                    </Text>
+                                    <View style={{ flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: spacing.xs }}>
+                                        <View
+                                            style={{
+                                                paddingHorizontal: spacing.md,
+                                                paddingVertical: spacing.xs,
+                                                borderRadius: radii.full,
+                                                backgroundColor: userRole === 'vendor' ? colors.textPrimary : colors.accent,
+                                            }}
+                                        >
+                                            <Text
+                                                style={{
+                                                    ...typography.caption,
+                                                    fontWeight: '700',
+                                                    color: userRole === 'vendor' ? '#FFFFFF' : colors.textPrimary,
+                                                }}
+                                            >
+                                                {userRole === 'vendor' ? 'Vendor' : 'Attendee'}
+                                            </Text>
+                                        </View>
+                                        {currentPlan && (
+                                            <View
+                                                style={{
+                                                    paddingHorizontal: spacing.md,
+                                                    paddingVertical: spacing.xs,
+                                                    borderRadius: radii.full,
+                                                    backgroundColor: currentPlan === 'free' ? '#9CA3AF' : currentPlan === 'premium' ? '#8B5CF6' : currentPlan === 'enterprise' ? '#DC2626' : colors.primary,
+                                                }}
+                                            >
+                                                <Text style={{ ...typography.captionBold, color: '#FFFFFF' }}>
+                                                    {currentPlan.charAt(0).toUpperCase() + currentPlan.slice(1)} Plan
+                                                </Text>
+                                            </View>
+                                        )}
+                                        {currentPlan && currentPlan !== 'enterprise' && (
+                                            <TouchableOpacity
+                                                onPress={() => navigation.navigate('SubscriptionPlans')}
+                                                style={{
+                                                    paddingHorizontal: spacing.sm,
+                                                    paddingVertical: spacing.xs,
+                                                    borderRadius: radii.full,
+                                                    borderWidth: 1,
+                                                    borderColor: colors.textPrimary,
+                                                }}
+                                            >
+                                                <Text style={{ ...typography.captionSemiBold, color: colors.textPrimary, fontSize: 10 }}>Upgrade</Text>
+                                            </TouchableOpacity>
+                                        )}
+                                    </View>
+                                </View>
+                            )}
+                        </View>
 
-                <View
-                    style={{
-                        marginHorizontal: spacing.lg,
-                        borderRadius: radii.lg,
-                        overflow: 'hidden',
-                        backgroundColor: colors.surface,
-                        borderWidth: 1,
-                        borderColor: colors.borderSubtle,
-                        shadowColor: '#000',
-                        shadowOpacity: 0.05,
-                        shadowRadius: 8,
-                        shadowOffset: { width: 0, height: 2 },
-                        elevation: 2,
-                    }}
-                >
-                    {menuItems
-                        .filter((item) => item.id !== 'lister-portfolio' || hasSubscriberAccess)
-                        .map((item) => renderMenuItem(item))}
-                </View>
+                        <View
+                            style={{
+                                marginHorizontal: spacing.lg,
+                                borderRadius: radii.lg,
+                                overflow: 'hidden',
+                                backgroundColor: colors.surface,
+                                borderWidth: 1,
+                                borderColor: colors.borderSubtle,
+                                shadowColor: '#000',
+                                shadowOpacity: 0.05,
+                                shadowRadius: 8,
+                                shadowOffset: { width: 0, height: 2 },
+                                elevation: 2,
+                            }}
+                        >
+                            {menuItems
+                                .filter((item) => item.id !== 'lister-portfolio' || hasSubscriberAccess)
+                                .map((item) => renderMenuItem(item))}
+                        </View>
+                    </>
+                )}
             </ScrollView>
             <HelpCenterModal
                 visible={helpVisible}

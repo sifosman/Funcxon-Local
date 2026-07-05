@@ -6,6 +6,7 @@ import { MaterialIcons} from '@expo/vector-icons';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { AttendeeStackParamList } from '../navigation/AttendeeNavigator';
 import { colors, spacing, radii, typography } from '../theme';
+import { useIsDesktop } from '../hooks/useIsDesktop';
 import { supabase } from '../lib/supabaseClient';
 import { useAuth } from '../auth/AuthContext';
 
@@ -33,6 +34,7 @@ type PdfDocument = {
 export default function VenueCatalogueViewScreen({ route, navigation }: Props) {
   const { venueId, venueName } = route.params;
   const { session } = useAuth();
+  const isDesktop = useIsDesktop();
 
   const [loading, setLoading] = useState(true);
   const [items, setItems] = useState<CatalogueItem[]>([]);
@@ -145,44 +147,154 @@ export default function VenueCatalogueViewScreen({ route, navigation }: Props) {
 
   const hasCatalogueItems = activeItems.length > 0;
 
+  const renderCatalogueItem = (item: CatalogueItem) => {
+    const isSelected = selectedIds.has(item.id);
+    return (
+      <TouchableOpacity
+        key={item.id}
+        activeOpacity={0.9}
+        onPress={() => toggleItem(item.id)}
+        style={isDesktop ? ({
+          width: 'calc(33.3333% - 16px)',
+          borderRadius: radii.lg,
+          backgroundColor: colors.surfaceContainerLowest,
+          borderWidth: 2,
+          borderColor: isSelected ? colors.textPrimary : colors.outlineVariant,
+          overflow: 'hidden',
+        } as any) : {
+          flexDirection: 'row',
+          borderRadius: radii.lg,
+          backgroundColor: colors.surface,
+          borderWidth: 2,
+          borderColor: isSelected ? colors.textPrimary : colors.borderSubtle,
+          overflow: 'hidden',
+        }}
+      >
+        {isDesktop ? (
+          <View>
+            {item.image_url ? (
+              <NetworkImage
+                uri={item.image_url}
+                style={{ width: '100%', height: 160 }}
+                resizeMode="cover"
+              />
+            ) : (
+              <View
+                style={{
+                  width: '100%',
+                  height: 160,
+                  backgroundColor: colors.surfaceMuted,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                <MaterialIcons name="image" size={40} color={colors.textMuted} />
+              </View>
+            )}
+            <View style={{ position: 'absolute', top: spacing.sm, right: spacing.sm }}>
+              <MaterialIcons
+                name={isSelected ? 'check-circle' : 'radio-button-unchecked'}
+                size={28}
+                color={isSelected ? colors.textPrimary : colors.outlineVariant}
+              />
+            </View>
+          </View>
+        ) : (
+          <>
+            {item.image_url ? (
+              <NetworkImage
+                uri={item.image_url}
+                style={{ width: 100, height: 100 }}
+                resizeMode="cover"
+              />
+            ) : (
+              <View
+                style={{
+                  width: 100,
+                  height: 100,
+                  backgroundColor: colors.surfaceMuted,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                <MaterialIcons name="image" size={32} color={colors.textMuted} />
+              </View>
+            )}
+          </>
+        )}
+        <View style={{ flex: 1, padding: spacing.md, justifyContent: 'center' }}>
+          <Text style={{ ...(isDesktop ? typography.titleMedium : typography.bodySemiBold), color: colors.textPrimary }}>
+            {item.title}
+          </Text>
+          {item.description ? (
+            <Text style={{ ...(isDesktop ? typography.bodyMd : typography.caption), color: colors.textMuted, marginTop: 2 }} numberOfLines={isDesktop ? 3 : 2}>
+              {item.description}
+            </Text>
+          ) : null}
+          <Text style={{ ...(isDesktop ? typography.bodyMd : typography.bodyBold), color: colors.textPrimary, marginTop: spacing.sm }}>
+            R{Number(item.price ?? 0).toLocaleString()}
+          </Text>
+        </View>
+        {!isDesktop && (
+          <View style={{ justifyContent: 'center', paddingRight: spacing.md }}>
+            <MaterialIcons
+              name={isSelected ? 'check-circle' : 'radio-button-unchecked'}
+              size={28}
+              color={isSelected ? colors.textPrimary : colors.borderSubtle}
+            />
+          </View>
+        )}
+      </TouchableOpacity>
+    );
+  };
+
   return (
     <KeyboardAvoidingView
-      style={{ flex: 1, backgroundColor: colors.background }}
+      style={{ flex: 1, backgroundColor: isDesktop ? colors.surfaceBg : colors.background }}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
       <ScrollView
         style={{ flex: 1 }}
-        contentContainerStyle={{ paddingHorizontal: spacing.lg, paddingTop: spacing.sm, paddingBottom: 140 }}
+        contentContainerStyle={isDesktop ? { paddingHorizontal: 48, paddingTop: spacing.sm, paddingBottom: 140, maxWidth: 1200, width: '100%', alignSelf: 'center' } : { paddingHorizontal: spacing.lg, paddingTop: spacing.sm, paddingBottom: 140 }}
         keyboardShouldPersistTaps="handled"
       >
-        <TouchableOpacity
-          onPress={() => navigation.goBack()}
-          style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.sm }}
-        >
-          <MaterialIcons name="arrow-back" size={20} color={colors.textPrimary} />
-          <Text style={{ ...typography.body, color: colors.textPrimary, marginLeft: spacing.sm }}>Back</Text>
-        </TouchableOpacity>
+        {isDesktop ? null : (
+          <TouchableOpacity
+            onPress={() => navigation.goBack()}
+            style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.sm }}
+          >
+            <MaterialIcons name="arrow-back" size={20} color={colors.textPrimary} />
+            <Text style={{ ...typography.body, color: colors.textPrimary, marginLeft: spacing.sm }}>Back</Text>
+          </TouchableOpacity>
+        )}
 
-        <Text style={{ ...typography.titleLarge, color: colors.textPrimary, marginBottom: spacing.xs }}>
-          {venueName}
-        </Text>
-        <Text style={{ ...typography.body, color: colors.textMuted, marginBottom: spacing.lg }}>
-          Catalogue
-        </Text>
+        <View style={{ marginBottom: spacing.lg }}>
+          {isDesktop && (
+            <Text style={{ ...typography.labelMd, color: colors.dustyRose, marginBottom: spacing.sm, textTransform: 'uppercase', letterSpacing: 0.05 }}>
+              Catalogue
+            </Text>
+          )}
+          <Text style={{ ...(isDesktop ? typography.headlineMd : typography.titleLarge), color: colors.textPrimary, marginBottom: spacing.xs }}>
+            {venueName}
+          </Text>
+          <Text style={{ ...(isDesktop ? typography.bodyMd : typography.body), color: colors.textMuted, marginBottom: spacing.lg }}>
+            Catalogue
+          </Text>
+        </View>
 
         {!hasCatalogueItems && pdfDocs.length === 0 && (
           <View
             style={{
               padding: spacing.xl,
               borderRadius: radii.lg,
-              backgroundColor: colors.surface,
+              backgroundColor: isDesktop ? colors.surfaceContainerLowest : colors.surface,
               borderWidth: 1,
-              borderColor: colors.borderSubtle,
+              borderColor: isDesktop ? colors.outlineVariant : colors.borderSubtle,
               alignItems: 'center',
             }}
           >
             <MaterialIcons name="inventory-2" size={48} color={colors.textMuted} />
-            <Text style={{ ...typography.body, color: colors.textMuted, marginTop: spacing.md, textAlign: 'center' }}>
+            <Text style={{ ...(isDesktop ? typography.bodyMd : typography.body), color: colors.textMuted, marginTop: spacing.md, textAlign: 'center' }}>
               No catalogue items available yet.
             </Text>
           </View>
@@ -190,7 +302,7 @@ export default function VenueCatalogueViewScreen({ route, navigation }: Props) {
 
         {!hasCatalogueItems && pdfDocs.length > 0 && (
           <View style={{ gap: spacing.md }}>
-            <Text style={{ ...typography.titleMedium, color: colors.textPrimary, marginBottom: spacing.sm }}>
+            <Text style={{ ...(isDesktop ? typography.headlineSm : typography.titleMedium), color: colors.textPrimary, marginBottom: spacing.sm }}>
               PDF Catalogue
             </Text>
             {pdfDocs.map((doc) => (
@@ -206,14 +318,14 @@ export default function VenueCatalogueViewScreen({ route, navigation }: Props) {
                   alignItems: 'center',
                   padding: spacing.md,
                   borderRadius: radii.lg,
-                  backgroundColor: colors.surface,
+                  backgroundColor: isDesktop ? colors.surfaceContainerLowest : colors.surface,
                   borderWidth: 1,
-                  borderColor: colors.borderSubtle,
+                  borderColor: isDesktop ? colors.outlineVariant : colors.borderSubtle,
                   gap: spacing.sm,
                 }}
               >
                 <MaterialIcons name="picture-as-pdf" size={28} color={colors.destructive} />
-                <Text style={{ ...typography.body, color: colors.textPrimary, flex: 1 }} numberOfLines={1}>
+                <Text style={{ ...(isDesktop ? typography.bodyMd : typography.body), color: colors.textPrimary, flex: 1 }} numberOfLines={1}>
                   {doc.file_name || 'Catalogue PDF'}
                 </Text>
                 <MaterialIcons name="open-in-new" size={18} color={colors.textPrimary} />
@@ -224,82 +336,33 @@ export default function VenueCatalogueViewScreen({ route, navigation }: Props) {
 
         {hasCatalogueItems && (
           <View style={{ gap: spacing.md }}>
-            {activeItems.map((item) => {
-              const isSelected = selectedIds.has(item.id);
-              return (
-                <TouchableOpacity
-                  key={item.id}
-                  activeOpacity={0.9}
-                  onPress={() => toggleItem(item.id)}
-                  style={{
-                    flexDirection: 'row',
-                    borderRadius: radii.lg,
-                    backgroundColor: colors.surface,
-                    borderWidth: 2,
-                    borderColor: isSelected ? colors.textPrimary : colors.borderSubtle,
-                    overflow: 'hidden',
-                  }}
-                >
-                  {item.image_url ? (
-                    <NetworkImage
-                      uri={item.image_url}
-                      style={{ width: 100, height: 100 }}
-                      resizeMode="cover"
-                    />
-                  ) : (
-                    <View
-                      style={{
-                        width: 100,
-                        height: 100,
-                        backgroundColor: colors.surfaceMuted,
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                      }}
-                    >
-                      <MaterialIcons name="image" size={32} color={colors.textMuted} />
-                    </View>
-                  )}
-                  <View style={{ flex: 1, padding: spacing.md, justifyContent: 'center' }}>
-                    <Text style={{ ...typography.bodySemiBold, color: colors.textPrimary }}>
-                      {item.title}
-                    </Text>
-                    {item.description ? (
-                      <Text style={{ ...typography.caption, color: colors.textMuted, marginTop: 2 }} numberOfLines={2}>
-                        {item.description}
-                      </Text>
-                    ) : null}
-                    <Text style={{ ...typography.bodyBold, color: colors.textPrimary, marginTop: spacing.sm }}>
-                      R{Number(item.price ?? 0).toLocaleString()}
-                    </Text>
-                  </View>
-                  <View style={{ justifyContent: 'center', paddingRight: spacing.md }}>
-                    <MaterialIcons
-                      name={isSelected ? 'check-circle' : 'radio-button-unchecked'}
-                      size={28}
-                      color={isSelected ? colors.textPrimary : colors.borderSubtle}
-                    />
-                  </View>
-                </TouchableOpacity>
-              );
-            })}
+            {isDesktop && (
+              <Text style={{ ...typography.headlineSm, color: colors.textPrimary, marginBottom: spacing.sm }}>
+                Items
+              </Text>
+            )}
+            <View style={isDesktop ? { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.md } as any : { gap: spacing.md }}>
+              {activeItems.map(renderCatalogueItem)}
+            </View>
 
             {selectedItems.length > 0 && (
               <View
                 style={{
                   padding: spacing.lg,
                   borderRadius: radii.lg,
-                  backgroundColor: colors.surface,
+                  backgroundColor: isDesktop ? colors.surfaceContainerLowest : colors.surface,
                   borderWidth: 1,
-                  borderColor: colors.borderSubtle,
+                  borderColor: isDesktop ? colors.outlineVariant : colors.borderSubtle,
                   gap: spacing.md,
+                  ...(isDesktop ? { maxWidth: 800, width: '100%', alignSelf: 'center' } : {}),
                 }}
               >
-                <Text style={{ ...typography.titleMedium, color: colors.textPrimary }}>Your Selection</Text>
+                <Text style={{ ...(isDesktop ? typography.headlineSm : typography.titleMedium), color: colors.textPrimary }}>Your Selection</Text>
                 {selectedItems.map((item) => (
                   <View key={item.id} style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
                     <View style={{ flex: 1 }}>
-                      <Text style={{ ...typography.body, color: colors.textPrimary }}>{item.title}</Text>
-                      <Text style={{ ...typography.caption, color: colors.textMuted }}>
+                      <Text style={{ ...(isDesktop ? typography.bodyMd : typography.body), color: colors.textPrimary }}>{item.title}</Text>
+                      <Text style={{ ...(isDesktop ? typography.bodyMd : typography.caption), color: colors.textMuted }}>
                         R{Number(item.price ?? 0).toLocaleString()} each
                       </Text>
                     </View>
@@ -317,7 +380,7 @@ export default function VenueCatalogueViewScreen({ route, navigation }: Props) {
                       >
                         <MaterialIcons name="remove" size={16} color={colors.textPrimary} />
                       </TouchableOpacity>
-                      <Text style={{ ...typography.body, color: colors.textPrimary, minWidth: 24, textAlign: 'center' }}>
+                      <Text style={{ ...(isDesktop ? typography.bodyMd : typography.body), color: colors.textPrimary, minWidth: 24, textAlign: 'center' }}>
                         {quantities[item.id] || 1}
                       </Text>
                       <TouchableOpacity
@@ -346,8 +409,8 @@ export default function VenueCatalogueViewScreen({ route, navigation }: Props) {
                     alignItems: 'center',
                   }}
                 >
-                  <Text style={{ ...typography.titleMedium, color: colors.textPrimary }}>Total</Text>
-                  <Text style={{ ...typography.titleMedium, color: colors.textPrimary }}>R{total.toLocaleString()}</Text>
+                  <Text style={{ ...(isDesktop ? typography.headlineSm : typography.titleMedium), color: colors.textPrimary }}>Total</Text>
+                  <Text style={{ ...(isDesktop ? typography.headlineSm : typography.titleMedium), color: colors.textPrimary }}>R{total.toLocaleString()}</Text>
                 </View>
               </View>
             )}
@@ -363,6 +426,7 @@ export default function VenueCatalogueViewScreen({ route, navigation }: Props) {
                 borderRadius: radii.lg,
                 backgroundColor: selectedItems.length > 0 ? colors.textPrimary : colors.surfaceMuted,
                 gap: spacing.sm,
+                ...(isDesktop ? { maxWidth: 800, width: '100%', alignSelf: 'center' } : {}),
               }}
             >
               <MaterialIcons name="request-quote" size={20} color="#FFFFFF" />
@@ -370,7 +434,7 @@ export default function VenueCatalogueViewScreen({ route, navigation }: Props) {
             </TouchableOpacity>
 
             {selectedItems.length > 0 && (
-              <Text style={{ ...typography.caption, color: colors.textMuted, textAlign: 'center' }}>
+              <Text style={{ ...(isDesktop ? typography.bodyMd : typography.caption), color: colors.textMuted, textAlign: 'center' }}>
                 Selected items will be pre-filled on the quote request screen.
               </Text>
             )}

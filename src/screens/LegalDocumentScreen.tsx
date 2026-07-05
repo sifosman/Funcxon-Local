@@ -2,6 +2,7 @@ import { ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { colors, spacing, radii, typography } from '../theme';
+import { useIsDesktop } from '../hooks/useIsDesktop';
 import {
   privacyPolicy,
   cookiePolicy,
@@ -17,7 +18,7 @@ const documentMap: Record<string, LegalDocument> = {
   'terms-and-conditions': termsAndConditions,
 };
 
-function SectionBlock({ section }: { section: LegalSection }) {
+function SectionBlock({ section, isDesktop }: { section: LegalSection; isDesktop?: boolean }) {
   return (
     <View style={{ marginBottom: spacing.lg }}>
       <Text
@@ -25,6 +26,7 @@ function SectionBlock({ section }: { section: LegalSection }) {
           ...typography.titleMedium,
           color: colors.textPrimary,
           marginBottom: spacing.sm,
+          fontSize: isDesktop ? 24 : undefined,
         }}
       >
         {section.title}
@@ -33,19 +35,21 @@ function SectionBlock({ section }: { section: LegalSection }) {
         style={{
           ...typography.body,
           color: colors.textSecondary,
-          lineHeight: 22,
+          lineHeight: isDesktop ? 28 : 22,
+          fontSize: isDesktop ? 16 : undefined,
         }}
       >
         {section.content}
       </Text>
       {section.subsections?.map((sub, idx) => (
-        <View key={idx} style={{ marginTop: spacing.md, paddingLeft: spacing.md }}>
+        <View key={idx} style={{ marginTop: spacing.md, paddingLeft: isDesktop ? 0 : spacing.md }}>
           <Text
             style={{
               ...typography.body,
               fontWeight: '600',
               color: colors.textPrimary,
               marginBottom: spacing.xs,
+              fontSize: isDesktop ? 16 : undefined,
             }}
           >
             {sub.title}
@@ -54,7 +58,8 @@ function SectionBlock({ section }: { section: LegalSection }) {
             style={{
               ...typography.body,
               color: colors.textSecondary,
-              lineHeight: 22,
+              lineHeight: isDesktop ? 28 : 22,
+              fontSize: isDesktop ? 16 : undefined,
             }}
           >
             {sub.content}
@@ -68,6 +73,7 @@ function SectionBlock({ section }: { section: LegalSection }) {
 export default function LegalDocumentScreen() {
   const navigation = useNavigation();
   const route = useRoute();
+  const isDesktop = useIsDesktop();
   const { documentId } = (route.params as { documentId: string }) || {};
 
   const document = documentMap[documentId];
@@ -99,19 +105,21 @@ export default function LegalDocumentScreen() {
   }
 
   return (
-    <View style={{ flex: 1, backgroundColor: colors.background }}>
+    <View style={{ flex: 1, backgroundColor: isDesktop ? colors.surfaceBg : colors.background }}>
       <ScrollView contentContainerStyle={{ paddingBottom: spacing.xxl }}>
-        <View style={{ paddingHorizontal: spacing.lg, paddingTop: spacing.sm }}>
+        <View style={isDesktop ? { maxWidth: 800, width: '100%', alignSelf: 'center', paddingHorizontal: 48, paddingTop: spacing.sm } : { paddingHorizontal: spacing.lg, paddingTop: spacing.sm }}>
           {/* Header */}
-          <TouchableOpacity
-            onPress={() => navigation.goBack()}
-            style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.sm }}
-          >
-            <MaterialIcons name="arrow-back" size={20} color={colors.textPrimary} />
-            <Text style={{ ...typography.body, color: colors.textPrimary, marginLeft: spacing.sm }}>
-              Back
-            </Text>
-          </TouchableOpacity>
+          {isDesktop ? null : (
+            <TouchableOpacity
+              onPress={() => navigation.goBack()}
+              style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.sm }}
+            >
+              <MaterialIcons name="arrow-back" size={20} color={colors.textPrimary} />
+              <Text style={{ ...typography.body, color: colors.textPrimary, marginLeft: spacing.sm }}>
+                Back
+              </Text>
+            </TouchableOpacity>
+          )}
 
           {/* Title Card */}
           <View
@@ -128,11 +136,12 @@ export default function LegalDocumentScreen() {
                 ...typography.titleLarge,
                 color: '#FFFFFF',
                 marginBottom: spacing.xs,
+                fontSize: isDesktop ? 32 : undefined,
               }}
             >
               {document.title}
             </Text>
-            <Text style={{ ...typography.caption, color: 'rgba(255,255,255,0.8)' }}>
+            <Text style={{ ...typography.caption, color: 'rgba(255,255,255,0.8)', fontSize: isDesktop ? 14 : undefined }}>
               Effective Date: {document.effectiveDate}
             </Text>
           </View>
@@ -140,20 +149,21 @@ export default function LegalDocumentScreen() {
           {/* Preamble */}
           <View
             style={{
-              backgroundColor: colors.surface,
+              backgroundColor: isDesktop ? colors.surfaceContainerLowest : colors.surface,
               borderRadius: radii.lg,
               padding: spacing.lg,
               marginBottom: spacing.lg,
               borderWidth: 1,
-              borderColor: colors.borderSubtle,
+              borderColor: isDesktop ? colors.outlineVariant : colors.borderSubtle,
             }}
           >
             <Text
               style={{
                 ...typography.body,
                 color: colors.textSecondary,
-                lineHeight: 22,
+                lineHeight: isDesktop ? 28 : 22,
                 fontStyle: 'italic',
+                fontSize: isDesktop ? 16 : undefined,
               }}
             >
               {document.preamble}
@@ -163,16 +173,16 @@ export default function LegalDocumentScreen() {
           {/* Sections */}
           <View
             style={{
-              backgroundColor: colors.surface,
+              backgroundColor: isDesktop ? colors.surfaceContainerLowest : colors.surface,
               borderRadius: radii.lg,
               padding: spacing.lg,
               marginBottom: spacing.lg,
               borderWidth: 1,
-              borderColor: colors.borderSubtle,
+              borderColor: isDesktop ? colors.outlineVariant : colors.borderSubtle,
             }}
           >
             {document.sections.map((section, idx) => (
-              <SectionBlock key={idx} section={section} />
+              <SectionBlock key={idx} section={section} isDesktop={isDesktop} />
             ))}
           </View>
 
@@ -180,11 +190,13 @@ export default function LegalDocumentScreen() {
           {document.closing && (
             <View
               style={{
-                backgroundColor: '#f2f7ff',
+                backgroundColor: isDesktop ? colors.surfaceContainerLow : '#f2f7ff',
                 borderRadius: radii.lg,
                 padding: spacing.lg,
                 flexDirection: 'row',
                 alignItems: 'flex-start',
+                borderWidth: isDesktop ? 1 : 0,
+                borderColor: isDesktop ? colors.outlineVariant : undefined,
               }}
             >
               <MaterialIcons
@@ -198,7 +210,8 @@ export default function LegalDocumentScreen() {
                   ...typography.body,
                   color: colors.textPrimary,
                   flex: 1,
-                  lineHeight: 22,
+                  lineHeight: isDesktop ? 28 : 22,
+                  fontSize: isDesktop ? 16 : undefined,
                 }}
               >
                 {document.closing}

@@ -4,15 +4,18 @@ import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { useQuery } from '@tanstack/react-query';
 import { MaterialIcons } from '@expo/vector-icons';
 import { colors, radii, spacing, typography } from '../theme';
+import { useIsDesktop } from '../hooks/useIsDesktop';
 import { supabase } from '../lib/supabaseClient';
 import { getFavourites, getShortlists, toggleFavourite, updateShortlistNotes } from '../lib/favourites';
 import type { VendorListItem } from './AttendeeHomeScreen';
 import { useAuth } from '../auth/AuthContext';
 import NetworkImage from '../components/NetworkImage';
+import { formatCardAddress } from '../utils/location';
 
 export default function FavouritesScreen() {
   const navigation = useNavigation<any>();
   const { user } = useAuth();
+  const isDesktop = useIsDesktop();
 
   const cardImageHeight = Math.max(120, Math.round(Dimensions.get('window').height / 2.5 - 220));
   const [favouriteIds, setFavouriteIds] = useState<{ vendorIds: number[], venueIds: number[] }>({ vendorIds: [], venueIds: [] });
@@ -63,11 +66,11 @@ export default function FavouritesScreen() {
       if (favouriteIds.vendorIds.length > 0) {
         const { data: vendors, error: vendorError } = await supabase
           .from('vendors')
-          .select('id, name, price_range, rating, review_count, image_url, description, city, province, address_line_1')
+          .select('id, name, price_range, rating, review_count, image_url, description, city, province, address_line_1, location')
           .in('id', favouriteIds.vendorIds);
-          
+
         if (vendorError) throw vendorError;
-        
+
         if (vendors) {
           items.push(...vendors.map(v => ({ ...v, type: 'vendor' as const })));
         }
@@ -76,11 +79,11 @@ export default function FavouritesScreen() {
       if (favouriteIds.venueIds.length > 0) {
         const { data: venues, error: venueError } = await supabase
           .from('venue_listings')
-          .select('id, name, rating, image_url, description, city, province, address_line_1')
+          .select('id, name, rating, image_url, description, city, province, address_line_1, location')
           .in('id', favouriteIds.venueIds);
-          
+
         if (venueError) throw venueError;
-        
+
         if (venues) {
           items.push(...venues.map(v => ({
             id: v.id,
@@ -92,6 +95,7 @@ export default function FavouritesScreen() {
             description: v.description,
             province: v.province,
             city: v.city,
+            location: v.location,
             address_line_1: v.address_line_1 ?? null,
             category_id: null,
             type: 'venue' as const
@@ -140,9 +144,161 @@ export default function FavouritesScreen() {
     }
   };
 
+  const renderCard = (item: VendorListItem) => {
+    const shortlistEntry = shortlistEntries?.find((entry) => {
+      const entryId = item.type === 'venue' ? entry.venueId : entry.vendorId;
+      return entryId != null && Number(entryId) === Number(item.id);
+    });
+    const shortlistId = shortlistEntry?.id;
+    const noteValue = shortlistId != null
+      ? noteDrafts[shortlistId] ?? shortlistEntry?.notes ?? ''
+      : '';
+    const hasNoteChange = shortlistId != null && noteValue.trim() !== (shortlistEntry?.notes ?? '').trim();
+    const isSaving = shortlistId != null ? !!savingNotes[shortlistId] : false;
+    return (
+      <View
+        key={`${item.type}-${item.id}`}
+        style={{
+          borderRadius: radii.lg,
+          backgroundColor: isDesktop ? colors.surfaceContainerLowest : colors.surface,
+          borderWidth: 1,
+          borderColor: isDesktop ? colors.outlineVariant : colors.borderSubtle,
+          overflow: 'hidden',
+          width: isDesktop ? 'calc(33.333% - 16px)' : '100%',
+        } as any}
+      >
+        <NetworkImage
+          uri={item.image_url}
+          style={{ width: '100%', height: isDesktop ? 200 : cardImageHeight }}
+        />
+        <TouchableOpacity
+          onPress={() => handleRemove(item.id, item.type)}
+          style={{
+            position: 'absolute',
+            top: spacing.sm,
+            right: spacing.sm,
+            width: 36,
+            height: 36,
+            borderRadius: 8,
+            backgroundColor: '#EF4444',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+        >
+          <MaterialIcons name="delete" size={18} color="#FFFFFF" />
+        </TouchableOpacity>
+        <View style={{ padding: spacing.md }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+            <View style={{ flex: 1, paddingRight: spacing.md }}>
+              <Text style={isDesktop ? { ...typography.headlineSm, color: colors.textPrimary } : { ...typography.titleMedium, color: colors.textPrimary }}>
+                {item.name ?? 'Untitled'}
+              </Text>
+              {item.description ? (
+                <Text style={isDesktop ? { ...typography.bodyMd, color: colors.textMuted, marginTop: spacing.xs } : { ...typography.caption, color: colors.textMuted, marginTop: spacing.xs }} numberOfLines={2}>
+                  {item.description}
+                </Text>
+              ) : null}
+              {item.type === 'venue' && (
+                 <Text style={isDesktop ? { ...typography.bodyMd, color: colors.textPrimary, marginTop: 4 } : { ...typography.caption, color: colors.textPrimary, marginTop: 4 }}>Venue</Text>
+              )}
+            </View>
+            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+              <MaterialIcons name="star" size={14} color="#F59E0B" />
+              <Text style={isDesktop ? { ...typography.bodyMd, color: colors.textSecondary, marginLeft: spacing.xs } : { ...typography.caption, color: colors.textSecondary, marginLeft: spacing.xs }}>
+                {typeof item.rating === 'number' ? item.rating.toFixed(1) : 'No rating yet'}
+                {typeof item.review_count === 'number' && item.review_count > 0
+                  ? ` (${item.review_count})`
+                  : ''}
+              </Text>
+            </View>
+          </View>
+          <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: spacing.xs }}>
+            <MaterialIcons name="place" size={16} color={colors.textSecondary} />
+            <Text style={isDesktop ? { ...typography.bodyMd, color: colors.textSecondary, marginLeft: spacing.xs, flex: 1 } : { ...typography.caption, color: colors.textSecondary, marginLeft: spacing.xs, flex: 1 }} numberOfLines={2}>
+              {formatCardAddress(item)}
+            </Text>
+          </View>
+          {shortlistId != null ? (
+            <View
+              style={{
+                marginTop: spacing.md,
+                padding: spacing.md,
+                borderRadius: radii.md,
+                backgroundColor: isDesktop ? colors.surfaceContainerLow : colors.surfaceMuted,
+                borderWidth: 1,
+                borderColor: isDesktop ? colors.outlineVariant : colors.borderSubtle,
+              }}
+            >
+              <Text style={isDesktop ? { ...typography.labelMd, color: colors.textSecondary } : { ...typography.captionSemiBold, color: colors.textSecondary }}>
+                Your Notes:
+              </Text>
+              <TextInput
+                value={noteValue}
+                onChangeText={(value) => handleNoteChange(shortlistId, value)}
+                placeholder={`Add a note about this ${item.type}`}
+                placeholderTextColor={colors.textMuted}
+                multiline
+                style={{
+                  marginTop: spacing.xs,
+                  padding: spacing.sm,
+                  borderRadius: radii.sm,
+                  borderWidth: 1,
+                  borderColor: isDesktop ? colors.outlineVariant : colors.borderSubtle,
+                  backgroundColor: isDesktop ? colors.surfaceContainerLowest : colors.surface,
+                  minHeight: 64,
+                  textAlignVertical: 'top',
+                  color: colors.textPrimary,
+                }}
+              />
+              <TouchableOpacity
+                onPress={() => handleSaveNotes(shortlistId, shortlistEntry?.notes ?? null)}
+                disabled={!hasNoteChange || isSaving}
+                style={{
+                  marginTop: spacing.sm,
+                  paddingVertical: spacing.sm,
+                  borderRadius: radii.md,
+                  alignItems: 'center',
+                  backgroundColor: hasNoteChange && !isSaving ? colors.textPrimary : colors.surfaceMuted,
+                }}
+              >
+                <Text style={{ ...typography.caption, color: hasNoteChange && !isSaving ? '#FFFFFF' : colors.textMuted }}>
+                  {isSaving ? 'Saving...' : 'Save Notes'}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          ) : null}
+          <TouchableOpacity
+            onPress={() => {
+              pendingRestoreRef.current = true;
+              navigation.navigate('Home', {
+                screen: item.type === 'venue' ? 'VenueProfile' : 'VendorProfile',
+                params: item.type === 'venue'
+                  ? { venueId: item.id, from: 'Favourites' }
+                  : { vendorId: item.id, from: 'Favourites' },
+              });
+            }}
+            style={{
+              marginTop: spacing.md,
+              paddingVertical: spacing.sm,
+              borderRadius: radii.md,
+              borderWidth: 1,
+              borderColor: isDesktop ? colors.outlineVariant : colors.borderSubtle,
+              alignItems: 'center',
+              backgroundColor: isDesktop ? colors.surfaceContainerLowest : colors.surface,
+            }}
+          >
+            <Text style={isDesktop ? { ...typography.labelMd, color: colors.textPrimary } : { ...typography.bodySemiBold, color: colors.textPrimary }}>
+              View Details
+            </Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    );
+  };
+
   return (
     <KeyboardAvoidingView
-      style={{ flex: 1, backgroundColor: colors.background }}
+      style={{ flex: 1, backgroundColor: isDesktop ? colors.surfaceBg : colors.background }}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       keyboardVerticalOffset={Platform.OS === 'ios' ? spacing.lg : 0}
     >
@@ -152,11 +308,38 @@ export default function FavouritesScreen() {
         onScroll={(e) => {
           lastOffsetRef.current = e.nativeEvent.contentOffset.y;
         }}
-        contentContainerStyle={{ flexGrow: 1, paddingHorizontal: spacing.lg, paddingTop: spacing.sm, paddingBottom: spacing.xl }}
+        contentContainerStyle={isDesktop ? { flexGrow: 1, paddingHorizontal: 48, paddingTop: spacing.sm, paddingBottom: spacing.xl, maxWidth: 1200, width: '100%', alignSelf: 'center' } : { flexGrow: 1, paddingHorizontal: spacing.lg, paddingTop: spacing.sm, paddingBottom: spacing.xl }}
       >
-        <Text style={{ ...typography.displayMedium, color: colors.textPrimary, marginBottom: spacing.lg }}>
-          My Favourites
-        </Text>
+        {isDesktop ? (
+          <View style={{ marginBottom: spacing.lg, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end' }}>
+            <View>
+              <Text style={{ ...typography.labelMd, color: colors.dustyRose, marginBottom: spacing.sm, textTransform: 'uppercase', letterSpacing: 0.05 }}>
+                Saved
+              </Text>
+              <Text style={{ ...typography.headlineMd, color: colors.primary }}>
+                My Favourites
+              </Text>
+            </View>
+            <View
+              style={{
+                borderRadius: radii.full,
+                backgroundColor: colors.surfaceContainerLowest,
+                borderWidth: 1,
+                borderColor: colors.outlineVariant,
+                paddingHorizontal: spacing.md,
+                paddingVertical: spacing.xs,
+              }}
+            >
+              <Text style={{ ...typography.labelMd, color: colors.textSecondary }}>
+                All ({favouriteItems?.length ?? 0})
+              </Text>
+            </View>
+          </View>
+        ) : (
+          <Text style={{ ...typography.displayMedium, color: colors.textPrimary, marginBottom: spacing.lg }}>
+            My Favourites
+          </Text>
+        )}
 
         {loadingIds || isLoading || shortlistsLoading ? (
           <View style={{ paddingVertical: spacing.xl, alignItems: 'center' }}>
@@ -166,8 +349,8 @@ export default function FavouritesScreen() {
 
         {(error instanceof Error || shortlistsError instanceof Error) && (
           <View style={{ paddingVertical: spacing.lg }}>
-            <Text style={{ ...typography.titleMedium, color: colors.textPrimary }}>Unable to load favourites.</Text>
-            <Text style={{ ...typography.caption, color: colors.textMuted, marginTop: spacing.xs }}>
+            <Text style={isDesktop ? { ...typography.headlineSm, color: colors.textPrimary } : { ...typography.titleMedium, color: colors.textPrimary }}>Unable to load favourites.</Text>
+            <Text style={isDesktop ? { ...typography.bodyMd, color: colors.textMuted, marginTop: spacing.xs } : { ...typography.caption, color: colors.textMuted, marginTop: spacing.xs }}>
               {(error instanceof Error && error.message) || (shortlistsError instanceof Error && shortlistsError.message)}
             </Text>
             <TouchableOpacity
@@ -177,181 +360,32 @@ export default function FavouritesScreen() {
               }}
               style={{ marginTop: spacing.md, alignSelf: 'flex-start' }}
             >
-              <Text style={{ ...typography.caption, color: colors.textPrimary }}>Try again</Text>
+              <Text style={isDesktop ? { ...typography.labelMd, color: colors.textPrimary } : { ...typography.caption, color: colors.textPrimary }}>Try again</Text>
             </TouchableOpacity>
           </View>
         )}
 
         {!loadingIds && !isLoading && !shortlistsLoading && hasFavourites && favouriteItems && (
-          <View style={{ gap: spacing.md }}>
-            <View style={{ flexDirection: 'row', marginBottom: spacing.sm }}>
-              <View
-                style={{
-                  borderRadius: radii.full,
-                  backgroundColor: colors.surface,
-                  borderWidth: 1,
-                  borderColor: colors.borderSubtle,
-                  paddingHorizontal: spacing.md,
-                  paddingVertical: spacing.xs,
-                }}
-              >
-                <Text style={{ ...typography.caption, color: colors.textSecondary }}>
-                  All ({favouriteItems.length})
-                </Text>
-              </View>
-            </View>
-            {favouriteItems.map((item) => (
-              (() => {
-                const shortlistEntry = shortlistEntries?.find((entry) => {
-                  const entryId = item.type === 'venue' ? entry.venueId : entry.vendorId;
-                  return entryId != null && Number(entryId) === Number(item.id);
-                });
-                const shortlistId = shortlistEntry?.id;
-                const noteValue = shortlistId != null
-                  ? noteDrafts[shortlistId] ?? shortlistEntry?.notes ?? ''
-                  : '';
-                const hasNoteChange = shortlistId != null && noteValue.trim() !== (shortlistEntry?.notes ?? '').trim();
-                const isSaving = shortlistId != null ? !!savingNotes[shortlistId] : false;
-                return (
-              <View
-                key={`${item.type}-${item.id}`}
-                style={{
-                  borderRadius: radii.lg,
-                  backgroundColor: colors.surface,
-                  borderWidth: 1,
-                  borderColor: colors.borderSubtle,
-                  overflow: 'hidden',
-                }}
-              >
-                <NetworkImage
-                  uri={item.image_url}
-                  style={{ width: '100%', height: cardImageHeight }}
-                />
-                <TouchableOpacity
-                  onPress={() => handleRemove(item.id, item.type)}
+          <View style={isDesktop ? { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.gutter } as any : { gap: spacing.md }}>
+            {isDesktop ? null : (
+              <View style={{ flexDirection: 'row', marginBottom: spacing.sm }}>
+                <View
                   style={{
-                    position: 'absolute',
-                    top: spacing.sm,
-                    right: spacing.sm,
-                    width: 36,
-                    height: 36,
-                    borderRadius: 8,
-                    backgroundColor: '#EF4444',
-                    alignItems: 'center',
-                    justifyContent: 'center',
+                    borderRadius: radii.full,
+                    backgroundColor: colors.surface,
+                    borderWidth: 1,
+                    borderColor: colors.borderSubtle,
+                    paddingHorizontal: spacing.md,
+                    paddingVertical: spacing.xs,
                   }}
                 >
-                  <MaterialIcons name="delete" size={18} color="#FFFFFF" />
-                </TouchableOpacity>
-                <View style={{ padding: spacing.md }}>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <View style={{ flex: 1, paddingRight: spacing.md }}>
-                      <Text style={{ ...typography.titleMedium, color: colors.textPrimary }}>
-                        {item.name ?? 'Untitled'}
-                      </Text>
-                      {item.description ? (
-                        <Text style={{ ...typography.caption, color: colors.textMuted, marginTop: spacing.xs }} numberOfLines={2}>
-                          {item.description}
-                        </Text>
-                      ) : null}
-                      {item.type === 'venue' && (
-                         <Text style={{ ...typography.caption, color: colors.textPrimary, marginTop: 4 }}>Venue</Text>
-                      )}
-                    </View>
-                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                      <MaterialIcons name="star" size={14} color="#F59E0B" />
-                      <Text style={{ ...typography.caption, color: colors.textSecondary, marginLeft: spacing.xs }}>
-                        {typeof item.rating === 'number' ? item.rating.toFixed(1) : 'No rating yet'}
-                        {typeof item.review_count === 'number' && item.review_count > 0
-                          ? ` (${item.review_count})`
-                          : ''}
-                      </Text>
-                    </View>
-                  </View>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: spacing.xs }}>
-                    <MaterialIcons name="place" size={16} color={colors.textSecondary} />
-                    <Text style={{ ...typography.caption, color: colors.textSecondary, marginLeft: spacing.xs, flex: 1 }} numberOfLines={2}>
-                      {[item.address_line_1, item.city].filter(Boolean).join(', ') || [item.city, item.province].filter(Boolean).join(', ') || item.location || 'Location available on profile'}
-                    </Text>
-                  </View>
-                  {shortlistId != null ? (
-                    <View
-                      style={{
-                        marginTop: spacing.md,
-                        padding: spacing.md,
-                        borderRadius: radii.md,
-                        backgroundColor: colors.surfaceMuted,
-                        borderWidth: 1,
-                        borderColor: colors.borderSubtle,
-                      }}
-                    >
-                      <Text style={{ ...typography.captionSemiBold, color: colors.textSecondary }}>
-                        Your Notes:
-                      </Text>
-                      <TextInput
-                        value={noteValue}
-                        onChangeText={(value) => handleNoteChange(shortlistId, value)}
-                        placeholder={`Add a note about this ${item.type}`}
-                        placeholderTextColor={colors.textMuted}
-                        multiline
-                        style={{
-                          marginTop: spacing.xs,
-                          padding: spacing.sm,
-                          borderRadius: radii.sm,
-                          borderWidth: 1,
-                          borderColor: colors.borderSubtle,
-                          backgroundColor: colors.surface,
-                          minHeight: 64,
-                          textAlignVertical: 'top',
-                          color: colors.textPrimary,
-                        }}
-                      />
-                      <TouchableOpacity
-                        onPress={() => handleSaveNotes(shortlistId, shortlistEntry?.notes ?? null)}
-                        disabled={!hasNoteChange || isSaving}
-                        style={{
-                          marginTop: spacing.sm,
-                          paddingVertical: spacing.sm,
-                          borderRadius: radii.md,
-                          alignItems: 'center',
-                          backgroundColor: hasNoteChange && !isSaving ? colors.textPrimary : colors.surfaceMuted,
-                        }}
-                      >
-                        <Text style={{ ...typography.caption, color: hasNoteChange && !isSaving ? '#FFFFFF' : colors.textMuted }}>
-                          {isSaving ? 'Saving...' : 'Save Notes'}
-                        </Text>
-                      </TouchableOpacity>
-                    </View>
-                  ) : null}
-                  <TouchableOpacity
-                    onPress={() => {
-                      pendingRestoreRef.current = true;
-                      navigation.navigate('Home', {
-                        screen: item.type === 'venue' ? 'VenueProfile' : 'VendorProfile',
-                        params: item.type === 'venue'
-                          ? { venueId: item.id, from: 'Favourites' }
-                          : { vendorId: item.id, from: 'Favourites' },
-                      });
-                    }}
-                    style={{
-                      marginTop: spacing.md,
-                      paddingVertical: spacing.sm,
-                      borderRadius: radii.md,
-                      borderWidth: 1,
-                      borderColor: colors.borderSubtle,
-                      alignItems: 'center',
-                      backgroundColor: colors.surface,
-                    }}
-                  >
-                    <Text style={{ ...typography.bodySemiBold, color: colors.textPrimary }}>
-                      View Details
-                    </Text>
-                  </TouchableOpacity>
+                  <Text style={{ ...typography.caption, color: colors.textSecondary }}>
+                    All ({favouriteItems.length})
+                  </Text>
                 </View>
               </View>
-                );
-              })()
-            ))}
+            )}
+            {favouriteItems.map((item) => renderCard(item))}
           </View>
         )}
 
@@ -362,10 +396,10 @@ export default function FavouritesScreen() {
               alignItems: 'center',
               justifyContent: 'center',
               paddingVertical: spacing.xxl,
-              backgroundColor: colors.surface,
+              backgroundColor: isDesktop ? colors.surfaceContainerLowest : colors.surface,
               borderRadius: radii.lg,
               borderWidth: 1,
-              borderColor: colors.borderSubtle,
+              borderColor: isDesktop ? colors.outlineVariant : colors.borderSubtle,
             }}
           >
             <View

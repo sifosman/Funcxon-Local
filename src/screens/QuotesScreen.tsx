@@ -11,6 +11,7 @@ import { quoteStatusLabel } from '../lib/quoting';
 import type { QuotesStackParamList } from '../navigation/QuotesNavigator';
 import { useAuth } from '../auth/AuthContext';
 import ThemedAlert from '../components/ThemedAlert';
+import { useIsDesktop } from '../hooks/useIsDesktop';
 
 type QuoteRequest = {
   id: number | string;
@@ -47,6 +48,7 @@ type CategorySeed = {
 export default function QuotesScreen() {
   const navigation = useNavigation<any>();
   const { user } = useAuth();
+  const isDesktop = useIsDesktop();
   const [activeTab, setActiveTab] = useState<'all' | 'pending' | 'quoted' | 'amended' | 'accepted' | 'finalised' | 'cancelled' | 'tours'>('all');
   const [actionLoadingId, setActionLoadingId] = useState<number | string | null>(null);
   const [editingNotesId, setEditingNotesId] = useState<number | string | null>(null);
@@ -529,422 +531,456 @@ export default function QuotesScreen() {
     );
   }
 
+  const renderQuoteCard = (item: QuoteRequest) => {
+    const requestedDate = item.event_date || item.created_at
+      ? new Date(item.event_date || item.created_at || '').toLocaleDateString('en-ZA', { day: 'numeric', month: 'long', year: 'numeric' })
+      : null;
+    const actionLabel = item.status === 'cancelled'
+      ? 'View Details'
+      : item.status === 'finalised' || item.status === 'accepted'
+        ? 'Rate and Review'
+        : item.status === 'quoted' || (typeof item.quote_amount === 'number' && item.quote_amount > 0)
+          ? 'Review & Accept'
+          : item.status === 'amended'
+            ? 'Amend'
+            : item.status === 'pending'
+              ? 'Amend'
+              : item.status === 'tour_requested'
+                ? 'Contact Venue'
+                : 'View Details';
+    const actionLoading = actionLoadingId === item.id;
+    return (
+      <View
+        style={{
+          marginBottom: spacing.md,
+          padding: spacing.lg,
+          borderRadius: radii.lg,
+          backgroundColor: isDesktop ? colors.surfaceContainerLowest : colors.surface,
+          borderWidth: 1,
+          borderColor: isDesktop ? colors.outlineVariant : colors.borderSubtle,
+          width: isDesktop ? 'calc(50% - 12px)' : '100%',
+          shadowColor: '#000',
+          shadowOpacity: 0.06,
+          shadowRadius: 8,
+          shadowOffset: { width: 0, height: 4 },
+        } as any}
+      >
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+          <View style={{ flex: 1, paddingRight: spacing.sm }}>
+            <Text style={isDesktop ? { ...typography.headlineSm, color: colors.textPrimary } : { ...typography.titleMedium, color: colors.textPrimary }}>
+              {item.target_name ?? item.name ?? (item.is_venue ? 'Venue Quote' : 'Vendor Quote')}
+            </Text>
+            <Text style={isDesktop ? { ...typography.bodyMd, color: colors.textSecondary, marginTop: spacing.xs } : { ...typography.caption, color: colors.textSecondary, marginTop: spacing.xs }}>
+              {item.is_venue ? 'Venue Quote Request' : (item.event_type ?? 'Service package')}
+            </Text>
+          </View>
+          <View
+            style={{
+              paddingHorizontal: spacing.sm,
+              paddingVertical: spacing.xs,
+              borderRadius: radii.full,
+              backgroundColor: statusStyle(item.status).backgroundColor,
+            }}
+          >
+            <Text style={{ ...typography.captionSemiBold, color: statusStyle(item.status).color }}>
+              {quoteStatusLabel(item.status)}
+            </Text>
+          </View>
+        </View>
+
+        <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: spacing.sm }}>
+          <MaterialIcons name={item.is_venue ? 'storefront' : 'store'} size={14} color={colors.textMuted} style={{ marginRight: spacing.xs }} />
+          <Text style={isDesktop ? { ...typography.bodyMd, color: colors.textMuted } : { ...typography.caption, color: colors.textMuted }}>
+            Requested from {item.target_name ?? (item.is_venue ? 'Venue' : 'Vendor')}
+          </Text>
+        </View>
+
+        <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: spacing.sm }}>
+          <MaterialIcons
+            name={item.status === 'pending' ? 'schedule' : 'visibility'}
+            size={14}
+            color={item.status === 'pending' ? colors.textMuted : '#16A34A'}
+            style={{ marginRight: spacing.xs }}
+          />
+          <Text style={isDesktop ? { ...typography.bodyMd, color: item.status === 'pending' ? colors.textMuted : '#16A34A' } : { ...typography.caption, color: item.status === 'pending' ? colors.textMuted : '#16A34A' }}>
+            {item.status === 'pending' ? 'Awaiting vendor review' : 'Vendor has seen this request'}
+          </Text>
+        </View>
+
+        {item.details && (
+          <Text style={isDesktop ? { ...typography.bodyMd, color: colors.textSecondary, marginTop: spacing.sm } : { ...typography.body, color: colors.textSecondary, marginTop: spacing.sm }} numberOfLines={3}>
+            {item.details}
+          </Text>
+        )}
+
+        {/* Notes field */}
+        <View style={{ marginTop: spacing.sm }}>
+          {editingNotesId === item.id ? (
+            <View>
+              <Text style={isDesktop ? { ...typography.labelMd, color: colors.textMuted, marginBottom: spacing.xs } : { ...typography.caption, color: colors.textMuted, marginBottom: spacing.xs }}>Notes</Text>
+              <TextInput
+                value={notesDraft}
+                onChangeText={setNotesDraft}
+                placeholder="Add notes about this quote..."
+                placeholderTextColor={colors.textMuted}
+                multiline
+                style={{
+                  borderWidth: 1,
+                  borderColor: isDesktop ? colors.outlineVariant : colors.borderSubtle,
+                  borderRadius: radii.md,
+                  paddingHorizontal: spacing.sm,
+                  paddingVertical: spacing.sm,
+                  backgroundColor: isDesktop ? colors.surfaceContainerLow : colors.surfaceMuted,
+                  color: colors.textPrimary,
+                  minHeight: 60,
+                  textAlignVertical: 'top',
+                }}
+              />
+              <View style={{ flexDirection: 'row', gap: spacing.sm, marginTop: spacing.xs }}>
+                <TouchableOpacity
+                  onPress={async () => {
+                    try {
+                      setActionLoadingId(item.id);
+                      const tableName = item.is_venue ? 'venue_quote_requests' : 'quote_requests';
+                      const { error } = await supabase
+                        .from(tableName)
+                        .update({ requirements: notesDraft || null })
+                        .eq('id', item.original_id ?? item.id);
+                      if (error) throw error;
+                      await refetch();
+                    } catch (err: any) {
+                      setAlertState({ visible: true, title: 'Error', message: err?.message ?? 'Failed to save notes' });
+                    } finally {
+                      setActionLoadingId(null);
+                      setEditingNotesId(null);
+                    }
+                  }}
+                  disabled={actionLoadingId === item.id}
+                  style={{
+                    flex: 1,
+                    paddingVertical: spacing.xs,
+                    borderRadius: radii.sm,
+                    backgroundColor: colors.primary,
+                    alignItems: 'center',
+                    opacity: actionLoadingId === item.id ? 0.7 : 1,
+                  }}
+                >
+                  <Text style={{ ...typography.captionSemiBold, color: '#FFFFFF' }}>
+                    {actionLoadingId === item.id ? 'Saving...' : 'Save'}
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={() => { setEditingNotesId(null); setNotesDraft(''); }}
+                  style={{
+                    flex: 1,
+                    paddingVertical: spacing.xs,
+                    borderRadius: radii.sm,
+                    borderWidth: 1,
+                    borderColor: isDesktop ? colors.outlineVariant : colors.borderSubtle,
+                    alignItems: 'center',
+                  }}
+                >
+                  <Text style={{ ...typography.caption, color: colors.textSecondary }}>Cancel</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          ) : (
+            <View>
+              {item.notes ? (
+                <View style={{
+                  padding: spacing.sm,
+                  backgroundColor: isDesktop ? colors.surfaceContainerLow : colors.surfaceMuted,
+                  borderRadius: radii.md,
+                  borderLeftWidth: 3,
+                  borderLeftColor: colors.textMuted,
+                }}>
+                  <Text style={isDesktop ? { ...typography.labelMd, color: colors.textMuted } : { ...typography.captionSemiBold, color: colors.textMuted }}>Notes</Text>
+                  <Text style={isDesktop ? { ...typography.bodyMd, color: colors.textSecondary, marginTop: 2 } : { ...typography.caption, color: colors.textSecondary, marginTop: 2 }}>
+                    {item.notes}
+                  </Text>
+                </View>
+              ) : null}
+              <TouchableOpacity
+                onPress={() => {
+                  setNotesDraft(item.notes ?? '');
+                  setEditingNotesId(item.id);
+                }}
+                style={{ flexDirection: 'row', alignItems: 'center', marginTop: spacing.xs }}
+              >
+                <MaterialIcons name="edit-note" size={16} color={colors.primary} />
+                <Text style={{ ...typography.caption, color: colors.primary, marginLeft: spacing.xs }}>
+                  {item.notes ? 'Edit notes' : 'Add notes'}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          )}
+        </View>
+
+        {item.requirements && item.status === 'tour_requested' && (
+          <View style={{
+            marginTop: spacing.sm,
+            padding: spacing.sm,
+            backgroundColor: '#F0F9FF',
+            borderRadius: radii.md,
+            borderLeftWidth: 3,
+            borderLeftColor: colors.primary
+          }}>
+            <Text style={isDesktop ? { ...typography.labelMd, color: colors.primary } : { ...typography.captionSemiBold, color: colors.primary }}>
+              Tour Request
+            </Text>
+            <Text style={isDesktop ? { ...typography.bodyMd, color: colors.primary, marginTop: 2 } : { ...typography.caption, color: colors.primary, marginTop: 2 }}>
+              {item.requirements}
+            </Text>
+          </View>
+        )}
+
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: spacing.md }}>
+          <View>
+            <Text style={isDesktop ? { ...typography.labelMd, color: colors.textMuted } : { ...typography.caption, color: colors.textMuted }}>Category:</Text>
+            <Text style={isDesktop ? { ...typography.bodyMd, color: colors.textPrimary } : { ...typography.body, color: colors.textPrimary }}>
+              {item.is_venue ? 'Venue' : (item.event_type ?? 'General')}
+            </Text>
+          </View>
+          <View>
+            <Text style={isDesktop ? { ...typography.labelMd, color: colors.textMuted } : { ...typography.caption, color: colors.textMuted }}>Requested:</Text>
+            <Text style={isDesktop ? { ...typography.bodyMd, color: colors.textPrimary } : { ...typography.body, color: colors.textPrimary }}>
+              {requestedDate ?? 'TBD'}
+            </Text>
+          </View>
+          <View style={{ alignItems: 'flex-end' }}>
+            <Text style={isDesktop ? { ...typography.labelMd, color: colors.textMuted } : { ...typography.caption, color: colors.textMuted }}>Quote</Text>
+            <Text style={isDesktop ? { ...typography.headlineSm, color: colors.textPrimary } : { ...typography.titleMedium, color: colors.textPrimary }}>
+              {typeof item.quote_amount === 'number' ? formatCurrency(item.quote_amount) : 'TBD'}
+            </Text>
+          </View>
+        </View>
+
+        <View style={{ flexDirection: 'row', marginTop: spacing.md, columnGap: spacing.sm }}>
+          <TouchableOpacity
+            onPress={() => navigation.navigate('QuoteDetail', { quoteId: item.id, from: 'Quotes' })}
+            style={{
+              flex: 1,
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'center',
+              paddingVertical: spacing.sm,
+              borderRadius: radii.md,
+              borderWidth: 1,
+              borderColor: isDesktop ? colors.outlineVariant : colors.borderSubtle,
+              backgroundColor: isDesktop ? colors.surfaceContainerLowest : colors.surface,
+            }}
+          >
+            <MaterialIcons name="description" size={16} color={colors.textPrimary} style={{ marginRight: spacing.xs }} />
+            <Text style={isDesktop ? { ...typography.labelMd, color: colors.textPrimary } : { ...typography.caption, color: colors.textPrimary }}>View Details</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={() => handleSecondaryAction(item)}
+            disabled={actionLoading}
+            style={{
+              flex: 1,
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'center',
+              paddingVertical: spacing.sm,
+              borderRadius: radii.md,
+              backgroundColor: colors.accent,
+              opacity: actionLoading ? 0.7 : 1,
+            }}
+          >
+            <MaterialIcons name="edit" size={16} color={colors.textPrimary} style={{ marginRight: spacing.xs }} />
+            <Text style={isDesktop ? { ...typography.labelMd, color: colors.textPrimary } : { ...typography.caption, color: colors.textPrimary }}>
+              {actionLoading ? 'Saving...' : actionLabel}
+            </Text>
+          </TouchableOpacity>
+        </View>
+
+        {canCancel(item.status) && (
+          <TouchableOpacity
+            onPress={() => handleCancel(item)}
+            disabled={actionLoading}
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'center',
+              marginTop: spacing.sm,
+              paddingVertical: spacing.sm,
+              borderRadius: radii.md,
+              borderWidth: 1,
+              borderColor: colors.destructive,
+              opacity: actionLoading ? 0.7 : 1,
+            }}
+          >
+            <MaterialIcons name="cancel" size={16} color={colors.destructive} style={{ marginRight: spacing.xs }} />
+            <Text style={isDesktop ? { ...typography.labelMd, color: colors.destructive } : { ...typography.captionSemiBold, color: colors.destructive }}>
+              {actionLoading ? 'Cancelling...' : 'Cancel request'}
+            </Text>
+          </TouchableOpacity>
+        )}
+
+        {item.status === 'cancelled' && (
+          <TouchableOpacity
+            onPress={() => handleRemove(item)}
+            disabled={actionLoading}
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'center',
+              marginTop: spacing.sm,
+              paddingVertical: spacing.sm,
+              borderRadius: radii.md,
+              borderWidth: 1,
+              borderColor: colors.destructive,
+              opacity: actionLoading ? 0.7 : 1,
+            }}
+          >
+            <MaterialIcons name="delete" size={16} color={colors.destructive} style={{ marginRight: spacing.xs }} />
+            <Text style={isDesktop ? { ...typography.labelMd, color: colors.destructive } : { ...typography.captionSemiBold, color: colors.destructive }}>
+              {actionLoading ? 'Removing...' : 'Remove request'}
+            </Text>
+          </TouchableOpacity>
+        )}
+      </View>
+    );
+  };
+
+  const tabs = [
+    { key: 'all' as const, label: `All (${tabCounts.all})` },
+    { key: 'pending' as const, label: `Pending (${tabCounts.pending})` },
+    { key: 'quoted' as const, label: `Received Quote (${tabCounts.quoted})` },
+    { key: 'amended' as const, label: `Amended (${tabCounts.amended})` },
+    { key: 'accepted' as const, label: `Accepted (${tabCounts.accepted})` },
+    { key: 'finalised' as const, label: `Finalised (${tabCounts.finalised})` },
+    { key: 'cancelled' as const, label: `Cancelled (${tabCounts.cancelled})` },
+    { key: 'tours' as const, label: `Tours (${tabCounts.tours})` },
+  ];
+
+  const renderTabBar = () => (
+    <ScrollView
+      horizontal
+      showsHorizontalScrollIndicator={false}
+      contentContainerStyle={{ flexDirection: 'row', columnGap: spacing.sm, marginTop: spacing.lg, marginBottom: spacing.md, paddingRight: isDesktop ? 0 : spacing.lg }}
+    >
+      {tabs.map((tab) => {
+        const selected = activeTab === tab.key;
+        return (
+          <TouchableOpacity
+            key={tab.key}
+            onPress={() => setActiveTab(tab.key)}
+            style={{
+              paddingHorizontal: spacing.md,
+              paddingVertical: spacing.xs,
+              borderRadius: radii.full,
+              borderWidth: 1,
+              borderColor: selected ? colors.primary : isDesktop ? colors.outlineVariant : colors.borderSubtle,
+              backgroundColor: selected ? colors.primary : isDesktop ? colors.surfaceContainerLowest : colors.surface,
+            }}
+          >
+            <Text style={isDesktop ? { ...typography.labelMd, color: selected ? '#FFFFFF' : colors.textPrimary } : { ...typography.caption, color: selected ? '#FFFFFF' : colors.textPrimary }}>
+              {tab.label}
+            </Text>
+          </TouchableOpacity>
+        );
+      })}
+    </ScrollView>
+  );
+
+  const renderSummary = () => (
+    <View
+      style={{
+        marginTop: spacing.lg,
+        padding: spacing.lg,
+        borderRadius: radii.lg,
+        backgroundColor: isDesktop ? colors.surfaceContainerLowest : colors.surface,
+        borderWidth: 1,
+        borderColor: isDesktop ? colors.outlineVariant : colors.borderSubtle,
+        shadowColor: '#000',
+        shadowOpacity: 0.05,
+        shadowRadius: 8,
+        shadowOffset: { width: 0, height: 3 },
+      }}
+    >
+      <Text style={isDesktop ? { ...typography.headlineSm, color: colors.textPrimary, marginBottom: spacing.md } : { ...typography.bodySemiBold, color: colors.textPrimary, marginBottom: spacing.md }}>
+        Quote Summary
+      </Text>
+      <View style={{ flexDirection: 'row', flexWrap: 'wrap', rowGap: spacing.md }}>
+        <View style={{ width: '50%' }}>
+          <Text style={isDesktop ? { ...typography.labelMd, color: colors.textMuted } : { ...typography.caption, color: colors.textMuted }}>Total Value</Text>
+          <Text style={isDesktop ? { ...typography.headlineSm, color: colors.textPrimary } : { ...typography.titleMedium, color: colors.textPrimary }}>
+            {formatCurrency(summary.total)}
+          </Text>
+        </View>
+        <View style={{ width: '50%' }}>
+          <Text style={isDesktop ? { ...typography.labelMd, color: colors.textMuted } : { ...typography.caption, color: colors.textMuted }}>Finalised</Text>
+          <Text style={isDesktop ? { ...typography.headlineSm, color: '#16A34A' } : { ...typography.titleMedium, color: '#16A34A' }}>
+            {formatCurrency(summary.finalised)}
+          </Text>
+        </View>
+        <View style={{ width: '50%' }}>
+          <Text style={isDesktop ? { ...typography.labelMd, color: colors.textMuted } : { ...typography.caption, color: colors.textMuted }}>Pending</Text>
+          <Text style={isDesktop ? { ...typography.headlineSm, color: '#4F46E5' } : { ...typography.titleMedium, color: '#4F46E5' }}>
+            {formatCurrency(summary.pending)}
+          </Text>
+        </View>
+        <View style={{ width: '50%' }}>
+          <Text style={isDesktop ? { ...typography.labelMd, color: colors.textMuted } : { ...typography.caption, color: colors.textMuted }}>Received</Text>
+          <Text style={isDesktop ? { ...typography.headlineSm, color: '#D97706' } : { ...typography.titleMedium, color: '#D97706' }}>
+            {formatCurrency(summary.received)}
+          </Text>
+        </View>
+      </View>
+    </View>
+  );
+
   return (
     <View
       style={{
         flex: 1,
-        paddingHorizontal: spacing.lg,
-        paddingVertical: spacing.lg,
-        backgroundColor: colors.background,
+        paddingHorizontal: isDesktop ? 48 : spacing.lg,
+        paddingVertical: isDesktop ? spacing.sm : spacing.lg,
+        backgroundColor: isDesktop ? colors.surfaceBg : colors.background,
       }}
     >
-      <FlatList
-        data={filtered}
-        keyExtractor={(item) => String(item.id)}
-        contentContainerStyle={{ paddingBottom: spacing.xl }}
-        ListHeaderComponent={
-          <View>
+      {isDesktop ? (
+        <ScrollView contentContainerStyle={{ paddingBottom: spacing.xl, maxWidth: 1200, width: '100%', alignSelf: 'center' }}>
+          <View style={{ marginBottom: spacing.lg, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end' }}>
             <View>
-              <Text style={{ ...typography.displayMedium, color: colors.textPrimary }}>My Quotes</Text>
-              <Text style={{ ...typography.body, color: colors.textSecondary, marginTop: spacing.xs }}>
+              <Text style={{ ...typography.labelMd, color: colors.dustyRose, marginBottom: spacing.sm, textTransform: 'uppercase', letterSpacing: 0.05 }}>
+                Quotes
+              </Text>
+              <Text style={{ ...typography.headlineMd, color: colors.primary }}>
+                My Quotes
+              </Text>
+              <Text style={{ ...typography.bodyMd, color: colors.textSecondary, marginTop: spacing.xs }}>
                 Track your vendor quotes by status
               </Text>
             </View>
-
-            <View
-              style={{
-                marginTop: spacing.lg,
-                padding: spacing.lg,
-                borderRadius: radii.lg,
-                backgroundColor: colors.surface,
-                borderWidth: 1,
-                borderColor: colors.borderSubtle,
-                shadowColor: '#000',
-                shadowOpacity: 0.05,
-                shadowRadius: 8,
-                shadowOffset: { width: 0, height: 3 },
-              }}
-            >
-              <Text style={{ ...typography.bodySemiBold, color: colors.textPrimary, marginBottom: spacing.md }}>
-                Quote Summary
-              </Text>
-              <View style={{ flexDirection: 'row', flexWrap: 'wrap', rowGap: spacing.md }}>
-                <View style={{ width: '50%' }}>
-                  <Text style={{ ...typography.caption, color: colors.textMuted }}>Total Value</Text>
-                  <Text style={{ ...typography.titleMedium, color: colors.textPrimary }}>
-                    {formatCurrency(summary.total)}
-                  </Text>
-                </View>
-                <View style={{ width: '50%' }}>
-                  <Text style={{ ...typography.caption, color: colors.textMuted }}>Finalised</Text>
-                  <Text style={{ ...typography.titleMedium, color: '#16A34A' }}>
-                    {formatCurrency(summary.finalised)}
-                  </Text>
-                </View>
-                <View style={{ width: '50%' }}>
-                  <Text style={{ ...typography.caption, color: colors.textMuted }}>Pending</Text>
-                  <Text style={{ ...typography.titleMedium, color: '#4F46E5' }}>
-                    {formatCurrency(summary.pending)}
-                  </Text>
-                </View>
-                <View style={{ width: '50%' }}>
-                  <Text style={{ ...typography.caption, color: colors.textMuted }}>Received</Text>
-                  <Text style={{ ...typography.titleMedium, color: '#D97706' }}>
-                    {formatCurrency(summary.received)}
-                  </Text>
-                </View>
-              </View>
-            </View>
-
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={{ flexDirection: 'row', columnGap: spacing.sm, marginTop: spacing.lg, marginBottom: spacing.md, paddingRight: spacing.lg }}
-            >
-              {([
-                { key: 'all' as const, label: `All (${tabCounts.all})` },
-                { key: 'pending' as const, label: `Pending (${tabCounts.pending})` },
-                { key: 'quoted' as const, label: `Received Quote (${tabCounts.quoted})` },
-                { key: 'amended' as const, label: `Amended (${tabCounts.amended})` },
-                { key: 'accepted' as const, label: `Accepted (${tabCounts.accepted})` },
-                { key: 'finalised' as const, label: `Finalised (${tabCounts.finalised})` },
-                { key: 'cancelled' as const, label: `Cancelled (${tabCounts.cancelled})` },
-                { key: 'tours' as const, label: `Tours (${tabCounts.tours})` },
-              ]).map((tab) => {
-                const selected = activeTab === tab.key;
-                return (
-                  <TouchableOpacity
-                    key={tab.key}
-                    onPress={() => setActiveTab(tab.key)}
-                    style={{
-                      paddingHorizontal: spacing.md,
-                      paddingVertical: spacing.xs,
-                      borderRadius: radii.full,
-                      borderWidth: 1,
-                      borderColor: selected ? colors.primary : colors.borderSubtle,
-                      backgroundColor: selected ? colors.primary : colors.surface,
-                    }}
-                  >
-                    <Text style={{ ...typography.caption, color: selected ? '#FFFFFF' : colors.textPrimary }}>
-                      {tab.label}
-                    </Text>
-                  </TouchableOpacity>
-                );
-              })}
-            </ScrollView>
           </View>
-        }
-        renderItem={({ item }) => {
-          const requestedDate = item.event_date || item.created_at
-            ? new Date(item.event_date || item.created_at || '').toLocaleDateString('en-ZA', { day: 'numeric', month: 'long', year: 'numeric' })
-            : null;
-          const actionLabel = item.status === 'cancelled'
-            ? 'View Details'
-            : item.status === 'finalised' || item.status === 'accepted'
-              ? 'Rate and Review'
-              : item.status === 'quoted' || (typeof item.quote_amount === 'number' && item.quote_amount > 0)
-                ? 'Review & Accept'
-                : item.status === 'amended'
-                  ? 'Amend'
-                  : item.status === 'pending'
-                    ? 'Amend'
-                    : item.status === 'tour_requested'
-                      ? 'Contact Venue'
-                      : 'View Details';
-          const actionLoading = actionLoadingId === item.id;
-          return (
-            <View
-              style={{
-                marginBottom: spacing.md,
-                padding: spacing.lg,
-                borderRadius: radii.lg,
-                backgroundColor: colors.surface,
-                borderWidth: 1,
-                borderColor: colors.borderSubtle,
-                shadowColor: '#000',
-                shadowOpacity: 0.06,
-                shadowRadius: 8,
-                shadowOffset: { width: 0, height: 4 },
-              }}
-            >
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                <View style={{ flex: 1, paddingRight: spacing.sm }}>
-                  <Text style={{ ...typography.titleMedium, color: colors.textPrimary }}>
-                    {item.target_name ?? item.name ?? (item.is_venue ? 'Venue Quote' : 'Vendor Quote')}
-                  </Text>
-                  <Text style={{ ...typography.caption, color: colors.textSecondary, marginTop: spacing.xs }}>
-                    {item.is_venue ? 'Venue Quote Request' : (item.event_type ?? 'Service package')}
-                  </Text>
-                </View>
-                <View
-                  style={{
-                    paddingHorizontal: spacing.sm,
-                    paddingVertical: spacing.xs,
-                    borderRadius: radii.full,
-                    backgroundColor: statusStyle(item.status).backgroundColor,
-                  }}
-                >
-                  <Text style={{ ...typography.captionSemiBold, color: statusStyle(item.status).color }}>
-                    {quoteStatusLabel(item.status)}
-                  </Text>
-                </View>
-              </View>
-
-              <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: spacing.sm }}>
-                <MaterialIcons name={item.is_venue ? 'storefront' : 'store'} size={14} color={colors.textMuted} style={{ marginRight: spacing.xs }} />
-                <Text style={{ ...typography.caption, color: colors.textMuted }}>
-                  Requested from {item.target_name ?? (item.is_venue ? 'Venue' : 'Vendor')}
+          {renderSummary()}
+          {renderTabBar()}
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.gutter } as any}>
+            {filtered.map((item) => renderQuoteCard(item))}
+          </View>
+        </ScrollView>
+      ) : (
+        <FlatList
+          data={filtered}
+          keyExtractor={(item) => String(item.id)}
+          contentContainerStyle={{ paddingBottom: spacing.xl }}
+          ListHeaderComponent={
+            <View>
+              <View>
+                <Text style={{ ...typography.displayMedium, color: colors.textPrimary }}>My Quotes</Text>
+                <Text style={{ ...typography.body, color: colors.textSecondary, marginTop: spacing.xs }}>
+                  Track your vendor quotes by status
                 </Text>
               </View>
-
-              <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: spacing.sm }}>
-                <MaterialIcons
-                  name={item.status === 'pending' ? 'schedule' : 'visibility'}
-                  size={14}
-                  color={item.status === 'pending' ? colors.textMuted : '#16A34A'}
-                  style={{ marginRight: spacing.xs }}
-                />
-                <Text style={{ ...typography.caption, color: item.status === 'pending' ? colors.textMuted : '#16A34A' }}>
-                  {item.status === 'pending' ? 'Awaiting vendor review' : 'Vendor has seen this request'}
-                </Text>
-              </View>
-
-              {item.details && (
-                <Text style={{ ...typography.body, color: colors.textSecondary, marginTop: spacing.sm }} numberOfLines={3}>
-                  {item.details}
-                </Text>
-              )}
-
-              {/* Notes field */}
-              <View style={{ marginTop: spacing.sm }}>
-                {editingNotesId === item.id ? (
-                  <View>
-                    <Text style={{ ...typography.caption, color: colors.textMuted, marginBottom: spacing.xs }}>Notes</Text>
-                    <TextInput
-                      value={notesDraft}
-                      onChangeText={setNotesDraft}
-                      placeholder="Add notes about this quote..."
-                      placeholderTextColor={colors.textMuted}
-                      multiline
-                      style={{
-                        borderWidth: 1,
-                        borderColor: colors.borderSubtle,
-                        borderRadius: radii.md,
-                        paddingHorizontal: spacing.sm,
-                        paddingVertical: spacing.sm,
-                        backgroundColor: colors.surfaceMuted,
-                        color: colors.textPrimary,
-                        minHeight: 60,
-                        textAlignVertical: 'top',
-                      }}
-                    />
-                    <View style={{ flexDirection: 'row', gap: spacing.sm, marginTop: spacing.xs }}>
-                      <TouchableOpacity
-                        onPress={async () => {
-                          try {
-                            setActionLoadingId(item.id);
-                            const tableName = item.is_venue ? 'venue_quote_requests' : 'quote_requests';
-                            const { error } = await supabase
-                              .from(tableName)
-                              .update({ requirements: notesDraft || null })
-                              .eq('id', item.original_id ?? item.id);
-                            if (error) throw error;
-                            await refetch();
-                          } catch (err: any) {
-                            setAlertState({ visible: true, title: 'Error', message: err?.message ?? 'Failed to save notes' });
-                          } finally {
-                            setActionLoadingId(null);
-                            setEditingNotesId(null);
-                          }
-                        }}
-                        disabled={actionLoadingId === item.id}
-                        style={{
-                          flex: 1,
-                          paddingVertical: spacing.xs,
-                          borderRadius: radii.sm,
-                          backgroundColor: colors.primary,
-                          alignItems: 'center',
-                          opacity: actionLoadingId === item.id ? 0.7 : 1,
-                        }}
-                      >
-                        <Text style={{ ...typography.captionSemiBold, color: '#FFFFFF' }}>
-                          {actionLoadingId === item.id ? 'Saving...' : 'Save'}
-                        </Text>
-                      </TouchableOpacity>
-                      <TouchableOpacity
-                        onPress={() => { setEditingNotesId(null); setNotesDraft(''); }}
-                        style={{
-                          flex: 1,
-                          paddingVertical: spacing.xs,
-                          borderRadius: radii.sm,
-                          borderWidth: 1,
-                          borderColor: colors.borderSubtle,
-                          alignItems: 'center',
-                        }}
-                      >
-                        <Text style={{ ...typography.caption, color: colors.textSecondary }}>Cancel</Text>
-                      </TouchableOpacity>
-                    </View>
-                  </View>
-                ) : (
-                  <View>
-                    {item.notes ? (
-                      <View style={{
-                        padding: spacing.sm,
-                        backgroundColor: colors.surfaceMuted,
-                        borderRadius: radii.md,
-                        borderLeftWidth: 3,
-                        borderLeftColor: colors.textMuted,
-                      }}>
-                        <Text style={{ ...typography.captionSemiBold, color: colors.textMuted }}>Notes</Text>
-                        <Text style={{ ...typography.caption, color: colors.textSecondary, marginTop: 2 }}>
-                          {item.notes}
-                        </Text>
-                      </View>
-                    ) : null}
-                    <TouchableOpacity
-                      onPress={() => {
-                        setNotesDraft(item.notes ?? '');
-                        setEditingNotesId(item.id);
-                      }}
-                      style={{ flexDirection: 'row', alignItems: 'center', marginTop: spacing.xs }}
-                    >
-                      <MaterialIcons name="edit-note" size={16} color={colors.primary} />
-                      <Text style={{ ...typography.caption, color: colors.primary, marginLeft: spacing.xs }}>
-                        {item.notes ? 'Edit notes' : 'Add notes'}
-                      </Text>
-                    </TouchableOpacity>
-                  </View>
-                )}
-              </View>
-
-              {item.requirements && item.status === 'tour_requested' && (
-                <View style={{ 
-                  marginTop: spacing.sm, 
-                  padding: spacing.sm, 
-                  backgroundColor: '#F0F9FF', 
-                  borderRadius: radii.md,
-                  borderLeftWidth: 3,
-                  borderLeftColor: colors.primary
-                }}>
-                  <Text style={{ ...typography.captionSemiBold, color: colors.primary }}>
-                    Tour Request
-                  </Text>
-                  <Text style={{ ...typography.caption, color: colors.primary, marginTop: 2 }}>
-                    {item.requirements}
-                  </Text>
-                </View>
-              )}
-
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: spacing.md }}>
-                <View>
-                  <Text style={{ ...typography.caption, color: colors.textMuted }}>Category:</Text>
-                  <Text style={{ ...typography.body, color: colors.textPrimary }}>
-                    {item.is_venue ? 'Venue' : (item.event_type ?? 'General')}
-                  </Text>
-                </View>
-                <View>
-                  <Text style={{ ...typography.caption, color: colors.textMuted }}>Requested:</Text>
-                  <Text style={{ ...typography.body, color: colors.textPrimary }}>
-                    {requestedDate ?? 'TBD'}
-                  </Text>
-                </View>
-                <View style={{ alignItems: 'flex-end' }}>
-                  <Text style={{ ...typography.caption, color: colors.textMuted }}>Quote</Text>
-                  <Text style={{ ...typography.titleMedium, color: colors.textPrimary }}>
-                    {typeof item.quote_amount === 'number' ? formatCurrency(item.quote_amount) : 'TBD'}
-                  </Text>
-                </View>
-              </View>
-
-              <View style={{ flexDirection: 'row', marginTop: spacing.md, columnGap: spacing.sm }}>
-                <TouchableOpacity
-                  onPress={() => navigation.navigate('QuoteDetail', { quoteId: item.id, from: 'Quotes' })}
-                  style={{
-                    flex: 1,
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    paddingVertical: spacing.sm,
-                    borderRadius: radii.md,
-                    borderWidth: 1,
-                    borderColor: colors.borderSubtle,
-                    backgroundColor: colors.surface,
-                  }}
-                >
-                  <MaterialIcons name="description" size={16} color={colors.textPrimary} style={{ marginRight: spacing.xs }} />
-                  <Text style={{ ...typography.caption, color: colors.textPrimary }}>View Details</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  onPress={() => handleSecondaryAction(item)}
-                  disabled={actionLoading}
-                  style={{
-                    flex: 1,
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    paddingVertical: spacing.sm,
-                    borderRadius: radii.md,
-                    backgroundColor: colors.accent,
-                    opacity: actionLoading ? 0.7 : 1,
-                  }}
-                >
-                  <MaterialIcons name="edit" size={16} color={colors.textPrimary} style={{ marginRight: spacing.xs }} />
-                  <Text style={{ ...typography.caption, color: colors.textPrimary }}>
-                    {actionLoading ? 'Saving...' : actionLabel}
-                  </Text>
-                </TouchableOpacity>
-              </View>
-
-              {canCancel(item.status) && (
-                <TouchableOpacity
-                  onPress={() => handleCancel(item)}
-                  disabled={actionLoading}
-                  style={{
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    marginTop: spacing.sm,
-                    paddingVertical: spacing.sm,
-                    borderRadius: radii.md,
-                    borderWidth: 1,
-                    borderColor: colors.destructive,
-                    opacity: actionLoading ? 0.7 : 1,
-                  }}
-                >
-                  <MaterialIcons name="cancel" size={16} color={colors.destructive} style={{ marginRight: spacing.xs }} />
-                  <Text style={{ ...typography.captionSemiBold, color: colors.destructive }}>
-                    {actionLoading ? 'Cancelling...' : 'Cancel request'}
-                  </Text>
-                </TouchableOpacity>
-              )}
-
-              {item.status === 'cancelled' && (
-                <TouchableOpacity
-                  onPress={() => handleRemove(item)}
-                  disabled={actionLoading}
-                  style={{
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    marginTop: spacing.sm,
-                    paddingVertical: spacing.sm,
-                    borderRadius: radii.md,
-                    borderWidth: 1,
-                    borderColor: colors.destructive,
-                    opacity: actionLoading ? 0.7 : 1,
-                  }}
-                >
-                  <MaterialIcons name="delete" size={16} color={colors.destructive} style={{ marginRight: spacing.xs }} />
-                  <Text style={{ ...typography.captionSemiBold, color: colors.destructive }}>
-                    {actionLoading ? 'Removing...' : 'Remove request'}
-                  </Text>
-                </TouchableOpacity>
-              )}
+              {renderSummary()}
+              {renderTabBar()}
             </View>
-          );
-        }}
-      />
+          }
+          renderItem={({ item }) => renderQuoteCard(item)}
+        />
+      )}
 
       {alertState && (
         <ThemedAlert

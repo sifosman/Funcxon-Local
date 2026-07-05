@@ -17,6 +17,7 @@ import { colors, spacing, radii, typography } from '../theme';
 import { PrimaryButton } from '../components/ui';
 import { getFavourites, toggleFavourite } from '../lib/favourites';
 import { useAuth } from '../auth/AuthContext';
+import { useIsDesktop } from '../hooks/useIsDesktop';
 
 type Props = NativeStackScreenProps<AttendeeStackParamList, 'VendorProfile'>;
 
@@ -103,6 +104,7 @@ export default function VendorProfileScreen({ route, navigation }: Props) {
   });
   const [alertState, setAlertState] = useState<{visible: boolean; title: string; message: string} | null>(null);
   const { user, session } = useAuth();
+  const isDesktop = useIsDesktop();
 
   const goToQuoteRequest = () => {
     if (!vendor) return;
@@ -641,23 +643,10 @@ export default function VendorProfileScreen({ route, navigation }: Props) {
   const name: string = vendor.name ?? 'Vendor';
   const description: string | null = vendor.description;
 
-  return (
-    <ScrollView
-      style={{ flex: 1, backgroundColor: colors.background }}
-      contentContainerStyle={{ paddingHorizontal: spacing.lg, paddingBottom: spacing.lg, paddingTop: spacing.sm }}
-    >
-      <TouchableOpacity
-        onPress={handleBackNavigation}
-        style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.md }}
-      >
-        <MaterialIcons name="arrow-back" size={20} color={colors.textPrimary} />
-        <Text style={{ ...typography.body, color: colors.textPrimary, marginLeft: spacing.sm }}>
-          Back
-        </Text>
-      </TouchableOpacity>
-
-      {/* Header */}
-      <View
+  const renderMainContent = () => (
+    <>
+{/* Header */}
+            <View
         style={{
           marginBottom: spacing.lg,
           padding: spacing.lg,
@@ -1657,32 +1646,209 @@ export default function VendorProfileScreen({ route, navigation }: Props) {
         </View>
       )}
 
-      {/* Request Quote entry */}
+          </>
+  );
+
+const renderSidebar = () => (
+    <View
+      style={{
+        flex: 1,
+        gap: spacing.lg,
+      } as any}
+    >
       <View
         style={{
-          paddingVertical: spacing.lg,
-          borderTopWidth: 1,
-          borderTopColor: colors.borderSubtle,
-          marginTop: spacing.lg,
+          backgroundColor: colors.surface,
+          borderRadius: radii.lg,
+          borderWidth: 1,
+          borderColor: colors.outlineVariant,
+          padding: spacing.lg,
+          shadowColor: '#000',
+          shadowOpacity: 0.06,
+          shadowRadius: 6,
+          shadowOffset: { width: 0, height: 3 },
         }}
       >
-        <Text
-          style={{
-            ...typography.titleMedium,
-            color: colors.textPrimary,
-            marginBottom: spacing.sm,
-          }}
-        >
-          Request a quote
-        </Text>
-        <Text style={{ ...typography.body, color: colors.textSecondary, marginBottom: spacing.md }}>
-          Share your event details and request a custom quote from this vendor.
-        </Text>
-        <PrimaryButton
-          title="Request a quote"
-          onPress={goToQuoteRequest}
-        />
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: spacing.lg }}>
+          <View>
+            {vendor.price_range ? (
+              <Text style={{ ...typography.headlineMd, color: colors.primary }}>
+                {vendor.price_range}
+              </Text>
+            ) : (
+              <Text style={{ ...typography.headlineMd, color: colors.primary }}>
+                Request a quote
+              </Text>
+            )}
+            <Text style={{ ...typography.body, color: colors.onSurfaceVariant }}>
+              Pricing details
+            </Text>
+          </View>
+          <View style={{ flexDirection: 'row', gap: spacing.sm }}>
+            <TouchableOpacity
+              onPress={handleToggleFavourite}
+              style={{
+                width: 40,
+                height: 40,
+                borderRadius: 20,
+                borderWidth: 1,
+                borderColor: colors.outlineVariant,
+                alignItems: 'center',
+                justifyContent: 'center',
+                backgroundColor: colors.surfaceBg,
+              }}
+            >
+              <MaterialIcons
+                name={favouriteIds.vendorIds.includes(vendor.id) ? 'favorite' : 'favorite-border'}
+                size={22}
+                color={favouriteIds.vendorIds.includes(vendor.id) ? colors.primaryTeal : colors.outline}
+              />
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={handleShare}
+              style={{
+                width: 40,
+                height: 40,
+                borderRadius: 20,
+                borderWidth: 1,
+                borderColor: colors.outlineVariant,
+                alignItems: 'center',
+                justifyContent: 'center',
+                backgroundColor: colors.surfaceBg,
+              }}
+            >
+              <MaterialIcons name="share" size={22} color={colors.outline} />
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        <View style={{ gap: spacing.sm }}>
+          <TouchableOpacity
+            onPress={goToQuoteRequest}
+            style={{
+              backgroundColor: colors.primary,
+              paddingVertical: spacing.md,
+              borderRadius: radii.md,
+              alignItems: 'center',
+            }}
+          >
+            <Text style={{ ...typography.bodySemiBold, color: '#FFFFFF' }}>Request Quote</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={() => {
+              if (whatsappUrl) {
+                handleOpenUrl(whatsappUrl);
+              } else if (emailUrl) {
+                handleOpenUrl(emailUrl);
+              } else {
+                setAlertState({ visible: true, title: 'Contact', message: 'No contact details available.' });
+              }
+            }}
+            style={{
+              paddingVertical: spacing.md,
+              borderRadius: radii.md,
+              borderWidth: 2,
+              borderColor: colors.primary,
+              alignItems: 'center',
+            }}
+          >
+            <Text style={{ ...typography.bodySemiBold, color: colors.primary }}>Book a Tour</Text>
+          </TouchableOpacity>
+        </View>
+
+        <View style={{ borderTopWidth: 1, borderTopColor: colors.outlineVariant, paddingTop: spacing.lg, marginTop: spacing.lg }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md, marginBottom: spacing.md }}>
+            {vendor.logo_url ? (
+              <View style={{ width: 48, height: 48, borderRadius: 24, overflow: 'hidden', backgroundColor: colors.surfaceBg }}>
+                <Image source={{ uri: vendor.logo_url }} style={{ width: '100%', height: '100%' }} />
+              </View>
+            ) : (
+              <View style={{ width: 48, height: 48, borderRadius: 24, backgroundColor: colors.surfaceBg, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: colors.outlineVariant }}>
+                <MaterialIcons name="store" size={24} color={colors.outline} />
+              </View>
+            )}
+            <View style={{ flex: 1 }}>
+              <Text style={{ ...typography.bodySemiBold, color: colors.primary }}>{name}</Text>
+              <Text style={{ ...typography.caption, color: colors.onSurfaceVariant }}>
+                {vendor.city || vendor.province || 'South Africa'}
+              </Text>
+            </View>
+          </View>
+          <TouchableOpacity
+            onPress={() => {
+              if (whatsappUrl) {
+                handleOpenUrl(whatsappUrl);
+              } else if (emailUrl) {
+                handleOpenUrl(emailUrl);
+              } else {
+                setAlertState({ visible: true, title: 'Contact', message: 'No contact details available.' });
+              }
+            }}
+          >
+            <Text style={{ ...typography.captionSemiBold, color: colors.primary, textDecorationLine: 'underline' }}>
+              Contact Host
+            </Text>
+          </TouchableOpacity>
+        </View>
       </View>
+    </View>
+  );
+
+  return (
+    <ScrollView
+      style={{ flex: 1, backgroundColor: isDesktop ? colors.surfaceBg : colors.background }}
+      contentContainerStyle={isDesktop ? { paddingHorizontal: 48, paddingBottom: spacing.lg, paddingTop: spacing.sm, maxWidth: 1200, width: '100%', alignSelf: 'center' } : { paddingHorizontal: spacing.lg, paddingBottom: spacing.lg, paddingTop: spacing.sm }}
+    >
+      {isDesktop ? null : (
+        <TouchableOpacity
+          onPress={handleBackNavigation}
+          style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.md }}
+        >
+          <MaterialIcons name="arrow-back" size={20} color={colors.textPrimary} />
+          <Text style={{ ...typography.body, color: colors.textPrimary, marginLeft: spacing.sm }}>
+            Back
+          </Text>
+        </TouchableOpacity>
+      )}
+
+      {isDesktop ? (
+        <View style={{ flexDirection: 'row', gap: 24 } as any}>
+          <View style={{ flex: 2 } as any}>
+            {renderMainContent()}
+          </View>
+          {renderSidebar()}
+        </View>
+      ) : (
+        <>
+          {renderMainContent()}
+          {/* Request Quote entry */}
+          <View
+            style={{
+              paddingVertical: spacing.lg,
+              borderTopWidth: 1,
+              borderTopColor: colors.borderSubtle,
+              marginTop: spacing.lg,
+            }}
+          >
+            <Text
+              style={{
+                ...typography.titleMedium,
+                color: colors.textPrimary,
+                marginBottom: spacing.sm,
+              }}
+            >
+              Request a quote
+            </Text>
+            <Text style={{ ...typography.body, color: colors.textSecondary, marginBottom: spacing.md }}>
+              Share your event details and request a custom quote from this vendor.
+            </Text>
+            <PrimaryButton
+              title="Request a quote"
+              onPress={goToQuoteRequest}
+            />
+          </View>
+        </>
+      )}
 
       {alertState && (
         <ThemedAlert
@@ -1696,3 +1862,4 @@ export default function VendorProfileScreen({ route, navigation }: Props) {
     </ScrollView>
   );
 }
+

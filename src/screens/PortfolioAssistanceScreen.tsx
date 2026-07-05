@@ -8,6 +8,7 @@ import { colors, spacing, radii, typography } from '../theme';
 import { supabase } from '../lib/supabaseClient';
 import { SUPPORT_WHATSAPP } from '../utils/env';
 import ThemedAlert from '../components/ThemedAlert';
+import { useIsDesktop } from '../hooks/useIsDesktop';
 
 type ProfileStackParamList = {
   SubscriberSuite: undefined;
@@ -138,6 +139,7 @@ const FAQS = [
 
 export default function PortfolioAssistanceScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<ProfileStackParamList>>();
+  const isDesktop = useIsDesktop();
   const [showCallbackForm, setShowCallbackForm] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<string>('');
   const [formData, setFormData] = useState<CallbackFormData>({
@@ -264,129 +266,197 @@ export default function PortfolioAssistanceScreen() {
     }
   ];
 
-  return (
-    <View style={{ flex: 1, backgroundColor: colors.background }}>
-      <ScrollView contentContainerStyle={{ paddingBottom: spacing.xl }}>
-        {/* Header */}
-        <View style={{ paddingHorizontal: spacing.lg, paddingTop: spacing.sm, paddingBottom: spacing.md }}>
-          <TouchableOpacity
-            onPress={() => navigation.goBack()}
-            style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.sm }}
-          >
-            <MaterialIcons name="arrow-back" size={20} color={colors.textPrimary} />
-            <Text style={{ ...typography.body, color: colors.textPrimary, marginLeft: spacing.sm }}>
-              {isHelpCenter ? 'Back' : 'Back to Subscriber Suite'}
-            </Text>
-          </TouchableOpacity>
+  const cardSurface = isDesktop ? colors.surfaceContainerLowest : colors.surface;
+  const cardBorder = isDesktop ? colors.outlineVariant : colors.borderSubtle;
 
-          <View style={{ alignItems: 'center', marginBottom: spacing.lg }}>
-            <View style={{
-              width: 80,
-              height: 80,
-              borderRadius: 40,
-              backgroundColor: colors.textPrimary,
-              justifyContent: 'center',
-              alignItems: 'center',
-              marginBottom: spacing.md
-            }}>
-              <MaterialIcons name="support-agent" size={40} color="#FFFFFF" />
-            </View>
-            <Text style={{ ...typography.displayMedium, color: colors.textPrimary, textAlign: 'center' }}>
-              {isHelpCenter ? 'Help Centre' : 'Portfolio Assistance'}
-            </Text>
-            <Text style={{ ...typography.body, color: colors.textMuted, textAlign: 'center', marginTop: spacing.sm }}>
-              {isHelpCenter ? 'Browse common questions or contact our support team' : 'Get expert help to create and optimize your business portfolio'}
-            </Text>
-          </View>
-        </View>
-
-        {/* Office Hours */}
-        <View style={{
-          marginHorizontal: spacing.lg,
-          marginBottom: spacing.lg,
-          padding: spacing.md,
-          backgroundColor: colors.surface,
-          borderRadius: radii.lg,
-          borderWidth: 1,
-          borderColor: colors.borderSubtle
-        }}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.sm }}>
-            <MaterialIcons name="schedule" size={20} color={colors.textPrimary} />
-            <Text style={{ ...typography.titleMedium, color: colors.textPrimary, marginLeft: spacing.sm }}>
-              Office Hours & Response Times
-            </Text>
-          </View>
-          <View style={{ gap: spacing.xs }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-              <MaterialIcons name="access-time" size={16} color={colors.textMuted} />
-              <Text style={{ ...typography.caption, color: colors.textMuted, marginLeft: spacing.sm }}>
-                Monday - Friday: 9:00 AM - 5:00 PM
-              </Text>
-            </View>
-            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-              <MaterialIcons name="access-time" size={16} color={colors.textMuted} />
-              <Text style={{ ...typography.caption, color: colors.textMuted, marginLeft: spacing.sm }}>
-                Saturday: 9:00 AM - 1:00 PM
-              </Text>
-            </View>
-            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-              <MaterialIcons name="access-time" size={16} color={colors.textMuted} />
-              <Text style={{ ...typography.caption, color: colors.textMuted, marginLeft: spacing.sm }}>
-                Response Time: Within 2 hours during business hours
-              </Text>
-            </View>
-          </View>
-        </View>
-
-        {/* Assistance Options */}
-        <View style={{ paddingHorizontal: spacing.lg, marginBottom: spacing.lg }}>
-          <Text style={{ ...typography.titleMedium, color: colors.textPrimary, marginBottom: spacing.md }}>
-            How can we help you?
+  const renderHeader = () => (
+    <View style={{ alignItems: isDesktop ? 'flex-start' : 'center', marginBottom: isDesktop ? spacing.lg : spacing.lg, paddingHorizontal: isDesktop ? 0 : spacing.lg, paddingTop: isDesktop ? 0 : spacing.sm }}>
+      {isDesktop ? null : (
+        <TouchableOpacity
+          onPress={() => navigation.goBack()}
+          style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.sm, alignSelf: 'flex-start' }}
+        >
+          <MaterialIcons name="arrow-back" size={20} color={colors.textPrimary} />
+          <Text style={{ ...typography.body, color: colors.textPrimary, marginLeft: spacing.sm }}>
+            {isHelpCenter ? 'Back' : 'Back to Subscriber Suite'}
           </Text>
-          <View style={{ gap: spacing.md }}>
-            {assistanceOptions.map((option) => (
-              <TouchableOpacity
-                key={option.id}
-                onPress={option.action}
-                style={{
-                  padding: spacing.lg,
-                  backgroundColor: colors.surface,
-                  borderRadius: radii.lg,
-                  borderWidth: 1,
-                  borderColor: colors.borderSubtle,
-                  shadowColor: '#000',
-                  shadowOpacity: 0.05,
-                  shadowRadius: 8,
-                  shadowOffset: { width: 0, height: 2 },
-                  elevation: 2,
-                }}
-              >
-                <View style={{ flexDirection: 'row', alignItems: 'flex-start' }}>
-                  <View style={{
-                    width: 48,
-                    height: 48,
-                    borderRadius: 24,
-                    backgroundColor: option.bgColor,
-                    justifyContent: 'center',
-                    alignItems: 'center',
-                    marginRight: spacing.md
-                  }}>
-                    <MaterialIcons name={option.icon} size={24} color={option.iconColor} />
-                  </View>
-                  <View style={{ flex: 1 }}>
-                    <Text style={{ ...typography.titleMedium, color: colors.textPrimary, marginBottom: spacing.xs }}>
-                      {option.title}
-                    </Text>
-                    <Text style={{ ...typography.body, color: colors.textMuted }}>
-                      {option.description}
-                    </Text>
-                  </View>
-                  <MaterialIcons name="chevron-right" size={20} color={colors.textMuted} />
-                </View>
-              </TouchableOpacity>
-            ))}
-          </View>
+        </TouchableOpacity>
+      )}
+      <View style={{
+        width: isDesktop ? 64 : 80,
+        height: isDesktop ? 64 : 80,
+        borderRadius: isDesktop ? 32 : 40,
+        backgroundColor: colors.textPrimary,
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginBottom: spacing.md
+      }}>
+        <MaterialIcons name="support-agent" size={isDesktop ? 32 : 40} color="#FFFFFF" />
+      </View>
+      <Text style={{ ...typography.displayMedium, color: colors.textPrimary, textAlign: isDesktop ? 'left' : 'center', fontSize: isDesktop ? 32 : undefined }}>
+        {isHelpCenter ? 'Help Centre' : 'Portfolio Assistance'}
+      </Text>
+      <Text style={{ ...typography.body, color: isDesktop ? colors.onSurfaceVariant : colors.textMuted, textAlign: isDesktop ? 'left' : 'center', marginTop: spacing.sm, fontSize: isDesktop ? 16 : undefined, lineHeight: isDesktop ? 24 : undefined, maxWidth: isDesktop ? 600 : undefined }}>
+        {isHelpCenter ? 'Browse common questions or contact our support team' : 'Get expert help to create and optimize your business portfolio'}
+      </Text>
+    </View>
+  );
+
+  const renderOfficeHours = () => (
+    <View style={{
+      marginHorizontal: isDesktop ? 0 : spacing.lg,
+      marginBottom: spacing.lg,
+      padding: spacing.md,
+      backgroundColor: cardSurface,
+      borderRadius: radii.lg,
+      borderWidth: 1,
+      borderColor: cardBorder
+    }}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.sm }}>
+        <MaterialIcons name="schedule" size={20} color={colors.textPrimary} />
+        <Text style={{ ...typography.titleMedium, color: colors.textPrimary, marginLeft: spacing.sm, fontSize: isDesktop ? 20 : undefined }}>
+          Office Hours & Response Times
+        </Text>
+      </View>
+      <View style={{ gap: spacing.xs }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+          <MaterialIcons name="access-time" size={16} color={colors.textMuted} />
+          <Text style={{ ...typography.caption, color: colors.textMuted, marginLeft: spacing.sm, fontSize: isDesktop ? 14 : undefined }}>
+            Monday - Friday: 9:00 AM - 5:00 PM
+          </Text>
         </View>
+        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+          <MaterialIcons name="access-time" size={16} color={colors.textMuted} />
+          <Text style={{ ...typography.caption, color: colors.textMuted, marginLeft: spacing.sm, fontSize: isDesktop ? 14 : undefined }}>
+            Saturday: 9:00 AM - 1:00 PM
+          </Text>
+        </View>
+        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+          <MaterialIcons name="access-time" size={16} color={colors.textMuted} />
+          <Text style={{ ...typography.caption, color: colors.textMuted, marginLeft: spacing.sm, fontSize: isDesktop ? 14 : undefined }}>
+            Response Time: Within 2 hours during business hours
+          </Text>
+        </View>
+      </View>
+    </View>
+  );
+
+  const renderAssistanceOptions = () => (
+    <View style={{ paddingHorizontal: isDesktop ? 0 : spacing.lg, marginBottom: spacing.lg }}>
+      <Text style={{ ...typography.titleMedium, color: colors.textPrimary, marginBottom: spacing.md, fontSize: isDesktop ? 24 : undefined }}>
+        How can we help you?
+      </Text>
+      <View style={{ gap: spacing.md, flexDirection: isDesktop ? 'row' as const : 'column' as const, flexWrap: isDesktop ? 'wrap' as const : 'nowrap' as const }}>
+        {assistanceOptions.map((option) => (
+          <TouchableOpacity
+            key={option.id}
+            onPress={option.action}
+            style={{
+              padding: spacing.lg,
+              backgroundColor: cardSurface,
+              borderRadius: radii.lg,
+              borderWidth: 1,
+              borderColor: cardBorder,
+              shadowColor: '#000',
+              shadowOpacity: 0.05,
+              shadowRadius: 8,
+              shadowOffset: { width: 0, height: 2 },
+              elevation: 2,
+              flex: isDesktop ? 1 : undefined,
+              minWidth: isDesktop ? 220 : undefined,
+            }}
+          >
+            <View style={{ flexDirection: 'row', alignItems: 'flex-start' }}>
+              <View style={{
+                width: 48,
+                height: 48,
+                borderRadius: 24,
+                backgroundColor: option.bgColor,
+                justifyContent: 'center',
+                alignItems: 'center',
+                marginRight: spacing.md
+              }}>
+                <MaterialIcons name={option.icon} size={24} color={option.iconColor} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={{ ...typography.titleMedium, color: colors.textPrimary, marginBottom: spacing.xs, fontSize: isDesktop ? 18 : undefined }}>
+                  {option.title}
+                </Text>
+                <Text style={{ ...typography.body, color: colors.textMuted, fontSize: isDesktop ? 14 : undefined }}>
+                  {option.description}
+                </Text>
+              </View>
+              <MaterialIcons name="chevron-right" size={20} color={colors.textMuted} />
+            </View>
+          </TouchableOpacity>
+        ))}
+      </View>
+    </View>
+  );
+
+  const renderFaqSection = () => (
+    <View style={{ paddingHorizontal: isDesktop ? 0 : spacing.lg, marginBottom: spacing.lg, flex: isDesktop ? 1 : undefined }}>
+      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.md }}>
+        <Text style={{ ...typography.titleMedium, color: colors.textPrimary, fontSize: isDesktop ? 24 : undefined }}>Frequently Asked Questions</Text>
+        <TouchableOpacity onPress={() => setShowFaqSection(false)}>
+          <MaterialIcons name="close" size={20} color={colors.textMuted} />
+        </TouchableOpacity>
+      </View>
+      <View style={{ gap: spacing.sm }}>
+        {FAQS.map((faq, index) => {
+          const isOpen = openFaqIndex === index;
+          return (
+            <View key={index} style={{ backgroundColor: cardSurface, borderRadius: radii.md, borderWidth: 1, borderColor: cardBorder }}>
+              <TouchableOpacity
+                onPress={() => setOpenFaqIndex(isOpen ? null : index)}
+                style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: spacing.md }}
+              >
+                <Text style={{ ...typography.bodySemiBold, color: colors.textPrimary, flex: 1, fontSize: isDesktop ? 16 : undefined }}>{faq.question}</Text>
+                <MaterialIcons name={isOpen ? 'expand-less' : 'expand-more'} size={20} color={colors.textMuted} />
+              </TouchableOpacity>
+              {isOpen && (
+                <View style={{ paddingHorizontal: spacing.md, paddingBottom: spacing.md }}>
+                  <Text style={{ ...typography.body, color: colors.textMuted, fontSize: isDesktop ? 14 : undefined, lineHeight: isDesktop ? 24 : undefined }}>{faq.answer}</Text>
+                </View>
+              )}
+            </View>
+          );
+        })}
+      </View>
+    </View>
+  );
+
+  return (
+    <View style={{ flex: 1, backgroundColor: isDesktop ? colors.surfaceBg : colors.background }}>
+      <ScrollView contentContainerStyle={isDesktop ? { paddingHorizontal: 48, paddingTop: spacing.sm, paddingBottom: spacing.xl, maxWidth: 1200, width: '100%', alignSelf: 'center' } : { paddingBottom: spacing.xl }}>
+        {isDesktop ? (
+          <>
+            {renderHeader()}
+            <View style={{ flexDirection: 'row', gap: spacing.gutter } as any}>
+              <View style={{ flex: 1, gap: spacing.gutter } as any}>
+                {renderOfficeHours()}
+                {renderAssistanceOptions()}
+              </View>
+              <View style={{ flex: 1, gap: spacing.gutter } as any}>
+                {showFaqSection ? renderFaqSection() : (
+                  <View style={{ backgroundColor: cardSurface, borderRadius: radii.lg, borderWidth: 1, borderColor: cardBorder, padding: spacing.lg, alignItems: 'center', justifyContent: 'center' }}>
+                    <MaterialIcons name="help-outline" size={40} color={colors.textMuted} />
+                    <Text style={{ ...typography.body, color: colors.textMuted, textAlign: 'center', marginTop: spacing.md }}>
+                      Tap "FAQs" from the options to view common questions.
+                    </Text>
+                  </View>
+                )}
+              </View>
+            </View>
+          </>
+        ) : (
+          <>
+            {renderHeader()}
+            {renderOfficeHours()}
+            {renderAssistanceOptions()}
+            {showFaqSection && renderFaqSection()}
+          </>
+        )}
 
         {/* Callback Form Modal */}
         {showCallbackForm && (
@@ -548,38 +618,6 @@ export default function PortfolioAssistanceScreen() {
           </View>
         )}
 
-        {/* FAQ Accordion */}
-        {showFaqSection && (
-          <View style={{ paddingHorizontal: spacing.lg, marginBottom: spacing.lg }}>
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.md }}>
-              <Text style={{ ...typography.titleMedium, color: colors.textPrimary }}>Frequently Asked Questions</Text>
-              <TouchableOpacity onPress={() => setShowFaqSection(false)}>
-                <MaterialIcons name="close" size={20} color={colors.textMuted} />
-              </TouchableOpacity>
-            </View>
-            <View style={{ gap: spacing.sm }}>
-              {FAQS.map((faq, index) => {
-                const isOpen = openFaqIndex === index;
-                return (
-                  <View key={index} style={{ backgroundColor: colors.surface, borderRadius: radii.md, borderWidth: 1, borderColor: colors.borderSubtle }}>
-                    <TouchableOpacity
-                      onPress={() => setOpenFaqIndex(isOpen ? null : index)}
-                      style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: spacing.md }}
-                    >
-                      <Text style={{ ...typography.bodySemiBold, color: colors.textPrimary, flex: 1 }}>{faq.question}</Text>
-                      <MaterialIcons name={isOpen ? 'expand-less' : 'expand-more'} size={20} color={colors.textMuted} />
-                    </TouchableOpacity>
-                    {isOpen && (
-                      <View style={{ paddingHorizontal: spacing.md, paddingBottom: spacing.md }}>
-                        <Text style={{ ...typography.body, color: colors.textMuted }}>{faq.answer}</Text>
-                      </View>
-                    )}
-                  </View>
-                );
-              })}
-            </View>
-          </View>
-        )}
       </ScrollView>
 
       {alertState && (

@@ -8,6 +8,7 @@ import type { ProfileStackParamList } from '../navigation/ProfileNavigator';
 import { useAuth } from '../auth/AuthContext';
 import { colors, radii, spacing, typography } from '../theme';
 import { PrimaryButton } from '../components/ui';
+import { useIsDesktop } from '../hooks/useIsDesktop';
 
 type Props = NativeStackScreenProps<ProfileStackParamList, 'AccountSettings'>;
 
@@ -19,6 +20,7 @@ type UserProfileRow = {
 
 export default function AccountSettingsScreen({ navigation }: Props) {
   const { user } = useAuth();
+  const isDesktop = useIsDesktop();
   const [username, setUsername] = useState('');
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState(user?.email ?? '');
@@ -131,109 +133,207 @@ export default function AccountSettingsScreen({ navigation }: Props) {
 
   return (
     <KeyboardAvoidingView
-      style={{ flex: 1, backgroundColor: colors.background }}
+      style={{ flex: 1, backgroundColor: isDesktop ? colors.surfaceBg : colors.background }}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
-      <ScrollView contentContainerStyle={{ padding: spacing.lg, paddingBottom: spacing.xl }} keyboardShouldPersistTaps="handled">
-        <TouchableOpacity
-          onPress={() => navigation.goBack()}
-          style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.lg }}
-          activeOpacity={0.7}
-        >
-          <MaterialIcons name="arrow-back" size={20} color={colors.textPrimary} />
-          <Text style={{ ...typography.body, color: colors.textPrimary, marginLeft: spacing.sm }}>
-            Back
-          </Text>
-        </TouchableOpacity>
+      <ScrollView contentContainerStyle={isDesktop ? { paddingBottom: spacing.xxl } : { padding: spacing.lg, paddingBottom: spacing.xl }} keyboardShouldPersistTaps="handled">
+        {isDesktop ? (
+          <View style={{ maxWidth: 1200, width: '100%', alignSelf: 'center', paddingHorizontal: 48, paddingTop: spacing.sm, paddingBottom: spacing.xxl }}>
+            <View
+              style={{
+                maxWidth: 720,
+                width: '100%',
+                alignSelf: 'center',
+                backgroundColor: colors.surfaceContainerLowest,
+                borderRadius: radii.lg,
+                borderWidth: 1,
+                borderColor: colors.outlineVariant,
+                padding: spacing.xl,
+              }}
+            >
+              <Text style={{ ...typography.headlineSm, color: colors.textPrimary, marginBottom: spacing.sm }}>
+                Account Settings
+              </Text>
+              <Text style={{ ...typography.bodyMd, color: colors.onSurfaceVariant, marginBottom: spacing.lg }}>
+                Update your name, username and password from one place.
+              </Text>
 
-        <View
-          style={{
-            backgroundColor: colors.surface,
-            borderRadius: radii.lg,
-            borderWidth: 1,
-            borderColor: colors.borderSubtle,
-            padding: spacing.lg,
-          }}
-        >
-          <Text style={{ ...typography.titleLarge, color: colors.textPrimary, marginBottom: spacing.sm }}>
-            Account Settings
-          </Text>
-          <Text style={{ ...typography.body, color: colors.textSecondary, marginBottom: spacing.lg }}>
-            Update your name, username and password from one place.
-          </Text>
+              <Text style={{ ...typography.labelMd, color: colors.onSurface, marginBottom: spacing.xs }}>Username</Text>
+              <TextInput
+                value={username}
+                onChangeText={setUsername}
+                autoCapitalize="none"
+                editable={!loading && !saving}
+                placeholder="Enter username"
+                placeholderTextColor={colors.textMuted}
+                style={{
+                  borderWidth: 1,
+                  borderColor: colors.outlineVariant,
+                  borderRadius: radii.md,
+                  paddingHorizontal: spacing.md,
+                  paddingVertical: spacing.md,
+                  color: colors.textPrimary,
+                  marginBottom: spacing.md,
+                }}
+              />
 
-          <Text style={{ ...typography.caption, color: colors.textMuted, marginBottom: spacing.xs }}>Username</Text>
-          <TextInput
-            value={username}
-            onChangeText={setUsername}
-            autoCapitalize="none"
-            editable={!loading && !saving}
-            placeholder="Enter username"
-            placeholderTextColor={colors.textMuted}
-            style={{
-              borderWidth: 1,
-              borderColor: colors.borderSubtle,
-              borderRadius: radii.md,
-              paddingHorizontal: spacing.md,
-              paddingVertical: spacing.md,
-              color: colors.textPrimary,
-              marginBottom: spacing.md,
-            }}
-          />
+              <Text style={{ ...typography.labelMd, color: colors.onSurface, marginBottom: spacing.xs }}>Full name</Text>
+              <TextInput
+                value={fullName}
+                onChangeText={setFullName}
+                editable={!loading && !saving}
+                placeholder="Enter full name"
+                placeholderTextColor={colors.textMuted}
+                style={{
+                  borderWidth: 1,
+                  borderColor: colors.outlineVariant,
+                  borderRadius: radii.md,
+                  paddingHorizontal: spacing.md,
+                  paddingVertical: spacing.md,
+                  color: colors.textPrimary,
+                  marginBottom: spacing.md,
+                }}
+              />
 
-          <Text style={{ ...typography.caption, color: colors.textMuted, marginBottom: spacing.xs }}>Full name</Text>
-          <TextInput
-            value={fullName}
-            onChangeText={setFullName}
-            editable={!loading && !saving}
-            placeholder="Enter full name"
-            placeholderTextColor={colors.textMuted}
-            style={{
-              borderWidth: 1,
-              borderColor: colors.borderSubtle,
-              borderRadius: radii.md,
-              paddingHorizontal: spacing.md,
-              paddingVertical: spacing.md,
-              color: colors.textPrimary,
-              marginBottom: spacing.md,
-            }}
-          />
+              <Text style={{ ...typography.labelMd, color: colors.onSurface, marginBottom: spacing.xs }}>Email</Text>
+              <TextInput
+                value={email}
+                editable={false}
+                placeholderTextColor={colors.textMuted}
+                style={{
+                  borderWidth: 1,
+                  borderColor: colors.outlineVariant,
+                  borderRadius: radii.md,
+                  paddingHorizontal: spacing.md,
+                  paddingVertical: spacing.md,
+                  color: colors.textMuted,
+                  marginBottom: spacing.lg,
+                  backgroundColor: colors.surfaceContainerLow,
+                }}
+              />
 
-          <Text style={{ ...typography.caption, color: colors.textMuted, marginBottom: spacing.xs }}>Email</Text>
-          <TextInput
-            value={email}
-            editable={false}
-            placeholderTextColor={colors.textMuted}
-            style={{
-              borderWidth: 1,
-              borderColor: colors.borderSubtle,
-              borderRadius: radii.md,
-              paddingHorizontal: spacing.md,
-              paddingVertical: spacing.md,
-              color: colors.textMuted,
-              marginBottom: spacing.lg,
-              backgroundColor: colors.backgroundAlt,
-            }}
-          />
+              <PrimaryButton title={saving ? 'Saving...' : 'Save Changes'} onPress={handleSave} disabled={loading || saving} />
 
-          <PrimaryButton title={saving ? 'Saving...' : 'Save Changes'} onPress={handleSave} disabled={loading || saving} />
+              <TouchableOpacity
+                onPress={() => navigation.navigate('ChangePassword')}
+                style={{
+                  marginTop: spacing.md,
+                  borderRadius: radii.md,
+                  paddingVertical: spacing.md,
+                  alignItems: 'center',
+                  backgroundColor: colors.primary,
+                }}
+                activeOpacity={0.8}
+              >
+                <Text style={{ ...typography.bodySemiBold, color: '#FFFFFF' }}>
+                  Change Password
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        ) : (
+          <>
+            <TouchableOpacity
+              onPress={() => navigation.goBack()}
+              style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.lg }}
+              activeOpacity={0.7}
+            >
+              <MaterialIcons name="arrow-back" size={20} color={colors.textPrimary} />
+              <Text style={{ ...typography.body, color: colors.textPrimary, marginLeft: spacing.sm }}>
+                Back
+              </Text>
+            </TouchableOpacity>
 
-          <TouchableOpacity
-            onPress={() => navigation.navigate('ChangePassword')}
-            style={{
-              marginTop: spacing.md,
-              borderRadius: radii.md,
-              paddingVertical: spacing.md,
-              alignItems: 'center',
-              backgroundColor: colors.primary,
-            }}
-            activeOpacity={0.8}
-          >
-            <Text style={{ ...typography.bodySemiBold, color: '#FFFFFF' }}>
-              Change Password
-            </Text>
-          </TouchableOpacity>
-        </View>
+            <View
+              style={{
+                backgroundColor: colors.surface,
+                borderRadius: radii.lg,
+                borderWidth: 1,
+                borderColor: colors.borderSubtle,
+                padding: spacing.lg,
+              }}
+            >
+              <Text style={{ ...typography.titleLarge, color: colors.textPrimary, marginBottom: spacing.sm }}>
+                Account Settings
+              </Text>
+              <Text style={{ ...typography.body, color: colors.textSecondary, marginBottom: spacing.lg }}>
+                Update your name, username and password from one place.
+              </Text>
+
+              <Text style={{ ...typography.caption, color: colors.textMuted, marginBottom: spacing.xs }}>Username</Text>
+              <TextInput
+                value={username}
+                onChangeText={setUsername}
+                autoCapitalize="none"
+                editable={!loading && !saving}
+                placeholder="Enter username"
+                placeholderTextColor={colors.textMuted}
+                style={{
+                  borderWidth: 1,
+                  borderColor: colors.borderSubtle,
+                  borderRadius: radii.md,
+                  paddingHorizontal: spacing.md,
+                  paddingVertical: spacing.md,
+                  color: colors.textPrimary,
+                  marginBottom: spacing.md,
+                }}
+              />
+
+              <Text style={{ ...typography.caption, color: colors.textMuted, marginBottom: spacing.xs }}>Full name</Text>
+              <TextInput
+                value={fullName}
+                onChangeText={setFullName}
+                editable={!loading && !saving}
+                placeholder="Enter full name"
+                placeholderTextColor={colors.textMuted}
+                style={{
+                  borderWidth: 1,
+                  borderColor: colors.borderSubtle,
+                  borderRadius: radii.md,
+                  paddingHorizontal: spacing.md,
+                  paddingVertical: spacing.md,
+                  color: colors.textPrimary,
+                  marginBottom: spacing.md,
+                }}
+              />
+
+              <Text style={{ ...typography.caption, color: colors.textMuted, marginBottom: spacing.xs }}>Email</Text>
+              <TextInput
+                value={email}
+                editable={false}
+                placeholderTextColor={colors.textMuted}
+                style={{
+                  borderWidth: 1,
+                  borderColor: colors.borderSubtle,
+                  borderRadius: radii.md,
+                  paddingHorizontal: spacing.md,
+                  paddingVertical: spacing.md,
+                  color: colors.textMuted,
+                  marginBottom: spacing.lg,
+                  backgroundColor: colors.backgroundAlt,
+                }}
+              />
+
+              <PrimaryButton title={saving ? 'Saving...' : 'Save Changes'} onPress={handleSave} disabled={loading || saving} />
+
+              <TouchableOpacity
+                onPress={() => navigation.navigate('ChangePassword')}
+                style={{
+                  marginTop: spacing.md,
+                  borderRadius: radii.md,
+                  paddingVertical: spacing.md,
+                  alignItems: 'center',
+                  backgroundColor: colors.primary,
+                }}
+                activeOpacity={0.8}
+              >
+                <Text style={{ ...typography.bodySemiBold, color: '#FFFFFF' }}>
+                  Change Password
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </>
+        )}
       </ScrollView>
 
       {alertState && (

@@ -16,6 +16,7 @@ import type { AttendeeStackParamList } from '../navigation/AttendeeNavigator';
 import { colors, spacing, radii, typography } from '../theme';
 import { getFavourites, toggleFavourite } from '../lib/favourites';
 import { useAuth } from '../auth/AuthContext';
+import { useIsDesktop } from '../hooks/useIsDesktop';
 import { PrimaryButton } from '../components/ui';
 
 const headerTitleLarge = { ...typography.titleLarge, fontFamily: 'Montserrat_700Bold' as const };
@@ -101,6 +102,7 @@ export default function VenueProfileScreen({ route, navigation }: Props) {
   });
   const [alertState, setAlertState] = useState<{visible: boolean; title: string; message: string} | null>(null);
   const { user } = useAuth();
+  const isDesktop = useIsDesktop();
 
   const cameFromFavourites = route.params?.from === 'Favourites';
   const cameFromQuotes = route.params?.from === 'Quotes';
@@ -624,22 +626,9 @@ export default function VenueProfileScreen({ route, navigation }: Props) {
     });
   };
 
-  return (
-    <ScrollView
-      style={{ flex: 1, backgroundColor: colors.background }}
-      contentContainerStyle={{ paddingHorizontal: spacing.lg, paddingBottom: spacing.lg, paddingTop: spacing.sm }}
-    >
-      <TouchableOpacity
-        onPress={handleBackNavigation}
-        style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.md }}
-      >
-        <MaterialIcons name="arrow-back" size={20} color={colors.textPrimary} />
-        <Text style={{ ...typography.body, color: colors.textPrimary, marginLeft: spacing.sm }}>
-          Back
-        </Text>
-      </TouchableOpacity>
-
-      {/* Header */}
+  const renderMainContent = () => (
+    <>
+{/* Header */}
       <View
         style={{
           marginBottom: spacing.lg,
@@ -1743,29 +1732,194 @@ export default function VenueProfileScreen({ route, navigation }: Props) {
         </View>
       )}
 
-      {/* Request Quote entry */}
+          </>
+  );
+
+const renderSidebar = () => (
+    <View
+      style={{
+        flex: 1,
+        gap: spacing.lg,
+      } as any}
+    >
       <View
         style={{
-          paddingVertical: spacing.lg,
-          borderTopWidth: 1,
-          borderTopColor: colors.borderSubtle,
-          marginTop: spacing.lg,
+          backgroundColor: colors.surface,
+          borderRadius: radii.lg,
+          borderWidth: 1,
+          borderColor: colors.outlineVariant,
+          padding: spacing.lg,
+          shadowColor: '#000',
+          shadowOpacity: 0.06,
+          shadowRadius: 6,
+          shadowOffset: { width: 0, height: 3 },
         }}
       >
-        <Text
-          style={{
-            ...headerTitleMedium,
-            color: colors.textPrimary,
-            marginBottom: spacing.sm,
-          }}
-        >
-          Request a quote
-        </Text>
-        <Text style={{ ...typography.body, color: colors.textSecondary, marginBottom: spacing.md }}>
-          Share your event details and request a custom quote from this venue.
-        </Text>
-        <PrimaryButton title="Request a quote" onPress={handleRequestQuote} />
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: spacing.lg }}>
+          <View>
+            <Text style={{ ...typography.headlineMd, color: colors.primary }}>
+              {venue.venue_capacity ? `Up to ${venue.venue_capacity} guests` : 'Request a quote'}
+            </Text>
+            <Text style={{ ...typography.body, color: colors.onSurfaceVariant }}>
+              {venue.venue_type || 'Venue'}
+            </Text>
+          </View>
+          <View style={{ flexDirection: 'row', gap: spacing.sm }}>
+            <TouchableOpacity
+              onPress={handleToggleFavourite}
+              style={{
+                width: 40,
+                height: 40,
+                borderRadius: 20,
+                borderWidth: 1,
+                borderColor: colors.outlineVariant,
+                alignItems: 'center',
+                justifyContent: 'center',
+                backgroundColor: colors.surfaceBg,
+              }}
+            >
+              <MaterialIcons
+                name={isFavourite ? 'favorite' : 'favorite-border'}
+                size={22}
+                color={isFavourite ? colors.primaryTeal : colors.outline}
+              />
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={handleShare}
+              style={{
+                width: 40,
+                height: 40,
+                borderRadius: 20,
+                borderWidth: 1,
+                borderColor: colors.outlineVariant,
+                alignItems: 'center',
+                justifyContent: 'center',
+                backgroundColor: colors.surfaceBg,
+              }}
+            >
+              <MaterialIcons name="share" size={22} color={colors.outline} />
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        <View style={{ gap: spacing.sm }}>
+          <TouchableOpacity
+            onPress={handleRequestQuote}
+            style={{
+              backgroundColor: colors.primary,
+              paddingVertical: spacing.md,
+              borderRadius: radii.md,
+              alignItems: 'center',
+            }}
+          >
+            <Text style={{ ...typography.bodySemiBold, color: '#FFFFFF' }}>Request Quote</Text>
+          </TouchableOpacity>
+          {canBookTours && (
+            <TouchableOpacity
+              onPress={() => navigation.navigate('BookTour', { venueId: venue.id, venueName: venue.name })}
+              style={{
+                paddingVertical: spacing.md,
+                borderRadius: radii.md,
+                borderWidth: 2,
+                borderColor: colors.primary,
+                alignItems: 'center',
+              }}
+            >
+              <Text style={{ ...typography.bodySemiBold, color: colors.primary }}>Book a Tour</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+
+        <View style={{ borderTopWidth: 1, borderTopColor: colors.outlineVariant, paddingTop: spacing.lg, marginTop: spacing.lg }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md, marginBottom: spacing.md }}>
+            {venue.image_url ? (
+              <View style={{ width: 48, height: 48, borderRadius: 24, overflow: 'hidden', backgroundColor: colors.surfaceBg }}>
+                <Image source={{ uri: venue.image_url }} style={{ width: '100%', height: '100%' }} />
+              </View>
+            ) : (
+              <View style={{ width: 48, height: 48, borderRadius: 24, backgroundColor: colors.surfaceBg, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: colors.outlineVariant }}>
+                <MaterialIcons name="location-city" size={24} color={colors.outline} />
+              </View>
+            )}
+            <View style={{ flex: 1 }}>
+              <Text style={{ ...typography.bodySemiBold, color: colors.primary }}>{venue.name}</Text>
+              <Text style={{ ...typography.caption, color: colors.onSurfaceVariant }}>
+                {venue.city || venue.province || 'South Africa'}
+              </Text>
+            </View>
+          </View>
+          <TouchableOpacity
+            onPress={() => {
+              if (whatsappUrl) {
+                handleOpenUrl(whatsappUrl);
+              } else if (emailUrl) {
+                handleOpenUrl(emailUrl);
+              } else {
+                setAlertState({ visible: true, title: 'Contact', message: 'No contact details available.' });
+              }
+            }}
+          >
+            <Text style={{ ...typography.captionSemiBold, color: colors.primary, textDecorationLine: 'underline' }}>
+              Contact Host
+            </Text>
+          </TouchableOpacity>
+        </View>
       </View>
+    </View>
+  );
+
+  return (
+    <ScrollView
+      style={{ flex: 1, backgroundColor: isDesktop ? colors.surfaceBg : colors.background }}
+      contentContainerStyle={isDesktop ? { paddingHorizontal: 48, paddingBottom: spacing.lg, paddingTop: spacing.sm, maxWidth: 1200, width: '100%', alignSelf: 'center' } : { paddingHorizontal: spacing.lg, paddingBottom: spacing.lg, paddingTop: spacing.sm }}
+    >
+      {isDesktop ? null : (
+        <TouchableOpacity
+          onPress={handleBackNavigation}
+          style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.md }}
+        >
+          <MaterialIcons name="arrow-back" size={20} color={colors.textPrimary} />
+          <Text style={{ ...typography.body, color: colors.textPrimary, marginLeft: spacing.sm }}>
+            Back
+          </Text>
+        </TouchableOpacity>
+      )}
+
+      {isDesktop ? (
+        <View style={{ flexDirection: 'row', gap: 24 } as any}>
+          <View style={{ flex: 2 } as any}>
+            {renderMainContent()}
+          </View>
+          {renderSidebar()}
+        </View>
+      ) : (
+        <>
+          {renderMainContent()}
+          {/* Request Quote entry */}
+          <View
+            style={{
+              paddingVertical: spacing.lg,
+              borderTopWidth: 1,
+              borderTopColor: colors.borderSubtle,
+              marginTop: spacing.lg,
+            }}
+          >
+            <Text
+              style={{
+                ...headerTitleMedium,
+                color: colors.textPrimary,
+                marginBottom: spacing.sm,
+              }}
+            >
+              Request a quote
+            </Text>
+            <Text style={{ ...typography.body, color: colors.textSecondary, marginBottom: spacing.md }}>
+              Share your event details and request a custom quote from this venue.
+            </Text>
+            <PrimaryButton title="Request a quote" onPress={handleRequestQuote} />
+          </View>
+        </>
+      )}
 
       {alertState && (
         <ThemedAlert
@@ -1779,3 +1933,4 @@ export default function VenueProfileScreen({ route, navigation }: Props) {
     </ScrollView>
   );
 }
+

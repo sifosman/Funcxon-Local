@@ -34,6 +34,7 @@ import { AppFooter } from '../components/AppFooter';
 import { HelpCenterModal } from '../components/HelpCenterModal';
 import NetworkImage from '../components/NetworkImage';
 import { usePendingSearch } from '../context/PendingSearchContext';
+import { formatCardAddress } from '../utils/location';
 import type { PendingSearchSnapshot } from '../context/PendingSearchContext';
 import { useIsDesktop } from '../hooks/useIsDesktop';
 
@@ -509,7 +510,7 @@ export default function AttendeeHomeScreen() {
             <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: spacing.xs }}>
               <MaterialIcons name="place" size={16} color={colors.textSecondary} />
               <Text style={{ ...typography.caption, color: colors.textSecondary, marginLeft: spacing.xs, flex: 1 }} numberOfLines={2}>
-                {[item.address_line_1, item.city].filter(Boolean).join(', ') || [item.city, item.province].filter(Boolean).join(', ') || item.location || 'Location available on profile'}
+                {formatCardAddress(item)}
               </Text>
             </View>
 
@@ -1332,12 +1333,12 @@ export default function AttendeeHomeScreen() {
   }
 
   // Desktop-specific style helpers
-  const desktopContentStyle = isDesktop ? {
+  const desktopContentStyle = isDesktop ? ({
     maxWidth: 1200,
     width: '100%',
     alignSelf: 'center' as const,
     paddingHorizontal: 48,
-  } : {};
+  } as any) : {};
   const desktopGridStyle = isDesktop ? {
     flexDirection: 'row' as const,
     flexWrap: 'wrap' as const,

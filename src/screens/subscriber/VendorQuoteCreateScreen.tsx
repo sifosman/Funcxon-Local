@@ -19,6 +19,8 @@ import { colors, spacing, radii, typography } from '../../theme';
 import { OutlineButton, PrimaryButton, ThemedInput } from '../../components/ui';
 import { useAuth } from '../../auth/AuthContext';
 import ThemedAlert from '../../components/ThemedAlert';
+import { createQuoteQuotedNotification } from '../../lib/notifications';
+import { useIsDesktop } from '../../hooks/useIsDesktop';
 
 type SubscriberStackParamList = {
   VendorQuoteCreate: {
@@ -67,6 +69,7 @@ export default function VendorQuoteCreateScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<SubscriberStackParamList>>();
   const route = useRoute<RouteProp<SubscriberStackParamList, 'VendorQuoteCreate'>>();
   const { user } = useAuth();
+  const isDesktop = useIsDesktop();
 
   const { quoteRequestId, clientName, clientEmail, eventDetails } = route.params;
 
@@ -347,6 +350,18 @@ export default function VendorQuoteCreateScreen() {
         })
         .eq('id', quoteRequestId);
 
+      // In-app notification for the requester
+      if (quoteRequest?.user_id) {
+        const { data: requester } = await supabase
+          .from('users')
+          .select('auth_user_id')
+          .eq('id', quoteRequest.user_id)
+          .maybeSingle();
+        if (requester?.auth_user_id) {
+          await createQuoteQuotedNotification(requester.auth_user_id, vendor.name, quoteRequestId, false).catch(() => {});
+        }
+      }
+
       // Send notification to client
       await sendClientNotification(revisionId, vendor.name);
 
@@ -397,256 +412,310 @@ export default function VendorQuoteCreateScreen() {
     );
   }
 
+  const desktopContainerStyle = {
+    maxWidth: 1200,
+    width: '100%',
+    alignSelf: 'center' as const,
+    paddingHorizontal: 48,
+  };
+
+  const cardSurface = isDesktop ? colors.surfaceContainerLowest : colors.surface;
+  const cardBorder = isDesktop ? colors.outlineVariant : colors.borderSubtle;
+
+  const renderHeader = (isDesktopHeader: boolean) => (
+    <View style={{ marginBottom: spacing.md }}>
+      <Text style={isDesktopHeader ? { ...typography.labelMd, color: colors.dustyRose, textTransform: 'uppercase', marginBottom: spacing.sm } as any : { display: 'none' } as any}>
+        Quotes
+      </Text>
+      <Text style={isDesktopHeader ? { ...typography.headlineMd, color: colors.primary } as any : { ...typography.displayMedium, color: colors.textPrimary, marginBottom: spacing.xs }}>
+        Create Quote
+      </Text>
+      <Text style={{ ...typography.bodyMd, color: isDesktopHeader ? colors.onSurfaceVariant : colors.textMuted }}>
+        For: {clientName || quoteRequest?.name || 'Client'}
+      </Text>
+    </View>
+  );
+
+  const renderRequestDetails = () => (
+    <View
+      style={{
+        backgroundColor: cardSurface,
+        borderRadius: radii.lg,
+        padding: spacing.lg,
+        borderWidth: 1,
+        borderColor: cardBorder,
+      }}
+    >
+      <Text style={isDesktop ? { ...typography.headlineSm, color: colors.textPrimary, marginBottom: spacing.sm } as any : { ...typography.titleMedium, color: colors.textPrimary, marginBottom: spacing.sm }}>
+        Request Details
+      </Text>
+      {eventDetails || quoteRequest?.details ? (
+        <Text style={{ ...typography.bodyMd, color: colors.onSurfaceVariant, marginBottom: spacing.sm } as any}>
+          {eventDetails || quoteRequest?.details}
+        </Text>
+      ) : null}
+      {quoteRequest?.event_type ? (
+        <Text style={{ ...typography.bodyMd, color: colors.onSurfaceVariant } as any}>Event Type: {quoteRequest.event_type}</Text>
+      ) : null}
+      {quoteRequest?.event_date ? (
+        <Text style={{ ...typography.bodyMd, color: colors.onSurfaceVariant } as any}>
+          Event Date: {new Date(quoteRequest.event_date).toLocaleDateString('en-ZA', { day: 'numeric', month: 'long', year: 'numeric' })}
+        </Text>
+      ) : null}
+      {quoteRequest?.end_date ? (
+        <Text style={{ ...typography.bodyMd, color: colors.onSurfaceVariant } as any}>
+          End Date: {new Date(quoteRequest.end_date).toLocaleDateString('en-ZA', { day: 'numeric', month: 'long', year: 'numeric' })}
+        </Text>
+      ) : null}
+      {quoteRequest?.contact_phone ? (
+        <Text style={{ ...typography.bodyMd, color: colors.onSurfaceVariant } as any}>
+          Contact: {quoteRequest.contact_phone}
+        </Text>
+      ) : null}
+      {quoteRequest?.budget ? (
+        <Text style={{ ...typography.bodyMd, color: colors.onSurfaceVariant } as any}>Client Budget: {quoteRequest.budget}</Text>
+      ) : null}
+      {quoteRequest?.amended_message ? (
+        <View style={{ marginTop: spacing.sm, padding: spacing.sm, backgroundColor: '#FEF3C7', borderRadius: radii.md, borderLeftWidth: 3, borderLeftColor: '#D97706' }}>
+          <Text style={{ ...typography.captionSemiBold, color: '#92400E' }}>Amendment Request</Text>
+          <Text style={{ ...typography.caption, color: '#92400E', marginTop: 2 }}>{quoteRequest.amended_message}</Text>
+        </View>
+      ) : null}
+      {quoteRequest?.response_message ? (
+        <View style={{ marginTop: spacing.sm, padding: spacing.sm, backgroundColor: '#F0F9FF', borderRadius: radii.md, borderLeftWidth: 3, borderLeftColor: colors.primary }}>
+          <Text style={{ ...typography.captionSemiBold, color: colors.primary }}>Client Feedback</Text>
+          <Text style={{ ...typography.caption, color: colors.primary, marginTop: 2 }}>{quoteRequest.response_message}</Text>
+        </View>
+      ) : null}
+    </View>
+  );
+
+  const renderQuoteForm = () => (
+    <View
+      style={{
+        backgroundColor: cardSurface,
+        borderRadius: radii.lg,
+        padding: spacing.lg,
+        borderWidth: 1,
+        borderColor: cardBorder,
+      }}
+    >
+      <Text style={isDesktop ? { ...typography.headlineSm, color: colors.textPrimary, marginBottom: spacing.md } as any : { ...typography.titleMedium, color: colors.textPrimary, marginBottom: spacing.md }}>
+        Quote Details
+      </Text>
+
+      {/* Amount */}
+      <Text style={{ ...typography.body, color: colors.textSecondary, marginBottom: spacing.xs }}>Quote Amount (R)</Text>
+      <ThemedInput
+        value={amount}
+        onChangeText={setAmount}
+        placeholder="e.g. 5000"
+        keyboardType="numeric"
+        autoCapitalize="none"
+      />
+
+      {/* Description */}
+      <Text style={{ ...typography.body, color: colors.textSecondary, marginBottom: spacing.xs, marginTop: spacing.md }}>
+        Description of Services
+      </Text>
+      <ThemedInput
+        value={description}
+        onChangeText={setDescription}
+        placeholder="Describe what this quote includes..."
+        multiline
+        numberOfLines={4}
+        style={{ minHeight: 100, textAlignVertical: 'top' }}
+      />
+
+      {/* Terms */}
+      <Text style={{ ...typography.body, color: colors.textSecondary, marginBottom: spacing.xs, marginTop: spacing.md }}>
+        Terms & Conditions
+      </Text>
+      <ThemedInput
+        value={terms}
+        onChangeText={setTerms}
+        placeholder="Payment terms, delivery details, cancellation policy..."
+        multiline
+        numberOfLines={3}
+        style={{ minHeight: 80, textAlignVertical: 'top' }}
+      />
+
+      {/* Validity */}
+      <Text style={{ ...typography.body, color: colors.textSecondary, marginBottom: spacing.xs, marginTop: spacing.md }}>
+        Quote Valid (Days)
+      </Text>
+      <ThemedInput
+        value={validityDays}
+        onChangeText={setValidityDays}
+        placeholder="7"
+        keyboardType="numeric"
+      />
+
+      {/* Internal Notes */}
+      <Text style={{ ...typography.body, color: colors.textSecondary, marginBottom: spacing.xs, marginTop: spacing.md }}>
+        Internal Notes (Not visible to client)
+      </Text>
+      <ThemedInput
+        value={internalNotes}
+        onChangeText={setInternalNotes}
+        placeholder="Private notes about this quote..."
+        multiline
+        numberOfLines={2}
+        style={{ minHeight: 60, textAlignVertical: 'top', backgroundColor: colors.surfaceMuted }}
+      />
+
+      {/* Attachments */}
+      <Text style={{ ...typography.body, color: colors.textSecondary, marginBottom: spacing.xs, marginTop: spacing.md }}>
+        Attachments (PDF)
+      </Text>
+      {attachments.map((attachment) => (
+        <View
+          key={attachment.uri}
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            padding: spacing.sm,
+            backgroundColor: colors.surfaceMuted,
+            borderRadius: radii.md,
+            marginBottom: spacing.xs,
+            borderWidth: 1,
+            borderColor: cardBorder,
+          }}
+        >
+          <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
+            <MaterialIcons name="picture-as-pdf" size={20} color={attachment.uploading ? colors.textMuted : '#DC2626'} />
+            <Text
+              style={{
+                ...typography.body,
+                color: attachment.uploading ? colors.textMuted : colors.textPrimary,
+                marginLeft: spacing.sm,
+                flex: 1,
+              }}
+              numberOfLines={1}
+            >
+              {attachment.name}
+              {attachment.uploading ? ' (uploading...)' : ''}
+            </Text>
+          </View>
+          {!attachment.uploading && (
+            <TouchableOpacity onPress={() => removeAttachment(attachment.uri)} style={{ padding: spacing.xs }}>
+              <MaterialIcons name="close" size={18} color={colors.textMuted} />
+            </TouchableOpacity>
+          )}
+        </View>
+      ))}
+      <TouchableOpacity
+        onPress={pickAttachment}
+        disabled={uploadingAttachment}
+        style={{
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: spacing.sm,
+          borderWidth: 1,
+          borderColor: cardBorder,
+          borderRadius: radii.md,
+          borderStyle: 'dashed',
+          marginTop: spacing.xs,
+          opacity: uploadingAttachment ? 0.6 : 1,
+        }}
+      >
+        <MaterialIcons name="add" size={18} color={colors.primary} />
+        <Text style={{ ...typography.body, color: colors.primary, marginLeft: spacing.xs }}>
+          {uploadingAttachment ? 'Uploading PDF...' : 'Add PDF Attachment'}
+        </Text>
+      </TouchableOpacity>
+    </View>
+  );
+
+  const renderRevisionHistory = () =>
+    existingRevisions.length > 0 ? (
+      <TouchableOpacity
+        onPress={() => navigation.navigate('VendorQuoteHistory', { quoteRequestId })}
+        style={{
+          flexDirection: 'row',
+          alignItems: 'center',
+          padding: spacing.md,
+          backgroundColor: '#F0F9FF',
+          borderRadius: radii.md,
+          borderWidth: 1,
+          borderColor: '#BAE6FD',
+        }}
+      >
+        <MaterialIcons name="history" size={20} color="#0369A1" />
+        <Text style={{ ...typography.body, color: '#0369A1', marginLeft: spacing.sm, flex: 1 }}>
+          View Quote History ({existingRevisions.length} revision{existingRevisions.length !== 1 ? 's' : ''})
+        </Text>
+        <MaterialIcons name="chevron-right" size={20} color="#0369A1" />
+      </TouchableOpacity>
+    ) : null;
+
+  const renderActions = () => (
+    <View style={{ gap: spacing.md, marginTop: spacing.xl }}>
+      <PrimaryButton
+        title={saving ? 'Sending...' : 'Send Quote to Client'}
+        onPress={sendQuote}
+        disabled={saving}
+      />
+      <OutlineButton
+        title={saving ? 'Saving...' : 'Save as Draft'}
+        onPress={saveDraft}
+        style={{ marginTop: spacing.md }}
+      />
+    </View>
+  );
+
   return (
-    <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-      <ScrollView style={{ flex: 1, backgroundColor: colors.background }} contentContainerStyle={{ paddingBottom: 120 }}>
-        {/* Header */}
-        <View style={{ paddingHorizontal: spacing.lg, paddingTop: spacing.sm, paddingBottom: spacing.md }}>
-          <TouchableOpacity onPress={() => navigation.goBack()} style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.sm }}>
-            <MaterialIcons name="arrow-back" size={20} color={colors.textPrimary} />
-            <Text style={{ ...typography.body, color: colors.textPrimary, marginLeft: spacing.sm }}>Back</Text>
-          </TouchableOpacity>
-
-          <Text style={{ ...typography.displayMedium, color: colors.textPrimary, marginBottom: spacing.xs }}>
-            Create Quote
-          </Text>
-          <Text style={{ ...typography.body, color: colors.textMuted }}>
-            For: {clientName || quoteRequest?.name || 'Client'}
-          </Text>
-        </View>
-
-        {/* Client Info Card */}
-        <View style={{ paddingHorizontal: spacing.lg, marginBottom: spacing.lg }}>
-          <View
-            style={{
-              backgroundColor: colors.surface,
-              borderRadius: radii.lg,
-              padding: spacing.lg,
-              borderWidth: 1,
-              borderColor: colors.borderSubtle,
-            }}
-          >
-            <Text style={{ ...typography.titleMedium, color: colors.textPrimary, marginBottom: spacing.sm }}>
-              Request Details
-            </Text>
-            {eventDetails || quoteRequest?.details ? (
-              <Text style={{ ...typography.body, color: colors.textSecondary, marginBottom: spacing.sm }}>
-                {eventDetails || quoteRequest?.details}
-              </Text>
-            ) : null}
-            {quoteRequest?.event_type ? (
-              <Text style={{ ...typography.caption, color: colors.textMuted }}>Event Type: {quoteRequest.event_type}</Text>
-            ) : null}
-            {quoteRequest?.event_date ? (
-              <Text style={{ ...typography.caption, color: colors.textMuted }}>
-                Event Date: {new Date(quoteRequest.event_date).toLocaleDateString('en-ZA', { day: 'numeric', month: 'long', year: 'numeric' })}
-              </Text>
-            ) : null}
-            {quoteRequest?.end_date ? (
-              <Text style={{ ...typography.caption, color: colors.textMuted }}>
-                End Date: {new Date(quoteRequest.end_date).toLocaleDateString('en-ZA', { day: 'numeric', month: 'long', year: 'numeric' })}
-              </Text>
-            ) : null}
-            {quoteRequest?.contact_phone ? (
-              <Text style={{ ...typography.caption, color: colors.textMuted }}>
-                Contact: {quoteRequest.contact_phone}
-              </Text>
-            ) : null}
-            {quoteRequest?.budget ? (
-              <Text style={{ ...typography.caption, color: colors.textMuted }}>Client Budget: {quoteRequest.budget}</Text>
-            ) : null}
-            {quoteRequest?.amended_message ? (
-              <View style={{ marginTop: spacing.sm, padding: spacing.sm, backgroundColor: '#FEF3C7', borderRadius: radii.md, borderLeftWidth: 3, borderLeftColor: '#D97706' }}>
-                <Text style={{ ...typography.captionSemiBold, color: '#92400E' }}>Amendment Request</Text>
-                <Text style={{ ...typography.caption, color: '#92400E', marginTop: 2 }}>{quoteRequest.amended_message}</Text>
+    <KeyboardAvoidingView style={{ flex: 1, backgroundColor: isDesktop ? colors.surfaceBg : colors.background }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      <ScrollView style={{ flex: 1 }} contentContainerStyle={isDesktop ? { ...desktopContainerStyle, paddingBottom: 120 } as any : { paddingBottom: 120 }}>
+        {isDesktop ? (
+          <>
+            {renderHeader(true)}
+            <View style={{ flexDirection: 'row', gap: spacing.gutter } as any}>
+              <View style={{ flex: 2 } as any}>
+                {renderQuoteForm()}
+                {renderActions()}
               </View>
-            ) : null}
-            {quoteRequest?.response_message ? (
-              <View style={{ marginTop: spacing.sm, padding: spacing.sm, backgroundColor: '#F0F9FF', borderRadius: radii.md, borderLeftWidth: 3, borderLeftColor: colors.primary }}>
-                <Text style={{ ...typography.captionSemiBold, color: colors.primary }}>Client Feedback</Text>
-                <Text style={{ ...typography.caption, color: colors.primary, marginTop: 2 }}>{quoteRequest.response_message}</Text>
+              <View style={{ flex: 1, gap: spacing.md } as any}>
+                {renderRequestDetails()}
+                {renderRevisionHistory()}
               </View>
-            ) : null}
-          </View>
-        </View>
+            </View>
+          </>
+        ) : (
+          <>
+            {/* Header */}
+            <View style={{ paddingHorizontal: spacing.lg, paddingTop: spacing.sm, paddingBottom: spacing.md }}>
+              <TouchableOpacity onPress={() => navigation.goBack()} style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.sm }}>
+                <MaterialIcons name="arrow-back" size={20} color={colors.textPrimary} />
+                <Text style={{ ...typography.body, color: colors.textPrimary, marginLeft: spacing.sm }}>Back</Text>
+              </TouchableOpacity>
 
-        {/* Quote Form */}
-        <View style={{ paddingHorizontal: spacing.lg }}>
-          <View
-            style={{
-              backgroundColor: colors.surface,
-              borderRadius: radii.lg,
-              padding: spacing.lg,
-              borderWidth: 1,
-              borderColor: colors.borderSubtle,
-            }}
-          >
-            <Text style={{ ...typography.titleMedium, color: colors.textPrimary, marginBottom: spacing.md }}>
-              Quote Details
-            </Text>
+              {renderHeader(false)}
+            </View>
 
-            {/* Amount */}
-            <Text style={{ ...typography.body, color: colors.textSecondary, marginBottom: spacing.xs }}>Quote Amount (R)</Text>
-            <ThemedInput
-              value={amount}
-              onChangeText={setAmount}
-              placeholder="e.g. 5000"
-              keyboardType="numeric"
-              autoCapitalize="none"
-            />
+            {/* Client Info Card */}
+            <View style={{ paddingHorizontal: spacing.lg, marginBottom: spacing.lg }}>
+              {renderRequestDetails()}
+            </View>
 
-            {/* Description */}
-            <Text style={{ ...typography.body, color: colors.textSecondary, marginBottom: spacing.xs, marginTop: spacing.md }}>
-              Description of Services
-            </Text>
-            <ThemedInput
-              value={description}
-              onChangeText={setDescription}
-              placeholder="Describe what this quote includes..."
-              multiline
-              numberOfLines={4}
-              style={{ minHeight: 100, textAlignVertical: 'top' }}
-            />
+            {/* Quote Form */}
+            <View style={{ paddingHorizontal: spacing.lg }}>
+              {renderQuoteForm()}
+            </View>
 
-            {/* Terms */}
-            <Text style={{ ...typography.body, color: colors.textSecondary, marginBottom: spacing.xs, marginTop: spacing.md }}>
-              Terms & Conditions
-            </Text>
-            <ThemedInput
-              value={terms}
-              onChangeText={setTerms}
-              placeholder="Payment terms, delivery details, cancellation policy..."
-              multiline
-              numberOfLines={3}
-              style={{ minHeight: 80, textAlignVertical: 'top' }}
-            />
+            {/* Revision History Link */}
+            <View style={{ paddingHorizontal: spacing.lg, marginTop: spacing.lg }}>
+              {renderRevisionHistory()}
+            </View>
 
-            {/* Validity */}
-            <Text style={{ ...typography.body, color: colors.textSecondary, marginBottom: spacing.xs, marginTop: spacing.md }}>
-              Quote Valid (Days)
-            </Text>
-            <ThemedInput
-              value={validityDays}
-              onChangeText={setValidityDays}
-              placeholder="7"
-              keyboardType="numeric"
-            />
-
-            {/* Internal Notes */}
-            <Text style={{ ...typography.body, color: colors.textSecondary, marginBottom: spacing.xs, marginTop: spacing.md }}>
-              Internal Notes (Not visible to client)
-            </Text>
-            <ThemedInput
-              value={internalNotes}
-              onChangeText={setInternalNotes}
-              placeholder="Private notes about this quote..."
-              multiline
-              numberOfLines={2}
-              style={{ minHeight: 60, textAlignVertical: 'top', backgroundColor: colors.surfaceMuted }}
-            />
-
-            {/* Attachments */}
-            <Text style={{ ...typography.body, color: colors.textSecondary, marginBottom: spacing.xs, marginTop: spacing.md }}>
-              Attachments (PDF)
-            </Text>
-            {attachments.map((attachment) => (
-              <View
-                key={attachment.uri}
-                style={{
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  padding: spacing.sm,
-                  backgroundColor: colors.surfaceMuted,
-                  borderRadius: radii.md,
-                  marginBottom: spacing.xs,
-                  borderWidth: 1,
-                  borderColor: colors.borderSubtle,
-                }}
-              >
-                <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
-                  <MaterialIcons name="picture-as-pdf" size={20} color={attachment.uploading ? colors.textMuted : '#DC2626'} />
-                  <Text
-                    style={{
-                      ...typography.body,
-                      color: attachment.uploading ? colors.textMuted : colors.textPrimary,
-                      marginLeft: spacing.sm,
-                      flex: 1,
-                    }}
-                    numberOfLines={1}
-                  >
-                    {attachment.name}
-                    {attachment.uploading ? ' (uploading...)' : ''}
-                  </Text>
-                </View>
-                {!attachment.uploading && (
-                  <TouchableOpacity onPress={() => removeAttachment(attachment.uri)} style={{ padding: spacing.xs }}>
-                    <MaterialIcons name="close" size={18} color={colors.textMuted} />
-                  </TouchableOpacity>
-                )}
-              </View>
-            ))}
-            <TouchableOpacity
-              onPress={pickAttachment}
-              disabled={uploadingAttachment}
-              style={{
-                flexDirection: 'row',
-                alignItems: 'center',
-                justifyContent: 'center',
-                padding: spacing.sm,
-                borderWidth: 1,
-                borderColor: colors.borderSubtle,
-                borderRadius: radii.md,
-                borderStyle: 'dashed',
-                marginTop: spacing.xs,
-                opacity: uploadingAttachment ? 0.6 : 1,
-              }}
-            >
-              <MaterialIcons name="add" size={18} color={colors.primary} />
-              <Text style={{ ...typography.body, color: colors.primary, marginLeft: spacing.xs }}>
-                {uploadingAttachment ? 'Uploading PDF...' : 'Add PDF Attachment'}
-              </Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-
-        {/* Revision History Link */}
-        {existingRevisions.length > 0 && (
-          <View style={{ paddingHorizontal: spacing.lg, marginTop: spacing.lg }}>
-            <TouchableOpacity
-              onPress={() => navigation.navigate('VendorQuoteHistory', { quoteRequestId })}
-              style={{
-                flexDirection: 'row',
-                alignItems: 'center',
-                padding: spacing.md,
-                backgroundColor: '#F0F9FF',
-                borderRadius: radii.md,
-                borderWidth: 1,
-                borderColor: '#BAE6FD',
-              }}
-            >
-              <MaterialIcons name="history" size={20} color="#0369A1" />
-              <Text style={{ ...typography.body, color: '#0369A1', marginLeft: spacing.sm, flex: 1 }}>
-                View Quote History ({existingRevisions.length} revision{existingRevisions.length !== 1 ? 's' : ''})
-              </Text>
-              <MaterialIcons name="chevron-right" size={20} color="#0369A1" />
-            </TouchableOpacity>
-          </View>
+            {/* Action Buttons */}
+            <View style={{ paddingHorizontal: spacing.lg, marginTop: spacing.xl, gap: spacing.md }}>
+              {renderActions()}
+            </View>
+          </>
         )}
-
-        {/* Action Buttons */}
-        <View style={{ paddingHorizontal: spacing.lg, marginTop: spacing.xl, gap: spacing.md }}>
-          <PrimaryButton
-            title={saving ? 'Sending...' : 'Send Quote to Client'}
-            onPress={sendQuote}
-            disabled={saving}
-          />
-          <OutlineButton
-            title={saving ? 'Saving...' : 'Save as Draft'}
-            onPress={saveDraft}
-            style={{ marginTop: spacing.md }}
-          />
-        </View>
       </ScrollView>
 
       {alertState && (

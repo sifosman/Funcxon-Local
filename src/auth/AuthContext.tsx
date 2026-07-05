@@ -8,6 +8,7 @@ import * as Linking from 'expo-linking';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { GoogleSignin } from '@react-native-google-signin/google-signin';
 import { supabase, SUPABASE_URL } from '../lib/supabaseClient';
+import { ensureWelcomeNotification } from '../lib/notifications';
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -39,6 +40,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
   const [alertState, setAlertState] = useState<{visible: boolean; title: string; message: string} | null>(null);
   const welcomeEmailSentFor = useRef<Set<string>>(new Set());
+  const welcomeNotifSentFor = useRef<Set<string>>(new Set());
 
   // Fetch user role from database
   const fetchUserRole = async (userId: string) => {
@@ -359,6 +361,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setSession(data.session ?? null);
         if (data.session?.user) {
           await fetchUserRoleWithTimeout(data.session.user.id);
+          if (!welcomeNotifSentFor.current.has(data.session.user.id)) {
+            welcomeNotifSentFor.current.add(data.session.user.id);
+            ensureWelcomeNotification(data.session.user.id).catch(() => {});
+          }
         } else {
           setUserRole(null);
         }
@@ -381,6 +387,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           await fetchUserRoleWithTimeout(newSession.user.id);
           // Send welcome email for new OAuth sign-ups (Google/Facebook/Apple)
           maybeSendOAuthWelcomeEmail(newSession.user);
+          if (!welcomeNotifSentFor.current.has(newSession.user.id)) {
+            welcomeNotifSentFor.current.add(newSession.user.id);
+            ensureWelcomeNotification(newSession.user.id).catch(() => {});
+          }
         } catch (e) {
           console.error('[AuthContext] onAuthStateChange fetchUserRole error:', e);
         }

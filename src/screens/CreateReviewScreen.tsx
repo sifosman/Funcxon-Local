@@ -9,6 +9,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../lib/supabaseClient';
 import { useAuth } from '../auth/AuthContext';
 import { colors, radii, spacing, typography } from '../theme';
+import { useIsDesktop } from '../hooks/useIsDesktop';
 import { PrimaryButton, ThemedInput } from '../components/ui';
 
 type Props = NativeStackScreenProps<AttendeeStackParamList, 'CreateReview'>;
@@ -18,6 +19,7 @@ export default function CreateReviewScreen({ route, navigation }: Props) {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const isAppReview = type === 'app';
+  const isDesktop = useIsDesktop();
 
   const [rating, setRating] = useState<number>(0);
   const [title, setTitle] = useState('');
@@ -107,32 +109,35 @@ export default function CreateReviewScreen({ route, navigation }: Props) {
   return (
     <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <ScrollView
-        style={{ flex: 1, backgroundColor: colors.background }}
-        contentContainerStyle={{ paddingHorizontal: spacing.lg, paddingTop: spacing.sm, paddingBottom: 120 }}
+        style={{ flex: 1, backgroundColor: isDesktop ? colors.surfaceBg : colors.background }}
+        contentContainerStyle={isDesktop ? { paddingHorizontal: 48, paddingTop: spacing.sm, paddingBottom: 120, maxWidth: 1200, width: '100%', alignSelf: 'center' } : { paddingHorizontal: spacing.lg, paddingTop: spacing.sm, paddingBottom: 120 }}
         keyboardShouldPersistTaps="handled"
       >
-        <TouchableOpacity
-          onPress={() => navigation.goBack()}
-          style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.sm }}
-        >
-          <MaterialIcons name="arrow-back" size={20} color={colors.textPrimary} />
-          <Text style={{ ...typography.body, color: colors.textPrimary, marginLeft: spacing.xs }}>Back</Text>
-        </TouchableOpacity>
+        {isDesktop ? null : (
+          <TouchableOpacity
+            onPress={() => navigation.goBack()}
+            style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.sm }}
+          >
+            <MaterialIcons name="arrow-back" size={20} color={colors.textPrimary} />
+            <Text style={{ ...typography.body, color: colors.textPrimary, marginLeft: spacing.xs }}>Back</Text>
+          </TouchableOpacity>
+        )}
         <View
           style={{
             marginBottom: spacing.lg,
-            padding: spacing.lg,
+            padding: isDesktop ? spacing.xl : spacing.lg,
             borderRadius: radii.xl,
-            backgroundColor: colors.surface,
+            backgroundColor: isDesktop ? colors.surfaceContainerLowest : colors.surface,
             borderWidth: 1,
-            borderColor: colors.borderSubtle,
+            borderColor: isDesktop ? colors.outlineVariant : colors.borderSubtle,
+            ...(isDesktop ? { maxWidth: 800, width: '100%', alignSelf: 'center' } : {}),
           }}
         >
-          <Text style={{ ...typography.titleMedium, color: colors.textPrimary }}>
+          <Text style={{ ...(isDesktop ? typography.headlineSm : typography.titleMedium), color: colors.textPrimary }}>
             {isAppReview ? 'Review the Funxon App' : 'Leave a review for'}
           </Text>
           {!isAppReview && (
-            <Text style={{ ...typography.bodySemiBold, color: colors.textSecondary, marginTop: spacing.xs }}>
+            <Text style={{ ...(isDesktop ? typography.bodyMd : typography.bodySemiBold), color: colors.textSecondary, marginTop: spacing.xs }}>
               {targetName}
             </Text>
           )}
@@ -140,14 +145,15 @@ export default function CreateReviewScreen({ route, navigation }: Props) {
 
         <View
           style={{
-            padding: spacing.lg,
+            padding: isDesktop ? spacing.xl : spacing.lg,
             borderRadius: radii.xl,
-            backgroundColor: colors.surface,
+            backgroundColor: isDesktop ? colors.surfaceContainerLowest : colors.surface,
             borderWidth: 1,
-            borderColor: colors.borderSubtle,
+            borderColor: isDesktop ? colors.outlineVariant : colors.borderSubtle,
+            ...(isDesktop ? { maxWidth: 800, width: '100%', alignSelf: 'center' } : {}),
           }}
         >
-          <Text style={{ ...typography.titleMedium, color: colors.textPrimary, marginBottom: spacing.md }}>Your rating</Text>
+          <Text style={{ ...(isDesktop ? typography.headlineSm : typography.titleMedium), color: colors.textPrimary, marginBottom: spacing.md }}>Your rating</Text>
           <View style={{ flexDirection: 'row', marginBottom: spacing.md }}>
             {Array.from({ length: 5 }).map((_, idx) => {
               const value = idx + 1;
@@ -159,23 +165,23 @@ export default function CreateReviewScreen({ route, navigation }: Props) {
                   style={{ padding: 6 }}
                   accessibilityRole="button"
                 >
-                  <MaterialIcons name={filled ? 'star' : 'star-border'} size={28} color="#F59E0B" />
+                  <MaterialIcons name={filled ? 'star' : 'star-border'} size={isDesktop ? 36 : 28} color="#F59E0B" />
                 </TouchableOpacity>
               );
             })}
           </View>
 
-          <Text style={typography.label}>Title (optional)</Text>
+          <Text style={{ ...typography.labelMd, color: colors.textPrimary, marginBottom: spacing.xs }}>Title (optional)</Text>
           <ThemedInput value={title} onChangeText={setTitle} placeholder="e.g. Great experience" />
 
-          <Text style={typography.label}>Review (optional)</Text>
+          <Text style={{ ...typography.labelMd, color: colors.textPrimary, marginTop: spacing.md, marginBottom: spacing.xs }}>Review (optional)</Text>
           <ThemedInput
             value={reviewText}
             onChangeText={setReviewText}
             placeholder="Share details about your experience..."
             multiline
-            numberOfLines={5}
-            style={{ minHeight: 110, textAlignVertical: 'top' }}
+            numberOfLines={isDesktop ? 6 : 5}
+            style={{ minHeight: isDesktop ? 140 : 110, textAlignVertical: 'top' }}
           />
 
           <PrimaryButton

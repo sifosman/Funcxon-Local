@@ -8,6 +8,7 @@ import { colors, spacing, radii, typography } from '../../theme';
 import { supabase } from '../../lib/supabaseClient';
 import { useAuth } from '../../auth/AuthContext';
 import ThemedAlert from '../../components/ThemedAlert';
+import { useIsDesktop } from '../../hooks/useIsDesktop';
 
 type ProfileStackParamList = {
     SubscriberProfile: undefined;
@@ -138,108 +139,156 @@ export default function CalendarUpdatesScreen() {
         );
     }
 
+    const isDesktop = useIsDesktop();
+    const desktopContainerStyle = {
+        maxWidth: 1200,
+        width: '100%',
+        alignSelf: 'center' as const,
+        paddingHorizontal: 48,
+    };
+    const cardSurface = isDesktop ? colors.surfaceContainerLowest : colors.surface;
+    const cardBorder = isDesktop ? colors.outlineVariant : colors.borderSubtle;
+
+    const renderHeader = (isDesktopHeader: boolean) => (
+        <View style={{ marginBottom: spacing.md, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+            <View>
+                <Text style={isDesktopHeader ? { ...typography.labelMd, color: colors.dustyRose, textTransform: 'uppercase', marginBottom: spacing.sm } as any : { display: 'none' } as any}>
+                    Calendar
+                </Text>
+                <Text style={isDesktopHeader ? { ...typography.headlineMd, color: colors.primary, marginBottom: spacing.xs } as any : { ...typography.displayMedium, color: colors.textPrimary, marginBottom: spacing.xs }}>
+                    Calendar Updates
+                </Text>
+                <Text style={{ ...typography.bodyMd, color: isDesktopHeader ? colors.onSurfaceVariant : colors.textMuted }}>
+                    Your upcoming events and schedule
+                </Text>
+            </View>
+            <TouchableOpacity
+                onPress={() => setShowAddModal(true)}
+                style={{
+                    width: 44, height: 44, borderRadius: 22,
+                    backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center',
+                }}
+            >
+                <MaterialIcons name="add" size={24} color="#FFFFFF" />
+            </TouchableOpacity>
+        </View>
+    );
+
+    const renderEvents = () => (
+        <View>
+            {events.length === 0 && (
+                <View style={{ alignItems: 'center', paddingVertical: spacing.xl }}>
+                    <MaterialIcons name="event-busy" size={48} color={colors.textMuted} />
+                    <Text style={isDesktop ? { ...typography.bodyMd, color: colors.textMuted, marginTop: spacing.md } as any : { ...typography.body, color: colors.textMuted, marginTop: spacing.md }}>
+                        No upcoming events
+                    </Text>
+                    <Text style={isDesktop ? { ...typography.bodyMd, color: colors.onSurfaceVariant, marginTop: spacing.xs } as any : { ...typography.caption, color: colors.textMuted, marginTop: spacing.xs }}>
+                        Tap + to add your first event
+                    </Text>
+                </View>
+            )}
+
+            {Object.entries(groupedEvents).map(([month, monthEvents]) => (
+                <View key={month} style={{ marginBottom: spacing.lg }}>
+                    <Text style={isDesktop ? { ...typography.headlineSm, color: colors.textPrimary, marginBottom: spacing.sm } as any : { ...typography.titleMedium, color: colors.textPrimary, marginBottom: spacing.sm }}>
+                        {month}
+                    </Text>
+                    {monthEvents.map((event) => {
+                        const dateObj = new Date(event.event_date);
+                        const dayNum = dateObj.getDate();
+                        const dayName = dateObj.toLocaleDateString('en-ZA', { weekday: 'short' });
+                        return (
+                            <View
+                                key={event.id}
+                                style={{
+                                    flexDirection: 'row', alignItems: 'center',
+                                    backgroundColor: cardSurface, borderRadius: radii.md,
+                                    padding: spacing.md, marginBottom: spacing.sm,
+                                    borderWidth: 1, borderColor: cardBorder,
+                                }}
+                            >
+                                <View style={{
+                                    width: 48, height: 48, borderRadius: radii.md,
+                                    backgroundColor: '#f2f7ff', alignItems: 'center', justifyContent: 'center',
+                                    marginRight: spacing.md,
+                                }}>
+                                    <Text style={{ ...typography.titleLarge, color: colors.textPrimary }}>
+                                        {dayNum}
+                                    </Text>
+                                    <Text style={{ ...typography.caption, color: colors.textPrimary, fontSize: 10 }}>
+                                        {dayName}
+                                    </Text>
+                                </View>
+                                <View style={{ flex: 1 }}>
+                                    <Text style={isDesktop ? { ...typography.bodyMd, color: colors.textPrimary, fontWeight: '600' } as any : { ...typography.bodyMedium, color: colors.textPrimary }}>
+                                        {event.title}
+                                    </Text>
+                                    <Text style={isDesktop ? { ...typography.bodyMd, color: colors.onSurfaceVariant, marginTop: 2 } as any : { ...typography.caption, color: colors.textMuted, marginTop: 2 }}>
+                                        {dateObj.toLocaleDateString('en-ZA', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
+                                    </Text>
+                                </View>
+                                <TouchableOpacity onPress={() => handleDelete(event.id)}>
+                                    <MaterialIcons name="delete-outline" size={20} color={colors.textMuted} />
+                                </TouchableOpacity>
+                            </View>
+                        );
+                    })}
+                </View>
+            ))}
+        </View>
+    );
+
     return (
-        <View style={{ flex: 1, backgroundColor: colors.background }}>
-            <ScrollView contentContainerStyle={{ paddingBottom: spacing.xl }}>
-                {/* Header */}
-                <View style={{ paddingHorizontal: spacing.lg, paddingTop: spacing.sm, paddingBottom: spacing.md }}>
-                    <TouchableOpacity
-                        onPress={() => navigation.goBack()}
-                        style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.sm }}
-                    >
-                        <MaterialIcons name="arrow-back" size={20} color={colors.textPrimary} />
-                        <Text style={{ ...typography.body, color: colors.textPrimary, marginLeft: spacing.sm }}>Back</Text>
-                    </TouchableOpacity>
-
-                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <View>
-                            <Text style={{ ...typography.displayMedium, color: colors.textPrimary, marginBottom: spacing.xs }}>
-                                Calendar Updates
-                            </Text>
-                            <Text style={{ ...typography.body, color: colors.textMuted }}>
-                                Your upcoming events and schedule
-                            </Text>
+        <View style={{ flex: 1, backgroundColor: isDesktop ? colors.surfaceBg : colors.background }}>
+            <ScrollView contentContainerStyle={isDesktop ? { ...desktopContainerStyle, paddingBottom: spacing.xxl } as any : { paddingBottom: spacing.xl }}>
+                {isDesktop ? (
+                    <>
+                        {renderHeader(true)}
+                        <View style={{ flexDirection: 'row', gap: spacing.gutter } as any}>
+                            <View style={{ flex: 2 } as any}>
+                                <View style={{ backgroundColor: cardSurface, borderRadius: radii.lg, padding: spacing.lg, borderWidth: 1, borderColor: cardBorder }}>
+                                    {renderEvents()}
+                                </View>
+                            </View>
+                            <View style={{ flex: 1 } as any}>
+                                <View style={{ backgroundColor: cardSurface, borderRadius: radii.lg, padding: spacing.lg, borderWidth: 1, borderColor: cardBorder }}>
+                                    <Text style={{ ...typography.headlineSm, color: colors.textPrimary, marginBottom: spacing.sm }}>
+                                        Upcoming
+                                    </Text>
+                                    <Text style={{ ...typography.bodyMd, color: colors.onSurfaceVariant } as any}>
+                                        {events.length} event{events.length === 1 ? '' : 's'} scheduled
+                                    </Text>
+                                </View>
+                            </View>
                         </View>
-                        <TouchableOpacity
-                            onPress={() => setShowAddModal(true)}
-                            style={{
-                                width: 44, height: 44, borderRadius: 22,
-                                backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center',
-                            }}
-                        >
-                            <MaterialIcons name="add" size={24} color="#FFFFFF" />
-                        </TouchableOpacity>
-                    </View>
-                </View>
+                    </>
+                ) : (
+                    <>
+                        {/* Header */}
+                        <View style={{ paddingHorizontal: spacing.lg, paddingTop: spacing.sm, paddingBottom: spacing.md }}>
+                            <TouchableOpacity
+                                onPress={() => navigation.goBack()}
+                                style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.sm }}
+                            >
+                                <MaterialIcons name="arrow-back" size={20} color={colors.textPrimary} />
+                                <Text style={{ ...typography.body, color: colors.textPrimary, marginLeft: spacing.sm }}>Back</Text>
+                            </TouchableOpacity>
 
-                {/* Events */}
-                <View style={{ paddingHorizontal: spacing.lg }}>
-                    {events.length === 0 && (
-                        <View style={{ alignItems: 'center', paddingVertical: spacing.xl }}>
-                            <MaterialIcons name="event-busy" size={48} color={colors.textMuted} />
-                            <Text style={{ ...typography.body, color: colors.textMuted, marginTop: spacing.md }}>
-                                No upcoming events
-                            </Text>
-                            <Text style={{ ...typography.caption, color: colors.textMuted, marginTop: spacing.xs }}>
-                                Tap + to add your first event
-                            </Text>
+                            {renderHeader(false)}
                         </View>
-                    )}
 
-                    {Object.entries(groupedEvents).map(([month, monthEvents]) => (
-                        <View key={month} style={{ marginBottom: spacing.lg }}>
-                            <Text style={{ ...typography.titleMedium, color: colors.textPrimary, marginBottom: spacing.sm }}>
-                                {month}
-                            </Text>
-                            {monthEvents.map((event) => {
-                                const dateObj = new Date(event.event_date);
-                                const dayNum = dateObj.getDate();
-                                const dayName = dateObj.toLocaleDateString('en-ZA', { weekday: 'short' });
-                                return (
-                                    <View
-                                        key={event.id}
-                                        style={{
-                                            flexDirection: 'row', alignItems: 'center',
-                                            backgroundColor: colors.surface, borderRadius: radii.md,
-                                            padding: spacing.md, marginBottom: spacing.sm,
-                                            borderWidth: 1, borderColor: colors.borderSubtle,
-                                        }}
-                                    >
-                                        <View style={{
-                                            width: 48, height: 48, borderRadius: radii.md,
-                                            backgroundColor: '#f2f7ff', alignItems: 'center', justifyContent: 'center',
-                                            marginRight: spacing.md,
-                                        }}>
-                                            <Text style={{ ...typography.titleLarge, color: colors.textPrimary }}>
-                                                {dayNum}
-                                            </Text>
-                                            <Text style={{ ...typography.caption, color: colors.textPrimary, fontSize: 10 }}>
-                                                {dayName}
-                                            </Text>
-                                        </View>
-                                        <View style={{ flex: 1 }}>
-                                            <Text style={{ ...typography.bodyMedium, color: colors.textPrimary }}>
-                                                {event.title}
-                                            </Text>
-                                            <Text style={{ ...typography.caption, color: colors.textMuted, marginTop: 2 }}>
-                                                {dateObj.toLocaleDateString('en-ZA', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
-                                            </Text>
-                                        </View>
-                                        <TouchableOpacity onPress={() => handleDelete(event.id)}>
-                                            <MaterialIcons name="delete-outline" size={20} color={colors.textMuted} />
-                                        </TouchableOpacity>
-                                    </View>
-                                );
-                            })}
+                        {/* Events */}
+                        <View style={{ paddingHorizontal: spacing.lg }}>
+                            {renderEvents()}
                         </View>
-                    ))}
-                </View>
+                    </>
+                )}
             </ScrollView>
 
             {/* Add Event Modal */}
             <Modal visible={showAddModal} transparent animationType="fade" onRequestClose={() => setShowAddModal(false)}>
                 <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center', padding: spacing.lg }}>
-                    <View style={{ backgroundColor: colors.surface, borderRadius: radii.lg, padding: spacing.lg, width: '100%', maxWidth: 400 }}>
+                    <View style={{ backgroundColor: cardSurface, borderRadius: radii.lg, padding: spacing.lg, width: '100%', maxWidth: 400, borderWidth: isDesktop ? 1 : 0, borderColor: cardBorder }}>
                         <Text style={{ ...typography.titleMedium, color: colors.textPrimary, marginBottom: spacing.md }}>
                             Add Calendar Event
                         </Text>
@@ -251,7 +300,7 @@ export default function CalendarUpdatesScreen() {
                             placeholder="e.g. Client meeting"
                             placeholderTextColor={colors.textMuted}
                             style={{
-                                borderWidth: 1, borderColor: colors.borderSubtle, borderRadius: radii.md,
+                                borderWidth: 1, borderColor: cardBorder, borderRadius: radii.md,
                                 paddingHorizontal: spacing.md, paddingVertical: spacing.sm,
                                 backgroundColor: colors.surfaceMuted, color: colors.textPrimary, marginBottom: spacing.md,
                             }}
@@ -261,7 +310,7 @@ export default function CalendarUpdatesScreen() {
                         <TouchableOpacity
                             onPress={() => setShowDatePicker(true)}
                             style={{
-                                borderWidth: 1, borderColor: colors.borderSubtle, borderRadius: radii.md,
+                                borderWidth: 1, borderColor: cardBorder, borderRadius: radii.md,
                                 paddingHorizontal: spacing.md, paddingVertical: spacing.sm,
                                 backgroundColor: colors.surfaceMuted, marginBottom: spacing.md,
                                 flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
@@ -287,7 +336,7 @@ export default function CalendarUpdatesScreen() {
                         <View style={{ flexDirection: 'row', gap: spacing.sm, marginTop: spacing.sm }}>
                             <TouchableOpacity
                                 onPress={() => setShowAddModal(false)}
-                                style={{ flex: 1, paddingVertical: spacing.sm, borderRadius: radii.md, borderWidth: 1, borderColor: colors.borderSubtle, alignItems: 'center' }}
+                                style={{ flex: 1, paddingVertical: spacing.sm, borderRadius: radii.md, borderWidth: 1, borderColor: cardBorder, alignItems: 'center' }}
                             >
                                 <Text style={{ ...typography.body, color: colors.textPrimary }}>Cancel</Text>
                             </TouchableOpacity>

@@ -10,6 +10,7 @@ import { useAuth } from '../auth/AuthContext';
 import { buildPayFastPaymentData, getPayFastCheckoutUrl } from '../config/payfast';
 import type { ProfileStackParamList } from '../navigation/ProfileNavigator';
 import ThemedAlert from '../components/ThemedAlert';
+import { useIsDesktop } from '../hooks/useIsDesktop';
 
 type BillingInfo = {
     vendor_id: number;
@@ -58,6 +59,7 @@ type VenueBillingInfo = {
 export default function BillingScreen() {
     const navigation = useNavigation<NativeStackNavigationProp<ProfileStackParamList>>();
     const { user } = useAuth();
+    const isDesktop = useIsDesktop();
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
     const [billing, setBilling] = useState<BillingInfo | null>(null);
@@ -337,34 +339,37 @@ export default function BillingScreen() {
         : null;
 
     return (
-        <View style={{ flex: 1, backgroundColor: colors.background }}>
+        <View style={{ flex: 1, backgroundColor: isDesktop ? colors.surfaceBg : colors.background }}>
             <ScrollView
                 contentContainerStyle={{ paddingBottom: spacing.xl }}
                 refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={colors.primary} />}
             >
-                {/* Header */}
-                <View style={{ paddingHorizontal: spacing.lg, paddingTop: spacing.sm, paddingBottom: spacing.md }}>
-                    <TouchableOpacity
-                        onPress={() => navigation.goBack()}
-                        style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.sm }}
-                    >
-                        <MaterialIcons name="arrow-back" size={20} color={colors.textPrimary} />
-                        <Text style={{ ...typography.body, color: colors.textPrimary, marginLeft: spacing.sm }}>Back</Text>
-                    </TouchableOpacity>
+                <View style={isDesktop ? { maxWidth: 1200, width: '100%', alignSelf: 'center', paddingHorizontal: 48, paddingTop: spacing.sm, paddingBottom: spacing.xl } : undefined}>
+                    {/* Header */}
+                    <View style={{ paddingHorizontal: isDesktop ? 0 : spacing.lg, paddingTop: spacing.sm, paddingBottom: spacing.md }}>
+                        {isDesktop ? null : (
+                            <TouchableOpacity
+                                onPress={() => navigation.goBack()}
+                                style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.sm }}
+                            >
+                                <MaterialIcons name="arrow-back" size={20} color={colors.textPrimary} />
+                                <Text style={{ ...typography.body, color: colors.textPrimary, marginLeft: spacing.sm }}>Back</Text>
+                            </TouchableOpacity>
+                        )}
 
-                    <Text style={{ ...typography.displayMedium, color: colors.textPrimary, marginBottom: spacing.xs }}>
-                        Billing & Subscription
-                    </Text>
-                    <Text style={{ ...typography.body, color: colors.textMuted }}>
-                        Manage your subscription and view payment history
-                    </Text>
-                </View>
+                        <Text style={{ ...typography.displayMedium, color: colors.textPrimary, marginBottom: spacing.xs, fontSize: isDesktop ? 32 : undefined, fontWeight: isDesktop ? '600' : undefined }}>
+                            Billing & Subscription
+                        </Text>
+                        <Text style={{ ...typography.body, color: isDesktop ? colors.onSurfaceVariant : colors.textMuted, fontSize: isDesktop ? 16 : undefined, lineHeight: isDesktop ? 24 : undefined }}>
+                            Manage your subscription and view payment history
+                        </Text>
+                    </View>
 
                 {/* Current Plan Card */}
                 {billing && (
-                <View style={{ paddingHorizontal: spacing.lg, marginBottom: spacing.md }}>
+                <View style={{ paddingHorizontal: isDesktop ? 0 : spacing.lg, marginBottom: spacing.md }}>
                     <View style={{
-                        backgroundColor: colors.surface,
+                        backgroundColor: isDesktop ? colors.surfaceContainerLowest : colors.surface,
                         borderRadius: radii.lg,
                         padding: spacing.lg,
                         borderWidth: 2,
@@ -431,14 +436,14 @@ export default function BillingScreen() {
 
                 {/* Venue Subscription Card */}
                 {venueBilling && (
-                    <View style={{ paddingHorizontal: spacing.lg, marginBottom: spacing.md }}>
+                    <View style={{ paddingHorizontal: isDesktop ? 0 : spacing.lg, marginBottom: spacing.md }}>
                         <View
                             style={{
-                                backgroundColor: colors.surface,
+                                backgroundColor: isDesktop ? colors.surfaceContainerLowest : colors.surface,
                                 borderRadius: radii.lg,
                                 padding: spacing.lg,
                                 borderWidth: 1,
-                                borderColor: colors.borderSubtle,
+                                borderColor: isDesktop ? colors.outlineVariant : colors.borderSubtle,
                             }}
                         >
                             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
@@ -516,13 +521,13 @@ export default function BillingScreen() {
 
                 {/* Expiry & Next Payment */}
                 {billing && !isFree && (
-                    <View style={{ paddingHorizontal: spacing.lg, marginBottom: spacing.md }}>
+                    <View style={{ paddingHorizontal: isDesktop ? 0 : spacing.lg, marginBottom: spacing.md }}>
                         <View style={{
-                            backgroundColor: colors.surface,
+                            backgroundColor: isDesktop ? colors.surfaceContainerLowest : colors.surface,
                             borderRadius: radii.lg,
                             padding: spacing.lg,
                             borderWidth: 1,
-                            borderColor: colors.borderSubtle,
+                            borderColor: isDesktop ? colors.outlineVariant : colors.borderSubtle,
                         }}>
                             <Text style={{ ...typography.titleMedium, color: colors.textPrimary, marginBottom: spacing.md }}>
                                 Subscription Details
@@ -582,7 +587,7 @@ export default function BillingScreen() {
 
                 {/* Pay Now Button */}
                 {billing && !isFree && (
-                    <View style={{ paddingHorizontal: spacing.lg, marginBottom: spacing.md }}>
+                    <View style={{ paddingHorizontal: isDesktop ? 0 : spacing.lg, marginBottom: spacing.md }}>
                         <TouchableOpacity
                             onPress={handlePayNow}
                             disabled={payingNow}
@@ -608,85 +613,139 @@ export default function BillingScreen() {
 
                 {/* Invoice History */}
                 {billing && (
-                <View style={{ paddingHorizontal: spacing.lg }}>
-                    <Text style={{ ...typography.titleMedium, color: colors.textPrimary, marginBottom: spacing.md }}>
+                <View style={{ paddingHorizontal: isDesktop ? 0 : spacing.lg }}>
+                    <Text style={{ ...typography.titleMedium, color: colors.textPrimary, marginBottom: spacing.md, fontSize: isDesktop ? 24 : undefined }}>
                         Payment History
                     </Text>
 
                     {invoices.length === 0 ? (
                         <View style={{
-                            backgroundColor: colors.surface,
+                            backgroundColor: isDesktop ? colors.surfaceContainerLowest : colors.surface,
                             borderRadius: radii.lg,
                             padding: spacing.xl,
                             borderWidth: 1,
-                            borderColor: colors.borderSubtle,
+                            borderColor: isDesktop ? colors.outlineVariant : colors.borderSubtle,
                             alignItems: 'center',
                         }}>
                             <MaterialIcons name="receipt" size={40} color={colors.textMuted} />
-                            <Text style={{ ...typography.body, color: colors.textMuted, marginTop: spacing.sm }}>
+                            <Text style={{ ...typography.body, color: colors.textMuted, marginTop: spacing.sm, fontSize: isDesktop ? 16 : undefined }}>
                                 No invoices yet
                             </Text>
-                            <Text style={{ ...typography.caption, color: colors.textMuted, marginTop: spacing.xs, textAlign: 'center' }}>
+                            <Text style={{ ...typography.caption, color: colors.textMuted, marginTop: spacing.xs, textAlign: 'center', fontSize: isDesktop ? 14 : undefined }}>
                                 Your payment history will appear here after your first payment.
                             </Text>
                         </View>
                     ) : (
-                        invoices.map((inv) => (
-                            <View
-                                key={inv.id}
-                                style={{
-                                    backgroundColor: colors.surface,
-                                    borderRadius: radii.md,
-                                    padding: spacing.md,
-                                    marginBottom: spacing.sm,
-                                    borderWidth: 1,
-                                    borderColor: colors.borderSubtle,
-                                }}
-                            >
-                                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.xs }}>
-                                    <Text style={{ ...typography.bodySemiBold, color: colors.textPrimary }}>
-                                        {inv.invoice_number}
-                                    </Text>
-                                    <View style={{
-                                        paddingHorizontal: spacing.sm,
-                                        paddingVertical: 2,
-                                        borderRadius: radii.full,
-                                        backgroundColor: getInvoiceStatusColor(inv.status) + '20',
-                                    }}>
-                                        <Text style={{
-                                            ...typography.caption,
-                                            color: getInvoiceStatusColor(inv.status),
-                                            fontWeight: '600',
-                                            textTransform: 'uppercase',
-                                            fontSize: 10,
-                                        }}>
-                                            {inv.status}
-                                        </Text>
-                                    </View>
+                        isDesktop ? (
+                            <View style={{ backgroundColor: colors.surfaceContainerLowest, borderRadius: radii.lg, borderWidth: 1, borderColor: colors.outlineVariant, overflow: 'hidden' }}>
+                                <View style={{ flexDirection: 'row', paddingHorizontal: spacing.md, paddingVertical: spacing.sm, borderBottomWidth: 1, borderBottomColor: colors.outlineVariant, backgroundColor: colors.surfaceContainerLow } as any}>
+                                    <Text style={{ flex: 2, ...typography.labelMd, color: colors.onSurfaceVariant }}>Invoice</Text>
+                                    <Text style={{ flex: 1, ...typography.labelMd, color: colors.onSurfaceVariant }}>Status</Text>
+                                    <Text style={{ flex: 1, ...typography.labelMd, color: colors.onSurfaceVariant }}>Plan</Text>
+                                    <Text style={{ flex: 1.5, ...typography.labelMd, color: colors.onSurfaceVariant }}>Period</Text>
+                                    <Text style={{ flex: 1, ...typography.labelMd, color: colors.onSurfaceVariant, textAlign: 'right' }}>Amount</Text>
                                 </View>
-                                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                                    <View>
-                                        <Text style={{ ...typography.caption, color: colors.textMuted }}>
-                                            {inv.tier_name.charAt(0).toUpperCase() + inv.tier_name.slice(1)} • {inv.billing_period}
+                                {invoices.map((inv, index) => (
+                                    <View
+                                        key={inv.id}
+                                        style={{
+                                            flexDirection: 'row',
+                                            alignItems: 'center',
+                                            paddingHorizontal: spacing.md,
+                                            paddingVertical: spacing.md,
+                                            borderBottomWidth: index < invoices.length - 1 ? 1 : 0,
+                                            borderBottomColor: colors.outlineVariant,
+                                        } as any}
+                                    >
+                                        <Text style={{ flex: 2, ...typography.bodyMd, color: colors.textPrimary }}>{inv.invoice_number}</Text>
+                                        <View style={{ flex: 1 }}>
+                                            <View style={{
+                                                paddingHorizontal: spacing.sm,
+                                                paddingVertical: 2,
+                                                borderRadius: radii.full,
+                                                backgroundColor: getInvoiceStatusColor(inv.status) + '20',
+                                                alignSelf: 'flex-start',
+                                            }}>
+                                                <Text style={{
+                                                    ...typography.labelMd,
+                                                    color: getInvoiceStatusColor(inv.status),
+                                                    textTransform: 'uppercase',
+                                                }}>
+                                                    {inv.status}
+                                                </Text>
+                                            </View>
+                                        </View>
+                                        <Text style={{ flex: 1, ...typography.bodyMd, color: colors.textPrimary }}>
+                                            {inv.tier_name.charAt(0).toUpperCase() + inv.tier_name.slice(1)}
                                         </Text>
-                                        <Text style={{ ...typography.caption, color: colors.textMuted }}>
+                                        <Text style={{ flex: 1.5, ...typography.bodyMd, color: colors.onSurfaceVariant }}>
                                             {formatDate(inv.period_start)} — {formatDate(inv.period_end)}
                                         </Text>
+                                        <Text style={{ flex: 1, ...typography.bodyMd, color: colors.textPrimary, textAlign: 'right' }}>
+                                            R{Number(inv.amount).toLocaleString()}
+                                        </Text>
                                     </View>
-                                    <Text style={{ ...typography.titleLarge, color: colors.textPrimary }}>
-                                        R{Number(inv.amount).toLocaleString()}
-                                    </Text>
-                                </View>
-                                {inv.payment_date && (
-                                    <Text style={{ ...typography.caption, color: colors.textMuted, marginTop: spacing.xs }}>
-                                        Paid: {formatDate(inv.payment_date)}
-                                    </Text>
-                                )}
+                                ))}
                             </View>
-                        ))
+                        ) : (
+                            invoices.map((inv) => (
+                                <View
+                                    key={inv.id}
+                                    style={{
+                                        backgroundColor: colors.surface,
+                                        borderRadius: radii.md,
+                                        padding: spacing.md,
+                                        marginBottom: spacing.sm,
+                                        borderWidth: 1,
+                                        borderColor: colors.borderSubtle,
+                                    }}
+                                >
+                                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.xs }}>
+                                        <Text style={{ ...typography.bodySemiBold, color: colors.textPrimary }}>
+                                            {inv.invoice_number}
+                                        </Text>
+                                        <View style={{
+                                            paddingHorizontal: spacing.sm,
+                                            paddingVertical: 2,
+                                            borderRadius: radii.full,
+                                            backgroundColor: getInvoiceStatusColor(inv.status) + '20',
+                                        }}>
+                                            <Text style={{
+                                                ...typography.caption,
+                                                color: getInvoiceStatusColor(inv.status),
+                                                fontWeight: '600',
+                                                textTransform: 'uppercase',
+                                                fontSize: 10,
+                                            }}>
+                                                {inv.status}
+                                            </Text>
+                                        </View>
+                                    </View>
+                                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                                        <View>
+                                            <Text style={{ ...typography.caption, color: colors.textMuted }}>
+                                                {inv.tier_name.charAt(0).toUpperCase() + inv.tier_name.slice(1)} • {inv.billing_period}
+                                            </Text>
+                                            <Text style={{ ...typography.caption, color: colors.textMuted }}>
+                                                {formatDate(inv.period_start)} — {formatDate(inv.period_end)}
+                                            </Text>
+                                        </View>
+                                        <Text style={{ ...typography.titleLarge, color: colors.textPrimary }}>
+                                            R{Number(inv.amount).toLocaleString()}
+                                        </Text>
+                                    </View>
+                                    {inv.payment_date && (
+                                        <Text style={{ ...typography.caption, color: colors.textMuted, marginTop: spacing.xs }}>
+                                            Paid: {formatDate(inv.payment_date)}
+                                        </Text>
+                                    )}
+                                </View>
+                            ))
+                        )
                     )}
                 </View>
                 )}
+                </View>
             </ScrollView>
 
             {alertState && (

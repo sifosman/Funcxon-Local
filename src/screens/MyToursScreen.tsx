@@ -6,6 +6,7 @@ import { supabase } from '../lib/supabaseClient';
 import { useAuth } from '../auth/AuthContext';
 import { colors, spacing, radii, typography } from '../theme';
 import type { AttendeeStackParamList } from '../navigation/AttendeeNavigator';
+import { useIsDesktop } from '../hooks/useIsDesktop';
 
 type Props = NativeStackScreenProps<AttendeeStackParamList, 'MyTours'>;
 
@@ -42,6 +43,7 @@ const STATUS_META: Record<string, { label: string; color: string; bg: string; ic
 
 export default function MyToursScreen({ navigation }: Props) {
   const { user } = useAuth();
+  const isDesktop = useIsDesktop();
   const [items, setItems] = useState<BookingItem[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -170,16 +172,17 @@ export default function MyToursScreen({ navigation }: Props) {
         onPress={() => handlePress(item)}
         activeOpacity={0.7}
         style={{
-          backgroundColor: colors.surface,
+          backgroundColor: isDesktop ? colors.surfaceContainerLowest : colors.surface,
           borderRadius: radii.lg,
           padding: spacing.lg,
           borderWidth: 1,
-          borderColor: colors.borderSubtle,
+          borderColor: isDesktop ? colors.outlineVariant : colors.borderSubtle,
           marginBottom: spacing.md,
-        }}
+          width: isDesktop ? 'calc(50% - 12px)' : '100%',
+        } as any}
       >
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-          <Text style={{ ...typography.titleMedium, color: colors.textPrimary, flex: 1, marginRight: spacing.md }}>
+          <Text style={isDesktop ? { ...typography.headlineSm, color: colors.textPrimary, flex: 1, marginRight: spacing.md } : { ...typography.titleMedium, color: colors.textPrimary, flex: 1, marginRight: spacing.md }}>
             {item.title}
           </Text>
           <View
@@ -200,27 +203,27 @@ export default function MyToursScreen({ navigation }: Props) {
           </View>
         </View>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md, marginTop: spacing.sm }}>
-          <Text style={{ ...typography.body, color: colors.textSecondary }}>
+          <Text style={isDesktop ? { ...typography.bodyMd, color: colors.textSecondary } : { ...typography.body, color: colors.textSecondary }}>
             <MaterialIcons name={item.type === 'tour' ? 'calendar-today' : 'request-quote'} size={14} color={colors.textMuted} /> {formatDate(displayDate(item))}
           </Text>
           {displayTime(item) && (
-            <Text style={{ ...typography.body, color: colors.textSecondary }}>
+            <Text style={isDesktop ? { ...typography.bodyMd, color: colors.textSecondary } : { ...typography.body, color: colors.textSecondary }}>
               <MaterialIcons name="access-time" size={14} color={colors.textMuted} /> {displayTime(item)}
             </Text>
           )}
         </View>
         {item.quote_amount !== undefined && item.quote_amount !== null && (
-          <Text style={{ ...typography.caption, color: colors.textPrimary, marginTop: spacing.sm }}>
+          <Text style={isDesktop ? { ...typography.bodyMd, color: colors.textPrimary, marginTop: spacing.sm } : { ...typography.caption, color: colors.textPrimary, marginTop: spacing.sm }}>
             Quote amount: R{item.quote_amount.toLocaleString('en-ZA')}
           </Text>
         )}
         {item.status === 'countered' && (
-          <Text style={{ ...typography.caption, color: colors.primary, marginTop: spacing.sm }}>
+          <Text style={isDesktop ? { ...typography.bodyMd, color: colors.primary, marginTop: spacing.sm } : { ...typography.caption, color: colors.primary, marginTop: spacing.sm }}>
             {item.type === 'tour' ? 'Venue proposed an alternative. Tap to respond.' : 'Alternative proposal received. Tap to view.'}
           </Text>
         )}
         {item.status === 'pending' && (
-          <Text style={{ ...typography.caption, color: colors.textMuted, marginTop: spacing.sm }}>
+          <Text style={isDesktop ? { ...typography.bodyMd, color: colors.textMuted, marginTop: spacing.sm } : { ...typography.caption, color: colors.textMuted, marginTop: spacing.sm }}>
             {item.type === 'tour' ? 'Waiting for venue response.' : 'Waiting for quote response.'}
           </Text>
         )}
@@ -228,68 +231,114 @@ export default function MyToursScreen({ navigation }: Props) {
     );
   };
 
-  return (
-    <View style={{ flex: 1, backgroundColor: colors.background }}>
-      <ScrollView contentContainerStyle={{ paddingBottom: spacing.xl }}>
-        <View style={{ paddingHorizontal: spacing.lg, paddingTop: spacing.sm, paddingBottom: spacing.md }}>
-          <TouchableOpacity
-            onPress={() => navigation.goBack()}
-            style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.sm }}
-          >
-            <MaterialIcons name="arrow-back" size={20} color={colors.textPrimary} />
-            <Text style={{ ...typography.body, color: colors.textPrimary, marginLeft: spacing.sm }}>Back</Text>
-          </TouchableOpacity>
+  const statsConfig = [
+    { label: 'Total', value: stats.total, color: colors.primary },
+    { label: 'Confirmed', value: stats.confirmed, color: '#16A34A' },
+    { label: 'Pending', value: stats.pending, color: '#F59E0B' },
+    { label: 'Completed', value: stats.completed, color: colors.textPrimary },
+  ];
 
-          <Text style={{ ...typography.displayMedium, color: colors.textPrimary, marginBottom: spacing.xs }}>
-            My Bookings
-          </Text>
-          <Text style={{ ...typography.body, color: colors.textMuted }}>
-            Track your venue tours and quotes in one place.
-          </Text>
+  const renderStats = () => (
+    <View style={{ flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.lg }}>
+      {statsConfig.map((stat) => (
+        <View
+          key={stat.label}
+          style={{
+            flex: 1,
+            backgroundColor: isDesktop ? colors.surfaceContainerLowest : colors.surface,
+            borderRadius: radii.lg,
+            padding: spacing.md,
+            alignItems: 'center',
+            borderWidth: 1,
+            borderColor: isDesktop ? colors.outlineVariant : colors.borderSubtle,
+          }}
+        >
+          <Text style={isDesktop ? { ...typography.headlineSm, color: stat.color, fontWeight: '700' } : { ...typography.titleMedium, color: stat.color, fontWeight: '700' }}>{stat.value}</Text>
+          <Text style={isDesktop ? { ...typography.labelMd, color: colors.textMuted } : { ...typography.caption, color: colors.textMuted }}>{stat.label}</Text>
         </View>
+      ))}
+    </View>
+  );
 
-        <View style={{ paddingHorizontal: spacing.lg }}>
-          <View style={{ flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.lg }}>
-            {[
-              { label: 'Total', value: stats.total, color: colors.primary },
-              { label: 'Confirmed', value: stats.confirmed, color: '#16A34A' },
-              { label: 'Pending', value: stats.pending, color: '#F59E0B' },
-              { label: 'Completed', value: stats.completed, color: colors.textPrimary },
-            ].map((stat) => (
-              <View
-                key={stat.label}
+  const renderBrowseButton = () => (
+    <TouchableOpacity
+      onPress={() => navigation.navigate('Discover', { category: 'all' })}
+      style={{
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: spacing.sm,
+        backgroundColor: colors.primary,
+        paddingVertical: spacing.md,
+        borderRadius: radii.md,
+        marginBottom: spacing.lg,
+      }}
+    >
+      <MaterialIcons name="search" size={18} color="#FFFFFF" />
+      <Text style={{ ...typography.bodyBold, color: '#FFFFFF' }}>Browse</Text>
+    </TouchableOpacity>
+  );
+
+  return (
+    <View style={{ flex: 1, backgroundColor: isDesktop ? colors.surfaceBg : colors.background }}>
+      <ScrollView contentContainerStyle={isDesktop ? { paddingBottom: spacing.xl, paddingHorizontal: 48, maxWidth: 1200, width: '100%', alignSelf: 'center' } : { paddingBottom: spacing.xl }}>
+        <View style={isDesktop ? { paddingTop: spacing.sm, paddingBottom: spacing.md } : { paddingHorizontal: spacing.lg, paddingTop: spacing.sm, paddingBottom: spacing.md }}>
+          {isDesktop ? null : (
+            <TouchableOpacity
+              onPress={() => navigation.goBack()}
+              style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.sm }}
+            >
+              <MaterialIcons name="arrow-back" size={20} color={colors.textPrimary} />
+              <Text style={{ ...typography.body, color: colors.textPrimary, marginLeft: spacing.sm }}>Back</Text>
+            </TouchableOpacity>
+          )}
+
+          {isDesktop ? (
+            <View style={{ marginBottom: spacing.lg, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end' }}>
+              <View>
+                <Text style={{ ...typography.labelMd, color: colors.dustyRose, marginBottom: spacing.sm, textTransform: 'uppercase', letterSpacing: 0.05 }}>
+                  Bookings
+                </Text>
+                <Text style={{ ...typography.headlineMd, color: colors.primary }}>
+                  My Bookings
+                </Text>
+                <Text style={{ ...typography.bodyMd, color: colors.textMuted, marginTop: spacing.xs }}>
+                  Track your venue tours and quotes in one place.
+                </Text>
+              </View>
+              <TouchableOpacity
+                onPress={() => navigation.navigate('Discover', { category: 'all' })}
                 style={{
-                  flex: 1,
-                  backgroundColor: colors.surface,
-                  borderRadius: radii.lg,
-                  padding: spacing.md,
+                  flexDirection: 'row',
                   alignItems: 'center',
-                  borderWidth: 1,
-                  borderColor: colors.borderSubtle,
+                  justifyContent: 'center',
+                  gap: spacing.sm,
+                  backgroundColor: colors.primary,
+                  paddingVertical: spacing.sm,
+                  paddingHorizontal: spacing.lg,
+                  borderRadius: radii.md,
                 }}
               >
-                <Text style={{ ...typography.titleMedium, color: stat.color, fontWeight: '700' }}>{stat.value}</Text>
-                <Text style={{ ...typography.caption, color: colors.textMuted }}>{stat.label}</Text>
-              </View>
-            ))}
-          </View>
+                <MaterialIcons name="search" size={18} color="#FFFFFF" />
+                <Text style={{ ...typography.bodySemiBold, color: '#FFFFFF' }}>Browse</Text>
+              </TouchableOpacity>
+            </View>
+          ) : (
+            <>
+              <Text style={{ ...typography.displayMedium, color: colors.textPrimary, marginBottom: spacing.xs }}>
+                My Bookings
+              </Text>
+              <Text style={{ ...typography.body, color: colors.textMuted }}>
+                Track your venue tours and quotes in one place.
+              </Text>
+            </>
+          )}
+        </View>
 
-          <TouchableOpacity
-            onPress={() => navigation.navigate('Discover', { category: 'all' })}
-            style={{
-              flexDirection: 'row',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: spacing.sm,
-              backgroundColor: colors.primary,
-              paddingVertical: spacing.md,
-              borderRadius: radii.md,
-              marginBottom: spacing.lg,
-            }}
-          >
-            <MaterialIcons name="search" size={18} color="#FFFFFF" />
-            <Text style={{ ...typography.bodyBold, color: '#FFFFFF' }}>Browse</Text>
-          </TouchableOpacity>
+        <View style={isDesktop ? { paddingHorizontal: 0 } : { paddingHorizontal: spacing.lg }}>
+          {renderStats()}
+
+          {isDesktop ? null : renderBrowseButton()}
 
           {loading ? (
             <View style={{ padding: spacing.xl, alignItems: 'center' }}>
@@ -298,19 +347,19 @@ export default function MyToursScreen({ navigation }: Props) {
           ) : items.length === 0 ? (
             <View
               style={{
-                backgroundColor: colors.surface,
+                backgroundColor: isDesktop ? colors.surfaceContainerLowest : colors.surface,
                 borderRadius: radii.lg,
                 padding: spacing.xl,
                 alignItems: 'center',
                 borderWidth: 1,
-                borderColor: colors.borderSubtle,
+                borderColor: isDesktop ? colors.outlineVariant : colors.borderSubtle,
               }}
             >
               <MaterialIcons name="calendar-month" size={48} color={colors.textMuted} />
-              <Text style={{ ...typography.titleMedium, color: colors.textPrimary, marginTop: spacing.md }}>
+              <Text style={isDesktop ? { ...typography.headlineSm, color: colors.textPrimary, marginTop: spacing.md } : { ...typography.titleMedium, color: colors.textPrimary, marginTop: spacing.md }}>
                 No bookings yet
               </Text>
-              <Text style={{ ...typography.body, color: colors.textMuted, textAlign: 'center', marginTop: spacing.xs }}>
+              <Text style={isDesktop ? { ...typography.bodyMd, color: colors.textMuted, textAlign: 'center', marginTop: spacing.xs } : { ...typography.body, color: colors.textMuted, textAlign: 'center', marginTop: spacing.xs }}>
                 Book a tour or request a quote to see it here.
               </Text>
             </View>
@@ -318,18 +367,22 @@ export default function MyToursScreen({ navigation }: Props) {
             <>
               {(upcoming.length > 0) && (
                 <View style={{ marginBottom: spacing.lg }}>
-                  <Text style={{ ...typography.titleMedium, color: colors.textPrimary, marginBottom: spacing.md }}>
+                  <Text style={isDesktop ? { ...typography.headlineSm, color: colors.textPrimary, marginBottom: spacing.md } : { ...typography.titleMedium, color: colors.textPrimary, marginBottom: spacing.md }}>
                     Upcoming & Pending
                   </Text>
-                  {upcoming.map(renderCard)}
+                  <View style={isDesktop ? { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.gutter } as any : {}}>
+                    {upcoming.map(renderCard)}
+                  </View>
                 </View>
               )}
               {past.length > 0 && (
                 <View>
-                  <Text style={{ ...typography.titleMedium, color: colors.textPrimary, marginBottom: spacing.md }}>
+                  <Text style={isDesktop ? { ...typography.headlineSm, color: colors.textPrimary, marginBottom: spacing.md } : { ...typography.titleMedium, color: colors.textPrimary, marginBottom: spacing.md }}>
                     Past Bookings
                   </Text>
-                  {past.map(renderCard)}
+                  <View style={isDesktop ? { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.gutter } as any : {}}>
+                    {past.map(renderCard)}
+                  </View>
                 </View>
               )}
             </>

@@ -13,6 +13,7 @@ import { VENDOR_CATEGORIES } from './AttendeeHomeScreen';
 import { getFavourites, toggleFavourite } from '../lib/favourites';
 import { useAuth } from '../auth/AuthContext';
 import NetworkImage from '../components/NetworkImage';
+import { formatCardAddress } from '../utils/location';
 import type { AttendeeStackParamList } from '../navigation/AttendeeNavigator';
 import { venueTypes, amenitiesList, venueCapacityOptions } from '../config/venueTypes';
 import { provinces } from '../config/locations';
@@ -750,7 +751,7 @@ export default function DiscoverScreen() {
 
         navigation.navigate('VendorProfile', { vendorId: item.id });
       }}
-      style={{ marginRight: featuredCard ? spacing.md : 0, marginBottom: featuredCard ? 0 : isDesktop ? 24 : spacing.md, width: featuredCard ? 280 : isDesktop ? 'calc(50% - 12px)' : '100%' }}
+      style={{ marginRight: featuredCard ? spacing.md : 0, marginBottom: featuredCard ? 0 : isDesktop ? 24 : spacing.md, width: featuredCard ? 280 : isDesktop ? 'calc(50% - 12px)' : '100%' } as any}
     >
       <View
         style={{
@@ -845,7 +846,7 @@ export default function DiscoverScreen() {
           <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.sm }}>
             <MaterialIcons name="place" size={16} color={colors.textSecondary} />
             <Text style={{ ...typography.caption, color: colors.textSecondary, marginLeft: spacing.xs }} numberOfLines={2}>
-              {[item.address_line_1, item.city].filter(Boolean).join(', ') || [item.city, item.province].filter(Boolean).join(', ') || item.location || 'Location available on profile'}
+              {formatCardAddress(item)}
             </Text>
           </View>
 

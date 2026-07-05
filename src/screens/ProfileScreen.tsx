@@ -4,104 +4,181 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { colors, spacing, radii, typography } from '../theme';
 import { useAuth } from '../auth/AuthContext';
 import ThemedAlert from '../components/ThemedAlert';
+import { useIsDesktop } from '../hooks/useIsDesktop';
 
 export default function ProfileScreen() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [alertState, setAlertState] = useState<{visible: boolean; title: string; message: string} | null>(null);
   const { signOut } = useAuth();
+  const isDesktop = useIsDesktop();
 
   const toggleMenu = () => {
     setMenuOpen((prev) => !prev);
   };
 
   return (
-    <View style={{ flex: 1, backgroundColor: colors.background, position: 'relative' }}>
+    <View style={{ flex: 1, backgroundColor: isDesktop ? colors.surfaceBg : colors.background, position: 'relative' }}>
       <ScrollView
-        contentContainerStyle={{ paddingHorizontal: spacing.lg, paddingVertical: spacing.lg, paddingBottom: spacing.xxl }}
+        contentContainerStyle={isDesktop ? { paddingBottom: spacing.xxl } : { paddingHorizontal: spacing.lg, paddingVertical: spacing.lg, paddingBottom: spacing.xxl }}
       >
-        <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.lg }}>
-          <View
-            style={{
-              width: 56,
-              height: 56,
-              borderRadius: 28,
-              backgroundColor: colors.surface,
-              alignItems: 'center',
-              justifyContent: 'center',
-              borderWidth: 1,
-              borderColor: colors.borderSubtle,
-            }}
-          >
-            <Text style={{ ...typography.titleMedium, color: colors.textPrimary }}>U</Text>
-          </View>
-          <View style={{ marginLeft: spacing.md }}>
-            <Text
+        {isDesktop ? (
+          <View style={{ maxWidth: 1200, width: '100%', alignSelf: 'center', paddingHorizontal: 48, paddingTop: spacing.sm, paddingBottom: spacing.xxl }}>
+            <View
               style={{
-                ...typography.titleMedium,
-                color: colors.textPrimary,
+                maxWidth: 720,
+                width: '100%',
+                alignSelf: 'center',
+                backgroundColor: colors.surfaceContainerLowest,
+                borderRadius: radii.lg,
+                borderWidth: 1,
+                borderColor: colors.outlineVariant,
+                padding: spacing.xl,
               }}
             >
-              Your profile
-            </Text>
-            <Text
+              <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.lg }}>
+                <View
+                  style={{
+                    width: 72,
+                    height: 72,
+                    borderRadius: 36,
+                    backgroundColor: colors.surfaceContainerLow,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    borderWidth: 1,
+                    borderColor: colors.outlineVariant,
+                  }}
+                >
+                  <Text style={{ ...typography.headlineSm, color: colors.textPrimary }}>U</Text>
+                </View>
+                <View style={{ marginLeft: spacing.md }}>
+                  <Text
+                    style={{
+                      ...typography.headlineSm,
+                      color: colors.textPrimary,
+                    }}
+                  >
+                    Your profile
+                  </Text>
+                  <Text
+                    style={{
+                      ...typography.bodyMd,
+                      color: colors.onSurfaceVariant,
+                      marginTop: spacing.xs,
+                    }}
+                  >
+                    Manage your account and event preferences.
+                  </Text>
+                </View>
+              </View>
+
+              <View style={{ marginTop: spacing.xl }}>
+                <Text
+                  style={{
+                    ...typography.headlineSm,
+                    color: colors.textPrimary,
+                    marginBottom: spacing.sm,
+                  }}
+                >
+                  Account
+                </Text>
+                <Text
+                  style={{
+                    ...typography.bodyMd,
+                    color: colors.onSurfaceVariant,
+                  }}
+                >
+                  Additional account details and settings can go here.
+                </Text>
+              </View>
+            </View>
+          </View>
+        ) : (
+          <>
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.lg }}>
+              <View
+                style={{
+                  width: 56,
+                  height: 56,
+                  borderRadius: 28,
+                  backgroundColor: colors.surface,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  borderWidth: 1,
+                  borderColor: colors.borderSubtle,
+                }}
+              >
+                <Text style={{ ...typography.titleMedium, color: colors.textPrimary }}>U</Text>
+              </View>
+              <View style={{ marginLeft: spacing.md }}>
+                <Text
+                  style={{
+                    ...typography.titleMedium,
+                    color: colors.textPrimary,
+                  }}
+                >
+                  Your profile
+                </Text>
+                <Text
+                  style={{
+                    ...typography.caption,
+                    color: colors.textMuted,
+                    marginTop: spacing.xs,
+                  }}
+                >
+                  Manage your account and event preferences.
+                </Text>
+              </View>
+            </View>
+
+            <TouchableOpacity
+              onPress={toggleMenu}
+              activeOpacity={0.9}
               style={{
-                ...typography.caption,
-                color: colors.textMuted,
-                marginTop: spacing.xs,
+                alignSelf: 'flex-start',
+                paddingHorizontal: spacing.lg,
+                paddingVertical: spacing.sm,
+                borderRadius: radii.full,
+                backgroundColor: colors.textPrimary,
+                flexDirection: 'row',
+                alignItems: 'center',
               }}
             >
-              Manage your account and event preferences.
-            </Text>
-          </View>
-        </View>
+              <Text
+                style={{
+                  ...typography.body,
+                  color: '#FFFFFF',
+                  marginRight: spacing.xs,
+                }}
+              >
+                Open quick actions
+              </Text>
+              <MaterialIcons name={menuOpen ? 'expand-less' : 'expand-more'} size={20} color="#FFFFFF" />
+            </TouchableOpacity>
 
-        <TouchableOpacity
-          onPress={toggleMenu}
-          activeOpacity={0.9}
-          style={{
-            alignSelf: 'flex-start',
-            paddingHorizontal: spacing.lg,
-            paddingVertical: spacing.sm,
-            borderRadius: radii.full,
-            backgroundColor: colors.textPrimary,
-            flexDirection: 'row',
-            alignItems: 'center',
-          }}
-        >
-          <Text
-            style={{
-              ...typography.body,
-              color: '#FFFFFF',
-              marginRight: spacing.xs,
-            }}
-          >
-            Open quick actions
-          </Text>
-          <MaterialIcons name={menuOpen ? 'expand-less' : 'expand-more'} size={20} color="#FFFFFF" />
-        </TouchableOpacity>
-
-        <View style={{ marginTop: spacing.xl }}>
-          <Text
-            style={{
-              ...typography.titleMedium,
-              color: colors.textPrimary,
-              marginBottom: spacing.sm,
-            }}
-          >
-            Account
-          </Text>
-          <Text
-            style={{
-              ...typography.body,
-              color: colors.textMuted,
-            }}
-          >
-            Additional account details and settings can go here.
-          </Text>
-        </View>
+            <View style={{ marginTop: spacing.xl }}>
+              <Text
+                style={{
+                  ...typography.titleMedium,
+                  color: colors.textPrimary,
+                  marginBottom: spacing.sm,
+                }}
+              >
+                Account
+              </Text>
+              <Text
+                style={{
+                  ...typography.body,
+                  color: colors.textMuted,
+                }}
+              >
+                Additional account details and settings can go here.
+              </Text>
+            </View>
+          </>
+        )}
       </ScrollView>
 
-      {menuOpen && (
+      {!isDesktop && menuOpen && (
         <View
           style={{
             position: 'absolute',

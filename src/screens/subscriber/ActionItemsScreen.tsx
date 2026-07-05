@@ -7,6 +7,7 @@ import { colors, spacing, radii, typography } from '../../theme';
 import { supabase } from '../../lib/supabaseClient';
 import { useAuth } from '../../auth/AuthContext';
 import ThemedAlert from '../../components/ThemedAlert';
+import { useIsDesktop } from '../../hooks/useIsDesktop';
 
 type ProfileStackParamList = {
     SubscriberProfile: undefined;
@@ -113,6 +114,7 @@ export default function ActionItemsScreen() {
         await supabase.from('tasks').delete().eq('id', id);
     };
 
+    const isDesktop = useIsDesktop();
     const pendingCount = items.filter((i) => i.status !== 'completed').length;
     const completedCount = items.filter((i) => i.status === 'completed').length;
 
@@ -124,128 +126,191 @@ export default function ActionItemsScreen() {
         );
     }
 
-    return (
-        <View style={{ flex: 1, backgroundColor: colors.background }}>
-            <ScrollView contentContainerStyle={{ paddingBottom: spacing.xl }}>
-                {/* Header */}
-                <View style={{ paddingHorizontal: spacing.lg, paddingTop: spacing.sm, paddingBottom: spacing.md }}>
-                    <TouchableOpacity
-                        onPress={() => navigation.goBack()}
-                        style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.sm }}
-                    >
-                        <MaterialIcons name="arrow-back" size={20} color={colors.textPrimary} />
-                        <Text style={{ ...typography.body, color: colors.textPrimary, marginLeft: spacing.sm }}>Back</Text>
-                    </TouchableOpacity>
+    const desktopContainerStyle = {
+        maxWidth: 1200,
+        width: '100%',
+        alignSelf: 'center' as const,
+        paddingHorizontal: 48,
+    };
 
-                    <Text style={{ ...typography.displayMedium, color: colors.textPrimary, marginBottom: spacing.xs }}>
-                        Action Items
+    const cardSurface = isDesktop ? colors.surfaceContainerLowest : colors.surface;
+    const cardBorder = isDesktop ? colors.outlineVariant : colors.borderSubtle;
+
+    const renderHeader = (isDesktopHeader: boolean) => (
+        <View style={{ marginBottom: spacing.md }}>
+            <Text style={isDesktopHeader ? { ...typography.labelMd, color: colors.dustyRose, textTransform: 'uppercase', marginBottom: spacing.sm } as any : { display: 'none' } as any}>
+                Tasks
+            </Text>
+            <Text style={isDesktopHeader ? { ...typography.headlineMd, color: colors.primary } as any : { ...typography.displayMedium, color: colors.textPrimary, marginBottom: spacing.xs }}>
+                Action Items
+            </Text>
+            <Text style={{ ...typography.bodyMd, color: isDesktopHeader ? colors.onSurfaceVariant : colors.textMuted }}>
+                Manage your pending tasks and to-dos
+            </Text>
+        </View>
+    );
+
+    const renderSummaryCards = () => (
+        <View style={{ flexDirection: 'row', gap: spacing.md, marginBottom: spacing.lg } as any}>
+            <View style={{
+                flex: 1, backgroundColor: cardSurface, borderRadius: radii.lg, padding: spacing.md,
+                borderWidth: 1, borderColor: cardBorder, alignItems: 'center',
+            }}>
+                <Text style={{ ...typography.headlineMd, color: '#F59E0B' }}>{pendingCount}</Text>
+                <Text style={isDesktop ? { ...typography.bodyMd, color: colors.onSurfaceVariant } as any : { ...typography.caption, color: colors.textMuted }}>Pending</Text>
+            </View>
+            <View style={{
+                flex: 1, backgroundColor: cardSurface, borderRadius: radii.lg, padding: spacing.md,
+                borderWidth: 1, borderColor: cardBorder, alignItems: 'center',
+            }}>
+                <Text style={{ ...typography.headlineMd, color: '#16A34A' }}>{completedCount}</Text>
+                <Text style={isDesktop ? { ...typography.bodyMd, color: colors.onSurfaceVariant } as any : { ...typography.caption, color: colors.textMuted }}>Completed</Text>
+            </View>
+        </View>
+    );
+
+    const renderAddItem = () => (
+        <View style={{ marginBottom: spacing.lg }}>
+            <View style={{
+                flexDirection: 'row', alignItems: 'center',
+                backgroundColor: cardSurface, borderRadius: radii.md,
+                borderWidth: 1, borderColor: cardBorder, overflow: 'hidden',
+            }}>
+                <TextInput
+                    value={newItem}
+                    onChangeText={setNewItem}
+                    placeholder="Add a new action item..."
+                    placeholderTextColor={colors.textMuted}
+                    style={{
+                        flex: 1, paddingHorizontal: spacing.md, paddingVertical: spacing.sm,
+                        color: colors.textPrimary,
+                    }}
+                    onSubmitEditing={handleAdd}
+                />
+                <TouchableOpacity
+                    onPress={handleAdd}
+                    disabled={adding || !newItem.trim()}
+                    style={{
+                        paddingHorizontal: spacing.md, paddingVertical: spacing.sm,
+                        backgroundColor: colors.primary,
+                    }}
+                >
+                    <MaterialIcons name="add" size={20} color="#FFFFFF" />
+                </TouchableOpacity>
+            </View>
+        </View>
+    );
+
+    const renderItemRow = (item: ActionItem) => {
+        const completed = item.status === 'completed';
+        const due = item.due_date ? new Date(item.due_date).toLocaleDateString('en-ZA', { day: 'numeric', month: 'long', year: 'numeric' }) : null;
+        return (
+            <View
+                key={item.id}
+                style={{
+                    flexDirection: 'row', alignItems: 'center',
+                    backgroundColor: cardSurface, borderRadius: radii.md,
+                    padding: isDesktop ? spacing.md : spacing.md, marginBottom: spacing.sm,
+                    borderWidth: 1, borderColor: cardBorder,
+                }}
+            >
+                <TouchableOpacity onPress={() => handleToggle(item)} style={{ marginRight: spacing.sm }}>
+                    <MaterialIcons
+                        name={completed ? 'check-circle' : 'radio-button-unchecked'}
+                        size={22}
+                        color={completed ? '#16A34A' : colors.textMuted}
+                    />
+                </TouchableOpacity>
+                <View style={{ flex: 1 }}>
+                    <Text style={{
+                        ...typography.bodyMd, color: colors.textPrimary,
+                        textDecorationLine: completed ? 'line-through' : 'none',
+                        opacity: completed ? 0.6 : 1,
+                    } as any}>
+                        {item.title}
                     </Text>
-                    <Text style={{ ...typography.body, color: colors.textMuted }}>
-                        Manage your pending tasks and to-dos
-                    </Text>
-                </View>
-
-                {/* Summary */}
-                <View style={{ flexDirection: 'row', paddingHorizontal: spacing.lg, marginBottom: spacing.lg, gap: spacing.md }}>
-                    <View style={{
-                        flex: 1, backgroundColor: colors.surface, borderRadius: radii.lg, padding: spacing.md,
-                        borderWidth: 1, borderColor: colors.borderSubtle, alignItems: 'center',
-                    }}>
-                        <Text style={{ ...typography.displayLarge, color: '#F59E0B', fontWeight: '700' }}>{pendingCount}</Text>
-                        <Text style={{ ...typography.caption, color: colors.textMuted }}>Pending</Text>
-                    </View>
-                    <View style={{
-                        flex: 1, backgroundColor: colors.surface, borderRadius: radii.lg, padding: spacing.md,
-                        borderWidth: 1, borderColor: colors.borderSubtle, alignItems: 'center',
-                    }}>
-                        <Text style={{ ...typography.displayLarge, color: '#16A34A', fontWeight: '700' }}>{completedCount}</Text>
-                        <Text style={{ ...typography.caption, color: colors.textMuted }}>Completed</Text>
-                    </View>
-                </View>
-
-                {/* Add New Item */}
-                <View style={{ paddingHorizontal: spacing.lg, marginBottom: spacing.lg }}>
-                    <View style={{
-                        flexDirection: 'row', alignItems: 'center',
-                        backgroundColor: colors.surface, borderRadius: radii.md,
-                        borderWidth: 1, borderColor: colors.borderSubtle, overflow: 'hidden',
-                    }}>
-                        <TextInput
-                            value={newItem}
-                            onChangeText={setNewItem}
-                            placeholder="Add a new action item..."
-                            placeholderTextColor={colors.textMuted}
-                            style={{
-                                flex: 1, paddingHorizontal: spacing.md, paddingVertical: spacing.sm,
-                                color: colors.textPrimary,
-                            }}
-                            onSubmitEditing={handleAdd}
-                        />
-                        <TouchableOpacity
-                            onPress={handleAdd}
-                            disabled={adding || !newItem.trim()}
-                            style={{
-                                paddingHorizontal: spacing.md, paddingVertical: spacing.sm,
-                                backgroundColor: colors.primary,
-                            }}
-                        >
-                            <MaterialIcons name="add" size={20} color="#FFFFFF" />
-                        </TouchableOpacity>
-                    </View>
-                </View>
-
-                {/* Items List */}
-                <View style={{ paddingHorizontal: spacing.lg }}>
-                    {items.length === 0 && (
-                        <View style={{ alignItems: 'center', paddingVertical: spacing.xl }}>
-                            <MaterialIcons name="checklist" size={48} color={colors.textMuted} />
-                            <Text style={{ ...typography.body, color: colors.textMuted, marginTop: spacing.md }}>
-                                No action items yet
-                            </Text>
-                        </View>
+                    {due && (
+                        <Text style={isDesktop ? { ...typography.bodyMd, color: colors.onSurfaceVariant, marginTop: 2 } as any : { ...typography.caption, color: colors.textMuted, marginTop: 2 }}>
+                            Due: {due}
+                        </Text>
                     )}
-
-                    {items.map((item) => {
-                        const completed = item.status === 'completed';
-                        const due = item.due_date ? new Date(item.due_date).toLocaleDateString('en-ZA', { day: 'numeric', month: 'long', year: 'numeric' }) : null;
-                        return (
-                            <View
-                                key={item.id}
-                                style={{
-                                    flexDirection: 'row', alignItems: 'center',
-                                    backgroundColor: colors.surface, borderRadius: radii.md,
-                                    padding: spacing.md, marginBottom: spacing.sm,
-                                    borderWidth: 1, borderColor: colors.borderSubtle,
-                                }}
-                            >
-                                <TouchableOpacity onPress={() => handleToggle(item)} style={{ marginRight: spacing.sm }}>
-                                    <MaterialIcons
-                                        name={completed ? 'check-circle' : 'radio-button-unchecked'}
-                                        size={22}
-                                        color={completed ? '#16A34A' : colors.textMuted}
-                                    />
-                                </TouchableOpacity>
-                                <View style={{ flex: 1 }}>
-                                    <Text style={{
-                                        ...typography.body, color: colors.textPrimary,
-                                        textDecorationLine: completed ? 'line-through' : 'none',
-                                        opacity: completed ? 0.6 : 1,
-                                    }}>
-                                        {item.title}
-                                    </Text>
-                                    {due && (
-                                        <Text style={{ ...typography.caption, color: colors.textMuted, marginTop: 2 }}>
-                                            Due: {due}
-                                        </Text>
-                                    )}
-                                </View>
-                                <TouchableOpacity onPress={() => handleDelete(item.id)}>
-                                    <MaterialIcons name="close" size={18} color={colors.textMuted} />
-                                </TouchableOpacity>
-                            </View>
-                        );
-                    })}
                 </View>
+                <TouchableOpacity onPress={() => handleDelete(item.id)}>
+                    <MaterialIcons name="close" size={18} color={colors.textMuted} />
+                </TouchableOpacity>
+            </View>
+        );
+    };
+
+    return (
+        <View style={{ flex: 1, backgroundColor: isDesktop ? colors.surfaceBg : colors.background }}>
+            <ScrollView contentContainerStyle={isDesktop ? { ...desktopContainerStyle, paddingBottom: spacing.xxl } as any : { paddingBottom: spacing.xl }}>
+                {isDesktop ? (
+                    <>
+                        {renderHeader(true)}
+                        <View style={{ flexDirection: 'row', gap: spacing.gutter } as any}>
+                            <View style={{ flex: 2 } as any}>
+                                {renderAddItem()}
+                                <View style={{ backgroundColor: cardSurface, borderRadius: radii.lg, padding: spacing.lg, borderWidth: 1, borderColor: cardBorder }}>
+                                    <Text style={{ ...typography.headlineSm, color: colors.textPrimary, marginBottom: spacing.md }}>
+                                        Action Items
+                                    </Text>
+                                    {items.length === 0 && (
+                                        <View style={{ alignItems: 'center', paddingVertical: spacing.xl }}>
+                                            <MaterialIcons name="checklist" size={48} color={colors.textMuted} />
+                                            <Text style={{ ...typography.bodyMd, color: colors.textMuted, marginTop: spacing.md } as any}>
+                                                No action items yet
+                                            </Text>
+                                        </View>
+                                    )}
+                                    {items.map(renderItemRow)}
+                                </View>
+                            </View>
+                            <View style={{ flex: 1 } as any}>
+                                {renderSummaryCards()}
+                            </View>
+                        </View>
+                    </>
+                ) : (
+                    <>
+                        {/* Header */}
+                        <View style={{ paddingHorizontal: spacing.lg, paddingTop: spacing.sm, paddingBottom: spacing.md }}>
+                            <TouchableOpacity
+                                onPress={() => navigation.goBack()}
+                                style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.sm }}
+                            >
+                                <MaterialIcons name="arrow-back" size={20} color={colors.textPrimary} />
+                                <Text style={{ ...typography.body, color: colors.textPrimary, marginLeft: spacing.sm }}>Back</Text>
+                            </TouchableOpacity>
+
+                            {renderHeader(false)}
+                        </View>
+
+                        {/* Summary */}
+                        <View style={{ paddingHorizontal: spacing.lg }}>
+                            {renderSummaryCards()}
+                        </View>
+
+                        {/* Add New Item */}
+                        <View style={{ paddingHorizontal: spacing.lg }}>
+                            {renderAddItem()}
+                        </View>
+
+                        {/* Items List */}
+                        <View style={{ paddingHorizontal: spacing.lg }}>
+                            {items.length === 0 && (
+                                <View style={{ alignItems: 'center', paddingVertical: spacing.xl }}>
+                                    <MaterialIcons name="checklist" size={48} color={colors.textMuted} />
+                                    <Text style={{ ...typography.body, color: colors.textMuted, marginTop: spacing.md }}>
+                                        No action items yet
+                                    </Text>
+                                </View>
+                            )}
+
+                            {items.map(renderItemRow)}
+                        </View>
+                    </>
+                )}
             </ScrollView>
 
             {alertState && (

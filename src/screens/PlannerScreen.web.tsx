@@ -4,6 +4,7 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { AttendeeStackParamList } from '../navigation/AttendeeNavigator';
 
 import { colors, spacing, radii, typography } from '../theme';
+import { useIsDesktop } from '../hooks/useIsDesktop';
 import { usePlanner, tagOptions } from '../hooks/usePlanner';
 import ThemedAlert from '../components/ThemedAlert';
 
@@ -127,6 +128,7 @@ export default function PlannerScreen({ navigation }: PlannerProps) {
     handleDeleteItem,
     handleSelectTag,
   } = usePlanner();
+  const isDesktop = useIsDesktop();
 
   if (isLoading) {
     return (
@@ -160,27 +162,8 @@ export default function PlannerScreen({ navigation }: PlannerProps) {
     );
   }
 
-  return (
-    <KeyboardAvoidingView style={{ flex: 1, backgroundColor: colors.background }} behavior="height" keyboardVerticalOffset={0}>
-      <ScrollView
-        style={{ flex: 1, backgroundColor: colors.background }}
-        contentContainerStyle={{ paddingHorizontal: spacing.lg, paddingTop: spacing.sm, paddingBottom: 120 }}
-      >
-        <TouchableOpacity
-          onPress={() => navigation.goBack()}
-          style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.sm }}
-        >
-          <MaterialIcons name="arrow-back" size={20} color={colors.textPrimary} />
-          <Text style={{ ...typography.body, color: colors.textPrimary, marginLeft: spacing.xs }}>Back</Text>
-        </TouchableOpacity>
-        <View style={{ marginBottom: spacing.lg }}>
-          <Text style={{ ...typography.displayMedium, color: colors.textPrimary }}>My Planner</Text>
-          <Text style={{ ...typography.body, color: colors.textSecondary, marginTop: spacing.xs }}>
-            Track tasks, budget, and key dates for your event.
-          </Text>
-        </View>
-
-        <View
+  const renderEventDetails = () => (
+<View
           style={{
             backgroundColor: colors.surface,
             borderRadius: radii.lg,
@@ -334,7 +317,10 @@ export default function PlannerScreen({ navigation }: PlannerProps) {
           </View>
         </View>
 
-        <View
+          );
+
+const renderBudget = () => (
+<View
           style={{
             backgroundColor: colors.surface,
             borderRadius: radii.lg,
@@ -446,117 +432,10 @@ export default function PlannerScreen({ navigation }: PlannerProps) {
           </TouchableOpacity>
         </View>
 
-        {/* Edit Budget Modal */}
-        <Modal visible={editingBudgetIdx !== null} transparent animationType="fade" onRequestClose={() => setEditingBudgetIdx(null)}>
-          <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)' }}>
-            <ScrollView
-              contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', alignItems: 'center', padding: spacing.lg }}
-              keyboardShouldPersistTaps="handled"
-            >
-              <View style={{ backgroundColor: colors.surface, borderRadius: radii.lg, padding: spacing.lg, width: '100%', maxWidth: 400 }}>
-                <Text style={{ ...typography.titleMedium, color: colors.textPrimary, marginBottom: spacing.md }}>Edit Budget Item</Text>
-                <Text style={{ ...typography.caption, color: colors.textMuted, marginBottom: spacing.xs }}>Name</Text>
-                <TextInput
-                  value={editBudgetForm.name}
-                  onChangeText={(v) => setEditBudgetForm((p) => ({ ...p, name: v }))}
-                  placeholder="Item name"
-                  placeholderTextColor={colors.textMuted}
-                  style={{
-                    borderWidth: 1,
-                    borderColor: colors.borderSubtle,
-                    borderRadius: radii.md,
-                    paddingHorizontal: spacing.md,
-                    paddingVertical: spacing.sm,
-                    backgroundColor: colors.surfaceMuted,
-                    color: colors.textPrimary,
-                    marginBottom: spacing.md,
-                  }}
-                />
-                <Text style={{ ...typography.caption, color: colors.textMuted, marginBottom: spacing.xs }}>Total Budget (R)</Text>
-                <TextInput
-                  value={editBudgetForm.total}
-                  onChangeText={(v) => setEditBudgetForm((p) => ({ ...p, total: v }))}
-                  placeholder="0"
-                  keyboardType="numeric"
-                  placeholderTextColor={colors.textMuted}
-                  style={{
-                    borderWidth: 1,
-                    borderColor: colors.borderSubtle,
-                    borderRadius: radii.md,
-                    paddingHorizontal: spacing.md,
-                    paddingVertical: spacing.sm,
-                    backgroundColor: colors.surfaceMuted,
-                    color: colors.textPrimary,
-                    marginBottom: spacing.md,
-                  }}
-                />
-                <Text style={{ ...typography.caption, color: colors.textMuted, marginBottom: spacing.xs }}>Amount Spent (R)</Text>
-                <TextInput
-                  value={editBudgetForm.spent}
-                  onChangeText={(v) => setEditBudgetForm((p) => ({ ...p, spent: v }))}
-                  placeholder="0"
-                  keyboardType="numeric"
-                  placeholderTextColor={colors.textMuted}
-                  style={{
-                    borderWidth: 1,
-                    borderColor: colors.borderSubtle,
-                    borderRadius: radii.md,
-                    paddingHorizontal: spacing.md,
-                    paddingVertical: spacing.sm,
-                    backgroundColor: colors.surfaceMuted,
-                    color: colors.textPrimary,
-                    marginBottom: spacing.md,
-                  }}
-                />
-                <Text style={{ ...typography.caption, color: colors.textMuted, marginBottom: spacing.xs }}>Balance Remaining (R)</Text>
-                <View
-                  style={{
-                    borderWidth: 1,
-                    borderColor: colors.borderSubtle,
-                    borderRadius: radii.md,
-                    paddingHorizontal: spacing.md,
-                    paddingVertical: spacing.sm,
-                    backgroundColor: colors.surfaceMuted,
-                    marginBottom: spacing.md,
-                  }}
-                >
-                  <Text style={{ ...typography.body, color: colors.textPrimary }}>
-                    R{((parseFloat(editBudgetForm.total) || 0) - (parseFloat(editBudgetForm.spent) || 0)).toLocaleString('en-ZA')}
-                  </Text>
-                </View>
-                <View style={{ flexDirection: 'row', gap: spacing.sm }}>
-                  <TouchableOpacity
-                    onPress={() => setEditingBudgetIdx(null)}
-                    style={{
-                      flex: 1,
-                      paddingVertical: spacing.sm,
-                      borderRadius: radii.md,
-                      borderWidth: 1,
-                      borderColor: colors.borderSubtle,
-                      alignItems: 'center',
-                    }}
-                  >
-                    <Text style={{ ...typography.body, color: colors.textPrimary }}>Cancel</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    onPress={handleSaveBudget}
-                    style={{
-                      flex: 1,
-                      paddingVertical: spacing.sm,
-                      borderRadius: radii.md,
-                      backgroundColor: colors.primary,
-                      alignItems: 'center',
-                    }}
-                  >
-                    <Text style={{ ...typography.bodySemiBold, color: '#FFFFFF' }}>Save</Text>
-                  </TouchableOpacity>
-                </View>
-              </View>
-            </ScrollView>
-          </View>
-        </Modal>
+          );
 
-        <View
+const renderTasks = () => (
+<View
           style={{
             backgroundColor: colors.surface,
             borderRadius: radii.lg,
@@ -659,59 +538,10 @@ export default function PlannerScreen({ navigation }: PlannerProps) {
           </Text>
         </View>
 
-        {/* Edit Task Modal */}
-        <Modal visible={editingTask !== null} transparent animationType="fade" onRequestClose={() => setEditingTask(null)}>
-          <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center', padding: spacing.lg }}>
-            <View style={{ backgroundColor: colors.surface, borderRadius: radii.lg, padding: spacing.lg, width: '100%', maxWidth: 400 }}>
-              <Text style={{ ...typography.titleMedium, color: colors.textPrimary, marginBottom: spacing.md }}>Edit Task</Text>
-              <TextInput
-                value={editTaskTitle}
-                onChangeText={setEditTaskTitle}
-                placeholder="Task title"
-                placeholderTextColor={colors.textMuted}
-                style={{
-                  borderWidth: 1,
-                  borderColor: colors.borderSubtle,
-                  borderRadius: radii.md,
-                  paddingHorizontal: spacing.md,
-                  paddingVertical: spacing.sm,
-                  backgroundColor: colors.surfaceMuted,
-                  color: colors.textPrimary,
-                  marginBottom: spacing.md,
-                }}
-              />
-              <View style={{ flexDirection: 'row', gap: spacing.sm }}>
-                <TouchableOpacity
-                  onPress={() => setEditingTask(null)}
-                  style={{
-                    flex: 1,
-                    paddingVertical: spacing.sm,
-                    borderRadius: radii.md,
-                    borderWidth: 1,
-                    borderColor: colors.borderSubtle,
-                    alignItems: 'center',
-                  }}
-                >
-                  <Text style={{ ...typography.body, color: colors.textPrimary }}>Cancel</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  onPress={handleSaveTaskEdit}
-                  style={{
-                    flex: 1,
-                    paddingVertical: spacing.sm,
-                    borderRadius: radii.md,
-                    backgroundColor: colors.primary,
-                    alignItems: 'center',
-                  }}
-                >
-                  <Text style={{ ...typography.bodySemiBold, color: '#FFFFFF' }}>Save</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-          </View>
-        </Modal>
+          );
 
-        <View
+const renderDiary = () => (
+<View
           style={{
             backgroundColor: colors.surface,
             borderRadius: radii.lg,
@@ -784,6 +614,86 @@ export default function PlannerScreen({ navigation }: PlannerProps) {
             <Text style={{ ...typography.bodySemiBold, color: colors.textPrimary }}>+ Add Event</Text>
           </TouchableOpacity>
         </View>
+
+          );
+
+return (
+    <KeyboardAvoidingView style={{ flex: 1, backgroundColor: isDesktop ? colors.surfaceBg : colors.background }} behavior="height" keyboardVerticalOffset={0}>
+      <ScrollView
+        style={{ flex: 1, backgroundColor: isDesktop ? colors.surfaceBg : colors.background }}
+        contentContainerStyle={isDesktop ? { paddingHorizontal: 48, paddingTop: spacing.sm, paddingBottom: 120, maxWidth: 1200, width: '100%', alignSelf: 'center' } : { paddingHorizontal: spacing.lg, paddingTop: spacing.sm, paddingBottom: 120 }}
+      >
+        {isDesktop ? null : (
+          <TouchableOpacity
+            onPress={() => navigation.goBack()}
+            style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.sm }}
+          >
+            <MaterialIcons name="arrow-back" size={20} color={colors.textPrimary} />
+            <Text style={{ ...typography.body, color: colors.textPrimary, marginLeft: spacing.xs }}>Back</Text>
+          </TouchableOpacity>
+        )}
+
+        {isDesktop ? (
+          <View style={{ marginBottom: spacing.lg, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end' }}>
+            <View>
+              <Text style={{ ...typography.labelMd, color: colors.dustyRose, marginBottom: spacing.sm, textTransform: 'uppercase', letterSpacing: 0.05 }}>
+                Event Dashboard
+              </Text>
+              <Text style={{ ...typography.headlineMd, color: colors.primary }}>My Planner</Text>
+            </View>
+            <View style={{ flexDirection: 'row', gap: spacing.md }}>
+              <TouchableOpacity
+                onPress={() => setShowEventTypeModal(true)}
+                style={{
+                  paddingHorizontal: spacing.lg,
+                  paddingVertical: spacing.sm,
+                  borderRadius: radii.md,
+                  borderWidth: 2,
+                  borderColor: colors.primary,
+                }}
+              >
+                <Text style={{ ...typography.captionSemiBold, color: colors.primary }}>Edit Event</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={{
+                  paddingHorizontal: spacing.lg,
+                  paddingVertical: spacing.sm,
+                  borderRadius: radii.md,
+                  backgroundColor: colors.primary,
+                }}
+              >
+                <Text style={{ ...typography.captionSemiBold, color: '#FFFFFF' }}>Invite Collaborators</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        ) : (
+          <View style={{ marginBottom: spacing.lg }}>
+            <Text style={{ ...typography.displayMedium, color: colors.textPrimary }}>My Planner</Text>
+            <Text style={{ ...typography.body, color: colors.textSecondary, marginTop: spacing.xs }}>
+              Track tasks, budget, and key dates for your event.
+            </Text>
+          </View>
+        )}
+
+        {isDesktop ? (
+          <View style={{ flexDirection: 'row', gap: spacing.gutter } as any}>
+            <View style={{ flex: 7, gap: spacing.gutter } as any}>
+              {renderEventDetails()}
+              {renderDiary()}
+            </View>
+            <View style={{ flex: 5, gap: spacing.gutter } as any}>
+              {renderBudget()}
+              {renderTasks()}
+            </View>
+          </View>
+        ) : (
+          <>
+            {renderEventDetails()}
+            {renderBudget()}
+            {renderTasks()}
+            {renderDiary()}
+          </>
+        )}
 
         {/* Edit Diary Item Modal */}
         <Modal visible={editingItem !== null} transparent animationType="slide" onRequestClose={() => setEditingItem(null)}>

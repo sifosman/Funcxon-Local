@@ -28,6 +28,55 @@ export async function createNotification(notification: Omit<NotificationRow, 'id
   return data?.id;
 }
 
+export async function hasNotification(userId: string, type: string) {
+  const { count, error } = await supabase
+    .from('notifications')
+    .select('*', { count: 'exact', head: true })
+    .eq('user_id', userId)
+    .eq('type', type);
+
+  if (error) {
+    console.error('[hasNotification] failed:', error);
+    return false;
+  }
+  return (count ?? 0) > 0;
+}
+
+export async function createWelcomeNotification(userId: string) {
+  return createNotification({
+    user_id: userId,
+    type: 'welcome',
+    title: 'Welcome to Funxon!',
+    body: 'Thanks for joining us. Explore venues, discover vendors, and plan unforgettable events all in one place.',
+    link: null,
+    read: false,
+  });
+}
+
+export async function ensureWelcomeNotification(userId: string) {
+  const exists = await hasNotification(userId, 'welcome');
+  if (!exists) {
+    await createWelcomeNotification(userId);
+  }
+}
+
+export async function createAccountNotification(
+  userId: string,
+  type: string,
+  title: string,
+  body: string,
+  link?: string | null
+) {
+  return createNotification({
+    user_id: userId,
+    type,
+    title,
+    body,
+    link: link ?? null,
+    read: false,
+  });
+}
+
 export async function createTourRequestedNotification(
   listingOwnerUserId: string,
   visitorName: string,
@@ -146,13 +195,19 @@ export async function createQuoteAcceptedNotification(
   });
 }
 
-export async function fetchNotifications(userId: string, limit = 50) {
-  const { data, error } = await supabase
+export async function fetchNotifications(userId: string, limit = 50, onlyUnread = false) {
+  let query = supabase
     .from('notifications')
     .select('id, user_id, type, title, body, link, read, created_at')
     .eq('user_id', userId)
     .order('created_at', { ascending: false })
     .limit(limit);
+
+  if (onlyUnread) {
+    query = query.eq('read', false);
+  }
+
+  const { data, error } = await query;
 
   if (error) {
     console.error('[fetchNotifications] failed:', error);

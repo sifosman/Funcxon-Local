@@ -23,6 +23,7 @@ import ThemedAlert from '../../components/ThemedAlert';
 import { useFocusEffect } from '@react-navigation/native';
 import { SUPPORT_WHATSAPP } from '../../utils/env';
 import type { ProfileStackParamList } from '../../navigation/ProfileNavigator';
+import { useIsDesktop } from '../../hooks/useIsDesktop';
 
 type NavigationProp = NativeStackNavigationProp<ProfileStackParamList>;
 
@@ -54,6 +55,7 @@ type ActionItem = {
 export default function ListerPortfolioScreen() {
   const navigation = useNavigation<NavigationProp>();
   const { user, userRole, signOut } = useAuth();
+  const isDesktop = useIsDesktop();
   const [vendorListing, setVendorListing] = useState<VendorListing | null>(null);
   const [venueListing, setVenueListing] = useState<VenueListing | null>(null);
   const [venueListingNeedsSetup, setVenueListingNeedsSetup] = useState(false);
@@ -335,26 +337,6 @@ export default function ListerPortfolioScreen() {
     },
   ];
 
-  const renderActionCard = (item: ActionItem, index: number, total: number) => (
-    <TouchableOpacity
-      key={item.id}
-      onPress={item.action}
-      style={[
-        styles.actionRow,
-        index < total - 1 && styles.actionRowBorder,
-      ]}
-      activeOpacity={0.7}
-    >
-      <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
-        <MaterialIcons name={item.icon} size={22} color={colors.textPrimary} style={{ marginRight: spacing.md }} />
-        <Text style={{ ...typography.bodyMedium, color: colors.textPrimary }}>
-          {item.label}
-        </Text>
-      </View>
-      <MaterialIcons name="chevron-right" size={20} color={colors.textMuted} />
-    </TouchableOpacity>
-  );
-
   if (loading) {
     return (
       <View style={{ flex: 1, backgroundColor: colors.background, justifyContent: 'center', alignItems: 'center' }}>
@@ -363,25 +345,79 @@ export default function ListerPortfolioScreen() {
     );
   }
 
+  const desktopContainerStyle = {
+    maxWidth: 1200,
+    width: '100%',
+    alignSelf: 'center' as const,
+    paddingHorizontal: isDesktop ? 48 : spacing.lg,
+    paddingBottom: spacing.xxl,
+  };
+
+  const cardStyle = {
+    backgroundColor: isDesktop ? colors.surfaceContainerLowest : colors.surface,
+    borderColor: isDesktop ? colors.outlineVariant : colors.borderSubtle,
+  };
+
+  const renderActionCard = (item: ActionItem, index: number, total: number) => {
+    const isLast = index === total - 1;
+    return (
+      <TouchableOpacity
+        key={item.id}
+        style={[styles.actionRow, !isLast && styles.actionRowBorder]}
+        onPress={item.action}
+        activeOpacity={0.7}
+      >
+        <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
+          <MaterialIcons name={item.icon} size={22} color={colors.textPrimary} style={{ marginRight: spacing.md }} />
+          <Text style={isDesktop ? { ...typography.bodyMd, color: colors.textPrimary } as any : { ...typography.body, color: colors.textPrimary }}>
+            {item.label}
+          </Text>
+        </View>
+        <MaterialIcons name="chevron-right" size={20} color={colors.textMuted} />
+      </TouchableOpacity>
+    );
+  };
+
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
+    <ScrollView style={[styles.container, { backgroundColor: isDesktop ? colors.surfaceBg : colors.background }]} contentContainerStyle={desktopContainerStyle as any}>
       {/* Welcome Section */}
       <View style={styles.section}>
-        <Text style={styles.welcomeTitle}>Welcome back {getUsername()}</Text>
-        <Text style={styles.welcomeSubtitle}>Let's get into it!!!</Text>
+        <Text style={isDesktop ? { ...typography.headlineMd, color: colors.primary, marginBottom: spacing.xs } as any : styles.welcomeTitle}>Welcome back {getUsername()}</Text>
+        <Text style={isDesktop ? { ...typography.bodyMd, color: colors.onSurfaceVariant } as any : styles.welcomeSubtitle}>Let's get into it!!!</Text>
       </View>
 
-      {/* Portfolio Actions Card */}
-      <View style={styles.card}>
-        <Text style={styles.cardTitle}>Portfolio</Text>
-        {portfolioActions.map((item, i) => renderActionCard(item, i, portfolioActions.length))}
-      </View>
+      {isDesktop ? (
+        <View style={{ flexDirection: 'row', gap: spacing.gutter } as any}>
+          <View style={{ flex: 1 } as any}>
+            {/* Portfolio Actions Card */}
+            <View style={[styles.card, cardStyle]}>
+              <Text style={styles.cardTitle}>Portfolio</Text>
+              {portfolioActions.map((item, i) => renderActionCard(item, i, portfolioActions.length))}
+            </View>
+          </View>
+          <View style={{ flex: 1 } as any}>
+            {/* Profile & Settings Card */}
+            <View style={[styles.card, cardStyle]}>
+              <Text style={styles.cardTitle}>Profile & Settings</Text>
+              {settingsActions.map((item, i) => renderActionCard(item, i, settingsActions.length))}
+            </View>
+          </View>
+        </View>
+      ) : (
+        <>
+          {/* Portfolio Actions Card */}
+          <View style={[styles.card, cardStyle]}>
+            <Text style={styles.cardTitle}>Portfolio</Text>
+            {portfolioActions.map((item, i) => renderActionCard(item, i, portfolioActions.length))}
+          </View>
 
-      {/* Profile & Settings Card */}
-      <View style={styles.card}>
-        <Text style={styles.cardTitle}>Profile & Settings</Text>
-        {settingsActions.map((item, i) => renderActionCard(item, i, settingsActions.length))}
-      </View>
+          {/* Profile & Settings Card */}
+          <View style={[styles.card, cardStyle]}>
+            <Text style={styles.cardTitle}>Profile & Settings</Text>
+            {settingsActions.map((item, i) => renderActionCard(item, i, settingsActions.length))}
+          </View>
+        </>
+      )}
 
       {/* Submit Review & Featured CTA */}
       <View style={styles.ctaSection}>
@@ -393,7 +429,7 @@ export default function ListerPortfolioScreen() {
           <Text style={styles.ctaButtonText}>Submit a Funxon app review</Text>
         </TouchableOpacity>
 
-        <View style={styles.featuredCard}>
+        <View style={[styles.featuredCard, { backgroundColor: isDesktop ? colors.surfaceContainerLowest : colors.accent, borderColor: isDesktop ? colors.outlineVariant : undefined, borderWidth: isDesktop ? 1 : 0 }]}>
           <Text style={styles.featuredLabel}>Want priority exposure?</Text>
           <TouchableOpacity
             style={styles.featuredButton}
@@ -402,13 +438,12 @@ export default function ListerPortfolioScreen() {
             <Text style={styles.featuredButtonText}>GET FEATURED</Text>
           </TouchableOpacity>
         </View>
-
       </View>
 
       {/* Listers Blog Section */}
       <View style={styles.section}>
         <View style={styles.blogHeader}>
-          <Text style={styles.sectionTitle}>Listers Blog</Text>
+          <Text style={isDesktop ? { ...typography.headlineSm, color: colors.textPrimary, marginBottom: spacing.md } as any : styles.sectionTitle}>Listers Blog</Text>
           <TouchableOpacity onPress={() => {
             const parentNav = (navigation as any).getParent?.();
             parentNav?.navigate?.('Main', { screen: 'Home', params: { screen: 'BlogList' } });
@@ -431,7 +466,7 @@ export default function ListerPortfolioScreen() {
                   parentNav?.navigate?.('Main', { screen: 'Home', params: { screen: 'BlogDetail', params: { slug: post.slug } } });
                 }}
               >
-                <View style={styles.blogCardInner}>
+                <View style={[styles.blogCardInner, cardStyle]}>
                   {post.cover_image_url ? (
                     <Image source={{ uri: post.cover_image_url }} style={styles.blogCardImage} resizeMode="cover" />
                   ) : (
@@ -463,7 +498,7 @@ export default function ListerPortfolioScreen() {
       </View>
 
       {/* Support Links */}
-      <View style={styles.card}>
+      <View style={[styles.card, cardStyle]}>
         <Text style={styles.cardTitle}>Support</Text>
         {[
           { id: 'faqs', label: "FAQ's", icon: 'help-outline' as keyof typeof MaterialIcons.glyphMap, action: () => setHelpVisible(true) },

@@ -16,10 +16,12 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { supabase } from '../lib/supabaseClient';
 import type { AttendeeStackParamList } from '../navigation/AttendeeNavigator';
 import { colors, spacing, typography, radii } from '../theme';
+import { useIsDesktop } from '../hooks/useIsDesktop';
 import { PrimaryButton, ThemedInput } from '../components/ui';
 import { useAuth } from '../auth/AuthContext';
 import ThemedAlert from '../components/ThemedAlert';
 import type { QuoteLineItem } from '../lib/quoting';
+import { createQuoteRequestedNotification, createQuoteAmendedNotification } from '../lib/notifications';
 
 type CatalogueItem = {
   id: number;
@@ -42,6 +44,7 @@ function formatDateInput(date: Date | null): string {
 export default function QuoteRequestScreen({ route, navigation }: Props) {
   const { vendorId, vendorName, type = 'vendor', editMode = false, quoteId, initialLineItems } = route.params;
   const { user } = useAuth();
+  const isDesktop = useIsDesktop();
 
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -71,6 +74,40 @@ export default function QuoteRequestScreen({ route, navigation }: Props) {
   const total = useMemo(() => {
     return selectedItems.reduce((sum, item) => sum + (item.price ?? 0) * item.quantity, 0);
   }, [selectedItems]);
+
+  const createListerInAppNotification = async (quoteRequestId: number | null, isAmendment: boolean) => {
+    try {
+      if (type === 'venue') {
+        const { data: venue } = await supabase
+          .from('venue_listings')
+          .select('user_id, name')
+          .eq('id', vendorId)
+          .maybeSingle();
+        if (venue?.user_id) {
+          if (isAmendment && quoteRequestId) {
+            await createQuoteAmendedNotification(venue.user_id, name, venue.name || vendorName, quoteRequestId, true);
+          } else {
+            await createQuoteRequestedNotification(venue.user_id, name, venue.name || vendorName, true);
+          }
+        }
+      } else {
+        const { data: vendor } = await supabase
+          .from('vendors')
+          .select('user_id, name')
+          .eq('id', vendorId)
+          .maybeSingle();
+        if (vendor?.user_id) {
+          if (isAmendment && quoteRequestId) {
+            await createQuoteAmendedNotification(vendor.user_id, name, vendor.name || vendorName, quoteRequestId, false);
+          } else {
+            await createQuoteRequestedNotification(vendor.user_id, name, vendor.name || vendorName, false);
+          }
+        }
+      }
+    } catch (e) {
+      console.error('Failed to create lister in-app notification:', e);
+    }
+  };
 
   const toggleItem = (id: number) => {
     setSelectedIds((prev) => {
@@ -316,6 +353,7 @@ export default function QuoteRequestScreen({ route, navigation }: Props) {
             .eq('id', quoteId);
           if (updateError) throw updateError;
         }
+        await createListerInAppNotification(quoteId, true);
         setAlertState({ visible: true, title: 'Quote updated', message: 'Your amendment has been sent to the lister.', buttons: [{ text: 'OK', style: 'default', onPress: () => { setAlertState(null); navigation.goBack(); } }] });
         setSubmitting(false);
         return;
@@ -395,6 +433,7 @@ export default function QuoteRequestScreen({ route, navigation }: Props) {
       }
 
       await sendAdminNotification();
+      await createListerInAppNotification(quoteRequestId, false);
       if (type === 'vendor') {
         await sendVendorNotification(vendorId, vendorName, quoteRequestId);
       } else {
@@ -495,358 +534,414 @@ export default function QuoteRequestScreen({ route, navigation }: Props) {
     }
   };
 
-  return (
-    <KeyboardAvoidingView
-      style={{ flex: 1 }}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
-    >
-      <ScrollView
-        style={{ flex: 1, backgroundColor: colors.background }}
-        contentContainerStyle={{ paddingHorizontal: spacing.lg, paddingTop: spacing.sm, paddingBottom: 160 }}
-        keyboardShouldPersistTaps="handled"
+  const cardStyle = {
+    padding: isDesktop ? spacing.xl : spacing.lg,
+    borderRadius: isDesktop ? radii.xl : 16,
+    backgroundColor: isDesktop ? colors.surfaceContainerLowest : colors.surface,
+    borderWidth: 1,
+    borderColor: isDesktop ? colors.outlineVariant : colors.borderSubtle,
+    marginBottom: spacing.lg,
+  };
+
+  const renderHeader = () => (
+    <View style={cardStyle}>
+      <Text style={isDesktop ? { ...typography.labelMd, color: colors.dustyRose, marginBottom: spacing.sm, textTransform: 'uppercase', letterSpacing: 0.05 } : { ...typography.titleMedium, color: colors.textPrimary }}>
+        {isDesktop ? (editMode ? 'Amend Quote Request' : 'Request a Quote') : (editMode ? 'Amend your quote request for' : 'Request a quote from')}
+      </Text>
+      {!isDesktop && (
+        <Text style={{ marginTop: spacing.xs, ...typography.body, color: colors.textSecondary }}>
+          {vendorName}
+        </Text>
+      )}
+      {isDesktop && (
+        <Text style={{ ...typography.headlineMd, color: colors.primary, marginTop: spacing.xs }}>
+          {vendorName}
+        </Text>
+      )}
+    </View>
+  );
+
+  const renderYourDetails = () => (
+    <>
+      <Text style={isDesktop ? { ...typography.headlineSm, color: colors.textPrimary, marginBottom: spacing.md } : { ...typography.titleMedium, color: colors.textPrimary, marginBottom: spacing.md }}>
+        Your details
+      </Text>
+
+      <Text style={isDesktop ? { ...typography.labelMd, color: colors.dustyRose, marginBottom: spacing.xs, textTransform: 'uppercase' } : { ...typography.body, color: colors.textSecondary, marginBottom: spacing.xs }}>Your name</Text>
+      <ThemedInput
+        value={name}
+        onChangeText={setName}
+        placeholder="e.g. Thandi M"
+        autoCapitalize="words"
+        editable={!loadingUser}
+      />
+
+      <Text style={isDesktop ? { ...typography.labelMd, color: colors.dustyRose, marginBottom: spacing.xs, marginTop: spacing.md, textTransform: 'uppercase' } : { ...typography.body, color: colors.textSecondary, marginBottom: spacing.xs, marginTop: spacing.md }}>
+        Email address
+      </Text>
+      <ThemedInput
+        value={email}
+        onChangeText={setEmail}
+        placeholder="you@example.com"
+        keyboardType="email-address"
+        autoCapitalize="none"
+        editable={!loadingUser}
+      />
+
+      <Text style={isDesktop ? { ...typography.labelMd, color: colors.dustyRose, marginBottom: spacing.xs, marginTop: spacing.md, textTransform: 'uppercase' } : { ...typography.body, color: colors.textSecondary, marginBottom: spacing.xs, marginTop: spacing.md }}>
+        Contact number
+      </Text>
+      <ThemedInput
+        value={contactPhone}
+        onChangeText={setContactPhone}
+        placeholder="e.g. 082 123 4567"
+        keyboardType="phone-pad"
+        autoCapitalize="none"
+      />
+
+      <Text style={isDesktop ? { ...typography.labelMd, color: colors.dustyRose, marginBottom: spacing.xs, marginTop: spacing.md, textTransform: 'uppercase' } : { ...typography.body, color: colors.textSecondary, marginBottom: spacing.xs, marginTop: spacing.md }}>
+        Event date
+      </Text>
+      <TouchableOpacity
+        onPress={() => setShowDatePicker('event')}
+        style={{
+          borderWidth: 1,
+          borderColor: isDesktop ? colors.outlineVariant : colors.borderSubtle,
+          borderRadius: radii.md,
+          paddingHorizontal: spacing.md,
+          paddingVertical: spacing.sm,
+          backgroundColor: isDesktop ? colors.surfaceContainerLowest : colors.surfaceMuted,
+          flexDirection: 'row',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+        }}
       >
-        <TouchableOpacity
-          onPress={() => navigation.goBack()}
-          style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.sm }}
-        >
-          <MaterialIcons name="arrow-back" size={20} color={colors.textPrimary} />
-          <Text style={{ ...typography.body, color: colors.textPrimary, marginLeft: spacing.xs }}>Back</Text>
-        </TouchableOpacity>
+        <Text style={isDesktop ? { ...typography.bodyMd, color: eventDate ? colors.textPrimary : colors.textMuted } : { ...typography.body, color: eventDate ? colors.textPrimary : colors.textMuted }}>
+          {eventDate ? eventDate.toLocaleDateString('en-ZA', { day: 'numeric', month: 'long', year: 'numeric' }) : 'Select a date'}
+        </Text>
+        <MaterialIcons name="calendar-today" size={20} color={colors.textMuted} />
+      </TouchableOpacity>
 
-        <View
-          style={{
-            marginBottom: spacing.lg,
-            padding: spacing.lg,
-            borderRadius: 16,
-            backgroundColor: colors.surface,
-            borderWidth: 1,
-            borderColor: colors.borderSubtle,
-          }}
-        >
-          <Text style={{ ...typography.titleMedium, color: colors.textPrimary }}>
-            {editMode ? 'Amend your quote request for' : 'Request a quote from'}
-          </Text>
-          <Text style={{ marginTop: spacing.xs, ...typography.body, color: colors.textSecondary }}>
-            {vendorName}
-          </Text>
-        </View>
+      <TouchableOpacity
+        onPress={() => setIsMultiDay((prev) => !prev)}
+        style={{ flexDirection: 'row', alignItems: 'center', marginTop: spacing.md, marginBottom: isMultiDay ? spacing.sm : 0 }}
+      >
+        <MaterialIcons
+          name={isMultiDay ? 'check-box' : 'check-box-outline-blank'}
+          size={22}
+          color={isMultiDay ? colors.primary : colors.textMuted}
+        />
+        <Text style={isDesktop ? { ...typography.bodyMd, color: colors.textPrimary, marginLeft: spacing.sm } : { ...typography.body, color: colors.textPrimary, marginLeft: spacing.sm }}>
+          Multi-day event
+        </Text>
+      </TouchableOpacity>
 
-        {(loadingUser || loadingEdit) && (
-          <Text style={{ ...typography.caption, color: colors.textMuted, marginBottom: spacing.md }}>Loading...</Text>
-        )}
-
-        <View
-          style={{
-            padding: spacing.lg,
-            borderRadius: 16,
-            backgroundColor: colors.surface,
-            borderWidth: 1,
-            borderColor: colors.borderSubtle,
-          }}
-        >
-          <Text style={{ ...typography.titleMedium, color: colors.textPrimary, marginBottom: spacing.md }}>
-            Your details
-          </Text>
-
-          <Text style={{ ...typography.body, color: colors.textSecondary, marginBottom: spacing.xs }}>Your name</Text>
-          <ThemedInput
-            value={name}
-            onChangeText={setName}
-            placeholder="e.g. Thandi M"
-            autoCapitalize="words"
-            editable={!loadingUser}
-          />
-
-          <Text style={{ ...typography.body, color: colors.textSecondary, marginBottom: spacing.xs, marginTop: spacing.md }}>
-            Email address
-          </Text>
-          <ThemedInput
-            value={email}
-            onChangeText={setEmail}
-            placeholder="you@example.com"
-            keyboardType="email-address"
-            autoCapitalize="none"
-            editable={!loadingUser}
-          />
-
-          <Text style={{ ...typography.body, color: colors.textSecondary, marginBottom: spacing.xs, marginTop: spacing.md }}>
-            Contact number
-          </Text>
-          <ThemedInput
-            value={contactPhone}
-            onChangeText={setContactPhone}
-            placeholder="e.g. 082 123 4567"
-            keyboardType="phone-pad"
-            autoCapitalize="none"
-          />
-
-          <Text style={{ ...typography.body, color: colors.textSecondary, marginBottom: spacing.xs, marginTop: spacing.md }}>
-            Event date
+      {isMultiDay && (
+        <>
+          <Text style={isDesktop ? { ...typography.labelMd, color: colors.dustyRose, marginBottom: spacing.xs, marginTop: spacing.md, textTransform: 'uppercase' } : { ...typography.body, color: colors.textSecondary, marginBottom: spacing.xs, marginTop: spacing.md }}>
+            End date
           </Text>
           <TouchableOpacity
-            onPress={() => setShowDatePicker('event')}
+            onPress={() => setShowDatePicker('end')}
             style={{
               borderWidth: 1,
-              borderColor: colors.borderSubtle,
+              borderColor: isDesktop ? colors.outlineVariant : colors.borderSubtle,
               borderRadius: radii.md,
               paddingHorizontal: spacing.md,
               paddingVertical: spacing.sm,
-              backgroundColor: colors.surfaceMuted,
+              backgroundColor: isDesktop ? colors.surfaceContainerLowest : colors.surfaceMuted,
               flexDirection: 'row',
               justifyContent: 'space-between',
               alignItems: 'center',
             }}
           >
-            <Text style={{ ...typography.body, color: eventDate ? colors.textPrimary : colors.textMuted }}>
-              {eventDate ? eventDate.toLocaleDateString('en-ZA', { day: 'numeric', month: 'long', year: 'numeric' }) : 'Select a date'}
+            <Text style={isDesktop ? { ...typography.bodyMd, color: endDate ? colors.textPrimary : colors.textMuted } : { ...typography.body, color: endDate ? colors.textPrimary : colors.textMuted }}>
+              {endDate ? endDate.toLocaleDateString('en-ZA', { day: 'numeric', month: 'long', year: 'numeric' }) : 'Select end date'}
             </Text>
             <MaterialIcons name="calendar-today" size={20} color={colors.textMuted} />
           </TouchableOpacity>
+        </>
+      )}
 
-          <TouchableOpacity
-            onPress={() => setIsMultiDay((prev) => !prev)}
-            style={{ flexDirection: 'row', alignItems: 'center', marginTop: spacing.md, marginBottom: isMultiDay ? spacing.sm : 0 }}
-          >
-            <MaterialIcons
-              name={isMultiDay ? 'check-box' : 'check-box-outline-blank'}
-              size={22}
-              color={isMultiDay ? colors.primary : colors.textMuted}
-            />
-            <Text style={{ ...typography.body, color: colors.textPrimary, marginLeft: spacing.sm }}>
-              Multi-day event
-            </Text>
-          </TouchableOpacity>
+      {showDatePicker && (
+        <DateTimePicker
+          value={showDatePicker === 'event' ? (eventDate ?? new Date()) : (endDate ?? new Date())}
+          mode="date"
+          display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+          minimumDate={new Date()}
+          onChange={(event, date) => onDateChange(showDatePicker, event, date)}
+        />
+      )}
 
-          {isMultiDay && (
-            <>
-              <Text style={{ ...typography.body, color: colors.textSecondary, marginBottom: spacing.xs, marginTop: spacing.md }}>
-                End date
-              </Text>
-              <TouchableOpacity
-                onPress={() => setShowDatePicker('end')}
-                style={{
-                  borderWidth: 1,
-                  borderColor: colors.borderSubtle,
-                  borderRadius: radii.md,
-                  paddingHorizontal: spacing.md,
-                  paddingVertical: spacing.sm,
-                  backgroundColor: colors.surfaceMuted,
-                  flexDirection: 'row',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                }}
-              >
-                <Text style={{ ...typography.body, color: endDate ? colors.textPrimary : colors.textMuted }}>
-                  {endDate ? endDate.toLocaleDateString('en-ZA', { day: 'numeric', month: 'long', year: 'numeric' }) : 'Select end date'}
-                </Text>
-                <MaterialIcons name="calendar-today" size={20} color={colors.textMuted} />
-              </TouchableOpacity>
-            </>
-          )}
-
-          {showDatePicker && (
-            <DateTimePicker
-              value={showDatePicker === 'event' ? (eventDate ?? new Date()) : (endDate ?? new Date())}
-              mode="date"
-              display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-              minimumDate={new Date()}
-              onChange={(event, date) => onDateChange(showDatePicker, event, date)}
-            />
-          )}
-
-          {type === 'venue' && halls.length > 0 && (
-            <>
-              <Text style={{ ...typography.body, color: colors.textSecondary, marginBottom: spacing.xs, marginTop: spacing.md }}>
-                Hall
-              </Text>
-              <View style={{ gap: spacing.xs }}>
-                {halls.map((hall) => (
-                  <TouchableOpacity
-                    key={hall.name}
-                    onPress={() => setSelectedHall(hall.name)}
-                    style={{
-                      flexDirection: 'row',
-                      alignItems: 'center',
-                      padding: spacing.sm,
-                      borderRadius: radii.md,
-                      borderWidth: 1,
-                      borderColor: selectedHall === hall.name ? colors.primary : colors.borderSubtle,
-                      backgroundColor: selectedHall === hall.name ? colors.surfaceMuted : colors.surface,
-                    }}
-                  >
-                    <MaterialIcons
-                      name={selectedHall === hall.name ? 'radio-button-checked' : 'radio-button-unchecked'}
-                      size={20}
-                      color={selectedHall === hall.name ? colors.primary : colors.textMuted}
-                    />
-                    <View style={{ marginLeft: spacing.sm, flex: 1 }}>
-                      <Text style={{ ...typography.body, color: colors.textPrimary }}>{hall.name}</Text>
-                      {hall.capacity ? (
-                        <Text style={{ ...typography.caption, color: colors.textMuted }}>Capacity: {hall.capacity}</Text>
-                      ) : null}
-                    </View>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            </>
-          )}
-
-          <Text style={{ ...typography.body, color: colors.textSecondary, marginBottom: spacing.xs, marginTop: spacing.md }}>
-            Additional comments/requests/enquiries (optional)
+      {type === 'venue' && halls.length > 0 && (
+        <>
+          <Text style={isDesktop ? { ...typography.labelMd, color: colors.dustyRose, marginBottom: spacing.xs, marginTop: spacing.md, textTransform: 'uppercase' } : { ...typography.body, color: colors.textSecondary, marginBottom: spacing.xs, marginTop: spacing.md }}>
+            Hall
           </Text>
-          <ThemedInput
-            value={additionalComments}
-            onChangeText={setAdditionalComments}
-            placeholder="Any other details the lister should know..."
-            multiline
-            numberOfLines={4}
-            style={{ minHeight: 80, textAlignVertical: 'top' }}
-          />
-
-          {/* Catalogue Items */}
-          <View style={{ marginTop: spacing.lg }}>
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.sm }}>
-              <Text style={{ ...typography.titleMedium, color: colors.textPrimary }}>
-                Catalogue Items
-              </Text>
-              {loadingCatalogue && (
-                <Text style={{ ...typography.caption, color: colors.textMuted }}>Loading...</Text>
-              )}
-            </View>
-
-            {catalogueItems.length === 0 && !loadingCatalogue && (
-              <Text style={{ ...typography.caption, color: colors.textMuted, textAlign: 'center', paddingVertical: spacing.md }}>
-                No catalogue items available. You can still send a general request.
-              </Text>
-            )}
-
-            <View style={{ gap: spacing.sm }}>
-              {catalogueItems.map((item) => {
-                const isSelected = selectedIds.has(item.id);
-                return (
-                  <TouchableOpacity
-                    key={item.id}
-                    activeOpacity={0.9}
-                    onPress={() => toggleItem(item.id)}
-                    style={{
-                      flexDirection: 'row',
-                      borderRadius: radii.md,
-                      backgroundColor: colors.surfaceMuted,
-                      borderWidth: 2,
-                      borderColor: isSelected ? colors.primary : colors.borderSubtle,
-                      overflow: 'hidden',
-                    }}
-                  >
-                    {item.image_url ? (
-                      <Image source={{ uri: item.image_url }} style={{ width: 80, height: 80 }} resizeMode="cover" />
-                    ) : (
-                      <View style={{ width: 80, height: 80, backgroundColor: colors.surface, alignItems: 'center', justifyContent: 'center' }}>
-                        <MaterialIcons name="image" size={28} color={colors.textMuted} />
-                      </View>
-                    )}
-                    <View style={{ flex: 1, padding: spacing.sm, justifyContent: 'center' }}>
-                      <Text style={{ ...typography.bodySemiBold, color: colors.textPrimary }} numberOfLines={1}>
-                        {item.title}
-                      </Text>
-                      {item.description ? (
-                        <Text style={{ ...typography.caption, color: colors.textMuted, marginTop: 2 }} numberOfLines={2}>
-                          {item.description}
-                        </Text>
-                      ) : null}
-                      <Text style={{ ...typography.bodyBold, color: colors.textPrimary, marginTop: spacing.xs }}>
-                        {item.price === null || item.price === undefined ? '—' : `R${Number(item.price).toLocaleString()}`}
-                      </Text>
-                    </View>
-                    <View style={{ justifyContent: 'center', paddingRight: spacing.md }}>
-                      <MaterialIcons
-                        name={isSelected ? 'check-circle' : 'radio-button-unchecked'}
-                        size={28}
-                        color={isSelected ? colors.primary : colors.textMuted}
-                      />
-                    </View>
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
-
-            {selectedItems.length > 0 && (
-              <View
+          <View style={{ gap: spacing.xs }}>
+            {halls.map((hall) => (
+              <TouchableOpacity
+                key={hall.name}
+                onPress={() => setSelectedHall(hall.name)}
                 style={{
-                  marginTop: spacing.md,
-                  padding: spacing.md,
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  padding: spacing.sm,
                   borderRadius: radii.md,
-                  backgroundColor: colors.surfaceMuted,
                   borderWidth: 1,
-                  borderColor: colors.borderSubtle,
-                  gap: spacing.sm,
+                  borderColor: selectedHall === hall.name ? colors.primary : isDesktop ? colors.outlineVariant : colors.borderSubtle,
+                  backgroundColor: selectedHall === hall.name ? colors.surfaceMuted : colors.surface,
                 }}
               >
-                <Text style={{ ...typography.titleMedium, color: colors.textPrimary }}>Your Selection</Text>
-                {selectedItems.map((item) => (
-                  <View key={item.id} style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <View style={{ flex: 1 }}>
-                      <Text style={{ ...typography.body, color: colors.textPrimary }} numberOfLines={1}>
-                        {item.title}
-                      </Text>
-                    </View>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
-                      <TouchableOpacity
-                        onPress={() => updateQuantity(item.id, -1)}
-                        style={{
-                          width: 28,
-                          height: 28,
-                          borderRadius: 14,
-                          backgroundColor: colors.surface,
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                        }}
-                      >
-                        <MaterialIcons name="remove" size={16} color={colors.textPrimary} />
-                      </TouchableOpacity>
-                      <Text style={{ ...typography.body, color: colors.textPrimary, minWidth: 24, textAlign: 'center' }}>
-                        {quantities[item.id] || 1}
-                      </Text>
-                      <TouchableOpacity
-                        onPress={() => updateQuantity(item.id, 1)}
-                        style={{
-                          width: 28,
-                          height: 28,
-                          borderRadius: 14,
-                          backgroundColor: colors.surface,
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                        }}
-                      >
-                        <MaterialIcons name="add" size={16} color={colors.textPrimary} />
-                      </TouchableOpacity>
-                    </View>
-                  </View>
-                ))}
-                <View
+                <MaterialIcons
+                  name={selectedHall === hall.name ? 'radio-button-checked' : 'radio-button-unchecked'}
+                  size={20}
+                  color={selectedHall === hall.name ? colors.primary : colors.textMuted}
+                />
+                <View style={{ marginLeft: spacing.sm, flex: 1 }}>
+                  <Text style={isDesktop ? { ...typography.bodyMd, color: colors.textPrimary } : { ...typography.body, color: colors.textPrimary }}>{hall.name}</Text>
+                  {hall.capacity ? (
+                    <Text style={isDesktop ? { ...typography.labelMd, color: colors.textMuted } : { ...typography.caption, color: colors.textMuted }}>Capacity: {hall.capacity}</Text>
+                  ) : null}
+                </View>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </>
+      )}
+
+      <Text style={isDesktop ? { ...typography.labelMd, color: colors.dustyRose, marginBottom: spacing.xs, marginTop: spacing.md, textTransform: 'uppercase' } : { ...typography.body, color: colors.textSecondary, marginBottom: spacing.xs, marginTop: spacing.md }}>
+        Additional comments/requests/enquiries (optional)
+      </Text>
+      <ThemedInput
+        value={additionalComments}
+        onChangeText={setAdditionalComments}
+        placeholder="Any other details the lister should know..."
+        multiline
+        numberOfLines={4}
+        style={{ minHeight: 80, textAlignVertical: 'top' }}
+      />
+    </>
+  );
+
+  const renderCatalogueItems = () => (
+    <>
+      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.sm }}>
+        <Text style={isDesktop ? { ...typography.headlineSm, color: colors.textPrimary } : { ...typography.titleMedium, color: colors.textPrimary }}>
+          Catalogue Items
+        </Text>
+        {loadingCatalogue && (
+          <Text style={isDesktop ? { ...typography.bodyMd, color: colors.textMuted } : { ...typography.caption, color: colors.textMuted }}>Loading...</Text>
+        )}
+      </View>
+
+      {catalogueItems.length === 0 && !loadingCatalogue && (
+        <Text style={isDesktop ? { ...typography.bodyMd, color: colors.textMuted, textAlign: 'center', paddingVertical: spacing.md } : { ...typography.caption, color: colors.textMuted, textAlign: 'center', paddingVertical: spacing.md }}>
+          No catalogue items available. You can still send a general request.
+        </Text>
+      )}
+
+      <View style={{ gap: spacing.sm }}>
+        {catalogueItems.map((item) => {
+          const isSelected = selectedIds.has(item.id);
+          return (
+            <TouchableOpacity
+              key={item.id}
+              activeOpacity={0.9}
+              onPress={() => toggleItem(item.id)}
+              style={{
+                flexDirection: 'row',
+                borderRadius: radii.md,
+                backgroundColor: isDesktop ? colors.surfaceContainerLow : colors.surfaceMuted,
+                borderWidth: 2,
+                borderColor: isSelected ? colors.primary : isDesktop ? colors.outlineVariant : colors.borderSubtle,
+                overflow: 'hidden',
+              }}
+            >
+              {item.image_url ? (
+                <Image source={{ uri: item.image_url }} style={{ width: 80, height: 80 }} resizeMode="cover" />
+              ) : (
+                <View style={{ width: 80, height: 80, backgroundColor: isDesktop ? colors.surfaceContainerLowest : colors.surface, alignItems: 'center', justifyContent: 'center' }}>
+                  <MaterialIcons name="image" size={28} color={colors.textMuted} />
+                </View>
+              )}
+              <View style={{ flex: 1, padding: spacing.sm, justifyContent: 'center' }}>
+                <Text style={isDesktop ? { ...typography.bodyMd, fontWeight: '600', color: colors.textPrimary } : { ...typography.bodySemiBold, color: colors.textPrimary }} numberOfLines={1}>
+                  {item.title}
+                </Text>
+                {item.description ? (
+                  <Text style={isDesktop ? { ...typography.bodyMd, color: colors.textMuted, marginTop: 2 } : { ...typography.caption, color: colors.textMuted, marginTop: 2 }} numberOfLines={2}>
+                    {item.description}
+                  </Text>
+                ) : null}
+                <Text style={isDesktop ? { ...typography.bodyMd, fontWeight: '700', color: colors.textPrimary, marginTop: spacing.xs } : { ...typography.bodyBold, color: colors.textPrimary, marginTop: spacing.xs }}>
+                  {item.price === null || item.price === undefined ? '—' : `R${Number(item.price).toLocaleString()}`}
+                </Text>
+              </View>
+              <View style={{ justifyContent: 'center', paddingRight: spacing.md }}>
+                <MaterialIcons
+                  name={isSelected ? 'check-circle' : 'radio-button-unchecked'}
+                  size={28}
+                  color={isSelected ? colors.primary : colors.textMuted}
+                />
+              </View>
+            </TouchableOpacity>
+          );
+        })}
+      </View>
+    </>
+  );
+
+  const renderSelectionSummary = () => {
+    if (selectedItems.length === 0) return null;
+    return (
+      <>
+        <Text style={isDesktop ? { ...typography.headlineSm, color: colors.textPrimary, marginBottom: spacing.md } : { ...typography.titleMedium, color: colors.textPrimary }}>Your Selection</Text>
+        <View style={{ gap: spacing.sm }}>
+          {selectedItems.map((item) => (
+            <View key={item.id} style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+              <View style={{ flex: 1 }}>
+                <Text style={isDesktop ? { ...typography.bodyMd, color: colors.textPrimary } : { ...typography.body, color: colors.textPrimary }} numberOfLines={1}>
+                  {item.title}
+                </Text>
+              </View>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
+                <TouchableOpacity
+                  onPress={() => updateQuantity(item.id, -1)}
                   style={{
-                    borderTopWidth: 1,
-                    borderTopColor: colors.borderSubtle,
-                    paddingTop: spacing.sm,
-                    flexDirection: 'row',
-                    justifyContent: 'space-between',
+                    width: 28,
+                    height: 28,
+                    borderRadius: 14,
+                    backgroundColor: isDesktop ? colors.surfaceContainerLow : colors.surface,
                     alignItems: 'center',
+                    justifyContent: 'center',
                   }}
                 >
-                  <Text style={{ ...typography.bodyBold, color: colors.textPrimary }}>Estimated Total</Text>
-                  <Text style={{ ...typography.bodyBold, color: colors.primary }}>R{total.toLocaleString('en-ZA')}</Text>
+                  <MaterialIcons name="remove" size={16} color={colors.textPrimary} />
+                </TouchableOpacity>
+                <Text style={isDesktop ? { ...typography.bodyMd, color: colors.textPrimary, minWidth: 24, textAlign: 'center' } : { ...typography.body, color: colors.textPrimary, minWidth: 24, textAlign: 'center' }}>
+                  {quantities[item.id] || 1}
+                </Text>
+                <TouchableOpacity
+                  onPress={() => updateQuantity(item.id, 1)}
+                  style={{
+                    width: 28,
+                    height: 28,
+                    borderRadius: 14,
+                    backgroundColor: isDesktop ? colors.surfaceContainerLow : colors.surface,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
+                  <MaterialIcons name="add" size={16} color={colors.textPrimary} />
+                </TouchableOpacity>
+              </View>
+            </View>
+          ))}
+          <View
+            style={{
+              borderTopWidth: 1,
+              borderTopColor: isDesktop ? colors.outlineVariant : colors.borderSubtle,
+              paddingTop: spacing.sm,
+              flexDirection: 'row',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+            }}
+          >
+            <Text style={isDesktop ? { ...typography.bodyMd, fontWeight: '700', color: colors.textPrimary } : { ...typography.bodyBold, color: colors.textPrimary }}>Estimated Total</Text>
+            <Text style={isDesktop ? { ...typography.bodyMd, fontWeight: '700', color: colors.primary } : { ...typography.bodyBold, color: colors.primary }}>R{total.toLocaleString('en-ZA')}</Text>
+          </View>
+        </View>
+      </>
+    );
+  };
+
+  const renderSubmitButton = () => (
+    <PrimaryButton
+      title={submitting ? (editMode ? 'Updating...' : 'Submitting...') : (editMode ? 'Send amendment' : 'Submit quote request')}
+      onPress={handleSubmit}
+      disabled={submitting || loadingUser || loadingEdit || loadingCatalogue}
+      style={{ marginTop: spacing.lg }}
+    />
+  );
+
+  return (
+    <KeyboardAvoidingView
+      style={{ flex: 1, backgroundColor: isDesktop ? colors.surfaceBg : colors.background }}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
+    >
+      <ScrollView
+        style={{ flex: 1, backgroundColor: isDesktop ? colors.surfaceBg : colors.background }}
+        contentContainerStyle={isDesktop ? { paddingHorizontal: 48, paddingTop: spacing.sm, paddingBottom: 160, maxWidth: 1200, width: '100%', alignSelf: 'center' } : { paddingHorizontal: spacing.lg, paddingTop: spacing.sm, paddingBottom: 160 }}
+        keyboardShouldPersistTaps="handled"
+      >
+        {isDesktop ? null : (
+          <TouchableOpacity
+            onPress={() => navigation.goBack()}
+            style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.sm }}
+          >
+            <MaterialIcons name="arrow-back" size={20} color={colors.textPrimary} />
+            <Text style={{ ...typography.body, color: colors.textPrimary, marginLeft: spacing.xs }}>Back</Text>
+          </TouchableOpacity>
+        )}
+
+        {isDesktop ? (
+          <>
+            <View style={{ marginBottom: spacing.lg, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end' }}>
+              <View>
+                <Text style={{ ...typography.labelMd, color: colors.dustyRose, marginBottom: spacing.sm, textTransform: 'uppercase', letterSpacing: 0.05 }}>
+                  {editMode ? 'Amend Quote' : 'Request Quote'}
+                </Text>
+                <Text style={{ ...typography.headlineMd, color: colors.primary }}>
+                  {vendorName}
+                </Text>
+              </View>
+            </View>
+            <View style={{ flexDirection: 'row', gap: spacing.gutter } as any}>
+              <View style={{ flex: 2, gap: 0 } as any}>
+                <View style={cardStyle}>
+                  {renderYourDetails()}
+                </View>
+                <View style={cardStyle}>
+                  {renderCatalogueItems()}
+                </View>
+                {renderSubmitButton()}
+              </View>
+              <View style={{ flex: 1, gap: 0 } as any}>
+                {selectedItems.length > 0 && (
+                  <View style={cardStyle}>
+                    {renderSelectionSummary()}
+                  </View>
+                )}
+                <View style={cardStyle}>
+                  <Text style={{ ...typography.headlineSm, color: colors.textPrimary, marginBottom: spacing.md }}>
+                    {type === 'venue' ? 'Venue' : 'Vendor'}
+                  </Text>
+                  <Text style={{ ...typography.bodyMd, color: colors.textSecondary }}>
+                    {vendorName}
+                  </Text>
+                  <Text style={{ ...typography.bodyMd, color: colors.textMuted, marginTop: spacing.sm }}>
+                    Review your selections and event details before submitting your quote request.
+                  </Text>
                 </View>
               </View>
+            </View>
+          </>
+        ) : (
+          <>
+            {renderHeader()}
+            {(loadingUser || loadingEdit) && (
+              <Text style={{ ...typography.caption, color: colors.textMuted, marginBottom: spacing.md }}>Loading...</Text>
             )}
-          </View>
-
-          <PrimaryButton
-            title={submitting ? (editMode ? 'Updating...' : 'Submitting...') : (editMode ? 'Send amendment' : 'Submit quote request')}
-            onPress={handleSubmit}
-            disabled={submitting || loadingUser || loadingEdit || loadingCatalogue}
-            style={{ marginTop: spacing.lg }}
-          />
-        </View>
+            <View style={cardStyle}>
+              {renderYourDetails()}
+              {renderCatalogueItems()}
+              {renderSelectionSummary()}
+              {renderSubmitButton()}
+            </View>
+          </>
+        )}
       </ScrollView>
 
       {alertState && (

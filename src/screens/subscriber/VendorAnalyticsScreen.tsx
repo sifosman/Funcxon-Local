@@ -6,6 +6,7 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { colors, spacing, radii, typography } from '../../theme';
 import { supabase } from '../../lib/supabaseClient';
 import { useAuth } from '../../auth/AuthContext';
+import { useIsDesktop } from '../../hooks/useIsDesktop';
 
 type ProfileStackParamList = {
   UpdateVendorPortfolio: undefined;
@@ -21,6 +22,7 @@ type VendorRow = {
 export default function VendorAnalyticsScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<ProfileStackParamList>>();
   const { user } = useAuth();
+  const isDesktop = useIsDesktop();
 
   const [loading, setLoading] = useState(true);
   const [vendor, setVendor] = useState<VendorRow | null>(null);
@@ -100,28 +102,49 @@ export default function VendorAnalyticsScreen() {
     );
   }
 
+  const desktopContainerStyle = {
+    maxWidth: 1200,
+    width: '100%',
+    alignSelf: 'center' as const,
+    paddingHorizontal: 48,
+  };
+
+  const cardSurface = isDesktop ? colors.surfaceContainerLowest : colors.surface;
+  const cardBorder = isDesktop ? colors.outlineVariant : colors.borderSubtle;
+
+  const renderHeader = (isDesktopHeader: boolean, subtitle: string) => (
+    <View style={{ marginBottom: spacing.md }}>
+      <Text style={isDesktopHeader ? { ...typography.labelMd, color: colors.dustyRose, textTransform: 'uppercase', marginBottom: spacing.sm } as any : { display: 'none' } as any}>
+        Analytics
+      </Text>
+      <Text style={isDesktopHeader ? { ...typography.headlineMd, color: colors.primary } as any : { ...typography.displayMedium, color: colors.textPrimary, marginBottom: spacing.xs }}>
+        Analytics & Stats
+      </Text>
+      <Text style={{ ...typography.bodyMd, color: isDesktopHeader ? colors.onSurfaceVariant : colors.textMuted }}>
+        {subtitle}
+      </Text>
+    </View>
+  );
+
   if (!canUseAnalytics) {
     return (
-      <View style={{ flex: 1, backgroundColor: colors.background }}>
-        <ScrollView contentContainerStyle={{ paddingBottom: spacing.xl }}>
-          <View style={{ paddingHorizontal: spacing.lg, paddingTop: spacing.sm, paddingBottom: spacing.md }}>
-            <TouchableOpacity
-              onPress={() => navigation.goBack()}
-              style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.sm }}
-            >
-              <MaterialIcons name="arrow-back" size={20} color={colors.textPrimary} />
-              <Text style={{ ...typography.body, color: colors.textPrimary, marginLeft: spacing.sm }}>Back</Text>
-            </TouchableOpacity>
+      <View style={{ flex: 1, backgroundColor: isDesktop ? colors.surfaceBg : colors.background }}>
+        <ScrollView contentContainerStyle={isDesktop ? { ...desktopContainerStyle, paddingBottom: spacing.xxl } as any : { paddingBottom: spacing.xl }}>
+          <View style={{ paddingHorizontal: isDesktop ? 0 : spacing.lg, paddingTop: spacing.sm, paddingBottom: spacing.md }}>
+            {!isDesktop && (
+              <TouchableOpacity
+                onPress={() => navigation.goBack()}
+                style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.sm }}
+              >
+                <MaterialIcons name="arrow-back" size={20} color={colors.textPrimary} />
+                <Text style={{ ...typography.body, color: colors.textPrimary, marginLeft: spacing.sm }}>Back</Text>
+              </TouchableOpacity>
+            )}
 
-            <Text style={{ ...typography.displayMedium, color: colors.textPrimary, marginBottom: spacing.xs }}>
-              Analytics & Stats
-            </Text>
-            <Text style={{ ...typography.body, color: colors.textMuted }}>
-              This feature is available on paid vendor plans.
-            </Text>
+            {renderHeader(isDesktop, 'This feature is available on paid vendor plans.')}
           </View>
 
-          <View style={{ paddingHorizontal: spacing.lg }}>
+          <View style={{ paddingHorizontal: isDesktop ? 0 : spacing.lg }}>
             <View
               style={{
                 backgroundColor: '#FFF7ED',
@@ -134,7 +157,7 @@ export default function VendorAnalyticsScreen() {
               <Text style={{ ...typography.titleMedium, color: '#9A3412', marginBottom: spacing.sm }}>
                 Upgrade required
               </Text>
-              <Text style={{ ...typography.body, color: '#9A3412', marginBottom: spacing.md }}>
+              <Text style={{ ...typography.bodyMd, color: '#9A3412', marginBottom: spacing.md }}>
                 Upgrade your vendor plan to view analytics & stats.
               </Text>
 
@@ -158,36 +181,33 @@ export default function VendorAnalyticsScreen() {
 
   if (!vendor) {
     return (
-      <View style={{ flex: 1, backgroundColor: colors.background }}>
-        <ScrollView contentContainerStyle={{ paddingBottom: spacing.xl }}>
-          <View style={{ paddingHorizontal: spacing.lg, paddingTop: spacing.sm, paddingBottom: spacing.md }}>
-            <TouchableOpacity
-              onPress={() => navigation.goBack()}
-              style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.sm }}
-            >
-              <MaterialIcons name="arrow-back" size={20} color={colors.textPrimary} />
-              <Text style={{ ...typography.body, color: colors.textPrimary, marginLeft: spacing.sm }}>Back</Text>
-            </TouchableOpacity>
+      <View style={{ flex: 1, backgroundColor: isDesktop ? colors.surfaceBg : colors.background }}>
+        <ScrollView contentContainerStyle={isDesktop ? { ...desktopContainerStyle, paddingBottom: spacing.xxl } as any : { paddingBottom: spacing.xl }}>
+          <View style={{ paddingHorizontal: isDesktop ? 0 : spacing.lg, paddingTop: spacing.sm, paddingBottom: spacing.md }}>
+            {!isDesktop && (
+              <TouchableOpacity
+                onPress={() => navigation.goBack()}
+                style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.sm }}
+              >
+                <MaterialIcons name="arrow-back" size={20} color={colors.textPrimary} />
+                <Text style={{ ...typography.body, color: colors.textPrimary, marginLeft: spacing.sm }}>Back</Text>
+              </TouchableOpacity>
+            )}
 
-            <Text style={{ ...typography.displayMedium, color: colors.textPrimary, marginBottom: spacing.xs }}>
-              Analytics & Stats
-            </Text>
-            <Text style={{ ...typography.body, color: colors.textMuted }}>
-              Create your vendor profile first.
-            </Text>
+            {renderHeader(isDesktop, 'Create your vendor profile first.')}
           </View>
 
-          <View style={{ paddingHorizontal: spacing.lg }}>
+          <View style={{ paddingHorizontal: isDesktop ? 0 : spacing.lg }}>
             <View
               style={{
-                backgroundColor: colors.surface,
+                backgroundColor: cardSurface,
                 borderRadius: radii.lg,
                 padding: spacing.lg,
                 borderWidth: 1,
-                borderColor: colors.borderSubtle,
+                borderColor: cardBorder,
               }}
             >
-              <Text style={{ ...typography.body, color: colors.textPrimary }}>
+              <Text style={{ ...typography.bodyMd, color: colors.textPrimary }}>
                 You don't have a vendor profile yet. Please create it in "Update Vendor Portfolio" before viewing analytics.
               </Text>
               <TouchableOpacity
@@ -210,94 +230,136 @@ export default function VendorAnalyticsScreen() {
     );
   }
 
+  const renderStatsCards = () => (
+    <View style={{ flexDirection: 'row', gap: spacing.md } as any}>
+      <View style={{ flex: 1, backgroundColor: cardSurface, borderRadius: radii.lg, padding: spacing.lg, borderWidth: 1, borderColor: cardBorder } as any}>
+        <Text style={{ ...typography.labelMd, color: colors.onSurfaceVariant, marginBottom: spacing.sm } as any}>Catalogue Items</Text>
+        <Text style={{ ...typography.headlineMd, color: colors.primary }}>{counts.catalogueItems}</Text>
+      </View>
+      <View style={{ flex: 1, backgroundColor: cardSurface, borderRadius: radii.lg, padding: spacing.lg, borderWidth: 1, borderColor: cardBorder } as any}>
+        <Text style={{ ...typography.labelMd, color: colors.onSurfaceVariant, marginBottom: spacing.sm } as any}>Quote Requests</Text>
+        <Text style={{ ...typography.headlineMd, color: colors.primary }}>{counts.quoteRequests}</Text>
+      </View>
+      <View style={{ flex: 1, backgroundColor: cardSurface, borderRadius: radii.lg, padding: spacing.lg, borderWidth: 1, borderColor: cardBorder } as any}>
+        <Text style={{ ...typography.labelMd, color: colors.onSurfaceVariant, marginBottom: spacing.sm } as any}>Reviews</Text>
+        <Text style={{ ...typography.headlineMd, color: colors.primary }}>{counts.reviews}</Text>
+      </View>
+    </View>
+  );
+
   return (
-    <View style={{ flex: 1, backgroundColor: colors.background }}>
-      <ScrollView contentContainerStyle={{ paddingBottom: spacing.xl }}>
-        <View style={{ paddingHorizontal: spacing.lg, paddingTop: spacing.sm, paddingBottom: spacing.md }}>
-          <TouchableOpacity
-            onPress={() => navigation.goBack()}
-            style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.sm }}
-          >
-            <MaterialIcons name="arrow-back" size={20} color={colors.textPrimary} />
-            <Text style={{ ...typography.body, color: colors.textPrimary, marginLeft: spacing.sm }}>Back</Text>
-          </TouchableOpacity>
-
-          <Text style={{ ...typography.displayMedium, color: colors.textPrimary, marginBottom: spacing.xs }}>
-            Analytics & Stats
-          </Text>
-          <Text style={{ ...typography.body, color: colors.textMuted }}>{vendor.name}</Text>
-        </View>
-
-        <View style={{ paddingHorizontal: spacing.lg }}>
-          <View
-            style={{
-              backgroundColor: colors.surface,
-              borderRadius: radii.lg,
-              padding: spacing.lg,
-              borderWidth: 1,
-              borderColor: colors.borderSubtle,
-            }}
-          >
-            <Text style={{ ...typography.titleMedium, color: colors.textPrimary, marginBottom: spacing.md }}>
-              Overview
-            </Text>
-
-            <View style={{ flexDirection: 'row', gap: spacing.md }}>
-              <View
-                style={{
-                  flex: 1,
-                  backgroundColor: colors.surfaceMuted,
-                  borderRadius: radii.lg,
-                  padding: spacing.md,
-                  borderWidth: 1,
-                  borderColor: colors.borderSubtle,
-                }}
-              >
-                <Text style={{ ...typography.caption, color: colors.textMuted }}>Catalogue Items</Text>
-                <Text style={{ ...typography.displayLarge, color: colors.textPrimary }}>
-                  {counts.catalogueItems}
-                </Text>
+    <View style={{ flex: 1, backgroundColor: isDesktop ? colors.surfaceBg : colors.background }}>
+      <ScrollView contentContainerStyle={isDesktop ? { ...desktopContainerStyle, paddingBottom: spacing.xxl } as any : { paddingBottom: spacing.xl }}>
+        {isDesktop ? (
+          <>
+            {renderHeader(true, vendor.name)}
+            <View style={{ flexDirection: 'row', gap: spacing.gutter } as any}>
+              <View style={{ flex: 2 } as any}>
+                <View style={{ backgroundColor: cardSurface, borderRadius: radii.lg, padding: spacing.lg, borderWidth: 1, borderColor: cardBorder }}>
+                  <Text style={{ ...typography.headlineSm, color: colors.textPrimary, marginBottom: spacing.md }}>
+                    Overview
+                  </Text>
+                  {renderStatsCards()}
+                  <Text style={{ ...typography.bodyMd, color: colors.onSurfaceVariant, marginTop: spacing.md }}>
+                    This is a basic analytics view showing your current activity counts.
+                  </Text>
+                </View>
               </View>
+              <View style={{ flex: 1 } as any}>
+                <View style={{ backgroundColor: cardSurface, borderRadius: radii.lg, padding: spacing.lg, borderWidth: 1, borderColor: cardBorder }}>
+                  <Text style={{ ...typography.bodyMd, color: colors.onSurfaceVariant, textAlign: 'center' } as any}>
+                    Upgrade your plan for deeper insights, trend charts, and lead conversion metrics.
+                  </Text>
+                </View>
+              </View>
+            </View>
+          </>
+        ) : (
+          <>
+            <View style={{ paddingHorizontal: spacing.lg, paddingTop: spacing.sm, paddingBottom: spacing.md }}>
+              <TouchableOpacity
+                onPress={() => navigation.goBack()}
+                style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.sm }}
+              >
+                <MaterialIcons name="arrow-back" size={20} color={colors.textPrimary} />
+                <Text style={{ ...typography.body, color: colors.textPrimary, marginLeft: spacing.sm }}>Back</Text>
+              </TouchableOpacity>
 
+              {renderHeader(false, vendor.name)}
+            </View>
+
+            <View style={{ paddingHorizontal: spacing.lg }}>
               <View
                 style={{
-                  flex: 1,
-                  backgroundColor: colors.surfaceMuted,
+                  backgroundColor: cardSurface,
                   borderRadius: radii.lg,
-                  padding: spacing.md,
+                  padding: spacing.lg,
                   borderWidth: 1,
-                  borderColor: colors.borderSubtle,
+                  borderColor: cardBorder,
                 }}
               >
-                <Text style={{ ...typography.caption, color: colors.textMuted }}>Quote Requests</Text>
-                <Text style={{ ...typography.displayLarge, color: colors.textPrimary }}>
-                  {counts.quoteRequests}
+                <Text style={{ ...typography.titleMedium, color: colors.textPrimary, marginBottom: spacing.md }}>
+                  Overview
+                </Text>
+
+                <View style={{ flexDirection: 'row', gap: spacing.md }}>
+                  <View
+                    style={{
+                      flex: 1,
+                      backgroundColor: colors.surfaceMuted,
+                      borderRadius: radii.lg,
+                      padding: spacing.md,
+                      borderWidth: 1,
+                      borderColor: colors.borderSubtle,
+                    }}
+                  >
+                    <Text style={{ ...typography.caption, color: colors.textMuted }}>Catalogue Items</Text>
+                    <Text style={{ ...typography.displayLarge, color: colors.textPrimary }}>
+                      {counts.catalogueItems}
+                    </Text>
+                  </View>
+
+                  <View
+                    style={{
+                      flex: 1,
+                      backgroundColor: colors.surfaceMuted,
+                      borderRadius: radii.lg,
+                      padding: spacing.md,
+                      borderWidth: 1,
+                      borderColor: colors.borderSubtle,
+                    }}
+                  >
+                    <Text style={{ ...typography.caption, color: colors.textMuted }}>Quote Requests</Text>
+                    <Text style={{ ...typography.displayLarge, color: colors.textPrimary }}>
+                      {counts.quoteRequests}
+                    </Text>
+                  </View>
+                </View>
+
+                <View style={{ marginTop: spacing.md }}>
+                  <View
+                    style={{
+                      backgroundColor: colors.surfaceMuted,
+                      borderRadius: radii.lg,
+                      padding: spacing.md,
+                      borderWidth: 1,
+                      borderColor: colors.borderSubtle,
+                    }}
+                  >
+                    <Text style={{ ...typography.caption, color: colors.textMuted }}>Reviews</Text>
+                    <Text style={{ ...typography.displayLarge, color: colors.textPrimary }}>
+                      {counts.reviews}
+                    </Text>
+                  </View>
+                </View>
+
+                <Text style={{ ...typography.caption, color: colors.textMuted, marginTop: spacing.md }}>
+                  This is a basic analytics view showing your current activity counts.
                 </Text>
               </View>
             </View>
-
-            <View style={{ marginTop: spacing.md }}>
-              <View
-                style={{
-                  backgroundColor: colors.surfaceMuted,
-                  borderRadius: radii.lg,
-                  padding: spacing.md,
-                  borderWidth: 1,
-                  borderColor: colors.borderSubtle,
-                }}
-              >
-                <Text style={{ ...typography.caption, color: colors.textMuted }}>Reviews</Text>
-                <Text style={{ ...typography.displayLarge, color: colors.textPrimary }}>
-                  {counts.reviews}
-                </Text>
-              </View>
-            </View>
-
-            <Text style={{ ...typography.caption, color: colors.textMuted, marginTop: spacing.md }}>
-              This is a basic analytics view showing your current activity counts.
-            </Text>
-          </View>
-        </View>
+          </>
+        )}
       </ScrollView>
     </View>
   );

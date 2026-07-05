@@ -7,9 +7,11 @@ import { supabase } from '../lib/supabaseClient';
 import type { ProfileStackParamList } from '../navigation/ProfileNavigator';
 import { colors, spacing, radii, typography } from '../theme';
 import ThemedAlert from '../components/ThemedAlert';
+import { useIsDesktop } from '../hooks/useIsDesktop';
 
 export default function ChangePasswordScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<ProfileStackParamList>>();
+  const isDesktop = useIsDesktop();
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -77,15 +79,15 @@ export default function ChangePasswordScreen() {
     placeholder: string,
   ) => (
     <View style={{ marginBottom: spacing.md }}>
-      <Text style={{ ...typography.body, color: colors.textPrimary, marginBottom: spacing.xs }}>{label}</Text>
+      <Text style={{ ...typography.body, color: colors.textPrimary, marginBottom: spacing.xs, fontSize: isDesktop ? 12 : undefined, fontWeight: isDesktop ? '600' : undefined, lineHeight: isDesktop ? 16 : undefined, letterSpacing: isDesktop ? 0.05 : undefined }}>{label}</Text>
       <View
         style={{
           flexDirection: 'row',
           alignItems: 'center',
           borderRadius: radii.lg,
           borderWidth: 1,
-          borderColor: colors.borderSubtle,
-          backgroundColor: colors.inputBackground,
+          borderColor: isDesktop ? colors.outlineVariant : colors.borderSubtle,
+          backgroundColor: isDesktop ? colors.surfaceContainerLowest : colors.inputBackground,
           paddingHorizontal: spacing.md,
         }}
       >
@@ -101,7 +103,7 @@ export default function ChangePasswordScreen() {
             flex: 1,
             paddingVertical: spacing.sm,
             color: colors.textPrimary,
-            fontSize: 14,
+            fontSize: isDesktop ? 16 : 14,
           }}
         />
         <TouchableOpacity onPress={onToggleVisible} style={{ paddingVertical: spacing.sm, paddingLeft: spacing.sm }} activeOpacity={0.7}>
@@ -112,47 +114,89 @@ export default function ChangePasswordScreen() {
   );
 
   return (
-    <View style={{ flex: 1, backgroundColor: colors.background }}>
-      <ScrollView contentContainerStyle={{ paddingHorizontal: spacing.lg, paddingTop: spacing.sm, paddingBottom: spacing.xl }} keyboardShouldPersistTaps="handled">
-        <TouchableOpacity onPress={() => navigation.goBack()} style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.xl }}>
-          <MaterialIcons name="arrow-back" size={20} color={colors.textPrimary} />
-          <Text style={{ ...typography.body, color: colors.textPrimary, marginLeft: spacing.sm }}>Back to My Account</Text>
-        </TouchableOpacity>
-
-        <View
-          style={{
-            backgroundColor: colors.surface,
-            borderRadius: radii.lg,
-            borderWidth: 1,
-            borderColor: colors.borderSubtle,
-            padding: spacing.xl,
-          }}
-        >
-          <Text style={{ ...typography.titleLarge, color: colors.textPrimary, marginBottom: spacing.xs }}>Change Password</Text>
-          <Text style={{ ...typography.body, color: colors.textMuted, marginBottom: spacing.xl }}>
-            Enter your current password and choose a new secure password for your account.
-          </Text>
-
-          {renderPasswordField('Current Password', currentPassword, setCurrentPassword, showCurrentPassword, () => setShowCurrentPassword((prev) => !prev), 'Current password')}
-          {renderPasswordField('New Password', newPassword, setNewPassword, showNewPassword, () => setShowNewPassword((prev) => !prev), 'New password')}
-          {renderPasswordField('Confirm New Password', confirmPassword, setConfirmPassword, showConfirmPassword, () => setShowConfirmPassword((prev) => !prev), 'Confirm new password')}
-
-          <TouchableOpacity
-            onPress={handleSave}
-            disabled={saving}
+    <View style={{ flex: 1, backgroundColor: isDesktop ? colors.surfaceBg : colors.background }}>
+      <ScrollView contentContainerStyle={isDesktop ? { paddingHorizontal: 48, paddingTop: spacing.sm, paddingBottom: spacing.xxl, maxWidth: 1200, width: '100%', alignSelf: 'center' } : { paddingHorizontal: spacing.lg, paddingTop: spacing.sm, paddingBottom: spacing.xl }} keyboardShouldPersistTaps="handled">
+        {isDesktop ? (
+          <View
             style={{
-              marginTop: spacing.md,
-              backgroundColor: colors.textPrimary,
-              paddingVertical: spacing.md,
+              maxWidth: 720,
+              width: '100%',
+              alignSelf: 'center',
+              backgroundColor: colors.surfaceContainerLowest,
               borderRadius: radii.lg,
-              alignItems: 'center',
-              opacity: saving ? 0.7 : 1,
+              borderWidth: 1,
+              borderColor: colors.outlineVariant,
+              padding: spacing.xl,
             }}
-            activeOpacity={0.8}
           >
-            <Text style={{ ...typography.bodySemiBold, color: '#FFFFFF' }}>{saving ? 'Saving...' : 'Update Password'}</Text>
-          </TouchableOpacity>
-        </View>
+            <Text style={{ ...typography.headlineSm, color: colors.textPrimary, marginBottom: spacing.xs }}>Change Password</Text>
+            <Text style={{ ...typography.bodyMd, color: colors.onSurfaceVariant, marginBottom: spacing.xl }}>
+              Enter your current password and choose a new secure password for your account.
+            </Text>
+
+            {renderPasswordField('Current Password', currentPassword, setCurrentPassword, showCurrentPassword, () => setShowCurrentPassword((prev) => !prev), 'Current password')}
+            {renderPasswordField('New Password', newPassword, setNewPassword, showNewPassword, () => setShowNewPassword((prev) => !prev), 'New password')}
+            {renderPasswordField('Confirm New Password', confirmPassword, setConfirmPassword, showConfirmPassword, () => setShowConfirmPassword((prev) => !prev), 'Confirm new password')}
+
+            <TouchableOpacity
+              onPress={handleSave}
+              disabled={saving}
+              style={{
+                marginTop: spacing.md,
+                backgroundColor: colors.textPrimary,
+                paddingVertical: spacing.md,
+                borderRadius: radii.lg,
+                alignItems: 'center',
+                opacity: saving ? 0.7 : 1,
+              }}
+              activeOpacity={0.8}
+            >
+              <Text style={{ ...typography.bodySemiBold, color: '#FFFFFF' }}>{saving ? 'Saving...' : 'Update Password'}</Text>
+            </TouchableOpacity>
+          </View>
+        ) : (
+          <>
+            <TouchableOpacity onPress={() => navigation.goBack()} style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.xl }}>
+              <MaterialIcons name="arrow-back" size={20} color={colors.textPrimary} />
+              <Text style={{ ...typography.body, color: colors.textPrimary, marginLeft: spacing.sm }}>Back to My Account</Text>
+            </TouchableOpacity>
+
+            <View
+              style={{
+                backgroundColor: colors.surface,
+                borderRadius: radii.lg,
+                borderWidth: 1,
+                borderColor: colors.borderSubtle,
+                padding: spacing.xl,
+              }}
+            >
+              <Text style={{ ...typography.titleLarge, color: colors.textPrimary, marginBottom: spacing.xs }}>Change Password</Text>
+              <Text style={{ ...typography.body, color: colors.textMuted, marginBottom: spacing.xl }}>
+                Enter your current password and choose a new secure password for your account.
+              </Text>
+
+              {renderPasswordField('Current Password', currentPassword, setCurrentPassword, showCurrentPassword, () => setShowCurrentPassword((prev) => !prev), 'Current password')}
+              {renderPasswordField('New Password', newPassword, setNewPassword, showNewPassword, () => setShowNewPassword((prev) => !prev), 'New password')}
+              {renderPasswordField('Confirm New Password', confirmPassword, setConfirmPassword, showConfirmPassword, () => setShowConfirmPassword((prev) => !prev), 'Confirm new password')}
+
+              <TouchableOpacity
+                onPress={handleSave}
+                disabled={saving}
+                style={{
+                  marginTop: spacing.md,
+                  backgroundColor: colors.textPrimary,
+                  paddingVertical: spacing.md,
+                  borderRadius: radii.lg,
+                  alignItems: 'center',
+                  opacity: saving ? 0.7 : 1,
+                }}
+                activeOpacity={0.8}
+              >
+                <Text style={{ ...typography.bodySemiBold, color: '#FFFFFF' }}>{saving ? 'Saving...' : 'Update Password'}</Text>
+              </TouchableOpacity>
+            </View>
+          </>
+        )}
       </ScrollView>
 
       {alertState && (

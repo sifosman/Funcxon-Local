@@ -5,6 +5,7 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { colors, spacing, radii, typography } from '../../theme';
 import { useApplicationForm } from '../../context/ApplicationFormContext';
 import { getLatestUserApplicationByType, isBlockingApplicationStatus } from '../../lib/applicationService';
+import { useIsDesktop } from '../../hooks/useIsDesktop';
 
 type ProfileStackParamList = {
   AccountMain: undefined;
@@ -27,6 +28,7 @@ interface PortfolioOption {
 
 export default function PortfolioTypeScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<ProfileStackParamList>>();
+  const isDesktop = useIsDesktop();
   const { setPortfolioType } = useApplicationForm();
 
 
@@ -65,85 +67,116 @@ export default function PortfolioTypeScreen() {
     navigation.navigate('ApplicationStep1');
   };
 
+  const desktopContainerStyle = {
+    maxWidth: 1200,
+    width: '100%',
+    alignSelf: 'center' as const,
+    paddingHorizontal: 48,
+  };
+
+  const cardSurface = isDesktop ? colors.surfaceContainerLowest : colors.surface;
+  const cardBorder = isDesktop ? colors.outlineVariant : colors.borderSubtle;
+
+  const renderHeader = (isDesktopHeader: boolean) => (
+    <View style={isDesktopHeader ? { marginBottom: spacing.xl, textAlign: 'center' } as any : { alignItems: 'center', marginBottom: spacing.xl }}>
+      <Text style={isDesktopHeader ? { ...typography.labelMd, color: colors.dustyRose, textTransform: 'uppercase', marginBottom: spacing.sm, textAlign: 'center' } as any : { display: 'none' } as any}>
+        Create Portfolio
+      </Text>
+      <Text style={isDesktopHeader ? { ...typography.headlineMd, color: colors.primary, textAlign: 'center' } as any : { ...typography.displayMedium, color: colors.textPrimary, marginBottom: spacing.xs, textAlign: 'center' }}>
+        Create Portfolio
+      </Text>
+      <Text style={{ ...typography.bodyMd, color: isDesktopHeader ? colors.onSurfaceVariant : colors.textMuted, textAlign: 'center' }}>
+        Select the type of portfolio you want to create
+      </Text>
+    </View>
+  );
+
+  const renderOptions = () => (
+    <View
+      style={{
+        borderRadius: radii.lg,
+        overflow: 'hidden',
+        backgroundColor: cardSurface,
+        borderWidth: 1,
+        borderColor: cardBorder,
+        shadowColor: '#000',
+        shadowOpacity: 0.05,
+        shadowRadius: 8,
+        shadowOffset: { width: 0, height: 2 },
+        elevation: 2,
+      }}
+    >
+      {portfolioOptions.map((option, index) => (
+        <TouchableOpacity
+          key={option.id}
+          onPress={() => handleSelectType(option.id)}
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            padding: isDesktop ? spacing.lg : spacing.lg,
+            borderBottomWidth: index < portfolioOptions.length - 1 ? 1 : 0,
+            borderBottomColor: cardBorder,
+          }}
+          activeOpacity={0.7}
+        >
+          <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
+            <View
+              style={{
+                width: isDesktop ? 48 : 40,
+                height: isDesktop ? 48 : 40,
+                borderRadius: radii.lg,
+                backgroundColor: option.iconBg,
+                alignItems: 'center',
+                justifyContent: 'center',
+                marginRight: spacing.md,
+              }}
+            >
+              <MaterialIcons name={option.icon} size={isDesktop ? 24 : 20} color={option.iconColor} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={isDesktop ? { ...typography.bodyMd, color: colors.textPrimary, fontWeight: '600' } as any : { ...typography.bodyMedium, color: colors.textPrimary }}>
+                {option.title}
+              </Text>
+              <Text style={isDesktop ? { ...typography.bodyMd, color: colors.onSurfaceVariant, marginTop: 2 } as any : { ...typography.caption, color: colors.textMuted, marginTop: 2 }}>
+                {option.description}
+              </Text>
+            </View>
+          </View>
+          <MaterialIcons name="chevron-right" size={isDesktop ? 24 : 20} color={colors.textMuted} />
+        </TouchableOpacity>
+      ))}
+    </View>
+  );
+
   return (
-    <View style={{ flex: 1, backgroundColor: colors.background }}>
-      <ScrollView contentContainerStyle={{ paddingBottom: spacing.xl }}>
-        <View style={{ paddingHorizontal: spacing.lg, paddingTop: spacing.sm }}>
-          <TouchableOpacity
-            onPress={() => navigation.goBack()}
-            style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.sm }}
-          >
-            <MaterialIcons name="arrow-back" size={20} color={colors.textPrimary} />
-            <Text style={{ ...typography.body, color: colors.textPrimary, marginLeft: spacing.sm }}>
-              Back
-            </Text>
-          </TouchableOpacity>
-
-          <View style={{ alignItems: 'center', marginBottom: spacing.xl }}>
-            <Text style={{ ...typography.displayMedium, color: colors.textPrimary, marginBottom: spacing.xs }}>
-              Create Portfolio
-            </Text>
-            <Text style={{ ...typography.body, color: colors.textMuted, textAlign: 'center' }}>
-              Select the type of portfolio you want to create
-            </Text>
-          </View>
-
-          <View
-            style={{
-              borderRadius: radii.lg,
-              overflow: 'hidden',
-              backgroundColor: colors.surface,
-              borderWidth: 1,
-              borderColor: colors.borderSubtle,
-              shadowColor: '#000',
-              shadowOpacity: 0.05,
-              shadowRadius: 8,
-              shadowOffset: { width: 0, height: 2 },
-              elevation: 2,
-            }}
-          >
-            {portfolioOptions.map((option, index) => (
+    <View style={{ flex: 1, backgroundColor: isDesktop ? colors.surfaceBg : colors.background }}>
+      <ScrollView contentContainerStyle={isDesktop ? { ...desktopContainerStyle, paddingBottom: spacing.xxl, paddingTop: spacing.lg } as any : { paddingBottom: spacing.xl }}>
+        {isDesktop ? (
+          <>
+            {renderHeader(true)}
+            <View style={{ maxWidth: 720, width: '100%', alignSelf: 'center' } as any}>
+              {renderOptions()}
+            </View>
+          </>
+        ) : (
+          <>
+            <View style={{ paddingHorizontal: spacing.lg, paddingTop: spacing.sm }}>
               <TouchableOpacity
-                key={option.id}
-                onPress={() => handleSelectType(option.id)}
-                style={{
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  padding: spacing.lg,
-                  borderBottomWidth: index < portfolioOptions.length - 1 ? 1 : 0,
-                  borderBottomColor: colors.borderSubtle,
-                }}
-                activeOpacity={0.7}
+                onPress={() => navigation.goBack()}
+                style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.sm }}
               >
-                <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
-                  <View
-                    style={{
-                      width: 40,
-                      height: 40,
-                      borderRadius: radii.lg,
-                      backgroundColor: option.iconBg,
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      marginRight: spacing.md,
-                    }}
-                  >
-                    <MaterialIcons name={option.icon} size={20} color={option.iconColor} />
-                  </View>
-                  <View style={{ flex: 1 }}>
-                    <Text style={{ ...typography.bodyMedium, color: colors.textPrimary }}>
-                      {option.title}
-                    </Text>
-                    <Text style={{ ...typography.caption, color: colors.textMuted, marginTop: 2 }}>
-                      {option.description}
-                    </Text>
-                  </View>
-                </View>
-                <MaterialIcons name="chevron-right" size={20} color={colors.textMuted} />
+                <MaterialIcons name="arrow-back" size={20} color={colors.textPrimary} />
+                <Text style={{ ...typography.body, color: colors.textPrimary, marginLeft: spacing.sm }}>
+                  Back
+                </Text>
               </TouchableOpacity>
-            ))}
-          </View>
-        </View>
+
+              {renderHeader(false)}
+              {renderOptions()}
+            </View>
+          </>
+        )}
       </ScrollView>
     </View>
   );

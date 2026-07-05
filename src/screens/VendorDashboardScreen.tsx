@@ -1,10 +1,12 @@
 import { ActivityIndicator, FlatList, Text, TouchableOpacity, View } from 'react-native';
+import { MaterialIcons } from '@expo/vector-icons';
 import { useQuery } from '@tanstack/react-query';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import { supabase } from '../lib/supabaseClient';
 import { colors, spacing, radii, typography } from '../theme';
+import { useIsDesktop } from '../hooks/useIsDesktop';
 
 type ProfileStackParamList = {
   VendorQuoteCreate: {
@@ -40,6 +42,7 @@ type QuoteRequest = {
 
 export default function VendorDashboardScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<ProfileStackParamList>>();
+  const isDesktop = useIsDesktop();
   const {
     data: vendor,
     isLoading: vendorLoading,
@@ -161,61 +164,83 @@ export default function VendorDashboardScreen() {
     );
   }
 
-  return (
-    <View
-      style={{
-        flex: 1,
-        paddingHorizontal: spacing.lg,
-        paddingVertical: spacing.lg,
-        backgroundColor: colors.background,
-      }}
-    >
-      {pendingCount > 0 && (
-        <View
-          style={{
-            padding: spacing.md,
-            borderRadius: radii.lg,
-            backgroundColor: colors.surfaceMuted,
-            borderWidth: 1,
-            borderColor: colors.borderStrong,
-            marginBottom: spacing.md,
-          }}
-        >
-          <Text
-            style={{
-              ...typography.bodySemiBold,
-              color: colors.textPrimary,
-            }}
-          >
-            You have {pendingCount} pending quote request{pendingCount === 1 ? '' : 's'}.
-          </Text>
-        </View>
-      )}
-      <Text
-        style={{
-          ...typography.titleMedium,
-          color: colors.textPrimary,
-          marginBottom: spacing.xs,
-        }}
-      >
+  const desktopContainerStyle = {
+    maxWidth: 1200,
+    width: '100%',
+    alignSelf: 'center' as const,
+    paddingHorizontal: 48,
+  };
+
+  const renderHeader = () => (
+    <View style={{ marginBottom: spacing.md }}>
+      <Text style={{ ...typography.labelMd, color: colors.dustyRose, textTransform: 'uppercase', marginBottom: spacing.sm } as any}>
+        Vendor Dashboard
+      </Text>
+      <Text style={{ ...typography.headlineMd, color: colors.primary, marginBottom: spacing.xs }}>
         {vendor.name}
       </Text>
-      <Text style={{ ...typography.body, color: colors.textSecondary, marginBottom: spacing.md }}>
+      <Text style={{ ...typography.bodyMd, color: colors.onSurfaceVariant }}>
         {typeof vendor.rating === 'number' ? `${vendor.rating.toFixed(1)} / 5` : 'No rating yet'}
         {typeof vendor.review_count === 'number' && vendor.review_count > 0
           ? `  ·  ${vendor.review_count} review${vendor.review_count === 1 ? '' : 's'}`
           : ''}
         {vendor.price_range ? `  ·  ${vendor.price_range}` : ''}
       </Text>
+    </View>
+  );
 
-      {/* Reviews section */}
-      <Text
-        style={{
-          ...typography.titleMedium,
-          color: colors.textPrimary,
-          marginBottom: spacing.xs,
-        }}
-      >
+  const renderSummaryCards = () => (
+    <View style={{ flexDirection: 'row', gap: spacing.md, marginBottom: spacing.lg } as any}>
+      <View style={{ flex: 1, backgroundColor: colors.surfaceContainerLowest, borderRadius: radii.lg, padding: spacing.lg, borderWidth: 1, borderColor: colors.outlineVariant } as any}>
+        <Text style={{ ...typography.labelMd, color: colors.onSurfaceVariant, marginBottom: spacing.sm } as any}>Pending Quotes</Text>
+        <Text style={{ ...typography.headlineMd, color: colors.primary }}>{pendingCount}</Text>
+      </View>
+      <View style={{ flex: 1, backgroundColor: colors.surfaceContainerLowest, borderRadius: radii.lg, padding: spacing.lg, borderWidth: 1, borderColor: colors.outlineVariant } as any}>
+        <Text style={{ ...typography.labelMd, color: colors.onSurfaceVariant, marginBottom: spacing.sm } as any}>Total Reviews</Text>
+        <Text style={{ ...typography.headlineMd, color: colors.primary }}>{vendor.review_count ?? 0}</Text>
+      </View>
+      <View style={{ flex: 1, backgroundColor: colors.surfaceContainerLowest, borderRadius: radii.lg, padding: spacing.lg, borderWidth: 1, borderColor: colors.outlineVariant } as any}>
+        <Text style={{ ...typography.labelMd, color: colors.onSurfaceVariant, marginBottom: spacing.sm } as any}>Rating</Text>
+        <Text style={{ ...typography.headlineMd, color: colors.primary }}>{typeof vendor.rating === 'number' ? vendor.rating.toFixed(1) : '-'}</Text>
+      </View>
+    </View>
+  );
+
+  const renderQuickActions = () => (
+    <View style={{ marginBottom: spacing.lg }}>
+      <Text style={{ ...typography.headlineSm, color: colors.textPrimary, marginBottom: spacing.md }}>Quick Actions</Text>
+      <View style={{ flexDirection: 'row', gap: spacing.md } as any}>
+        <TouchableOpacity
+          onPress={() => navigation.navigate('VendorQuoteHistory' as any)}
+          style={{ flex: 1, backgroundColor: colors.surfaceContainerLowest, borderRadius: radii.lg, padding: spacing.lg, borderWidth: 1, borderColor: colors.outlineVariant } as any}
+        >
+          <MaterialIcons name="history" size={24} color={colors.primary} />
+          <Text style={{ ...typography.bodyMd, color: colors.textPrimary, marginTop: spacing.sm, fontWeight: '600' } as any}>Quote History</Text>
+          <Text style={{ ...typography.bodyMd, color: colors.onSurfaceVariant, marginTop: 2 } as any}>View past quotes</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          onPress={() => navigation.navigate('VendorCatalogue' as any)}
+          style={{ flex: 1, backgroundColor: colors.surfaceContainerLowest, borderRadius: radii.lg, padding: spacing.lg, borderWidth: 1, borderColor: colors.outlineVariant } as any}
+        >
+          <MaterialIcons name="inventory" size={24} color={colors.primary} />
+          <Text style={{ ...typography.bodyMd, color: colors.textPrimary, marginTop: spacing.sm, fontWeight: '600' } as any}>Catalogue</Text>
+          <Text style={{ ...typography.bodyMd, color: colors.onSurfaceVariant, marginTop: 2 } as any}>Manage items</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          onPress={() => navigation.navigate('VendorAnalytics' as any)}
+          style={{ flex: 1, backgroundColor: colors.surfaceContainerLowest, borderRadius: radii.lg, padding: spacing.lg, borderWidth: 1, borderColor: colors.outlineVariant } as any}
+        >
+          <MaterialIcons name="bar-chart" size={24} color={colors.primary} />
+          <Text style={{ ...typography.bodyMd, color: colors.textPrimary, marginTop: spacing.sm, fontWeight: '600' } as any}>Analytics</Text>
+          <Text style={{ ...typography.bodyMd, color: colors.onSurfaceVariant, marginTop: 2 } as any}>View stats</Text>
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+
+  const renderReviews = () => (
+    <View style={{ backgroundColor: isDesktop ? colors.surfaceContainerLowest : undefined, borderRadius: isDesktop ? radii.lg : undefined, padding: isDesktop ? spacing.lg : undefined, borderWidth: isDesktop ? 1 : 0, borderColor: isDesktop ? colors.outlineVariant : undefined } as any}>
+      <Text style={{ ...typography.titleMedium, color: colors.textPrimary, marginBottom: spacing.xs }}>
         Recent reviews
       </Text>
       {reviewsLoading && (
@@ -263,16 +288,12 @@ export default function VendorDashboardScreen() {
           style={{ marginBottom: 16 }}
         />
       )}
+    </View>
+  );
 
-      {/* Quote requests section */}
-      <Text
-        style={{
-          ...typography.titleMedium,
-          color: colors.textPrimary,
-          marginTop: spacing.lg,
-          marginBottom: spacing.xs,
-        }}
-      >
+  const renderQuotes = () => (
+    <View style={{ backgroundColor: isDesktop ? colors.surfaceContainerLowest : undefined, borderRadius: isDesktop ? radii.lg : undefined, padding: isDesktop ? spacing.lg : undefined, borderWidth: isDesktop ? 1 : 0, borderColor: isDesktop ? colors.outlineVariant : undefined } as any}>
+      <Text style={{ ...typography.titleMedium, color: colors.textPrimary, marginBottom: spacing.xs }}>
         Recent quote requests
       </Text>
       {quotesLoading && (
@@ -361,6 +382,75 @@ export default function VendorDashboardScreen() {
           )}
         />
       )}
+    </View>
+  );
+
+  return (
+    <View
+      style={{
+        flex: 1,
+        backgroundColor: isDesktop ? colors.surfaceBg : colors.background,
+      }}
+    >
+      <View style={isDesktop ? { ...desktopContainerStyle, paddingVertical: spacing.lg } as any : { flex: 1, paddingHorizontal: spacing.lg, paddingVertical: spacing.lg }}>
+        {isDesktop ? (
+          <>
+            {renderHeader()}
+            {renderSummaryCards()}
+            {renderQuickActions()}
+            <View style={{ flexDirection: 'row', gap: spacing.gutter } as any}>
+              <View style={{ flex: 1 } as any}>
+                {renderReviews()}
+              </View>
+              <View style={{ flex: 1 } as any}>
+                {renderQuotes()}
+              </View>
+            </View>
+          </>
+        ) : (
+          <>
+            {pendingCount > 0 && (
+              <View
+                style={{
+                  padding: spacing.md,
+                  borderRadius: radii.lg,
+                  backgroundColor: colors.surfaceMuted,
+                  borderWidth: 1,
+                  borderColor: colors.borderStrong,
+                  marginBottom: spacing.md,
+                }}
+              >
+                <Text
+                  style={{
+                    ...typography.bodySemiBold,
+                    color: colors.textPrimary,
+                  }}
+                >
+                  You have {pendingCount} pending quote request{pendingCount === 1 ? '' : 's'}.
+                </Text>
+              </View>
+            )}
+            <Text
+              style={{
+                ...typography.titleMedium,
+                color: colors.textPrimary,
+                marginBottom: spacing.xs,
+              }}
+            >
+              {vendor.name}
+            </Text>
+            <Text style={{ ...typography.body, color: colors.textSecondary, marginBottom: spacing.md }}>
+              {typeof vendor.rating === 'number' ? `${vendor.rating.toFixed(1)} / 5` : 'No rating yet'}
+              {typeof vendor.review_count === 'number' && vendor.review_count > 0
+                ? `  ·  ${vendor.review_count} review${vendor.review_count === 1 ? '' : 's'}`
+                : ''}
+              {vendor.price_range ? `  ·  ${vendor.price_range}` : ''}
+            </Text>
+            {renderReviews()}
+            {renderQuotes()}
+          </>
+        )}
+      </View>
     </View>
   );
 }

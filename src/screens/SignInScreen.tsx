@@ -9,10 +9,12 @@ import { clearPendingSubscriptionCheckout, getPendingSubscriptionCheckout } from
 import { colors, spacing, radii, typography } from '../theme';
 import { PrimaryButton, OutlineButton } from '../components/ui';
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
+import { useIsDesktop } from '../hooks/useIsDesktop';
 
 type Props = NativeStackScreenProps<AuthStackParamList, 'SignIn'>;
 
 export default function SignInScreen({ navigation }: Props) {
+  const isDesktop = useIsDesktop();
   const { signIn, signInWithProvider } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -114,252 +116,274 @@ export default function SignInScreen({ navigation }: Props) {
   };
 
 
-  return (
-    <View style={{ flex: 1, backgroundColor: colors.background }}>
-      <ScrollView
-        style={{ flex: 1 }}
-        contentContainerStyle={{
-          flexGrow: 1,
-          paddingHorizontal: spacing.lg,
-          paddingTop: spacing.sm,
-          paddingBottom: spacing.xl,
-        }}
-        keyboardShouldPersistTaps="handled"
-      >
-        <TouchableOpacity
-          onPress={() => navigation.goBack()}
-          style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.sm }}
-        >
-          <MaterialIcons name="arrow-back" size={20} color={colors.textPrimary} />
-          <Text style={{ ...typography.body, color: colors.textPrimary, marginLeft: spacing.xs }}>
-            Back
-          </Text>
-        </TouchableOpacity>
-        <View
+  const renderCard = (desktop: boolean) => (
+    <View
+      style={{
+        width: '100%',
+        maxWidth: desktop ? 480 : 360,
+        alignSelf: 'center',
+        backgroundColor: desktop ? colors.surfaceContainerLowest : colors.surface,
+        borderRadius: radii.lg,
+        borderWidth: 1,
+        borderColor: desktop ? colors.outlineVariant : colors.borderSubtle,
+        paddingHorizontal: desktop ? spacing.xxl : spacing.lg,
+        paddingTop: desktop ? spacing.xl : spacing.sm,
+        paddingBottom: desktop ? spacing.xxl : spacing.lg,
+        shadowColor: desktop ? undefined : '#000',
+        shadowOpacity: desktop ? undefined : 0.08,
+        shadowRadius: desktop ? undefined : 10,
+        shadowOffset: desktop ? undefined : { width: 0, height: 4 },
+      }}
+    >
+      <View style={{ alignItems: 'center', marginBottom: desktop ? spacing.xl : spacing.lg }}>
+        <Text
           style={{
-            width: '100%',
-            maxWidth: 360,
-            alignSelf: 'center',
-            backgroundColor: colors.surface,
-            borderRadius: radii.lg,
-            borderWidth: 1,
-            borderColor: colors.borderSubtle,
-            paddingHorizontal: spacing.lg,
-            paddingTop: spacing.sm,
-            paddingBottom: spacing.lg,
-            shadowColor: '#000',
-            shadowOpacity: 0.08,
-            shadowRadius: 10,
-            shadowOffset: { width: 0, height: 4 },
+            ...(desktop ? typography.headlineMd : typography.titleLarge),
+            color: colors.textPrimary,
+            marginBottom: spacing.sm,
+            textAlign: 'center',
           }}
         >
-          <View style={{ alignItems: 'center', marginBottom: spacing.lg }}>
-            <Text
-              style={{
-                ...typography.titleLarge,
-                color: colors.textPrimary,
-                marginBottom: spacing.sm,
-                textAlign: 'center',
-              }}
-            >
-              Welcome Back
-            </Text>
-            <Text style={{ ...typography.body, color: colors.textMuted, textAlign: 'center' }}>
-              Log in to access your event planning tools.
-            </Text>
-          </View>
+          Welcome Back
+        </Text>
+        <Text style={{ ...(desktop ? typography.bodyMd : typography.body), color: colors.textMuted, textAlign: 'center' }}>
+          Log in to access your event planning tools.
+        </Text>
+      </View>
 
-          {/* Email */}
+      {/* Email */}
+      <View
+        style={{
+          flexDirection: 'row',
+          alignItems: 'center',
+          borderRadius: radii.lg,
+          borderWidth: 1,
+          borderColor: desktop ? colors.outlineVariant : colors.borderSubtle,
+          backgroundColor: colors.surface,
+          paddingHorizontal: spacing.md,
+          marginBottom: spacing.md,
+        }}
+      >
+        <MaterialIcons
+          name="mail-outline"
+          size={20}
+          color={colors.primary}
+          style={{ marginRight: spacing.sm }}
+        />
+        <TextInput
+          value={email}
+          onChangeText={setEmail}
+          keyboardType="email-address"
+          autoCapitalize="none"
+          autoCorrect={false}
+          placeholder="Email"
+          placeholderTextColor={colors.textMuted}
+          style={{ flex: 1, paddingVertical: spacing.sm, color: colors.textPrimary }}
+        />
+      </View>
+
+      {/* Password */}
+      <View
+        style={{
+          flexDirection: 'row',
+          alignItems: 'center',
+          borderRadius: radii.lg,
+          borderWidth: 1,
+          borderColor: desktop ? colors.outlineVariant : colors.borderSubtle,
+          backgroundColor: colors.surface,
+          paddingHorizontal: spacing.md,
+          marginBottom: spacing.sm,
+        }}
+      >
+        <MaterialIcons
+          name="lock-outline"
+          size={20}
+          color={colors.primary}
+          style={{ marginRight: spacing.sm }}
+        />
+        <TextInput
+          value={password}
+          onChangeText={setPassword}
+          secureTextEntry={!showPassword}
+          autoCapitalize="none"
+          placeholder="Password"
+          placeholderTextColor={colors.textMuted}
+          style={{ flex: 1, paddingVertical: spacing.sm, color: colors.textPrimary }}
+        />
+        <TouchableOpacity
+          onPress={() => setShowPassword((prev) => !prev)}
+          style={{ paddingVertical: spacing.sm, paddingLeft: spacing.sm }}
+          activeOpacity={0.7}
+        >
+          <MaterialIcons
+            name={showPassword ? 'visibility-off' : 'visibility'}
+            size={20}
+            color={colors.textMuted}
+          />
+        </TouchableOpacity>
+      </View>
+
+      <TouchableOpacity
+        style={{ alignSelf: 'flex-end', marginBottom: spacing.md }}
+        onPress={handleForgotPassword}
+      >
+        <Text style={{ ...typography.caption, color: colors.textPrimary }}>Forgot password?</Text>
+      </TouchableOpacity>
+
+      <PrimaryButton title={loading ? 'Signing in...' : 'Log in'} onPress={handleSignIn} disabled={loading} />
+
+      {formError ? (
+        <Text
+          style={{
+            ...typography.caption,
+            color: colors.textPrimary,
+            marginTop: spacing.sm,
+            textAlign: 'center',
+          }}
+        >
+          {formError}
+        </Text>
+      ) : null}
+
+      {formSuccess ? (
+        <Text
+          style={{
+            ...typography.caption,
+            color: colors.textSecondary,
+            marginTop: spacing.sm,
+            textAlign: 'center',
+          }}
+        >
+          {formSuccess}
+        </Text>
+      ) : null}
+
+      <View style={{ marginTop: spacing.lg }}>
+        <TouchableOpacity
+          activeOpacity={0.9}
+          onPress={handleGoogleSignIn}
+          style={{
+            width: '100%',
+            paddingVertical: spacing.md,
+            borderRadius: radii.md,
+            borderWidth: 1,
+            borderColor: desktop ? colors.outlineVariant : colors.borderSubtle,
+            alignItems: 'center',
+            justifyContent: 'center',
+            flexDirection: 'row',
+            backgroundColor: colors.surface,
+          }}
+        >
           <View
             style={{
-              flexDirection: 'row',
+              width: 28,
+              height: 28,
+              borderRadius: 12,
+              backgroundColor: '#FFFFFF',
               alignItems: 'center',
-              borderRadius: radii.lg,
-              borderWidth: 1,
-              borderColor: colors.borderSubtle,
-              backgroundColor: colors.surface,
-              paddingHorizontal: spacing.md,
-              marginBottom: spacing.md,
+              justifyContent: 'center',
+              marginRight: spacing.sm,
+              borderWidth: 2,
+              borderTopColor: '#4285F4',
+              borderRightColor: '#EA4335',
+              borderBottomColor: '#34A853',
+              borderLeftColor: '#FBBC05',
             }}
           >
-            <MaterialIcons
-              name="mail-outline"
-              size={20}
-              color={colors.primary}
-              style={{ marginRight: spacing.sm }}
-            />
-            <TextInput
-              value={email}
-              onChangeText={setEmail}
-              keyboardType="email-address"
-              autoCapitalize="none"
-              autoCorrect={false}
-              placeholder="Email"
-              placeholderTextColor={colors.textMuted}
-              style={{ flex: 1, paddingVertical: spacing.sm, color: colors.textPrimary }}
-            />
+            <Text style={{ ...typography.captionBold, color: '#4285F4' }}>G</Text>
           </View>
+          <Text style={{ ...typography.body, color: colors.textPrimary }}>Log in with Google</Text>
+        </TouchableOpacity>
 
-          {/* Password */}
+
+        <TouchableOpacity
+          activeOpacity={0.9}
+          onPress={handleFacebookSignIn}
+          style={{
+            width: '100%',
+            paddingVertical: spacing.md,
+            borderRadius: radii.md,
+            borderWidth: 1,
+            borderColor: desktop ? colors.outlineVariant : colors.borderSubtle,
+            alignItems: 'center',
+            justifyContent: 'center',
+            flexDirection: 'row',
+            backgroundColor: colors.surface,
+            marginTop: spacing.sm,
+          }}
+        >
           <View
             style={{
-              flexDirection: 'row',
+              width: 28,
+              height: 28,
+              borderRadius: 12,
+              backgroundColor: '#1877F2',
               alignItems: 'center',
-              borderRadius: radii.lg,
-              borderWidth: 1,
-              borderColor: colors.borderSubtle,
-              backgroundColor: colors.surface,
-              paddingHorizontal: spacing.md,
-              marginBottom: spacing.sm,
+              justifyContent: 'center',
+              marginRight: spacing.sm,
             }}
           >
-            <MaterialIcons
-              name="lock-outline"
-              size={20}
-              color={colors.primary}
-              style={{ marginRight: spacing.sm }}
-            />
-            <TextInput
-              value={password}
-              onChangeText={setPassword}
-              secureTextEntry={!showPassword}
-              autoCapitalize="none"
-              placeholder="Password"
-              placeholderTextColor={colors.textMuted}
-              style={{ flex: 1, paddingVertical: spacing.sm, color: colors.textPrimary }}
-            />
-            <TouchableOpacity
-              onPress={() => setShowPassword((prev) => !prev)}
-              style={{ paddingVertical: spacing.sm, paddingLeft: spacing.sm }}
-              activeOpacity={0.7}
-            >
-              <MaterialIcons
-                name={showPassword ? 'visibility-off' : 'visibility'}
-                size={20}
-                color={colors.textMuted}
-              />
-            </TouchableOpacity>
+            <Text style={{ ...typography.captionBold, color: '#FFFFFF' }}>f</Text>
           </View>
+          <Text style={{ ...typography.body, color: colors.textPrimary }}>Log in with Facebook</Text>
+        </TouchableOpacity>
+      </View>
 
-          <TouchableOpacity
-            style={{ alignSelf: 'flex-end', marginBottom: spacing.md }}
-            onPress={handleForgotPassword}
+      <View style={{ marginTop: spacing.lg, alignItems: 'center' }}>
+        <Text style={{ ...typography.caption, color: colors.textMuted }}>
+          Don’t have an account?{' '}
+          <Text
+            style={{ ...typography.caption, color: colors.textPrimary }}
+            onPress={() => navigation.navigate('SignUp')}
           >
-            <Text style={{ ...typography.caption, color: colors.textPrimary }}>Forgot password?</Text>
-          </TouchableOpacity>
+            Create account
+          </Text>
+        </Text>
+      </View>
+    </View>
+  );
 
-          <PrimaryButton title={loading ? 'Signing in...' : 'Log in'} onPress={handleSignIn} disabled={loading} />
-
-          {formError ? (
-            <Text
-              style={{
-                ...typography.caption,
-                color: colors.textPrimary,
-                marginTop: spacing.sm,
-                textAlign: 'center',
-              }}
-            >
-              {formError}
-            </Text>
-          ) : null}
-
-          {formSuccess ? (
-            <Text
-              style={{
-                ...typography.caption,
-                color: colors.textSecondary,
-                marginTop: spacing.sm,
-                textAlign: 'center',
-              }}
-            >
-              {formSuccess}
-            </Text>
-          ) : null}
-
-          <View style={{ marginTop: spacing.lg }}>
-            <TouchableOpacity
-              activeOpacity={0.9}
-              onPress={handleGoogleSignIn}
-              style={{
-                width: '100%',
-                paddingVertical: spacing.md,
-                borderRadius: radii.md,
-                borderWidth: 1,
-                borderColor: colors.borderSubtle,
-                alignItems: 'center',
-                justifyContent: 'center',
-                flexDirection: 'row',
-                backgroundColor: colors.surface,
-              }}
-            >
-              <View
-                style={{
-                  width: 28,
-                  height: 28,
-                  borderRadius: 12,
-                  backgroundColor: '#FFFFFF',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  marginRight: spacing.sm,
-                  borderWidth: 2,
-                  borderTopColor: '#4285F4',
-                  borderRightColor: '#EA4335',
-                  borderBottomColor: '#34A853',
-                  borderLeftColor: '#FBBC05',
-                }}
-              >
-                <Text style={{ ...typography.captionBold, color: '#4285F4' }}>G</Text>
-              </View>
-              <Text style={{ ...typography.body, color: colors.textPrimary }}>Log in with Google</Text>
-            </TouchableOpacity>
-
-
-            <TouchableOpacity
-              activeOpacity={0.9}
-              onPress={handleFacebookSignIn}
-              style={{
-                width: '100%',
-                paddingVertical: spacing.md,
-                borderRadius: radii.md,
-                borderWidth: 1,
-                borderColor: colors.borderSubtle,
-                alignItems: 'center',
-                justifyContent: 'center',
-                flexDirection: 'row',
-                backgroundColor: colors.surface,
-                marginTop: spacing.sm,
-              }}
-            >
-              <View
-                style={{
-                  width: 28,
-                  height: 28,
-                  borderRadius: 12,
-                  backgroundColor: '#1877F2',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  marginRight: spacing.sm,
-                }}
-              >
-                <Text style={{ ...typography.captionBold, color: '#FFFFFF' }}>f</Text>
-              </View>
-              <Text style={{ ...typography.body, color: colors.textPrimary }}>Log in with Facebook</Text>
-            </TouchableOpacity>
+  return (
+    <View style={{ flex: 1, backgroundColor: isDesktop ? colors.surfaceBg : colors.background }}>
+      {isDesktop ? (
+        <ScrollView
+          style={{ flex: 1 }}
+          contentContainerStyle={{
+            flexGrow: 1,
+            paddingVertical: spacing.xxl,
+            paddingHorizontal: 48,
+          }}
+          keyboardShouldPersistTaps="handled"
+        >
+          <View style={{ maxWidth: 1200, width: '100%', alignSelf: 'center' }}>
+            {renderCard(true)}
           </View>
-
-          <View style={{ marginTop: spacing.lg, alignItems: 'center' }}>
-            <Text style={{ ...typography.caption, color: colors.textMuted }}>
-              Don’t have an account?{' '}
-              <Text
-                style={{ ...typography.caption, color: colors.textPrimary }}
-                onPress={() => navigation.navigate('SignUp')}
-              >
-                Create account
+        </ScrollView>
+      ) : (
+        <>
+          <ScrollView
+            style={{ flex: 1 }}
+            contentContainerStyle={{
+              flexGrow: 1,
+              paddingHorizontal: spacing.lg,
+              paddingTop: spacing.sm,
+              paddingBottom: spacing.xl,
+            }}
+            keyboardShouldPersistTaps="handled"
+          >
+            <TouchableOpacity
+              onPress={() => navigation.goBack()}
+              style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.sm }}
+            >
+              <MaterialIcons name="arrow-back" size={20} color={colors.textPrimary} />
+              <Text style={{ ...typography.body, color: colors.textPrimary, marginLeft: spacing.xs }}>
+                Back
               </Text>
-            </Text>
-          </View>
-        </View>
-      </ScrollView>
+            </TouchableOpacity>
+            {renderCard(false)}
+          </ScrollView>
+        </>
+      )}
 
       {alertState && (
         <ThemedAlert

@@ -11,6 +11,7 @@ import { serviceCategories, specialServiceFeatures } from '../../config/serviceP
 import { venueTypes, amenitiesList, venueCapacityOptions, eventTypes } from '../../config/venueTypes';
 import { provinces, getCitiesByProvince } from '../../config/locations';
 import ThemedAlert from '../../components/ThemedAlert';
+import { useIsDesktop } from '../../hooks/useIsDesktop';
 
 type ProfileStackParamList = {
   ApplicationStep1: undefined;
@@ -23,8 +24,11 @@ export default function ApplicationStep2Screen() {
   const { state, updateStep2 } = useApplicationForm();
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [alertState, setAlertState] = useState<{visible: boolean; title: string; message: string; buttons?: any[]} | null>(null);
+  const isDesktop = useIsDesktop();
   const isVenues = state.portfolioType === 'venues';
   const isVendors = state.portfolioType === 'vendors';
+  const cardSurface = isDesktop ? colors.surfaceContainerLowest : colors.surface;
+  const cardBorder = isDesktop ? colors.outlineVariant : colors.borderSubtle;
 
   // Debug logging
   console.log('ApplicationStep2Screen - portfolioType:', state.portfolioType);
@@ -49,8 +53,8 @@ export default function ApplicationStep2Screen() {
           paddingHorizontal: spacing.md,
           borderRadius: radii.lg,
           borderWidth: 1,
-          borderColor: colors.borderSubtle,
-          backgroundColor: colors.surface,
+          borderColor: cardBorder,
+          backgroundColor: cardSurface,
           marginBottom: spacing.sm,
         }}
       >
@@ -61,7 +65,7 @@ export default function ApplicationStep2Screen() {
             borderRadius: 5,
             borderWidth: 1,
             borderColor: opts.isSelected ? colors.textPrimary : colors.borderStrong,
-            backgroundColor: opts.isSelected ? colors.textPrimary : colors.surface,
+            backgroundColor: opts.isSelected ? colors.textPrimary : cardSurface,
             alignItems: 'center',
             justifyContent: 'center',
             marginRight: spacing.md,
@@ -93,8 +97,8 @@ export default function ApplicationStep2Screen() {
           paddingHorizontal: spacing.md,
           borderRadius: radii.lg,
           borderWidth: 1,
-          borderColor: colors.borderSubtle,
-          backgroundColor: colors.surface,
+          borderColor: cardBorder,
+          backgroundColor: cardSurface,
           marginBottom: spacing.sm,
         }}
       >
@@ -105,7 +109,7 @@ export default function ApplicationStep2Screen() {
             borderRadius: 5,
             borderWidth: 1,
             borderColor: opts.isSelected ? colors.textPrimary : colors.borderStrong,
-            backgroundColor: opts.isSelected ? colors.textPrimary : colors.surface,
+            backgroundColor: opts.isSelected ? colors.textPrimary : cardSurface,
             alignItems: 'center',
             justifyContent: 'center',
             marginRight: spacing.md,
@@ -192,57 +196,68 @@ export default function ApplicationStep2Screen() {
     navigation.navigate('ApplicationStep3');
   };
 
+  const desktopContainerStyle = {
+    maxWidth: 1200,
+    width: '100%',
+    alignSelf: 'center' as const,
+    paddingHorizontal: 48,
+    paddingBottom: spacing.xxl * 6,
+  };
+
   return (
     <KeyboardAvoidingView
-      style={{ flex: 1, backgroundColor: colors.background }}
+      style={{ flex: 1, backgroundColor: isDesktop ? colors.surfaceBg : colors.background }}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       keyboardVerticalOffset={Platform.OS === 'ios' ? spacing.lg : 0}
     >
       <ScrollView
         keyboardShouldPersistTaps="handled"
         keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
-        contentContainerStyle={{ paddingBottom: spacing.xxl * 6 }}
+        contentContainerStyle={isDesktop ? { ...desktopContainerStyle } as any : { paddingBottom: spacing.xxl * 6 }}
       >
-        <View style={{ paddingHorizontal: spacing.lg, paddingTop: spacing.sm }}>
-          <TouchableOpacity
-            onPress={() => navigation.goBack()}
-            style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.sm }}
-          >
-            <MaterialIcons name="arrow-back" size={20} color={colors.textPrimary} />
-            <Text style={{ ...typography.body, color: colors.textPrimary, marginLeft: spacing.sm }}>
-              Back
-            </Text>
-          </TouchableOpacity>
+        <View style={{ paddingHorizontal: isDesktop ? 0 : spacing.lg, paddingTop: spacing.sm }}>
+          {!isDesktop && (
+            <TouchableOpacity
+              onPress={() => navigation.goBack()}
+              style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.sm }}
+            >
+              <MaterialIcons name="arrow-back" size={20} color={colors.textPrimary} />
+              <Text style={{ ...typography.body, color: colors.textPrimary, marginLeft: spacing.sm }}>
+                Back
+              </Text>
+            </TouchableOpacity>
+          )}
 
-          <View style={{ marginBottom: spacing.lg }}>
+          <View style={{ marginBottom: spacing.lg, maxWidth: isDesktop ? 800 : undefined, width: isDesktop ? '100%' : undefined, alignSelf: isDesktop ? 'center' as const : undefined }}>
             <View style={{ marginBottom: spacing.md, alignSelf: 'flex-start' }}>
               <ApplicationProgress currentStep={2} />
             </View>
             <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: spacing.md }}>
               <MaterialIcons name="category" size={32} color={colors.textPrimary} />
               <View style={{ flex: 1 }}>
-                <Text style={{ ...typography.titleMedium, color: colors.textPrimary }}>
+                <Text style={isDesktop ? { ...typography.headlineMd, color: colors.primary } as any : { ...typography.titleMedium, color: colors.textPrimary }}>
                   {isVenues ? 'Venue Details' : 'Service Category & Coverage'}
                 </Text>
-                <Text style={{ ...typography.caption, color: colors.textMuted }}>
+                <Text style={isDesktop ? { ...typography.bodyMd, color: colors.onSurfaceVariant } as any : { ...typography.caption, color: colors.textMuted }}>
                   Page 2 of 4
                 </Text>
               </View>
             </View>
           </View>
 
+          <View style={{ maxWidth: isDesktop ? 800 : undefined, width: isDesktop ? '100%' : undefined, alignSelf: isDesktop ? 'center' as const : undefined }}>
           {/* Venue-specific sections */}
           {isVenues && (
             <>
               {/* Venue Type */}
               <View
                 style={{
-                  backgroundColor: colors.surface,
+                  backgroundColor: cardSurface,
                   borderRadius: radii.lg,
                   padding: spacing.lg,
                   marginBottom: spacing.lg,
                   borderWidth: 1,
-                  borderColor: colors.borderSubtle,
+                  borderColor: cardBorder,
                   shadowColor: '#000',
                   shadowOpacity: 0.05,
                   shadowRadius: 8,
@@ -274,12 +289,12 @@ export default function ApplicationStep2Screen() {
               {/* Venue Capacity */}
               <View
                 style={{
-                  backgroundColor: colors.surface,
+                  backgroundColor: cardSurface,
                   borderRadius: radii.lg,
                   padding: spacing.lg,
                   marginBottom: spacing.lg,
                   borderWidth: 1,
-                  borderColor: colors.borderSubtle,
+                  borderColor: cardBorder,
                   shadowColor: '#000',
                   shadowOpacity: 0.05,
                   shadowRadius: 8,
@@ -301,9 +316,9 @@ export default function ApplicationStep2Screen() {
                           paddingHorizontal: spacing.md,
                           paddingVertical: spacing.sm,
                           borderRadius: radii.full,
-                          backgroundColor: isSelected ? colors.textPrimary : colors.surface,
+                          backgroundColor: isSelected ? colors.textPrimary : cardSurface,
                           borderWidth: 1,
-                          borderColor: isSelected ? colors.textPrimary : colors.borderSubtle,
+                          borderColor: isSelected ? colors.textPrimary : cardBorder,
                         }}
                       >
                         <Text style={{ ...typography.body, color: isSelected ? '#FFFFFF' : colors.textPrimary, fontSize: 13 }}>
@@ -323,12 +338,12 @@ export default function ApplicationStep2Screen() {
               {/* Amenities */}
               <View
                 style={{
-                  backgroundColor: colors.surface,
+                  backgroundColor: cardSurface,
                   borderRadius: radii.lg,
                   padding: spacing.lg,
                   marginBottom: spacing.lg,
                   borderWidth: 1,
-                  borderColor: colors.borderSubtle,
+                  borderColor: cardBorder,
                   shadowColor: '#000',
                   shadowOpacity: 0.05,
                   shadowRadius: 8,
@@ -355,12 +370,12 @@ export default function ApplicationStep2Screen() {
               {/* Event Types */}
               <View
                 style={{
-                  backgroundColor: colors.surface,
+                  backgroundColor: cardSurface,
                   borderRadius: radii.lg,
                   padding: spacing.lg,
                   marginBottom: spacing.lg,
                   borderWidth: 1,
-                  borderColor: colors.borderSubtle,
+                  borderColor: cardBorder,
                   shadowColor: '#000',
                   shadowOpacity: 0.05,
                   shadowRadius: 8,
@@ -392,12 +407,12 @@ export default function ApplicationStep2Screen() {
               {/* Awards / Nominations */}
               <View
                 style={{
-                  backgroundColor: colors.surface,
+                  backgroundColor: cardSurface,
                   borderRadius: radii.lg,
                   padding: spacing.lg,
                   marginBottom: spacing.lg,
                   borderWidth: 1,
-                  borderColor: colors.borderSubtle,
+                  borderColor: cardBorder,
                   shadowColor: '#000',
                   shadowOpacity: 0.05,
                   shadowRadius: 8,
@@ -419,11 +434,11 @@ export default function ApplicationStep2Screen() {
                   numberOfLines={4}
                   style={{
                     borderWidth: 1,
-                    borderColor: colors.borderSubtle,
+                    borderColor: cardBorder,
                     borderRadius: radii.md,
                     paddingHorizontal: spacing.md,
                     paddingVertical: spacing.sm,
-                    backgroundColor: colors.surface,
+                    backgroundColor: cardSurface,
                     fontSize: 14,
                     color: colors.textPrimary,
                     textAlignVertical: 'top',
@@ -436,12 +451,12 @@ export default function ApplicationStep2Screen() {
               {/* Number of Halls on Property */}
               <View
                 style={{
-                  backgroundColor: colors.surface,
+                  backgroundColor: cardSurface,
                   borderRadius: radii.lg,
                   padding: spacing.lg,
                   marginBottom: spacing.lg,
                   borderWidth: 1,
-                  borderColor: colors.borderSubtle,
+                  borderColor: cardBorder,
                   shadowColor: '#000',
                   shadowOpacity: 0.05,
                   shadowRadius: 8,
@@ -469,11 +484,11 @@ export default function ApplicationStep2Screen() {
                       key={`hall-${hallNumber}`}
                       style={{
                         borderWidth: 1,
-                        borderColor: colors.borderSubtle,
+                        borderColor: cardBorder,
                         borderRadius: radii.lg,
                         padding: spacing.md,
                         marginBottom: spacing.md,
-                        backgroundColor: colors.surface,
+                        backgroundColor: cardSurface,
                       }}
                     >
                       <View style={{ flexDirection: 'row', gap: spacing.md }}>
@@ -487,11 +502,11 @@ export default function ApplicationStep2Screen() {
                             onChangeText={(value) => updateHall(idx, { name: value })}
                             style={{
                               borderWidth: 1,
-                              borderColor: colors.borderSubtle,
+                              borderColor: cardBorder,
                               borderRadius: radii.md,
                               paddingHorizontal: spacing.md,
                               paddingVertical: spacing.sm,
-                              backgroundColor: colors.surface,
+                              backgroundColor: cardSurface,
                               fontSize: 14,
                               color: colors.textPrimary,
                               fontFamily: typography.body.fontFamily,
@@ -509,11 +524,11 @@ export default function ApplicationStep2Screen() {
                             onChangeText={(value) => updateHall(idx, { capacity: value })}
                             style={{
                               borderWidth: 1,
-                              borderColor: colors.borderSubtle,
+                              borderColor: cardBorder,
                               borderRadius: radii.md,
                               paddingHorizontal: spacing.md,
                               paddingVertical: spacing.sm,
-                              backgroundColor: colors.surface,
+                              backgroundColor: cardSurface,
                               fontSize: 14,
                               color: colors.textPrimary,
                               fontFamily: typography.body.fontFamily,
@@ -529,12 +544,12 @@ export default function ApplicationStep2Screen() {
               {/* Venue Payment Terms & Conditions */}
               <View
                 style={{
-                  backgroundColor: colors.surface,
+                  backgroundColor: cardSurface,
                   borderRadius: radii.lg,
                   padding: spacing.lg,
                   marginBottom: spacing.lg,
                   borderWidth: 1,
-                  borderColor: colors.borderSubtle,
+                  borderColor: cardBorder,
                   shadowColor: '#000',
                   shadowOpacity: 0.05,
                   shadowRadius: 8,
@@ -556,11 +571,11 @@ export default function ApplicationStep2Screen() {
                   numberOfLines={4}
                   style={{
                     borderWidth: 1,
-                    borderColor: colors.borderSubtle,
+                    borderColor: cardBorder,
                     borderRadius: radii.md,
                     paddingHorizontal: spacing.md,
                     paddingVertical: spacing.sm,
-                    backgroundColor: colors.surface,
+                    backgroundColor: cardSurface,
                     fontSize: 14,
                     color: colors.textPrimary,
                     textAlignVertical: 'top',
@@ -578,12 +593,12 @@ export default function ApplicationStep2Screen() {
               {/* Service Categories */}
               <View
                 style={{
-                  backgroundColor: colors.surface,
+                  backgroundColor: cardSurface,
                   borderRadius: radii.lg,
                   padding: spacing.lg,
                   marginBottom: spacing.lg,
                   borderWidth: 1,
-                  borderColor: colors.borderSubtle,
+                  borderColor: cardBorder,
                   shadowColor: '#000',
                   shadowOpacity: 0.05,
                   shadowRadius: 8,
@@ -606,9 +621,9 @@ export default function ApplicationStep2Screen() {
                         padding: spacing.md,
                         marginBottom: spacing.sm,
                         borderRadius: radii.md,
-                        backgroundColor: isSelected ? '#f2f7ff' : colors.surface,
+                        backgroundColor: isSelected ? '#f2f7ff' : cardSurface,
                         borderWidth: 1,
-                        borderColor: isSelected ? colors.textPrimary : colors.borderSubtle,
+                        borderColor: isSelected ? colors.textPrimary : cardBorder,
                       }}
                     >
                       <View style={{ flex: 1 }}>
@@ -634,12 +649,12 @@ export default function ApplicationStep2Screen() {
               {state.step2.serviceCategories.length > 0 && (
                 <View
                   style={{
-                    backgroundColor: colors.surface,
+                    backgroundColor: cardSurface,
                     borderRadius: radii.lg,
                     padding: spacing.lg,
                     marginBottom: spacing.lg,
                     borderWidth: 1,
-                    borderColor: colors.borderSubtle,
+                    borderColor: cardBorder,
                     shadowColor: '#000',
                     shadowOpacity: 0.05,
                     shadowRadius: 8,
@@ -669,9 +684,9 @@ export default function ApplicationStep2Screen() {
                                   paddingHorizontal: spacing.md,
                                   paddingVertical: spacing.sm,
                                   borderRadius: radii.full,
-                                  backgroundColor: isSelected ? colors.textPrimary : colors.surface,
+                                  backgroundColor: isSelected ? colors.textPrimary : cardSurface,
                                   borderWidth: 1,
-                                  borderColor: isSelected ? colors.textPrimary : colors.borderSubtle,
+                                  borderColor: isSelected ? colors.textPrimary : cardBorder,
                                 }}
                               >
                                 <Text style={{ ...typography.body, color: isSelected ? '#FFFFFF' : colors.textPrimary, fontSize: 13 }}>
@@ -690,12 +705,12 @@ export default function ApplicationStep2Screen() {
               {/* Special Features */}
               <View
                 style={{
-                  backgroundColor: colors.surface,
+                  backgroundColor: cardSurface,
                   borderRadius: radii.lg,
                   padding: spacing.lg,
                   marginBottom: spacing.lg,
                   borderWidth: 1,
-                  borderColor: colors.borderSubtle,
+                  borderColor: cardBorder,
                   shadowColor: '#000',
                   shadowOpacity: 0.05,
                   shadowRadius: 8,
@@ -717,9 +732,9 @@ export default function ApplicationStep2Screen() {
                           paddingHorizontal: spacing.md,
                           paddingVertical: spacing.sm,
                           borderRadius: radii.full,
-                          backgroundColor: isSelected ? colors.textPrimary : colors.surface,
+                          backgroundColor: isSelected ? colors.textPrimary : cardSurface,
                           borderWidth: 1,
-                          borderColor: isSelected ? colors.textPrimary : colors.borderSubtle,
+                          borderColor: isSelected ? colors.textPrimary : cardBorder,
                         }}
                       >
                         <Text style={{ ...typography.body, color: isSelected ? '#FFFFFF' : colors.textPrimary, fontSize: 13 }}>
@@ -736,12 +751,12 @@ export default function ApplicationStep2Screen() {
           {/* Coverage Areas (for both) */}
           <View
             style={{
-              backgroundColor: colors.surface,
+              backgroundColor: cardSurface,
               borderRadius: radii.lg,
               padding: spacing.lg,
               marginBottom: spacing.lg,
               borderWidth: 1,
-              borderColor: colors.borderSubtle,
+              borderColor: cardBorder,
               shadowColor: '#000',
               shadowOpacity: 0.05,
               shadowRadius: 8,
@@ -759,7 +774,7 @@ export default function ApplicationStep2Screen() {
                 paddingHorizontal: spacing.md,
                 paddingVertical: spacing.sm,
                 borderRadius: radii.full,
-                backgroundColor: allProvincesSelected ? colors.textPrimary : colors.surface,
+                backgroundColor: allProvincesSelected ? colors.textPrimary : cardSurface,
                 borderWidth: 1,
                 borderColor: colors.textPrimary,
                 marginBottom: spacing.md,
@@ -780,9 +795,9 @@ export default function ApplicationStep2Screen() {
                       paddingHorizontal: spacing.md,
                       paddingVertical: spacing.sm,
                       borderRadius: radii.full,
-                      backgroundColor: isSelected ? colors.textPrimary : colors.surface,
+                      backgroundColor: isSelected ? colors.textPrimary : cardSurface,
                       borderWidth: 1,
-                      borderColor: isSelected ? colors.textPrimary : colors.borderSubtle,
+                      borderColor: isSelected ? colors.textPrimary : cardBorder,
                     }}
                   >
                     <Text style={{ ...typography.body, color: isSelected ? '#FFFFFF' : colors.textPrimary, fontSize: 13 }}>
@@ -803,12 +818,12 @@ export default function ApplicationStep2Screen() {
           {state.step2.provinces.length > 0 && (
             <View
               style={{
-                backgroundColor: colors.surface,
+                backgroundColor: cardSurface,
                 borderRadius: radii.lg,
                 padding: spacing.lg,
                 marginBottom: spacing.lg,
                 borderWidth: 1,
-                borderColor: colors.borderSubtle,
+                borderColor: cardBorder,
                 shadowColor: '#000',
                 shadowOpacity: 0.05,
                 shadowRadius: 8,
@@ -827,7 +842,7 @@ export default function ApplicationStep2Screen() {
                   paddingHorizontal: spacing.md,
                   paddingVertical: spacing.sm,
                   borderRadius: radii.full,
-                  backgroundColor: allCitiesSelected ? colors.textPrimary : colors.surface,
+                  backgroundColor: allCitiesSelected ? colors.textPrimary : cardSurface,
                   borderWidth: 1,
                   borderColor: colors.textPrimary,
                   marginBottom: spacing.md,
@@ -849,9 +864,9 @@ export default function ApplicationStep2Screen() {
                         paddingHorizontal: spacing.md,
                         paddingVertical: spacing.sm,
                         borderRadius: radii.full,
-                        backgroundColor: isSelected ? colors.textPrimary : colors.surface,
+                        backgroundColor: isSelected ? colors.textPrimary : cardSurface,
                         borderWidth: 1,
-                        borderColor: isSelected ? colors.textPrimary : colors.borderSubtle,
+                        borderColor: isSelected ? colors.textPrimary : cardBorder,
                       }}
                     >
                       <Text style={{ ...typography.body, color: isSelected ? '#FFFFFF' : colors.textPrimary, fontSize: 13 }}>
@@ -867,12 +882,12 @@ export default function ApplicationStep2Screen() {
           {/* Description */}
           <View
             style={{
-              backgroundColor: colors.surface,
+              backgroundColor: cardSurface,
               borderRadius: radii.lg,
               padding: spacing.lg,
               marginBottom: spacing.lg,
               borderWidth: 1,
-              borderColor: colors.borderSubtle,
+              borderColor: cardBorder,
               shadowColor: '#000',
               shadowOpacity: 0.05,
               shadowRadius: 8,
@@ -894,11 +909,11 @@ export default function ApplicationStep2Screen() {
               numberOfLines={6}
               style={{
                 borderWidth: 1,
-                borderColor: errors.description ? '#EF4444' : colors.borderSubtle,
+                borderColor: errors.description ? '#EF4444' : cardBorder,
                 borderRadius: radii.md,
                 paddingHorizontal: spacing.md,
                 paddingVertical: spacing.sm,
-                backgroundColor: colors.surface,
+                backgroundColor: cardSurface,
                 fontSize: 14,
                 color: colors.textPrimary,
                 textAlignVertical: 'top',
@@ -917,12 +932,12 @@ export default function ApplicationStep2Screen() {
           </View>
 
           {/* Navigation Buttons */}
-          <View style={{ flexDirection: 'row', gap: spacing.md }}>
+          <View style={{ flexDirection: 'row', gap: spacing.md, marginBottom: spacing.lg }}>
             <TouchableOpacity
               onPress={() => navigation.goBack()}
               style={{
                 flex: 1,
-                backgroundColor: colors.surface,
+                backgroundColor: cardSurface,
                 borderWidth: 1,
                 borderColor: colors.textPrimary,
                 paddingVertical: spacing.md,
@@ -952,6 +967,7 @@ export default function ApplicationStep2Screen() {
               </Text>
               <MaterialIcons name="arrow-forward" size={16} color="#FFFFFF" />
             </TouchableOpacity>
+          </View>
           </View>
         </View>
       </ScrollView>

@@ -11,12 +11,14 @@ import { colors, spacing, typography, radii } from '../theme';
 import { PrimaryButton, ThemedInput } from '../components/ui';
 import { useAuth } from '../auth/AuthContext';
 import ThemedAlert from '../components/ThemedAlert';
+import { useIsDesktop } from '../hooks/useIsDesktop';
 
 type Props = NativeStackScreenProps<AttendeeStackParamList, 'BookTour'>;
 
 export default function BookTourScreen({ route, navigation }: Props) {
   const { venueId, venueName } = route.params;
   const { user } = useAuth();
+  const isDesktop = useIsDesktop();
 
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -85,141 +87,238 @@ export default function BookTourScreen({ route, navigation }: Props) {
     }
   }
 
+  const renderForm = () => (
+    <>
+      <Text style={isDesktop ? { ...typography.labelMd, color: colors.dustyRose, marginBottom: spacing.sm, textTransform: 'uppercase' } : typography.label}>Name</Text>
+      <ThemedInput
+        value={name}
+        onChangeText={setName}
+        placeholder="Your full name"
+        autoCapitalize="words"
+      />
+
+      <Text style={isDesktop ? { ...typography.labelMd, color: colors.dustyRose, marginBottom: spacing.sm, marginTop: spacing.md, textTransform: 'uppercase' } : typography.label}>Email</Text>
+      <ThemedInput
+        value={email}
+        onChangeText={setEmail}
+        placeholder="you@example.com"
+        keyboardType="email-address"
+        autoCapitalize="none"
+      />
+
+      <Text style={isDesktop ? { ...typography.labelMd, color: colors.dustyRose, marginBottom: spacing.sm, marginTop: spacing.md, textTransform: 'uppercase' } : typography.label}>Phone Number</Text>
+      <ThemedInput
+        value={phone}
+        onChangeText={setPhone}
+        placeholder="e.g. 082 123 4567"
+        keyboardType="phone-pad"
+      />
+
+      <Text style={isDesktop ? { ...typography.labelMd, color: colors.dustyRose, marginBottom: spacing.sm, marginTop: spacing.md, textTransform: 'uppercase' } : typography.label}>Preferred Date</Text>
+      <TouchableOpacity
+        onPress={() => setShowDatePicker(true)}
+        style={{
+          padding: spacing.md,
+          borderWidth: 1,
+          borderColor: isDesktop ? colors.outlineVariant : colors.borderSubtle,
+          borderRadius: radii.md,
+          marginBottom: spacing.md,
+          backgroundColor: isDesktop ? colors.surfaceContainerLowest : colors.background,
+        }}
+      >
+        <Text style={isDesktop ? { ...typography.bodyMd, color: colors.textPrimary } : { ...typography.body, color: colors.textPrimary }}>
+          {date.toLocaleDateString('en-ZA', { day: 'numeric', month: 'long', year: 'numeric' })}
+        </Text>
+      </TouchableOpacity>
+      {showDatePicker && (
+        <DateTimePicker
+          value={date}
+          mode="date"
+          display="default"
+          onChange={onDateChange}
+          minimumDate={new Date()}
+        />
+      )}
+
+      <Text style={isDesktop ? { ...typography.labelMd, color: colors.dustyRose, marginBottom: spacing.sm, marginTop: spacing.md, textTransform: 'uppercase' } : typography.label}>Message (Optional)</Text>
+      <ThemedInput
+        value={message}
+        onChangeText={setMessage}
+        placeholder="Any specific questions or requests?"
+        multiline
+        numberOfLines={4}
+        style={{ minHeight: 80, textAlignVertical: 'top' }}
+      />
+
+      <PrimaryButton
+        title={submitting ? 'Submitting...' : 'Request Tour'}
+        onPress={handleSubmit}
+        disabled={submitting}
+        style={{ marginTop: spacing.lg }}
+      />
+    </>
+  );
+
   return (
     <KeyboardAvoidingView
-      style={{ flex: 1 }}
+      style={{ flex: 1, backgroundColor: isDesktop ? colors.surfaceBg : colors.background }}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
     >
       <ScrollView
-        style={{ flex: 1, backgroundColor: colors.background }}
-        contentContainerStyle={{ paddingHorizontal: spacing.lg, paddingTop: spacing.sm, paddingBottom: 120 }}
+        style={{ flex: 1, backgroundColor: isDesktop ? colors.surfaceBg : colors.background }}
+        contentContainerStyle={isDesktop ? { paddingHorizontal: 48, paddingTop: spacing.sm, paddingBottom: 120, maxWidth: 1200, width: '100%', alignSelf: 'center' } : { paddingHorizontal: spacing.lg, paddingTop: spacing.sm, paddingBottom: 120 }}
         keyboardShouldPersistTaps="handled"
       >
-        <TouchableOpacity
-          onPress={() => navigation.goBack()}
-          style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.sm }}
-        >
-          <MaterialIcons name="arrow-back" size={20} color={colors.textPrimary} />
-          <Text style={{ ...typography.body, color: colors.textPrimary, marginLeft: spacing.xs }}>Back</Text>
-        </TouchableOpacity>
-        <View
-          style={{
-            marginBottom: spacing.lg,
-            padding: spacing.lg,
-            borderRadius: 16,
-            backgroundColor: colors.surface,
-            borderWidth: 1,
-            borderColor: colors.borderSubtle,
-          }}
-        >
-          <Text
-            style={{
-              ...typography.titleMedium,
-              color: colors.textPrimary,
-            }}
-          >
-            Book a tour at
-          </Text>
-          <Text
-            style={{
-              marginTop: spacing.xs,
-              ...typography.body,
-              color: colors.textSecondary,
-              fontWeight: '600'
-            }}
-          >
-            {venueName}
-          </Text>
-        </View>
-
-        <View
-          style={{
-            padding: spacing.lg,
-            borderRadius: 16,
-            backgroundColor: colors.surface,
-            borderWidth: 1,
-            borderColor: colors.borderSubtle,
-          }}
-        >
-          <Text
-            style={{
-              ...typography.titleMedium,
-              color: colors.textPrimary,
-              marginBottom: spacing.md,
-            }}
-          >
-            Your details
-          </Text>
-
-          <Text style={typography.label}>Name</Text>
-          <ThemedInput
-            value={name}
-            onChangeText={setName}
-            placeholder="Your full name"
-            autoCapitalize="words"
-          />
-
-          <Text style={typography.label}>Email</Text>
-          <ThemedInput
-            value={email}
-            onChangeText={setEmail}
-            placeholder="you@example.com"
-            keyboardType="email-address"
-            autoCapitalize="none"
-          />
-
-          <Text style={typography.label}>Phone Number</Text>
-          <ThemedInput
-            value={phone}
-            onChangeText={setPhone}
-            placeholder="e.g. 082 123 4567"
-            keyboardType="phone-pad"
-          />
-
-          <Text style={typography.label}>Preferred Date</Text>
+        {isDesktop ? null : (
           <TouchableOpacity
-            onPress={() => setShowDatePicker(true)}
-            style={{
-              padding: spacing.md,
-              borderWidth: 1,
-              borderColor: colors.borderSubtle,
-              borderRadius: radii.md,
-              marginBottom: spacing.md,
-              backgroundColor: colors.background,
-            }}
+            onPress={() => navigation.goBack()}
+            style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.sm }}
           >
-            <Text style={{ ...typography.body, color: colors.textPrimary }}>
-              {date.toLocaleDateString('en-ZA', { day: 'numeric', month: 'long', year: 'numeric' })}
-            </Text>
+            <MaterialIcons name="arrow-back" size={20} color={colors.textPrimary} />
+            <Text style={{ ...typography.body, color: colors.textPrimary, marginLeft: spacing.xs }}>Back</Text>
           </TouchableOpacity>
-          {showDatePicker && (
-            <DateTimePicker
-              value={date}
-              mode="date"
-              display="default"
-              onChange={onDateChange}
-              minimumDate={new Date()}
-            />
-          )}
+        )}
 
-          <Text style={typography.label}>Message (Optional)</Text>
-          <ThemedInput
-            value={message}
-            onChangeText={setMessage}
-            placeholder="Any specific questions or requests?"
-            multiline
-            numberOfLines={4}
-            style={{ minHeight: 80, textAlignVertical: 'top' }}
-          />
+        {isDesktop ? (
+          <>
+            <View style={{ marginBottom: spacing.lg, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end' }}>
+              <View>
+                <Text style={{ ...typography.labelMd, color: colors.dustyRose, marginBottom: spacing.sm, textTransform: 'uppercase', letterSpacing: 0.05 }}>
+                  Venue Tour
+                </Text>
+                <Text style={{ ...typography.headlineMd, color: colors.primary }}>
+                  Book a tour at {venueName}
+                </Text>
+              </View>
+            </View>
+            <View
+              style={{
+                padding: spacing.xl,
+                borderRadius: radii.xl,
+                backgroundColor: colors.surfaceContainerLowest,
+                borderWidth: 1,
+                borderColor: colors.outlineVariant,
+                maxWidth: 900,
+                width: '100%',
+                alignSelf: 'center',
+              }}
+            >
+              <View style={{ flexDirection: 'row', gap: spacing.gutter, flexWrap: 'wrap' } as any}>
+                <View style={{ width: 'calc(50% - 12px)' } as any}>
+                  <Text style={{ ...typography.labelMd, color: colors.dustyRose, marginBottom: spacing.sm, textTransform: 'uppercase' }}>Name</Text>
+                  <ThemedInput value={name} onChangeText={setName} placeholder="Your full name" autoCapitalize="words" />
+                </View>
+                <View style={{ width: 'calc(50% - 12px)' } as any}>
+                  <Text style={{ ...typography.labelMd, color: colors.dustyRose, marginBottom: spacing.sm, textTransform: 'uppercase' }}>Email</Text>
+                  <ThemedInput value={email} onChangeText={setEmail} placeholder="you@example.com" keyboardType="email-address" autoCapitalize="none" />
+                </View>
+                <View style={{ width: 'calc(50% - 12px)' } as any}>
+                  <Text style={{ ...typography.labelMd, color: colors.dustyRose, marginBottom: spacing.sm, textTransform: 'uppercase' }}>Phone Number</Text>
+                  <ThemedInput value={phone} onChangeText={setPhone} placeholder="e.g. 082 123 4567" keyboardType="phone-pad" />
+                </View>
+                <View style={{ width: 'calc(50% - 12px)' } as any}>
+                  <Text style={{ ...typography.labelMd, color: colors.dustyRose, marginBottom: spacing.sm, textTransform: 'uppercase' }}>Preferred Date</Text>
+                  <TouchableOpacity
+                    onPress={() => setShowDatePicker(true)}
+                    style={{
+                      padding: spacing.md,
+                      borderWidth: 1,
+                      borderColor: colors.outlineVariant,
+                      borderRadius: radii.md,
+                      backgroundColor: colors.surfaceContainerLowest,
+                    } as any}
+                  >
+                    <Text style={{ ...typography.bodyMd, color: colors.textPrimary }}>
+                      {date.toLocaleDateString('en-ZA', { day: 'numeric', month: 'long', year: 'numeric' })}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+                <View style={{ width: '100%' } as any}>
+                  <Text style={{ ...typography.labelMd, color: colors.dustyRose, marginBottom: spacing.sm, marginTop: spacing.md, textTransform: 'uppercase' }}>Message (Optional)</Text>
+                  <ThemedInput
+                    value={message}
+                    onChangeText={setMessage}
+                    placeholder="Any specific questions or requests?"
+                    multiline
+                    numberOfLines={4}
+                    style={{ minHeight: 80, textAlignVertical: 'top' }}
+                  />
+                </View>
+                <View style={{ width: '100%' } as any}>
+                  <PrimaryButton
+                    title={submitting ? 'Submitting...' : 'Request Tour'}
+                    onPress={handleSubmit}
+                    disabled={submitting}
+                    style={{ marginTop: spacing.lg }}
+                  />
+                </View>
+              </View>
+              {showDatePicker && (
+                <DateTimePicker
+                  value={date}
+                  mode="date"
+                  display="default"
+                  onChange={onDateChange}
+                  minimumDate={new Date()}
+                />
+              )}
+            </View>
+          </>
+        ) : (
+          <>
+            <View
+              style={{
+                marginBottom: spacing.lg,
+                padding: spacing.lg,
+                borderRadius: 16,
+                backgroundColor: colors.surface,
+                borderWidth: 1,
+                borderColor: colors.borderSubtle,
+              }}
+            >
+              <Text
+                style={{
+                  ...typography.titleMedium,
+                  color: colors.textPrimary,
+                }}
+              >
+                Book a tour at
+              </Text>
+              <Text
+                style={{
+                  marginTop: spacing.xs,
+                  ...typography.body,
+                  color: colors.textSecondary,
+                  fontWeight: '600'
+                }}
+              >
+                {venueName}
+              </Text>
+            </View>
 
-          <PrimaryButton
-            title={submitting ? 'Submitting...' : 'Request Tour'}
-            onPress={handleSubmit}
-            disabled={submitting}
-            style={{ marginTop: spacing.lg }}
-          />
-        </View>
+            <View
+              style={{
+                padding: spacing.lg,
+                borderRadius: 16,
+                backgroundColor: colors.surface,
+                borderWidth: 1,
+                borderColor: colors.borderSubtle,
+              }}
+            >
+              <Text
+                style={{
+                  ...typography.titleMedium,
+                  color: colors.textPrimary,
+                  marginBottom: spacing.md,
+                }}
+              >
+                Your details
+              </Text>
+              {renderForm()}
+            </View>
+          </>
+        )}
       </ScrollView>
 
       {alertState && (

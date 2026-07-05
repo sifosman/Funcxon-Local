@@ -13,6 +13,7 @@ import { createGalleryMediaRecord } from '../../lib/mediaUpload';
 import { useAuth } from '../../auth/AuthContext';
 import { supabase } from '../../lib/supabaseClient';
 import ThemedAlert from '../../components/ThemedAlert';
+import { useIsDesktop } from '../../hooks/useIsDesktop';
 
 type ProfileStackParamList = {
   AccountMain: undefined;
@@ -41,6 +42,9 @@ export default function ApplicationStep4Screen() {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [alertState, setAlertState] = useState<{visible: boolean; title: string; message: string; buttons?: any[]} | null>(null);
+  const isDesktop = useIsDesktop();
+  const cardSurface = isDesktop ? colors.surfaceContainerLowest : colors.surface;
+  const cardBorder = isDesktop ? colors.outlineVariant : colors.borderSubtle;
   const [tiers, setTiers] = useState<Array<{
     id: number;
     tier_name: string;
@@ -528,54 +532,65 @@ export default function ApplicationStep4Screen() {
     }
   };
 
+  const desktopContainerStyle = {
+    maxWidth: 1200,
+    width: '100%',
+    alignSelf: 'center' as const,
+    paddingHorizontal: 48,
+    paddingBottom: spacing.xxl * 6,
+  };
+
   return (
     <KeyboardAvoidingView
-      style={{ flex: 1, backgroundColor: colors.background }}
+      style={{ flex: 1, backgroundColor: isDesktop ? colors.surfaceBg : colors.background }}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       keyboardVerticalOffset={Platform.OS === 'ios' ? spacing.lg : 0}
     >
       <ScrollView
         keyboardShouldPersistTaps="handled"
         keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
-        contentContainerStyle={{ paddingBottom: spacing.xxl * 6 }}
+        contentContainerStyle={isDesktop ? { ...desktopContainerStyle } as any : { paddingBottom: spacing.xxl * 6 }}
       >
-        <View style={{ paddingHorizontal: spacing.lg, paddingTop: spacing.sm }}>
-          <TouchableOpacity
-            onPress={() => navigation.goBack()}
-            style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.sm }}
-          >
-            <MaterialIcons name="arrow-back" size={20} color={colors.textPrimary} />
-            <Text style={{ ...typography.body, color: colors.textPrimary, marginLeft: spacing.sm }}>
-              Back
-            </Text>
-          </TouchableOpacity>
+        <View style={{ paddingHorizontal: isDesktop ? 0 : spacing.lg, paddingTop: spacing.sm }}>
+          {!isDesktop && (
+            <TouchableOpacity
+              onPress={() => navigation.goBack()}
+              style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.sm }}
+            >
+              <MaterialIcons name="arrow-back" size={20} color={colors.textPrimary} />
+              <Text style={{ ...typography.body, color: colors.textPrimary, marginLeft: spacing.sm }}>
+                Back
+              </Text>
+            </TouchableOpacity>
+          )}
 
-          <View style={{ marginBottom: spacing.lg }}>
+          <View style={{ marginBottom: spacing.lg, maxWidth: isDesktop ? 800 : undefined, width: isDesktop ? '100%' : undefined, alignSelf: isDesktop ? 'center' as const : undefined }}>
             <View style={{ marginBottom: spacing.md, alignSelf: 'flex-start' }}>
               <ApplicationProgress currentStep={4} />
             </View>
             <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: spacing.md }}>
               <MaterialIcons name="card-membership" size={32} color={colors.textPrimary} />
               <View style={{ flex: 1 }}>
-                <Text style={{ ...typography.titleMedium, color: colors.textPrimary }}>
+                <Text style={isDesktop ? { ...typography.headlineMd, color: colors.primary } as any : { ...typography.titleMedium, color: colors.textPrimary }}>
                   Subscription & Legal
                 </Text>
-                <Text style={{ ...typography.caption, color: colors.textMuted }}>
+                <Text style={isDesktop ? { ...typography.bodyMd, color: colors.onSurfaceVariant } as any : { ...typography.caption, color: colors.textMuted }}>
                   Page 4 of 4
                 </Text>
               </View>
             </View>
           </View>
 
+          <View style={{ maxWidth: isDesktop ? 800 : undefined, width: isDesktop ? '100%' : undefined, alignSelf: isDesktop ? 'center' as const : undefined }}>
           {/* Subscription Package Selection */}
           <View
             style={{
-              backgroundColor: colors.surface,
+              backgroundColor: cardSurface,
               borderRadius: radii.lg,
               padding: spacing.lg,
               marginBottom: spacing.lg,
               borderWidth: 1,
-              borderColor: colors.borderSubtle,
+              borderColor: cardBorder,
               shadowColor: '#000',
               shadowOpacity: 0.05,
               shadowRadius: 8,
@@ -638,8 +653,8 @@ export default function ApplicationStep4Screen() {
                         padding: spacing.md,
                         borderRadius: radii.lg,
                         borderWidth: 2,
-                        borderColor: isSelected ? colors.textPrimary : colors.borderSubtle,
-                        backgroundColor: isSelected ? '#f2f7ff' : colors.surface,
+                        borderColor: isSelected ? colors.textPrimary : cardBorder,
+                        backgroundColor: isSelected ? '#f2f7ff' : cardSurface,
                       }}
                     >
                       <View
@@ -649,7 +664,7 @@ export default function ApplicationStep4Screen() {
                           borderRadius: 12,
                           borderWidth: 2,
                           borderColor: isSelected ? colors.textPrimary : colors.borderStrong,
-                          backgroundColor: isSelected ? colors.textPrimary : colors.surface,
+                          backgroundColor: isSelected ? colors.textPrimary : cardSurface,
                           alignItems: 'center',
                           justifyContent: 'center',
                           marginRight: spacing.md,
@@ -680,12 +695,12 @@ export default function ApplicationStep4Screen() {
           {/* Legal Agreements */}
           <View
             style={{
-              backgroundColor: colors.surface,
+              backgroundColor: cardSurface,
               borderRadius: radii.lg,
               padding: spacing.lg,
               marginBottom: spacing.lg,
               borderWidth: 1,
-              borderColor: colors.borderSubtle,
+              borderColor: cardBorder,
               shadowColor: '#000',
               shadowOpacity: 0.05,
               shadowRadius: 8,
@@ -712,8 +727,8 @@ export default function ApplicationStep4Screen() {
                   height: 24,
                   borderRadius: 6,
                   borderWidth: 2,
-                  borderColor: errors.termsAccepted ? '#EF4444' : state.step4.termsAccepted ? colors.textPrimary : colors.borderSubtle,
-                  backgroundColor: state.step4.termsAccepted ? colors.textPrimary : colors.surface,
+                  borderColor: errors.termsAccepted ? '#EF4444' : state.step4.termsAccepted ? colors.textPrimary : cardBorder,
+                  backgroundColor: state.step4.termsAccepted ? colors.textPrimary : cardSurface,
                   alignItems: 'center',
                   justifyContent: 'center',
                   marginRight: spacing.md,
@@ -757,8 +772,8 @@ export default function ApplicationStep4Screen() {
                   height: 24,
                   borderRadius: 6,
                   borderWidth: 2,
-                  borderColor: errors.privacyAccepted ? '#EF4444' : state.step4.privacyAccepted ? colors.textPrimary : colors.borderSubtle,
-                  backgroundColor: state.step4.privacyAccepted ? colors.textPrimary : colors.surface,
+                  borderColor: errors.privacyAccepted ? '#EF4444' : state.step4.privacyAccepted ? colors.textPrimary : cardBorder,
+                  backgroundColor: state.step4.privacyAccepted ? colors.textPrimary : cardSurface,
                   alignItems: 'center',
                   justifyContent: 'center',
                   marginRight: spacing.md,
@@ -801,8 +816,8 @@ export default function ApplicationStep4Screen() {
                   height: 24,
                   borderRadius: 6,
                   borderWidth: 2,
-                  borderColor: state.step4.marketingConsent ? colors.textPrimary : colors.borderSubtle,
-                  backgroundColor: state.step4.marketingConsent ? colors.textPrimary : colors.surface,
+                  borderColor: state.step4.marketingConsent ? colors.textPrimary : cardBorder,
+                  backgroundColor: state.step4.marketingConsent ? colors.textPrimary : cardSurface,
                   alignItems: 'center',
                   justifyContent: 'center',
                   marginRight: spacing.md,
@@ -844,7 +859,7 @@ export default function ApplicationStep4Screen() {
               onPress={() => navigation.goBack()}
               style={{
                 flex: 1,
-                backgroundColor: colors.surface,
+                backgroundColor: cardSurface,
                 borderWidth: 1,
                 borderColor: colors.textPrimary,
                 paddingVertical: spacing.md,
@@ -861,7 +876,7 @@ export default function ApplicationStep4Screen() {
               disabled={isSubmitting}
               style={{
                 flex: 1,
-                backgroundColor: isSubmitting ? colors.borderSubtle : colors.textPrimary,
+                backgroundColor: isSubmitting ? cardBorder : colors.textPrimary,
                 paddingVertical: spacing.md,
                 borderRadius: radii.md,
                 flexDirection: 'row',
@@ -886,6 +901,7 @@ export default function ApplicationStep4Screen() {
                 </>
               )}
             </TouchableOpacity>
+          </View>
           </View>
         </View>
       </ScrollView>

@@ -15,6 +15,7 @@ import { MaterialIcons } from '@expo/vector-icons';
 
 import { fetchHubSpotBlogPostBySlug, fetchHubSpotRelatedPosts, fetchHubSpotAllSlugs, type AppBlogPost } from '../lib/hubspotBlog';
 import { colors, spacing, radii, typography } from '../theme';
+import { useIsDesktop } from '../hooks/useIsDesktop';
 import type { AttendeeStackParamList } from '../navigation/AttendeeNavigator';
 
 type BlogDetailRouteProp = RouteProp<AttendeeStackParamList, 'BlogDetail'>;
@@ -41,6 +42,7 @@ const fetchAllPublishedSlugs = async (): Promise<{ id: string; slug: string; tit
 export default function BlogDetailScreen() {
   const navigation = useNavigation<NavigationProp>();
   const route = useRoute<BlogDetailRouteProp>();
+  const isDesktop = useIsDesktop();
   const { slug } = route.params;
 
   const { data: post, isLoading, error } = useQuery({
@@ -104,7 +106,7 @@ export default function BlogDetailScreen() {
       const trimmedLine = line.trim();
       
       if (!trimmedLine) {
-        elements.push(<View key={index} style={{ height: spacing.md }} />);
+        elements.push(<View key={index} style={{ height: isDesktop ? spacing.lg : spacing.md }} />);
         return;
       }
 
@@ -113,7 +115,7 @@ export default function BlogDetailScreen() {
           <Text
             key={index}
             style={{
-              ...typography.titleLarge,
+              ...(isDesktop ? typography.headlineSm : typography.titleLarge),
               color: colors.textPrimary,
               marginTop: spacing.lg,
               marginBottom: spacing.sm,
@@ -128,7 +130,7 @@ export default function BlogDetailScreen() {
             <Text style={{ ...typography.bodySemiBold, color: colors.primary, marginRight: spacing.sm }}>
               {trimmedLine.split('.')[0]}.
             </Text>
-            <Text style={{ ...typography.body, color: colors.textPrimary, flex: 1, lineHeight: 22 }}>
+            <Text style={{ ...(isDesktop ? typography.bodyMd : typography.body), color: colors.textPrimary, flex: 1, lineHeight: isDesktop ? 28 : 22 }}>
               {trimmedLine.replace(/^\d+\.\s/, '')}
             </Text>
           </View>
@@ -137,7 +139,7 @@ export default function BlogDetailScreen() {
         elements.push(
           <View key={index} style={{ flexDirection: 'row', marginBottom: spacing.sm, marginLeft: spacing.lg }}>
             <Text style={{ ...typography.body, color: colors.primary, marginRight: spacing.sm }}>•</Text>
-            <Text style={{ ...typography.body, color: colors.textPrimary, flex: 1, lineHeight: 22 }}>
+            <Text style={{ ...(isDesktop ? typography.bodyMd : typography.body), color: colors.textPrimary, flex: 1, lineHeight: isDesktop ? 28 : 22 }}>
               {trimmedLine.replace('- ', '')}
             </Text>
           </View>
@@ -147,9 +149,9 @@ export default function BlogDetailScreen() {
           <Text
             key={index}
             style={{
-              ...typography.body,
+              ...(isDesktop ? typography.bodyMd : typography.body),
               color: colors.textPrimary,
-              lineHeight: 22,
+              lineHeight: isDesktop ? 28 : 22,
               marginBottom: spacing.sm,
             }}
           >
@@ -198,9 +200,227 @@ export default function BlogDetailScreen() {
     );
   }
 
+  const renderDesktopArticle = () => (
+    <View style={{ paddingHorizontal: 48, paddingTop: spacing.sm, paddingBottom: spacing.lg, maxWidth: 1200, width: '100%', alignSelf: 'center' }}>
+      <View style={{ marginBottom: spacing.lg }}>
+        <Text style={{ ...typography.labelMd, color: colors.dustyRose, marginBottom: spacing.sm, textTransform: 'uppercase', letterSpacing: 0.05 }}>
+          {post.category}
+        </Text>
+        <Text style={{ ...typography.headlineMd, color: colors.textPrimary, marginBottom: spacing.md }}>
+          {post.title}
+        </Text>
+        <View
+          style={{
+            flexDirection: 'row',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            marginBottom: spacing.xl,
+            paddingBottom: spacing.lg,
+            borderBottomWidth: 1,
+            borderBottomColor: colors.borderSubtle,
+          }}
+        >
+          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+            {post.author_avatar_url ? (
+              <Image
+                source={{ uri: post.author_avatar_url }}
+                style={{
+                  width: 48,
+                  height: 48,
+                  borderRadius: 24,
+                  marginRight: spacing.sm,
+                }}
+              />
+            ) : (
+              <View
+                style={{
+                  width: 48,
+                  height: 48,
+                  borderRadius: 24,
+                  backgroundColor: colors.accent,
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                  marginRight: spacing.sm,
+                }}
+              >
+                <MaterialIcons name="person" size={24} color={colors.primary} />
+              </View>
+            )}
+            <View>
+              <Text style={{ ...typography.bodyMd, color: colors.textPrimary }}>
+                {post.author_name}
+              </Text>
+              <Text style={{ ...typography.labelMd, color: colors.textMuted }}>
+                {formatDate(post.published_at)} · {post.read_time_minutes} min read
+              </Text>
+            </View>
+          </View>
+
+          <TouchableOpacity onPress={handleShare} style={{ padding: spacing.sm }}>
+            <MaterialIcons name="share" size={24} color={colors.textSecondary} />
+          </TouchableOpacity>
+        </View>
+      </View>
+
+      {post.cover_image_url && (
+        <Image
+          source={{ uri: post.cover_image_url }}
+          style={{
+            width: '100%',
+            height: 420,
+            resizeMode: 'cover',
+            borderRadius: radii.lg,
+            marginBottom: spacing.xl,
+          }}
+        />
+      )}
+
+      <View style={{ maxWidth: 800, width: '100%', alignSelf: 'center' }}>
+        <View style={{ marginBottom: spacing.xl }}>
+          {renderContent(post.content)}
+        </View>
+
+        {post.tags && post.tags.length > 0 && (
+          <View style={{ marginBottom: spacing.xl }}>
+            <Text style={{ ...typography.headlineSm, color: colors.textPrimary, marginBottom: spacing.md }}>
+              Tags
+            </Text>
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm }}>
+              {post.tags.map((tag, index) => (
+                <View
+                  key={index}
+                  style={{
+                    backgroundColor: colors.surfaceContainerLow,
+                    paddingHorizontal: spacing.md,
+                    paddingVertical: spacing.xs,
+                    borderRadius: radii.full,
+                    borderWidth: 1,
+                    borderColor: colors.outlineVariant,
+                  }}
+                >
+                  <Text style={{ ...typography.bodyMd, color: colors.textSecondary }}>
+                    #{tag}
+                  </Text>
+                </View>
+              ))}
+            </View>
+          </View>
+        )}
+
+        {relatedPosts && relatedPosts.length > 0 && (
+          <View style={{ marginBottom: spacing.xl }}>
+            <Text style={{ ...typography.headlineSm, color: colors.textPrimary, marginBottom: spacing.lg }}>
+              Related Articles
+            </Text>
+            <View style={{ flexDirection: 'row', gap: spacing.md } as any}>
+              {relatedPosts.map((relatedPost) => (
+                <TouchableOpacity
+                  key={relatedPost.id}
+                  style={{
+                    flex: 1,
+                    backgroundColor: colors.surfaceContainerLowest,
+                    borderRadius: radii.md,
+                    overflow: 'hidden',
+                    borderWidth: 1,
+                    borderColor: colors.outlineVariant,
+                  }}
+                  onPress={() => navigation.push('BlogDetail', { slug: relatedPost.slug })}
+                  activeOpacity={0.7}
+                >
+                  {relatedPost.cover_image_url && (
+                    <Image
+                      source={{ uri: relatedPost.cover_image_url }}
+                      style={{
+                        width: '100%',
+                        height: 140,
+                        resizeMode: 'cover',
+                      }}
+                    />
+                  )}
+                  <View style={{ padding: spacing.md }}>
+                    <Text
+                      style={{
+                        ...typography.titleMedium,
+                        color: colors.textPrimary,
+                        marginBottom: spacing.xs,
+                      }}
+                      numberOfLines={2}
+                    >
+                      {relatedPost.title}
+                    </Text>
+                    <Text style={{ ...typography.bodyMd, color: colors.textMuted }}>
+                      {relatedPost.read_time_minutes} min read
+                    </Text>
+                  </View>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+        )}
+
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: spacing.xxl }}>
+          {prevPost ? (
+            <TouchableOpacity
+              style={{
+                backgroundColor: colors.surfaceContainerLowest,
+                paddingHorizontal: spacing.lg,
+                paddingVertical: spacing.md,
+                borderRadius: radii.md,
+                flexDirection: 'row',
+                alignItems: 'center',
+                flex: 1,
+                marginRight: spacing.sm,
+                borderWidth: 1,
+                borderColor: colors.outlineVariant,
+              }}
+              onPress={() => navigation.replace('BlogDetail', { slug: prevPost.slug })}
+            >
+              <MaterialIcons name="arrow-back" size={20} color={colors.textPrimary} />
+              <View style={{ marginLeft: spacing.sm, flex: 1 }}>
+                <Text style={{ ...typography.labelMd, color: colors.textMuted }}>Previous</Text>
+                <Text style={{ ...typography.bodyMd, color: colors.textPrimary }} numberOfLines={1}>
+                  {prevPost.title}
+                </Text>
+              </View>
+            </TouchableOpacity>
+          ) : (
+            <View style={{ flex: 1, marginRight: spacing.sm }} />
+          )}
+
+          {nextPost ? (
+            <TouchableOpacity
+              style={{
+                backgroundColor: colors.primary,
+                paddingHorizontal: spacing.lg,
+                paddingVertical: spacing.md,
+                borderRadius: radii.md,
+                flexDirection: 'row',
+                alignItems: 'center',
+                flex: 1,
+                marginLeft: spacing.sm,
+              }}
+              onPress={() => navigation.replace('BlogDetail', { slug: nextPost.slug })}
+            >
+              <View style={{ marginRight: spacing.sm, flex: 1, alignItems: 'flex-end' }}>
+                <Text style={{ ...typography.labelMd, color: colors.primaryForeground, opacity: 0.8 }}>Next</Text>
+                <Text style={{ ...typography.bodyMd, color: colors.primaryForeground }} numberOfLines={1}>
+                  {nextPost.title}
+                </Text>
+              </View>
+              <MaterialIcons name="arrow-forward" size={20} color={colors.primaryForeground} />
+            </TouchableOpacity>
+          ) : (
+            <View style={{ flex: 1, marginLeft: spacing.sm }} />
+          )}
+        </View>
+      </View>
+    </View>
+  );
+
   return (
-    <View style={{ flex: 1, backgroundColor: colors.background }}>
+    <View style={{ flex: 1, backgroundColor: isDesktop ? colors.surfaceBg : colors.background }}>
       <ScrollView showsVerticalScrollIndicator={false}>
+        {isDesktop ? renderDesktopArticle() : (<>
         {post.cover_image_url && (
           <Image
             source={{ uri: post.cover_image_url }}
@@ -452,6 +672,7 @@ export default function BlogDetailScreen() {
             )}
           </View>
         </View>
+      </>)}
       </ScrollView>
     </View>
   );

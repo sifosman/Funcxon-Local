@@ -11,6 +11,7 @@ import { supabase } from '../../lib/supabaseClient';
 import { useAuth } from '../../auth/AuthContext';
 import ThemedAlert from '../../components/ThemedAlert';
 import { getCatalogueItemLimit, isCatalogueLimitReached } from '../../lib/catalogue';
+import { useIsDesktop } from '../../hooks/useIsDesktop';
 
 const MAX_IMAGE_SIZE = 10 * 1024 * 1024; // 10MB
 
@@ -43,6 +44,7 @@ type CatalogueItem = {
 export default function VendorCatalogueScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<ProfileStackParamList>>();
   const { user } = useAuth();
+  const isDesktop = useIsDesktop();
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -393,38 +395,59 @@ export default function VendorCatalogueScreen() {
     );
   }
 
+  const desktopContainerStyle = {
+    maxWidth: 1200,
+    width: '100%',
+    alignSelf: 'center' as const,
+    paddingHorizontal: 48,
+  };
+
+  const cardSurface = isDesktop ? colors.surfaceContainerLowest : colors.surface;
+  const cardBorder = isDesktop ? colors.outlineVariant : colors.borderSubtle;
+
+  const renderHeader = (isDesktopHeader: boolean) => (
+    <View style={{ marginBottom: spacing.md }}>
+      <Text style={isDesktopHeader ? { ...typography.labelMd, color: colors.dustyRose, textTransform: 'uppercase', marginBottom: spacing.sm } as any : { display: 'none' } as any}>
+        Catalogue
+      </Text>
+      <Text style={isDesktopHeader ? { ...typography.headlineMd, color: colors.primary } as any : { ...typography.displayMedium, color: colors.textPrimary, marginBottom: spacing.xs }}>
+        Catalogue / Pricelist
+      </Text>
+      <Text style={{ ...typography.bodyMd, color: isDesktopHeader ? colors.onSurfaceVariant : colors.textMuted }}>
+        {vendor ? vendor.name : 'Create your vendor profile first.'}
+      </Text>
+    </View>
+  );
+
   if (!vendor) {
     return (
-      <View style={{ flex: 1, backgroundColor: colors.background }}>
-        <ScrollView contentContainerStyle={{ paddingBottom: spacing.xl }}>
-          <View style={{ paddingHorizontal: spacing.lg, paddingTop: spacing.sm, paddingBottom: spacing.md }}>
-            <TouchableOpacity
-              onPress={() => navigation.goBack()}
-              style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.sm }}
-            >
-              <MaterialIcons name="arrow-back" size={20} color={colors.textPrimary} />
-              <Text style={{ ...typography.body, color: colors.textPrimary, marginLeft: spacing.sm }}>Back</Text>
-            </TouchableOpacity>
+      <View style={{ flex: 1, backgroundColor: isDesktop ? colors.surfaceBg : colors.background }}>
+        <ScrollView contentContainerStyle={isDesktop ? { ...desktopContainerStyle, paddingBottom: spacing.xxl } as any : { paddingBottom: spacing.xl }}>
+          <View style={{ paddingHorizontal: isDesktop ? 0 : spacing.lg, paddingTop: spacing.sm, paddingBottom: spacing.md }}>
+            {!isDesktop && (
+              <TouchableOpacity
+                onPress={() => navigation.goBack()}
+                style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.sm }}
+              >
+                <MaterialIcons name="arrow-back" size={20} color={colors.textPrimary} />
+                <Text style={{ ...typography.body, color: colors.textPrimary, marginLeft: spacing.sm }}>Back</Text>
+              </TouchableOpacity>
+            )}
 
-            <Text style={{ ...typography.displayMedium, color: colors.textPrimary, marginBottom: spacing.xs }}>
-              Catalogue / Pricelist
-            </Text>
-            <Text style={{ ...typography.body, color: colors.textMuted }}>
-              Create your vendor profile first.
-            </Text>
+            {renderHeader(isDesktop)}
           </View>
 
-          <View style={{ paddingHorizontal: spacing.lg }}>
+          <View style={{ paddingHorizontal: isDesktop ? 0 : spacing.lg }}>
             <View
               style={{
-                backgroundColor: colors.surface,
+                backgroundColor: cardSurface,
                 borderRadius: radii.lg,
                 padding: spacing.lg,
                 borderWidth: 1,
-                borderColor: colors.borderSubtle,
+                borderColor: cardBorder,
               }}
             >
-              <Text style={{ ...typography.body, color: colors.textPrimary }}>
+              <Text style={{ ...typography.bodyMd, color: colors.textPrimary }}>
                 You don’t have a vendor profile yet. Please create it in “Update Vendor Portfolio” before adding catalogue items.
               </Text>
               <TouchableOpacity
@@ -447,227 +470,270 @@ export default function VendorCatalogueScreen() {
     );
   }
 
-  return (
-    <View style={{ flex: 1, backgroundColor: colors.background }}>
-      <ScrollView contentContainerStyle={{ paddingBottom: spacing.xl }}>
-        <View style={{ paddingHorizontal: spacing.lg, paddingTop: spacing.sm, paddingBottom: spacing.md }}>
-          <TouchableOpacity
-            onPress={() => navigation.goBack()}
-            style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.sm }}
-          >
-            <MaterialIcons name="arrow-back" size={20} color={colors.textPrimary} />
-            <Text style={{ ...typography.body, color: colors.textPrimary, marginLeft: spacing.sm }}>Back</Text>
-          </TouchableOpacity>
-
-          <Text style={{ ...typography.displayMedium, color: colors.textPrimary, marginBottom: spacing.xs }}>
-            Catalogue / Pricelist
-          </Text>
-          <Text style={{ ...typography.body, color: colors.textMuted }}>
-            {vendor.name}
-          </Text>
-        </View>
-
-        <View style={{ paddingHorizontal: spacing.lg }}>
-          <View style={{ marginBottom: spacing.md }}>
-            <Text style={{ ...typography.caption, color: colors.textMuted }}>
-              {items.length} of {itemLimit} items used
-            </Text>
-          </View>
-
-          <TouchableOpacity
-            onPress={openNew}
-            disabled={saving || (!editingItem && !canAddMoreItems)}
-            style={{
-              backgroundColor: saving ? colors.textMuted : colors.primary,
-              borderRadius: radii.lg,
-              paddingVertical: spacing.md,
-              flexDirection: 'row',
-              alignItems: 'center',
-              justifyContent: 'center',
-              marginBottom: spacing.md,
-              opacity: saving ? 0.7 : 1,
-            }}
-          >
-            <MaterialIcons name="add" size={20} color="#FFFFFF" style={{ marginRight: spacing.sm }} />
-            <Text style={{ ...typography.bodyBold, color: '#FFFFFF' }}>
-              Add Item
-            </Text>
-          </TouchableOpacity>
-
-          {selectedItems.length > 0 && (
-            <View
-              style={{
-                backgroundColor: colors.surface,
-                borderRadius: radii.lg,
-                borderWidth: 1,
-                borderColor: colors.borderSubtle,
-                padding: spacing.md,
-                marginBottom: spacing.md,
-              }}
-            >
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.sm }}>
-                <Text style={{ ...typography.titleMedium, color: colors.textPrimary }}>Your Selection</Text>
-                <TouchableOpacity onPress={clearSelection}>
-                  <Text style={{ ...typography.captionSemiBold, color: colors.textMuted }}>Clear</Text>
-                </TouchableOpacity>
-              </View>
-              {selectedItems.map((item) => (
-                <View key={item.id} style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: spacing.xs }}>
-                  <Text style={{ ...typography.body, color: colors.textPrimary }}>
-                    {item.title} x{item.quantity}
-                  </Text>
-                  <Text style={{ ...typography.body, color: colors.textPrimary }}>
-                    R{Number((item.price ?? 0) * item.quantity).toLocaleString()}
-                  </Text>
-                </View>
-              ))}
-              <View
-                style={{
-                  borderTopWidth: 1,
-                  borderColor: colors.borderSubtle,
-                  marginTop: spacing.sm,
-                  paddingTop: spacing.sm,
-                  flexDirection: 'row',
-                  justifyContent: 'space-between',
-                }}
-              >
-                <Text style={{ ...typography.titleMedium, color: colors.textPrimary }}>Total</Text>
-                <Text style={{ ...typography.titleMedium, color: colors.primary }}>
-                  R{Number(total).toLocaleString()}
-                </Text>
-              </View>
-            </View>
-          )}
-
-          {sortedItems.length === 0 ? (
-            <View
-              style={{
-                backgroundColor: colors.surface,
-                borderRadius: radii.lg,
-                padding: spacing.xl,
-                borderWidth: 1,
-                borderColor: colors.borderSubtle,
-                alignItems: 'center',
-              }}
-            >
-              <MaterialIcons name="inventory-2" size={48} color={colors.textMuted} />
-              <Text style={{ ...typography.body, color: colors.textMuted, marginTop: spacing.md, textAlign: 'center' }}>
-                No catalogue items yet.
-              </Text>
-            </View>
+  const renderItemCard = (item: CatalogueItem) => (
+    <View
+      key={item.id}
+      style={{
+        backgroundColor: cardSurface,
+        borderRadius: radii.lg,
+        borderWidth: 1,
+        borderColor: cardBorder,
+        marginBottom: spacing.md,
+        overflow: 'hidden',
+        width: isDesktop ? '48%' : '100%',
+      }}
+    >
+      <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+        <TouchableOpacity onPress={() => toggleItem(item.id)} style={{ padding: spacing.sm }}>
+          <MaterialIcons
+            name={selectedIds.has(item.id) ? 'check-box' : 'check-box-outline-blank'}
+            size={24}
+            color={selectedIds.has(item.id) ? colors.primary : colors.textMuted}
+          />
+        </TouchableOpacity>
+        <TouchableOpacity
+          onPress={() => pickCatalogueImage(item.id)}
+          style={{ width: 100, height: 100, backgroundColor: colors.backgroundAlt, alignItems: 'center', justifyContent: 'center' }}
+        >
+          {item.image_url ? (
+            <Image source={{ uri: item.image_url }} style={{ width: 100, height: 100 }} resizeMode="cover" />
+          ) : uploadingImage === item.id ? (
+            <ActivityIndicator color={colors.textPrimary} />
           ) : (
-            sortedItems.map((item) => (
-              <View
-                key={item.id}
+            <>
+              <MaterialIcons name="add-photo-alternate" size={28} color={colors.textMuted} />
+              <Text style={{ ...typography.caption, color: colors.textMuted, marginTop: spacing.xs }}>Add Photo</Text>
+            </>
+          )}
+        </TouchableOpacity>
+        <View style={{ flex: 1, padding: spacing.md, justifyContent: 'center' }}>
+          <Text style={isDesktop ? { ...typography.bodyMd, color: colors.textPrimary, fontWeight: '600' } as any : { ...typography.titleMedium, color: colors.textPrimary }}>{item.title}</Text>
+          {item.description ? (
+            <Text style={isDesktop ? { ...typography.bodyMd, color: colors.onSurfaceVariant, marginTop: spacing.xs } as any : { ...typography.body, color: colors.textMuted, marginTop: spacing.xs }} numberOfLines={2}>
+              {item.description}
+            </Text>
+          ) : null}
+          <Text style={{ ...typography.bodyBold, color: colors.textPrimary, marginTop: spacing.sm }}>
+            {item.price === null || item.price === undefined ? '—' : `R${Number(item.price).toLocaleString()}`}
+          </Text>
+          {selectedIds.has(item.id) && (
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginTop: spacing.sm }}>
+              <TouchableOpacity
+                onPress={() => updateQuantity(item.id, -1)}
                 style={{
-                  backgroundColor: colors.surface,
-                  borderRadius: radii.lg,
-                  borderWidth: 1,
-                  borderColor: colors.borderSubtle,
-                  marginBottom: spacing.md,
-                  overflow: 'hidden',
+                  width: 28,
+                  height: 28,
+                  borderRadius: radii.md,
+                  backgroundColor: colors.surfaceMuted,
+                  alignItems: 'center',
+                  justifyContent: 'center',
                 }}
               >
-                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                  <TouchableOpacity onPress={() => toggleItem(item.id)} style={{ padding: spacing.sm }}>
-                    <MaterialIcons
-                      name={selectedIds.has(item.id) ? 'check-box' : 'check-box-outline-blank'}
-                      size={24}
-                      color={selectedIds.has(item.id) ? colors.primary : colors.textMuted}
-                    />
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    onPress={() => pickCatalogueImage(item.id)}
-                    style={{ width: 100, height: 100, backgroundColor: colors.backgroundAlt, alignItems: 'center', justifyContent: 'center' }}
-                  >
-                    {item.image_url ? (
-                      <Image source={{ uri: item.image_url }} style={{ width: 100, height: 100 }} resizeMode="cover" />
-                    ) : uploadingImage === item.id ? (
-                      <ActivityIndicator color={colors.textPrimary} />
-                    ) : (
-                      <>
-                        <MaterialIcons name="add-photo-alternate" size={28} color={colors.textMuted} />
-                        <Text style={{ ...typography.caption, color: colors.textMuted, marginTop: spacing.xs }}>Add Photo</Text>
-                      </>
-                    )}
-                  </TouchableOpacity>
-                  <View style={{ flex: 1, padding: spacing.md, justifyContent: 'center' }}>
-                    <Text style={{ ...typography.titleMedium, color: colors.textPrimary }}>{item.title}</Text>
-                    {item.description ? (
-                      <Text style={{ ...typography.body, color: colors.textMuted, marginTop: spacing.xs }} numberOfLines={2}>
-                        {item.description}
-                      </Text>
-                    ) : null}
-                    <Text style={{ ...typography.bodyBold, color: colors.textPrimary, marginTop: spacing.sm }}>
-                      {item.price === null || item.price === undefined ? '—' : `R${Number(item.price).toLocaleString()}`}
-                    </Text>
-                    {selectedIds.has(item.id) && (
-                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginTop: spacing.sm }}>
-                        <TouchableOpacity
-                          onPress={() => updateQuantity(item.id, -1)}
-                          style={{
-                            width: 28,
-                            height: 28,
-                            borderRadius: radii.md,
-                            backgroundColor: colors.surfaceMuted,
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                          }}
-                        >
-                          <MaterialIcons name="remove" size={18} color={colors.textPrimary} />
-                        </TouchableOpacity>
-                        <Text style={{ ...typography.bodyBold, color: colors.textPrimary, minWidth: 24, textAlign: 'center' }}>
-                          {quantities[item.id] || 1}
-                        </Text>
-                        <TouchableOpacity
-                          onPress={() => updateQuantity(item.id, 1)}
-                          style={{
-                            width: 28,
-                            height: 28,
-                            borderRadius: radii.md,
-                            backgroundColor: colors.surfaceMuted,
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                          }}
-                        >
-                          <MaterialIcons name="add" size={18} color={colors.textPrimary} />
-                        </TouchableOpacity>
-                      </View>
-                    )}
-                    {!item.is_active && (
-                      <Text style={{ ...typography.caption, color: colors.textMuted, marginTop: spacing.xs }}>
-                        Inactive
-                      </Text>
-                    )}
-                  </View>
-                  <View style={{ justifyContent: 'center', paddingRight: spacing.md, gap: spacing.sm }}>
-                    <TouchableOpacity onPress={() => openEdit(item)} disabled={saving}>
-                      <MaterialIcons name="edit" size={20} color={colors.textPrimary} />
-                    </TouchableOpacity>
-                    <TouchableOpacity onPress={() => handleDelete(item)} disabled={saving}>
-                      <MaterialIcons name="delete-outline" size={20} color={colors.destructive} />
-                    </TouchableOpacity>
-                  </View>
-                </View>
-              </View>
-            ))
+                <MaterialIcons name="remove" size={18} color={colors.textPrimary} />
+              </TouchableOpacity>
+              <Text style={{ ...typography.bodyBold, color: colors.textPrimary, minWidth: 24, textAlign: 'center' }}>
+                {quantities[item.id] || 1}
+              </Text>
+              <TouchableOpacity
+                onPress={() => updateQuantity(item.id, 1)}
+                style={{
+                  width: 28,
+                  height: 28,
+                  borderRadius: radii.md,
+                  backgroundColor: colors.surfaceMuted,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                <MaterialIcons name="add" size={18} color={colors.textPrimary} />
+              </TouchableOpacity>
+            </View>
+          )}
+          {!item.is_active && (
+            <Text style={{ ...typography.caption, color: colors.textMuted, marginTop: spacing.xs }}>
+              Inactive
+            </Text>
           )}
         </View>
+        <View style={{ justifyContent: 'center', paddingRight: spacing.md, gap: spacing.sm }}>
+          <TouchableOpacity onPress={() => openEdit(item)} disabled={saving}>
+            <MaterialIcons name="edit" size={20} color={colors.textPrimary} />
+          </TouchableOpacity>
+          <TouchableOpacity onPress={() => handleDelete(item)} disabled={saving}>
+            <MaterialIcons name="delete-outline" size={20} color={colors.destructive} />
+          </TouchableOpacity>
+        </View>
+      </View>
+    </View>
+  );
+
+  const renderSelectionPanel = () => (
+    <View
+      style={{
+        backgroundColor: cardSurface,
+        borderRadius: radii.lg,
+        borderWidth: 1,
+        borderColor: cardBorder,
+        padding: spacing.md,
+        marginBottom: spacing.md,
+      }}
+    >
+      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.sm }}>
+        <Text style={isDesktop ? { ...typography.bodyMd, color: colors.textPrimary, fontWeight: '600' } as any : { ...typography.titleMedium, color: colors.textPrimary }}>Your Selection</Text>
+        <TouchableOpacity onPress={clearSelection}>
+          <Text style={{ ...typography.captionSemiBold, color: colors.textMuted }}>Clear</Text>
+        </TouchableOpacity>
+      </View>
+      {selectedItems.map((item) => (
+        <View key={item.id} style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: spacing.xs }}>
+          <Text style={{ ...typography.body, color: colors.textPrimary }}>
+            {item.title} x{item.quantity}
+          </Text>
+          <Text style={{ ...typography.body, color: colors.textPrimary }}>
+            R{Number((item.price ?? 0) * item.quantity).toLocaleString()}
+          </Text>
+        </View>
+      ))}
+      <View
+        style={{
+          borderTopWidth: 1,
+          borderColor: cardBorder,
+          marginTop: spacing.sm,
+          paddingTop: spacing.sm,
+          flexDirection: 'row',
+          justifyContent: 'space-between',
+        }}
+      >
+        <Text style={{ ...typography.titleMedium, color: colors.textPrimary }}>Total</Text>
+        <Text style={{ ...typography.titleMedium, color: colors.primary }}>
+          R{Number(total).toLocaleString()}
+        </Text>
+      </View>
+    </View>
+  );
+
+  const renderAddButton = () => (
+    <TouchableOpacity
+      onPress={openNew}
+      disabled={saving || (!editingItem && !canAddMoreItems)}
+      style={{
+        backgroundColor: saving ? colors.textMuted : colors.primary,
+        borderRadius: radii.lg,
+        paddingVertical: spacing.md,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginBottom: spacing.md,
+        opacity: saving ? 0.7 : 1,
+      }}
+    >
+      <MaterialIcons name="add" size={20} color="#FFFFFF" style={{ marginRight: spacing.sm }} />
+      <Text style={{ ...typography.bodyBold, color: '#FFFFFF' }}>
+        Add Item
+      </Text>
+    </TouchableOpacity>
+  );
+
+  const renderUsageCounter = () => (
+    <View style={{ marginBottom: spacing.md }}>
+      <Text style={isDesktop ? { ...typography.bodyMd, color: colors.onSurfaceVariant } as any : { ...typography.caption, color: colors.textMuted }}>
+        {items.length} of {itemLimit} items used
+      </Text>
+    </View>
+  );
+
+  const renderItems = () => (
+    <>
+      {sortedItems.length === 0 ? (
+        <View
+          style={{
+            backgroundColor: cardSurface,
+            borderRadius: radii.lg,
+            padding: spacing.xl,
+            borderWidth: 1,
+            borderColor: cardBorder,
+            alignItems: 'center',
+            width: '100%',
+          }}
+        >
+          <MaterialIcons name="inventory-2" size={48} color={colors.textMuted} />
+          <Text style={isDesktop ? { ...typography.bodyMd, color: colors.textMuted, marginTop: spacing.md, textAlign: 'center' } as any : { ...typography.body, color: colors.textMuted, marginTop: spacing.md, textAlign: 'center' }}>
+            No catalogue items yet.
+          </Text>
+        </View>
+      ) : (
+        <View style={isDesktop ? { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between' } as any : undefined}>
+          {sortedItems.map(renderItemCard)}
+        </View>
+      )}
+    </>
+  );
+
+  return (
+    <View style={{ flex: 1, backgroundColor: isDesktop ? colors.surfaceBg : colors.background }}>
+      <ScrollView contentContainerStyle={isDesktop ? { ...desktopContainerStyle, paddingBottom: spacing.xxl } as any : { paddingBottom: spacing.xl }}>
+        {isDesktop ? (
+          <>
+            {renderHeader(true)}
+            <View style={{ flexDirection: 'row', gap: spacing.gutter } as any}>
+              <View style={{ flex: 3 } as any}>
+                {renderUsageCounter()}
+                {renderAddButton()}
+                {renderItems()}
+              </View>
+              <View style={{ flex: 1 } as any}>
+                {selectedItems.length > 0 && renderSelectionPanel()}
+                <View style={{ backgroundColor: cardSurface, borderRadius: radii.lg, padding: spacing.lg, borderWidth: 1, borderColor: cardBorder }}>
+                  <Text style={{ ...typography.headlineSm, color: colors.textPrimary, marginBottom: spacing.sm }}>
+                    Catalogue
+                  </Text>
+                  <Text style={{ ...typography.bodyMd, color: colors.onSurfaceVariant } as any}>
+                    Manage items and pricing for your vendor profile.
+                  </Text>
+                </View>
+              </View>
+            </View>
+          </>
+        ) : (
+          <>
+            <View style={{ paddingHorizontal: spacing.lg, paddingTop: spacing.sm, paddingBottom: spacing.md }}>
+              <TouchableOpacity
+                onPress={() => navigation.goBack()}
+                style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.sm }}
+              >
+                <MaterialIcons name="arrow-back" size={20} color={colors.textPrimary} />
+                <Text style={{ ...typography.body, color: colors.textPrimary, marginLeft: spacing.sm }}>Back</Text>
+              </TouchableOpacity>
+
+              {renderHeader(false)}
+            </View>
+
+            <View style={{ paddingHorizontal: spacing.lg }}>
+              {renderUsageCounter()}
+              {renderAddButton()}
+              {selectedItems.length > 0 && renderSelectionPanel()}
+              {renderItems()}
+            </View>
+          </>
+        )}
       </ScrollView>
 
       <Modal visible={editVisible} transparent animationType="fade" onRequestClose={closeEdit}>
         <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', padding: spacing.lg }}>
           <View
             style={{
-              backgroundColor: colors.surface,
+              backgroundColor: cardSurface,
               borderRadius: radii.lg,
               padding: spacing.lg,
               borderWidth: 1,
-              borderColor: colors.borderSubtle,
+              borderColor: cardBorder,
+              maxWidth: 560,
+              width: '100%',
+              alignSelf: 'center',
             }}
           >
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.md }}>
-              <Text style={{ ...typography.titleMedium, color: colors.textPrimary }}>
+              <Text style={isDesktop ? { ...typography.headlineSm, color: colors.textPrimary } as any : { ...typography.titleMedium, color: colors.textPrimary }}>
                 {editingItem ? 'Edit item' : 'Add item'}
               </Text>
               <TouchableOpacity onPress={closeEdit}>
@@ -683,7 +749,7 @@ export default function VendorCatalogueScreen() {
               placeholderTextColor={colors.textMuted}
               style={{
                 borderWidth: 1,
-                borderColor: colors.borderSubtle,
+                borderColor: cardBorder,
                 borderRadius: radii.md,
                 paddingHorizontal: spacing.md,
                 paddingVertical: spacing.sm,
@@ -703,7 +769,7 @@ export default function VendorCatalogueScreen() {
               numberOfLines={4}
               style={{
                 borderWidth: 1,
-                borderColor: colors.borderSubtle,
+                borderColor: cardBorder,
                 borderRadius: radii.md,
                 paddingHorizontal: spacing.md,
                 paddingVertical: spacing.sm,
@@ -724,7 +790,7 @@ export default function VendorCatalogueScreen() {
               keyboardType="numeric"
               style={{
                 borderWidth: 1,
-                borderColor: colors.borderSubtle,
+                borderColor: cardBorder,
                 borderRadius: radii.md,
                 paddingHorizontal: spacing.md,
                 paddingVertical: spacing.sm,
@@ -753,7 +819,7 @@ export default function VendorCatalogueScreen() {
               onPress={pickImageForForm}
               style={{
                 borderWidth: 1,
-                borderColor: colors.borderSubtle,
+                borderColor: cardBorder,
                 borderRadius: radii.md,
                 backgroundColor: colors.surfaceMuted,
                 alignItems: 'center',

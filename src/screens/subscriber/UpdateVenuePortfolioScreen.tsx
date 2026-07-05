@@ -12,6 +12,7 @@ import { getMyVenueEntitlement, isVenueFeatureEnabled } from '../../lib/venueSub
 import { createGalleryMediaRecord } from '../../lib/mediaUpload';
 import { normalizePhoneNumber } from '../../utils/phoneNormalization';
 import ThemedAlert from '../../components/ThemedAlert';
+import { useIsDesktop } from '../../hooks/useIsDesktop';
 
 function buildLegacyLocation(parts: Array<string | null | undefined>) {
   return parts.map((part) => part?.trim() ?? '').filter(Boolean).join(', ') || null;
@@ -66,6 +67,9 @@ type VenueListing = {
 export default function UpdateVenuePortfolioScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<ProfileStackParamList>>();
   const { user } = useAuth();
+  const isDesktop = useIsDesktop();
+  const cardSurface = isDesktop ? colors.surfaceContainerLowest : colors.surface;
+  const cardBorder = isDesktop ? colors.outlineVariant : colors.borderSubtle;
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [listing, setListing] = useState<VenueListing | null>(null);
@@ -484,11 +488,11 @@ export default function UpdateVenuePortfolioScreen() {
         editable={!options?.disabled}
         style={{
           borderWidth: 1,
-          borderColor: colors.borderSubtle,
+          borderColor: cardBorder,
           borderRadius: radii.md,
           paddingHorizontal: spacing.md,
           paddingVertical: spacing.sm,
-          backgroundColor: options?.disabled ? colors.surfaceMuted : colors.surface,
+          backgroundColor: options?.disabled ? colors.surfaceMuted : cardSurface,
           color: colors.textPrimary,
           opacity: options?.disabled ? 0.7 : 1,
           fontFamily: typography.body.fontFamily,
@@ -498,9 +502,17 @@ export default function UpdateVenuePortfolioScreen() {
     </View>
   );
 
+  const desktopContainerStyle = {
+    maxWidth: 1200,
+    width: '100%',
+    alignSelf: 'center' as const,
+    paddingHorizontal: isDesktop ? 48 : 0,
+    paddingBottom: 120,
+  };
+
   if (loading) {
     return (
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: colors.background }}>
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: isDesktop ? colors.surfaceBg : colors.background }}>
         <ActivityIndicator size="large" color={colors.primary} />
         <Text style={{ ...typography.body, color: colors.textMuted, marginTop: spacing.md }}>Loading venue listing...</Text>
       </View>
@@ -509,36 +521,38 @@ export default function UpdateVenuePortfolioScreen() {
 
   return (
     <KeyboardAvoidingView
-      style={{ flex: 1, backgroundColor: colors.background }}
+      style={{ flex: 1, backgroundColor: isDesktop ? colors.surfaceBg : colors.background }}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       keyboardVerticalOffset={Platform.OS === 'ios' ? spacing.lg : 0}
     >
-      <ScrollView contentContainerStyle={{ paddingBottom: 120 }}>
-        <View style={{ paddingHorizontal: spacing.lg, paddingTop: spacing.sm, paddingBottom: spacing.md }}>
-          <TouchableOpacity
-            onPress={() => navigation.goBack()}
-            style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.sm }}
-          >
-            <MaterialIcons name="arrow-back" size={20} color={colors.textPrimary} />
-            <Text style={{ ...typography.body, color: colors.textPrimary, marginLeft: spacing.sm }}>Back</Text>
-          </TouchableOpacity>
+      <ScrollView contentContainerStyle={desktopContainerStyle as any}>
+        <View style={{ paddingHorizontal: isDesktop ? 0 : spacing.lg, paddingTop: spacing.sm, paddingBottom: spacing.md, maxWidth: isDesktop ? 800 : undefined, width: isDesktop ? '100%' : undefined, alignSelf: isDesktop ? 'center' as const : undefined }}>
+          {!isDesktop && (
+            <TouchableOpacity
+              onPress={() => navigation.goBack()}
+              style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.sm }}
+            >
+              <MaterialIcons name="arrow-back" size={20} color={colors.textPrimary} />
+              <Text style={{ ...typography.body, color: colors.textPrimary, marginLeft: spacing.sm }}>Back</Text>
+            </TouchableOpacity>
+          )}
 
-          <Text style={{ ...typography.displayMedium, color: colors.textPrimary, marginBottom: spacing.xs }}>
+          <Text style={isDesktop ? { ...typography.headlineMd, color: colors.primary, marginBottom: spacing.xs } as any : { ...typography.displayMedium, color: colors.textPrimary, marginBottom: spacing.xs }}>
             Update Venue Portfolio
           </Text>
-          <Text style={{ ...typography.body, color: colors.textMuted }}>
+          <Text style={isDesktop ? { ...typography.bodyMd, color: colors.onSurfaceVariant } as any : { ...typography.body, color: colors.textMuted }}>
             Edit your venue listing details
           </Text>
         </View>
 
-        <View style={{ paddingHorizontal: spacing.lg }}>
+        <View style={{ paddingHorizontal: isDesktop ? 0 : spacing.lg, maxWidth: isDesktop ? 800 : undefined, width: isDesktop ? '100%' : undefined, alignSelf: isDesktop ? 'center' as const : undefined }}>
           <View
             style={{
-              backgroundColor: colors.surface,
+              backgroundColor: cardSurface,
               borderRadius: radii.lg,
               padding: spacing.lg,
               borderWidth: 1,
-              borderColor: colors.borderSubtle,
+              borderColor: cardBorder,
             }}
           >
             <Text style={{ ...typography.titleMedium, color: colors.textPrimary, marginBottom: spacing.xs }}>
@@ -563,7 +577,7 @@ export default function UpdateVenuePortfolioScreen() {
               <View
                 style={{
                   borderWidth: 1,
-                  borderColor: colors.borderSubtle,
+                  borderColor: cardBorder,
                   borderRadius: radii.md,
                   paddingHorizontal: spacing.md,
                   paddingVertical: spacing.sm,
@@ -582,11 +596,11 @@ export default function UpdateVenuePortfolioScreen() {
           {/* Portfolio Photos - always visible */}
           <View
             style={{
-              backgroundColor: colors.surface,
+              backgroundColor: cardSurface,
               borderRadius: radii.lg,
               padding: spacing.lg,
               borderWidth: 1,
-              borderColor: colors.borderSubtle,
+              borderColor: cardBorder,
               marginTop: spacing.md,
             }}
           >
@@ -649,7 +663,7 @@ export default function UpdateVenuePortfolioScreen() {
                     height: 180,
                     borderRadius: radii.md,
                     borderWidth: 1,
-                    borderColor: colors.borderSubtle,
+                    borderColor: cardBorder,
                     borderStyle: 'dashed',
                     backgroundColor: colors.surfaceMuted,
                     alignItems: 'center',
@@ -697,7 +711,7 @@ export default function UpdateVenuePortfolioScreen() {
                       height: 80,
                       borderRadius: radii.md,
                       borderWidth: 1,
-                      borderColor: colors.borderSubtle,
+                      borderColor: cardBorder,
                       borderStyle: 'dashed',
                       backgroundColor: colors.surfaceMuted,
                       alignItems: 'center',
@@ -765,7 +779,7 @@ export default function UpdateVenuePortfolioScreen() {
                       height: 80,
                       borderRadius: radii.md,
                       borderWidth: 1,
-                      borderColor: colors.borderSubtle,
+                      borderColor: cardBorder,
                       borderStyle: 'dashed',
                       backgroundColor: colors.surfaceMuted,
                       alignItems: 'center',
@@ -787,11 +801,11 @@ export default function UpdateVenuePortfolioScreen() {
 
           <View
             style={{
-              backgroundColor: colors.surface,
+              backgroundColor: cardSurface,
               borderRadius: radii.lg,
               padding: spacing.lg,
               borderWidth: 1,
-              borderColor: colors.borderSubtle,
+              borderColor: cardBorder,
               marginTop: spacing.md,
             }}
           >
@@ -824,7 +838,7 @@ export default function UpdateVenuePortfolioScreen() {
                   borderRadius: radii.full,
                   backgroundColor: canUseCatalogue ? colors.primary : colors.surfaceMuted,
                   borderWidth: canUseCatalogue ? 0 : 1,
-                  borderColor: colors.borderSubtle,
+                  borderColor: cardBorder,
                 }}
               >
                 <Text style={{ ...typography.captionBold, color: canUseCatalogue ? '#FFFFFF' : colors.textMuted }}>
@@ -856,11 +870,11 @@ export default function UpdateVenuePortfolioScreen() {
 
           <View
             style={{
-              backgroundColor: colors.surface,
+              backgroundColor: cardSurface,
               borderRadius: radii.lg,
               padding: spacing.lg,
               borderWidth: 1,
-              borderColor: colors.borderSubtle,
+              borderColor: cardBorder,
               marginTop: spacing.md,
             }}
           >
@@ -893,7 +907,7 @@ export default function UpdateVenuePortfolioScreen() {
                   borderRadius: radii.full,
                   backgroundColor: canUseAnalytics ? colors.primary : colors.surfaceMuted,
                   borderWidth: canUseAnalytics ? 0 : 1,
-                  borderColor: colors.borderSubtle,
+                  borderColor: cardBorder,
                 }}
               >
                 <Text
@@ -930,11 +944,11 @@ export default function UpdateVenuePortfolioScreen() {
 
           <View
             style={{
-              backgroundColor: colors.surface,
+              backgroundColor: cardSurface,
               borderRadius: radii.lg,
               padding: spacing.lg,
               borderWidth: 1,
-              borderColor: colors.borderSubtle,
+              borderColor: cardBorder,
               marginTop: spacing.md,
             }}
           >
@@ -967,7 +981,7 @@ export default function UpdateVenuePortfolioScreen() {
                   borderRadius: radii.full,
                   backgroundColor: canUseTourBookings ? colors.primary : colors.surfaceMuted,
                   borderWidth: canUseTourBookings ? 0 : 1,
-                  borderColor: colors.borderSubtle,
+                  borderColor: cardBorder,
                 }}
               >
                 <Text
@@ -1004,11 +1018,11 @@ export default function UpdateVenuePortfolioScreen() {
 
           <View
             style={{
-              backgroundColor: colors.surface,
+              backgroundColor: cardSurface,
               borderRadius: radii.lg,
               padding: spacing.lg,
               borderWidth: 1,
-              borderColor: colors.borderSubtle,
+              borderColor: cardBorder,
               marginTop: spacing.md,
             }}
           >
@@ -1041,7 +1055,7 @@ export default function UpdateVenuePortfolioScreen() {
                   borderRadius: radii.full,
                   backgroundColor: canUseQuoteRequests ? colors.primary : colors.surfaceMuted,
                   borderWidth: canUseQuoteRequests ? 0 : 1,
-                  borderColor: colors.borderSubtle,
+                  borderColor: cardBorder,
                 }}
               >
                 <Text
@@ -1078,11 +1092,11 @@ export default function UpdateVenuePortfolioScreen() {
 
           <View
             style={{
-              backgroundColor: colors.surface,
+              backgroundColor: cardSurface,
               borderRadius: radii.lg,
               padding: spacing.lg,
               borderWidth: 1,
-              borderColor: colors.borderSubtle,
+              borderColor: cardBorder,
               marginTop: spacing.md,
             }}
           >

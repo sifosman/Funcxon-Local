@@ -1,20 +1,16 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { View, Text, TouchableOpacity, Modal, ScrollView, ActivityIndicator } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
-import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useAuth } from '../auth/AuthContext';
 import { colors, spacing, radii, typography } from '../theme';
 import { fetchNotifications, fetchUnreadCount, markNotificationRead, markAllNotificationsRead, NotificationRow } from '../lib/notifications';
-import type { AttendeeStackParamList } from '../navigation/AttendeeNavigator';
 
 const POLL_INTERVAL_MS = 30_000;
 
-type NavigationProp = NativeStackNavigationProp<AttendeeStackParamList>;
-
 export default function NotificationBell() {
   const { user } = useAuth();
-  const navigation = useNavigation<NavigationProp>();
+  const navigation = useNavigation<any>();
   const [open, setOpen] = useState(false);
   const [notifications, setNotifications] = useState<NotificationRow[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
@@ -26,7 +22,7 @@ export default function NotificationBell() {
     if (showLoading) setLoading(true);
     try {
       const [rows, count] = await Promise.all([
-        fetchNotifications(userId, 20),
+        fetchNotifications(userId, 20, true),
         fetchUnreadCount(userId),
       ]);
       setNotifications(rows);
@@ -48,28 +44,65 @@ export default function NotificationBell() {
   useEffect(() => {
     if (!open) return;
     load(false);
-    if (userId) {
-      markAllNotificationsRead(userId).catch(() => {});
-      setUnreadCount(0);
-    }
   }, [open]);
 
+  const markAllRead = async () => {
+    if (!userId) return;
+    try {
+      await markAllNotificationsRead(userId);
+      setNotifications([]);
+      setUnreadCount(0);
+    } catch (err) {
+      console.error('[NotificationBell] mark all read failed:', err);
+    }
+  };
+
+  const navigateFromLink = (link: string | null) => {
+    if (!link) return;
+    const parent = navigation.getParent() as any;
+
+    if (link.startsWith('/quotes/')) {
+      const id = link.replace('/quotes/', '');
+      parent?.navigate?.('Quotes', { screen: 'QuoteDetail', params: { quoteId: id } });
+      return;
+    }
+
+    if (link.startsWith('/bookings/')) {
+      const id = link.replace('/bookings/', '');
+      navigation.navigate('BookingDetail', { bookingId: Number(id) });
+      return;
+    }
+
+    if (link === '/my-tours') {
+      navigation.navigate('MyTours');
+      return;
+    }
+
+    if (link === '/venue/tours') {
+      parent?.navigate?.('Account', { screen: 'VenueTourBookings' });
+      return;
+    }
+
+    if (link === '/venue/quote-requests' || link.startsWith('/venue/quote-requests/')) {
+      parent?.navigate?.('Account', { screen: 'VenueQuoteRequests' });
+      return;
+    }
+
+    if (link.startsWith('/vendor/quotes/')) {
+      const id = link.replace('/vendor/quotes/', '');
+      parent?.navigate?.('Account', { screen: 'VendorQuoteCreate', params: { quoteRequestId: Number(id) } });
+      return;
+    }
+  };
+
   const handleItemPress = async (n: NotificationRow) => {
+    setOpen(false);
     if (!n.read) {
       await markNotificationRead(n.id).catch(() => {});
-      setNotifications((prev) => prev.map((x) => (x.id === n.id ? { ...x, read: true } : x)));
+      setNotifications((prev) => prev.filter((x) => x.id !== n.id));
+      setUnreadCount((prev) => Math.max(0, prev - 1));
     }
-    setOpen(false);
-    if (n.link?.startsWith('/bookings/')) {
-      const id = n.link.replace('/bookings/', '');
-      navigation.navigate('BookingDetail', { bookingId: Number(id) });
-    } else if (n.link === '/my-tours') {
-      navigation.navigate('MyTours');
-    } else if (n.link === '/venue/tours') {
-      // lister notification - best-effort navigate via parent tab
-      const parent = navigation.getParent() as any;
-      parent?.navigate?.('Account', { screen: 'VenueTourBookings' });
-    }
+    navigateFromLink(n.link);
   };
 
   const formatTime = (s: string) => {
@@ -137,9 +170,14 @@ export default function NotificationBell() {
               }}
             >
               <Text style={{ ...typography.titleMedium, color: colors.textPrimary }}>Notifications</Text>
-              <TouchableOpacity onPress={() => setOpen(false)}>
-                <MaterialIcons name="close" size={24} color={colors.textMuted} />
-              </TouchableOpacity>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md }}>
+                <TouchableOpacity onPress={markAllRead}>
+                  <Text style={{ ...typography.bodySemiBold, color: colors.primary }}>Mark all read</Text>
+                </TouchableOpacity>
+                <TouchableOpacity onPress={() => setOpen(false)}>
+                  <MaterialIcons name="close" size={24} color={colors.textMuted} />
+                </TouchableOpacity>
+              </View>
             </View>
 
             <ScrollView style={{ maxHeight: 400 }}>
@@ -155,11 +193,13 @@ export default function NotificationBell() {
                   </Text>
                 </View>
               ) : (
-                notifications.map((n) => (
+                notifications
+                  .filter((n) => !n.read)
+                  .map((n) => (
                   <TouchableOpacity
                     key={n.id}
                     onPress={() => handleItemPress(n)}
-                    style={{
+                    style={{ 
                       padding: spacing.lg,
                       borderBottomWidth: 1,
                       borderBottomColor: colors.borderSubtle,
@@ -196,7 +236,7 @@ export default function NotificationBell() {
             </ScrollView>
 
             <TouchableOpacity
-              onPress={() => { setOpen(false); navigation.navigate('MyTours'); }}
+              onPress={() => setOpen(false)}
               style={{
                 margin: spacing.lg,
                 padding: spacing.md,
@@ -205,7 +245,7 @@ export default function NotificationBell() {
                 alignItems: 'center',
               }}
             >
-              <Text style={{ ...typography.bodyBold, color: '#FFFFFF' }}>View My Tours</Text>
+              <Text style={{ ...typography.bodyBold, color: '#FFFFFF' }}>Close</Text>
             </TouchableOpacity>
           </View>
         </View>

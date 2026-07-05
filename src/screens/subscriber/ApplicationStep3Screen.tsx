@@ -17,6 +17,7 @@ import { getMyVenueEntitlement } from '../../lib/venueSubscription';
 import { useAuth } from '../../auth/AuthContext';
 import { supabase } from '../../lib/supabaseClient';
 import ThemedAlert from '../../components/ThemedAlert';
+import { useIsDesktop } from '../../hooks/useIsDesktop';
 
 type ProfileStackParamList = {
   ApplicationStep2: undefined;
@@ -43,6 +44,9 @@ export default function ApplicationStep3Screen() {
   const [alertState, setAlertState] = useState<{visible: boolean; title: string; message: string; buttons?: any[]} | null>(null);
   const [vendorVideoLimit, setVendorVideoLimit] = useState<number | null>(null);
   const [venueLimits, setVenueLimits] = useState<{ photoLimit: number; videoLimit: number } | null>(null);
+  const isDesktop = useIsDesktop();
+  const cardSurface = isDesktop ? colors.surfaceContainerLowest : colors.surface;
+  const cardBorder = isDesktop ? colors.outlineVariant : colors.borderSubtle;
 
   useEffect(() => {
     async function loadVendorId() {
@@ -363,45 +367,56 @@ export default function ApplicationStep3Screen() {
     navigation.navigate('ApplicationStep4');
   };
 
+  const desktopContainerStyle = {
+    maxWidth: 1200,
+    width: '100%',
+    alignSelf: 'center' as const,
+    paddingHorizontal: 48,
+    paddingBottom: spacing.xxl * 6,
+  };
+
   return (
     <KeyboardAvoidingView
-      style={{ flex: 1, backgroundColor: colors.background }}
+      style={{ flex: 1, backgroundColor: isDesktop ? colors.surfaceBg : colors.background }}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       keyboardVerticalOffset={Platform.OS === 'ios' ? spacing.lg : 0}
     >
       <ScrollView
         keyboardShouldPersistTaps="handled"
         keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
-        contentContainerStyle={{ paddingBottom: spacing.xxl * 6 }}
+        contentContainerStyle={isDesktop ? { ...desktopContainerStyle } as any : { paddingBottom: spacing.xxl * 6 }}
       >
-        <View style={{ paddingHorizontal: spacing.lg, paddingTop: spacing.sm }}>
-          <TouchableOpacity
-            onPress={() => navigation.goBack()}
-            style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.sm }}
-          >
-            <MaterialIcons name="arrow-back" size={20} color={colors.textPrimary} />
-            <Text style={{ ...typography.body, color: colors.textPrimary, marginLeft: spacing.sm }}>
-              Back
-            </Text>
-          </TouchableOpacity>
+        <View style={{ paddingHorizontal: isDesktop ? 0 : spacing.lg, paddingTop: spacing.sm }}>
+          {!isDesktop && (
+            <TouchableOpacity
+              onPress={() => navigation.goBack()}
+              style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.sm }}
+            >
+              <MaterialIcons name="arrow-back" size={20} color={colors.textPrimary} />
+              <Text style={{ ...typography.body, color: colors.textPrimary, marginLeft: spacing.sm }}>
+                Back
+              </Text>
+            </TouchableOpacity>
+          )}
 
-          <View style={{ marginBottom: spacing.lg }}>
+          <View style={{ marginBottom: spacing.lg, maxWidth: isDesktop ? 800 : undefined, width: isDesktop ? '100%' : undefined, alignSelf: isDesktop ? 'center' as const : undefined }}>
             <View style={{ marginBottom: spacing.md, alignSelf: 'flex-start' }}>
               <ApplicationProgress currentStep={3} />
             </View>
             <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: spacing.md }}>
               <MaterialIcons name="cloud-upload" size={32} color={colors.textPrimary} />
               <View style={{ flex: 1 }}>
-                <Text style={{ ...typography.titleMedium, color: colors.textPrimary }}>
+                <Text style={isDesktop ? { ...typography.headlineMd, color: colors.primary } as any : { ...typography.titleMedium, color: colors.textPrimary }}>
                   Portfolio Media
                 </Text>
-                <Text style={{ ...typography.caption, color: colors.textMuted }}>
+                <Text style={isDesktop ? { ...typography.bodyMd, color: colors.onSurfaceVariant } as any : { ...typography.caption, color: colors.textMuted }}>
                   Page 3 of 4
                 </Text>
               </View>
             </View>
           </View>
 
+          <View style={{ maxWidth: isDesktop ? 800 : undefined, width: isDesktop ? '100%' : undefined, alignSelf: isDesktop ? 'center' as const : undefined }}>
           {/* Photo Upload Counter — vendors with an existing record use the full counter;
               venues use an inline summary built from the already-loaded venueLimits */}
           {state.portfolioType !== 'venues' && vendorId && (
@@ -416,11 +431,11 @@ export default function ApplicationStep3Screen() {
           {state.portfolioType === 'venues' && venueLimits && (
             <View
               style={{
-                backgroundColor: colors.surface,
+                backgroundColor: cardSurface,
                 borderRadius: radii.lg,
                 padding: spacing.md,
                 borderWidth: 1,
-                borderColor: colors.borderSubtle,
+                borderColor: cardBorder,
                 marginBottom: spacing.md,
               }}
             >
@@ -440,7 +455,7 @@ export default function ApplicationStep3Screen() {
                     {Math.max(0, venueLimits.photoLimit - state.step3.images.length)} remaining
                   </Text>
                 </View>
-                <View style={{ height: 4, backgroundColor: colors.borderSubtle, borderRadius: 2, overflow: 'hidden' }}>
+                <View style={{ height: 4, backgroundColor: cardBorder, borderRadius: 2, overflow: 'hidden' }}>
                   <View
                     style={{
                       height: '100%',
@@ -469,7 +484,7 @@ export default function ApplicationStep3Screen() {
                     {Math.max(0, venueLimits.videoLimit - state.step3.videos.length)} remaining
                   </Text>
                 </View>
-                <View style={{ height: 4, backgroundColor: colors.borderSubtle, borderRadius: 2, overflow: 'hidden' }}>
+                <View style={{ height: 4, backgroundColor: cardBorder, borderRadius: 2, overflow: 'hidden' }}>
                   <View
                     style={{
                       height: '100%',
@@ -491,12 +506,12 @@ export default function ApplicationStep3Screen() {
           {/* Portfolio Images */}
           <View
             style={{
-              backgroundColor: colors.surface,
+              backgroundColor: cardSurface,
               borderRadius: radii.lg,
               padding: spacing.lg,
               marginBottom: spacing.lg,
               borderWidth: 1,
-              borderColor: colors.borderSubtle,
+              borderColor: cardBorder,
               shadowColor: '#000',
               shadowOpacity: 0.05,
               shadowRadius: 8,
@@ -578,12 +593,12 @@ export default function ApplicationStep3Screen() {
           {/* Videos */}
           <View
             style={{
-              backgroundColor: colors.surface,
+              backgroundColor: cardSurface,
               borderRadius: radii.lg,
               padding: spacing.lg,
               marginBottom: spacing.lg,
               borderWidth: 1,
-              borderColor: colors.borderSubtle,
+              borderColor: cardBorder,
               shadowColor: '#000',
               shadowOpacity: 0.05,
               shadowRadius: 8,
@@ -630,7 +645,7 @@ export default function ApplicationStep3Screen() {
               onPress={handlePickVideos}
               style={{
                 borderWidth: 2,
-                borderColor: colors.borderSubtle,
+                borderColor: cardBorder,
                 borderStyle: 'dashed',
                 borderRadius: radii.md,
                 padding: spacing.lg,
@@ -651,12 +666,12 @@ export default function ApplicationStep3Screen() {
           {/* Business Documents */}
           <View
             style={{
-              backgroundColor: colors.surface,
+              backgroundColor: cardSurface,
               borderRadius: radii.lg,
               padding: spacing.lg,
               marginBottom: spacing.lg,
               borderWidth: 1,
-              borderColor: colors.borderSubtle,
+              borderColor: cardBorder,
               shadowColor: '#000',
               shadowOpacity: 0.05,
               shadowRadius: 8,
@@ -723,7 +738,7 @@ export default function ApplicationStep3Screen() {
                       onPress={() => handlePickDocument(doc.key)}
                       style={{
                         borderWidth: 2,
-                        borderColor: hasError ? '#EF4444' : colors.borderSubtle,
+                        borderColor: hasError ? '#EF4444' : cardBorder,
                         borderStyle: 'dashed',
                         borderRadius: radii.md,
                         padding: spacing.md,
@@ -771,7 +786,7 @@ export default function ApplicationStep3Screen() {
               onPress={() => navigation.goBack()}
               style={{
                 flex: 1,
-                backgroundColor: colors.surface,
+                backgroundColor: cardSurface,
                 borderWidth: 1,
                 borderColor: colors.textPrimary,
                 paddingVertical: spacing.md,
@@ -801,6 +816,7 @@ export default function ApplicationStep3Screen() {
               </Text>
               <MaterialIcons name="arrow-forward" size={16} color="#FFFFFF" />
             </TouchableOpacity>
+          </View>
           </View>
         </View>
       </ScrollView>
