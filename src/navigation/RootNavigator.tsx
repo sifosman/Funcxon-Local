@@ -1,4 +1,4 @@
-import { View, ActivityIndicator } from 'react-native';
+import { View, ActivityIndicator, Platform } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { MaterialIcons } from '@expo/vector-icons';
 import { AttendeeNavigator } from './AttendeeNavigator';
@@ -11,6 +11,7 @@ import PortfolioProfileScreen from '../screens/subscriber/PortfolioProfileScreen
 import { colors, typography } from '../theme';
 import { useAuth } from '../auth/AuthContext';
 import GuardedScreen from '../components/GuardedScreen';
+import { useIsDesktop } from '../hooks/useIsDesktop';
 
 export type RootTabParamList = {
   Home: undefined;
@@ -24,6 +25,7 @@ const Tab = createBottomTabNavigator<RootTabParamList>();
 
 export function RootNavigator() {
   const { userRole, isLoading, session } = useAuth();
+  const isDesktop = useIsDesktop();
 
   // Show loading indicator while determining user role
   if (isLoading) {
@@ -57,7 +59,8 @@ export function RootNavigator() {
           elevation: 12,
           borderTopLeftRadius: 18,
           borderTopRightRadius: 18,
-        },
+          ...(isDesktop ? { display: 'none' } : {}),
+        } as any,
         tabBarLabelStyle: {
           ...typography.caption,
         },

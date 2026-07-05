@@ -35,6 +35,7 @@ import { HelpCenterModal } from '../components/HelpCenterModal';
 import NetworkImage from '../components/NetworkImage';
 import { usePendingSearch } from '../context/PendingSearchContext';
 import type { PendingSearchSnapshot } from '../context/PendingSearchContext';
+import { useIsDesktop } from '../hooks/useIsDesktop';
 
 export type VendorListItem = {
   id: number;
@@ -303,10 +304,11 @@ export default function AttendeeHomeScreen() {
   const scrollViewRef = useRef<ScrollView>(null);
   const [search, setSearch] = useState('');
   const [serviceType, setServiceType] = useState<ServiceType>('All');
+  const isDesktop = useIsDesktop();
 
-  // Responsive card width - aim for ~2.2 cards visible
+  // Responsive card width - aim for ~2.2 cards visible on mobile, 3 columns on desktop
   const [screenWidth, setScreenWidth] = useState(Dimensions.get('window').width);
-  const cardWidth = screenWidth / 2.2;
+  const cardWidth = isDesktop ? (Math.min(screenWidth, 1200) - 48 * 2 - 24 * 2) / 3 : screenWidth / 2.2;
 
   useEffect(() => {
     const subscription = Dimensions.addEventListener('change', ({ window }) => {
@@ -430,7 +432,7 @@ export default function AttendeeHomeScreen() {
         key={item.id}
         activeOpacity={0.92}
         onPress={onPress}
-        style={{ width: cardWidth, marginRight: spacing.md }}
+        style={{ width: cardWidth, marginRight: isDesktop ? 0 : spacing.md, marginBottom: isDesktop ? 24 : 0 }}
       >
         <View
           style={{
@@ -1329,47 +1331,80 @@ export default function AttendeeHomeScreen() {
     );
   }
 
+  // Desktop-specific style helpers
+  const desktopContentStyle = isDesktop ? {
+    maxWidth: 1200,
+    width: '100%',
+    alignSelf: 'center' as const,
+    paddingHorizontal: 48,
+  } : {};
+  const desktopGridStyle = isDesktop ? {
+    flexDirection: 'row' as const,
+    flexWrap: 'wrap' as const,
+    paddingHorizontal: 48,
+    gap: 24,
+  } : {};
+
   return (
     <ScrollView
       ref={scrollViewRef}
-      style={{ flex: 1, backgroundColor: colors.background }}
+      style={{ flex: 1, backgroundColor: isDesktop ? colors.surfaceBg : colors.background }}
       contentContainerStyle={{ paddingBottom: spacing.xl }}
     >
       {/* Hero Image with Text Overlay */}
-      <View style={{ paddingHorizontal: spacing.lg, paddingTop: spacing.lg }}>
-        <View style={{ position: 'relative' }}>
+      {isDesktop ? (
+        <View style={{ position: 'relative', width: '100%', height: 500 }}>
           <Image
             source={require('../../assets/slider_1.jpg')}
-            style={{ width: '100%', height: 180, borderRadius: radii.lg }}
+            style={{ width: '100%', height: '100%' }}
             resizeMode="cover"
           />
-          <View
-            style={{
-              position: 'absolute',
-              left: 0,
-              top: 0,
-              bottom: 0,
-              justifyContent: 'center',
-              paddingLeft: spacing.md,
-              paddingRight: spacing.xl,
-              backgroundColor: 'transparent',
-            }}
-          >
-            <Text style={{ ...typography.displayLarge, color: '#FFFFFF', fontWeight: '700', textShadowColor: 'rgba(0,0,0,0.5)', textShadowOffset: { width: 2, height: 2 }, textShadowRadius: 4, fontSize: screenWidth < 375 ? 22 : screenWidth < 400 ? 25 : 28, textAlign: 'left' }}>
-              Connect
+          <View style={{ position: 'absolute', inset: 0, backgroundColor: 'rgba(18, 63, 92, 0.45)' }} />
+          <View style={{ position: 'absolute', inset: 0, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 48 }}>
+            <Text style={{ fontSize: 56, fontWeight: '700', fontFamily: 'Montserrat_700Bold', color: '#FFFFFF', textAlign: 'center', textShadowColor: 'rgba(0,0,0,0.3)', textShadowOffset: { width: 0, height: 2 }, textShadowRadius: 8, marginBottom: 16 }}>
+              Curate Your Perfect Event
             </Text>
-            <Text style={{ ...typography.displayLarge, color: '#FFFFFF', fontWeight: '700', textShadowColor: 'rgba(0,0,0,0.5)', textShadowOffset: { width: 2, height: 2 }, textShadowRadius: 4, fontSize: screenWidth < 375 ? 22 : screenWidth < 400 ? 25 : 28, textAlign: 'left' }}>
-              Collaborate
-            </Text>
-            <Text style={{ ...typography.displayLarge, color: '#FFFFFF', fontWeight: '700', textShadowColor: 'rgba(0,0,0,0.5)', textShadowOffset: { width: 2, height: 2 }, textShadowRadius: 4, fontSize: screenWidth < 375 ? 22 : screenWidth < 400 ? 25 : 28, textAlign: 'left' }}>
-              Celebrate
+            <Text style={{ fontSize: 18, fontFamily: 'Montserrat_400Regular', color: 'rgba(255,255,255,0.9)', textAlign: 'center', maxWidth: 600, lineHeight: 28 }}>
+              Discover the most exquisite venues and top-tier vendors across South Africa for your next celebration.
             </Text>
           </View>
         </View>
-      </View>
+      ) : (
+        <View style={{ paddingHorizontal: spacing.lg, paddingTop: spacing.lg }}>
+          <View style={{ position: 'relative' }}>
+            <Image
+              source={require('../../assets/slider_1.jpg')}
+              style={{ width: '100%', height: 180, borderRadius: radii.lg }}
+              resizeMode="cover"
+            />
+            <View
+              style={{
+                position: 'absolute',
+                left: 0,
+                top: 0,
+                bottom: 0,
+                justifyContent: 'center',
+                paddingLeft: spacing.md,
+                paddingRight: spacing.xl,
+                backgroundColor: 'transparent',
+              }}
+            >
+              <Text style={{ ...typography.displayLarge, color: '#FFFFFF', fontWeight: '700', textShadowColor: 'rgba(0,0,0,0.5)', textShadowOffset: { width: 2, height: 2 }, textShadowRadius: 4, fontSize: screenWidth < 375 ? 22 : screenWidth < 400 ? 25 : 28, textAlign: 'left' }}>
+                Connect
+              </Text>
+              <Text style={{ ...typography.displayLarge, color: '#FFFFFF', fontWeight: '700', textShadowColor: 'rgba(0,0,0,0.5)', textShadowOffset: { width: 2, height: 2 }, textShadowRadius: 4, fontSize: screenWidth < 375 ? 22 : screenWidth < 400 ? 25 : 28, textAlign: 'left' }}>
+                Collaborate
+              </Text>
+              <Text style={{ ...typography.displayLarge, color: '#FFFFFF', fontWeight: '700', textShadowColor: 'rgba(0,0,0,0.5)', textShadowOffset: { width: 2, height: 2 }, textShadowRadius: 4, fontSize: screenWidth < 375 ? 22 : screenWidth < 400 ? 25 : 28, textAlign: 'left' }}>
+                Celebrate
+              </Text>
+            </View>
+          </View>
+        </View>
+      )}
 
       {/* Message from app owners */}
-      <View style={{ paddingHorizontal: spacing.lg, marginTop: spacing.xl }}>
+      <View style={[{ marginTop: spacing.xl }, desktopContentStyle]}>
         <View
           style={{
             backgroundColor: colors.background,
@@ -1386,7 +1421,7 @@ export default function AttendeeHomeScreen() {
               color: colors.textPrimary,
               textAlign: 'center',
               fontWeight: '800',
-              fontSize: screenWidth < 375 ? 16 : screenWidth < 400 ? 18 : 20,
+              fontSize: isDesktop ? 32 : screenWidth < 375 ? 16 : screenWidth < 400 ? 18 : 20,
             }}
           >
             Let's get this party started!!
@@ -1394,67 +1429,95 @@ export default function AttendeeHomeScreen() {
         </View>
       </View>
 
-      {/* Featured Venues - Horizontal Scroll */}
+      {/* Featured Venues - Grid (desktop) / Horizontal Scroll (mobile) */}
       <View style={{ marginTop: spacing.xl }}>
-        <View style={{ paddingHorizontal: spacing.lg, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.md }}>
-          <Text style={{ ...typography.titleLarge, color: colors.textPrimary }}>Featured Venues</Text>
+        <View style={[{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.md }, isDesktop ? { paddingHorizontal: 48, maxWidth: 1200, width: '100%', alignSelf: 'center' } : { paddingHorizontal: spacing.lg }]}>
+          <View>
+            <Text style={{ ...typography.titleLarge, color: colors.textPrimary, fontSize: isDesktop ? 32 : undefined }}>Featured Venues</Text>
+            {isDesktop && <Text style={{ ...typography.body, color: colors.onSurfaceVariant, marginTop: 4 }}>Exclusive spaces for unforgettable moments.</Text>}
+          </View>
           <TouchableOpacity onPress={() => navigation.navigate('Discover', { category: 'venues', searchTitle: 'Featured Venues' })}>
-            <Text style={{ ...typography.bodySemiBold, color: colors.primary }}>Find more →</Text>
+            <Text style={{ ...typography.bodySemiBold, color: colors.secondaryBlue }}>View All →</Text>
           </TouchableOpacity>
         </View>
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={{ paddingHorizontal: spacing.lg }}
-          snapToInterval={cardWidth + spacing.md}
-          decelerationRate="fast"
-        >
-          {sortedFeaturedData
-            .filter((item) => item.type === 'venue')
-            .slice(0, 6)
-            .map((item) =>
-              renderFeaturedCard(item, () => navigation.navigate('VenueProfile', { venueId: item.id })),
-            )}
-        </ScrollView>
+        {isDesktop ? (
+          <View style={desktopGridStyle as any}>
+            {sortedFeaturedData
+              .filter((item) => item.type === 'venue')
+              .slice(0, 6)
+              .map((item) =>
+                renderFeaturedCard(item, () => navigation.navigate('VenueProfile', { venueId: item.id })),
+              )}
+          </View>
+        ) : (
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={{ paddingHorizontal: spacing.lg }}
+            snapToInterval={cardWidth + spacing.md}
+            decelerationRate="fast"
+          >
+            {sortedFeaturedData
+              .filter((item) => item.type === 'venue')
+              .slice(0, 6)
+              .map((item) =>
+                renderFeaturedCard(item, () => navigation.navigate('VenueProfile', { venueId: item.id })),
+              )}
+          </ScrollView>
+        )}
       </View>
 
-      {/* Featured Vendors & Services - Horizontal Scroll */}
-      <View style={{ marginTop: spacing.xl }}>
-        <View style={{ paddingHorizontal: spacing.lg, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.md }}>
-          <Text style={{ ...typography.titleLarge, color: colors.textPrimary }}>Featured Vendors & Services</Text>
+      {/* Featured Vendors & Services - Grid (desktop) / Horizontal Scroll (mobile) */}
+      <View style={{ marginTop: isDesktop ? 80 : spacing.xl }}>
+        <View style={[{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.md }, isDesktop ? { paddingHorizontal: 48, maxWidth: 1200, width: '100%', alignSelf: 'center' } : { paddingHorizontal: spacing.lg }]}>
+          <View>
+            <Text style={{ ...typography.titleLarge, color: colors.textPrimary, fontSize: isDesktop ? 32 : undefined }}>Featured Vendors & Services</Text>
+            {isDesktop && <Text style={{ ...typography.body, color: colors.onSurfaceVariant, marginTop: 4 }}>Masters of their craft, ready to elevate your event.</Text>}
+          </View>
           <TouchableOpacity onPress={() => navigation.navigate('Discover', { category: 'vendors', searchTitle: 'Featured Vendors & Services' })}>
-            <Text style={{ ...typography.bodySemiBold, color: colors.primary }}>Find more →</Text>
+            <Text style={{ ...typography.bodySemiBold, color: colors.secondaryBlue }}>View All →</Text>
           </TouchableOpacity>
         </View>
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={{ paddingHorizontal: spacing.lg }}
-          snapToInterval={cardWidth + spacing.md}
-          decelerationRate="fast"
-        >
-          {sortedFeaturedData
-            .filter((item) => item.type === 'vendor')
-            .slice(0, 6)
-            .map((item) =>
-              renderFeaturedCard(item, () => navigation.navigate('VendorProfile', { vendorId: item.id })),
-            )}
-        </ScrollView>
+        {isDesktop ? (
+          <View style={desktopGridStyle as any}>
+            {sortedFeaturedData
+              .filter((item) => item.type === 'vendor')
+              .slice(0, 6)
+              .map((item) =>
+                renderFeaturedCard(item, () => navigation.navigate('VendorProfile', { vendorId: item.id })),
+              )}
+          </View>
+        ) : (
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={{ paddingHorizontal: spacing.lg }}
+            snapToInterval={cardWidth + spacing.md}
+            decelerationRate="fast"
+          >
+            {sortedFeaturedData
+              .filter((item) => item.type === 'vendor')
+              .slice(0, 6)
+              .map((item) =>
+                renderFeaturedCard(item, () => navigation.navigate('VendorProfile', { vendorId: item.id })),
+              )}
+          </ScrollView>
+        )}
       </View>
 
-      {/* Explore By - Horizontal Discovery Section */}
-      <View style={{ marginTop: spacing.xl }}>
+      {/* Explore By - Grid (desktop) / Horizontal Discovery Section (mobile) */}
+      <View style={{ marginTop: isDesktop ? 80 : spacing.xl }}>
         <View
-          style={{
-            paddingHorizontal: spacing.lg,
+          style={[{
             marginBottom: spacing.md,
-          }}
+          }, isDesktop ? { paddingHorizontal: 48, maxWidth: 1200, width: '100%', alignSelf: 'center' } : { paddingHorizontal: spacing.lg }]}
         >
           <Text
             style={{
               ...typography.titleLarge,
               color: colors.textPrimary,
               fontWeight: '700',
+              fontSize: isDesktop ? 32 : undefined,
             }}
           >
             Explore by
@@ -1462,7 +1525,7 @@ export default function AttendeeHomeScreen() {
           <Text
             style={{
               ...typography.body,
-              color: colors.textSecondary,
+              color: isDesktop ? colors.onSurfaceVariant : colors.textSecondary,
               marginTop: spacing.xs,
             }}
           >
@@ -1470,6 +1533,60 @@ export default function AttendeeHomeScreen() {
           </Text>
         </View>
 
+        {isDesktop ? (
+          <View style={desktopGridStyle as any}>
+            {exploreOptions.map((option) => (
+              <TouchableOpacity
+                key={option.key}
+                activeOpacity={0.9}
+                style={{ width: cardWidth, marginRight: 0, marginBottom: 24 }}
+                onPress={() => openDiscoverPreset(option.key)}
+              >
+                <View
+                  style={{
+                    backgroundColor: colors.surface,
+                    borderRadius: radii.lg,
+                    overflow: 'hidden',
+                    borderWidth: 1,
+                    borderColor: colors.borderSubtle,
+                    height: cardWidth * 1.25,
+                  }}
+                >
+                  <Image
+                    source={option.image}
+                    style={{ width: '100%', height: cardWidth * 0.6 }}
+                    resizeMode="cover"
+                  />
+                  <View style={{ flex: 1, padding: spacing.sm, justifyContent: 'space-between' }}>
+                    <View>
+                      <Text
+                        style={{
+                          ...typography.titleMedium,
+                          color: colors.textPrimary,
+                          marginBottom: spacing.xs,
+                          fontSize: 14,
+                        }}
+                        numberOfLines={2}
+                      >
+                        {option.title}
+                      </Text>
+                      <Text
+                        style={{
+                          ...typography.caption,
+                          color: colors.onSurfaceVariant,
+                          fontSize: 12,
+                        }}
+                        numberOfLines={2}
+                      >
+                        {option.subtitle}
+                      </Text>
+                    </View>
+                  </View>
+                </View>
+              </TouchableOpacity>
+            ))}
+          </View>
+        ) : (
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
@@ -1526,18 +1643,18 @@ export default function AttendeeHomeScreen() {
             </TouchableOpacity>
           ))}
         </ScrollView>
+        )}
       </View>
 
       {/* Blog Section - only shown when posts exist */}
-      {blogPosts && blogPosts.length > 0 && <View style={{ marginTop: spacing.xl }}>
+      {blogPosts && blogPosts.length > 0 && <View style={{ marginTop: isDesktop ? 80 : spacing.xl }}>
         <View
-          style={{
-            paddingHorizontal: spacing.lg,
+          style={[{
             marginBottom: spacing.md,
             flexDirection: 'row',
             justifyContent: 'space-between',
             alignItems: 'center',
-          }}
+          }, isDesktop ? { paddingHorizontal: 48, maxWidth: 1200, width: '100%', alignSelf: 'center' } : { paddingHorizontal: spacing.lg }]}
         >
           <View>
             <Text
@@ -1545,6 +1662,7 @@ export default function AttendeeHomeScreen() {
                 ...typography.titleLarge,
                 color: colors.textPrimary,
                 fontWeight: '700',
+                fontSize: isDesktop ? 32 : undefined,
               }}
             >
               From the Blog
@@ -1552,7 +1670,7 @@ export default function AttendeeHomeScreen() {
             <Text
               style={{
                 ...typography.body,
-                color: colors.textSecondary,
+                color: isDesktop ? colors.onSurfaceVariant : colors.textSecondary,
                 marginTop: spacing.xs,
               }}
             >
@@ -1566,11 +1684,103 @@ export default function AttendeeHomeScreen() {
               alignItems: 'center',
             }}
           >
-            <Text style={{ ...typography.bodySemiBold, color: colors.primary }}>View all</Text>
-            <MaterialIcons name="arrow-forward" size={18} color={colors.primary} />
+            <Text style={{ ...typography.bodySemiBold, color: colors.secondaryBlue }}>View all</Text>
+            <MaterialIcons name="arrow-forward" size={18} color={colors.secondaryBlue} />
           </TouchableOpacity>
         </View>
 
+        {isDesktop ? (
+          <View style={desktopGridStyle as any}>
+            {(blogPosts || []).slice(0, 6).map((post) => (
+              <TouchableOpacity
+                key={post.id}
+                activeOpacity={0.9}
+                style={{ width: cardWidth, marginRight: 0, marginBottom: 24 }}
+                onPress={() => navigation.navigate('BlogDetail', { slug: post.slug })}
+              >
+                <View
+                  style={{
+                    backgroundColor: colors.surface,
+                    borderRadius: radii.lg,
+                    overflow: 'hidden',
+                    borderWidth: 1,
+                    borderColor: colors.borderSubtle,
+                    height: cardWidth * 1.4,
+                  }}
+                >
+                  <NetworkImage
+                    uri={post.cover_image_url}
+                    style={{ width: '100%', height: cardWidth * 0.55 }}
+                    resizeMode="cover"
+                    placeholderIcon="article"
+                    placeholderIconSize={40}
+                    placeholderBg={colors.accent}
+                  />
+                  <View style={{ flex: 1, padding: spacing.md, justifyContent: 'space-between' }}>
+                    <View>
+                      <View
+                        style={{
+                          backgroundColor: colors.accent,
+                          paddingHorizontal: spacing.sm,
+                          paddingVertical: spacing.xs,
+                          borderRadius: radii.sm,
+                          alignSelf: 'flex-start',
+                          marginBottom: spacing.sm,
+                        }}
+                      >
+                        <Text
+                          style={{
+                            color: colors.primary,
+                            fontSize: 11,
+                            fontWeight: '600',
+                            fontFamily: 'Montserrat_600SemiBold',
+                          }}
+                        >
+                          {post.category}
+                        </Text>
+                      </View>
+                      <Text
+                        style={{
+                          ...typography.titleMedium,
+                          color: colors.textPrimary,
+                          marginBottom: spacing.xs,
+                          fontSize: 14,
+                        }}
+                        numberOfLines={3}
+                      >
+                        {post.title}
+                      </Text>
+                      <Text
+                        style={{
+                          ...typography.caption,
+                          color: colors.onSurfaceVariant,
+                          fontSize: 12,
+                          lineHeight: 18,
+                        }}
+                        numberOfLines={4}
+                      >
+                        {post.excerpt}
+                      </Text>
+                    </View>
+                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                      <MaterialIcons name="schedule" size={12} color={colors.outline} />
+                      <Text
+                        style={{
+                          ...typography.caption,
+                          color: colors.outline,
+                          marginLeft: spacing.xs,
+                          fontSize: 11,
+                        }}
+                      >
+                        {post.read_time_minutes} min read
+                      </Text>
+                    </View>
+                  </View>
+                </View>
+              </TouchableOpacity>
+            ))}
+          </View>
+        ) : (
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
@@ -1665,39 +1875,35 @@ export default function AttendeeHomeScreen() {
             </TouchableOpacity>
           ))}
         </ScrollView>
+        )}
       </View>}
 
       {/* Get Listed CTA Section */}
-      <View style={{ marginTop: spacing.xl }}>
-        <View style={{ paddingHorizontal: spacing.lg, marginBottom: spacing.xs }}>
-          <Text style={{ ...typography.titleLarge, color: colors.textPrimary }}>
+      <View style={{ marginTop: isDesktop ? 80 : spacing.xl }}>
+        <View style={[{ marginBottom: spacing.xs }, isDesktop ? { paddingHorizontal: 48, maxWidth: 1200, width: '100%', alignSelf: 'center' } : { paddingHorizontal: spacing.lg }]}>
+          <Text style={{ ...typography.titleLarge, color: colors.textPrimary, fontSize: isDesktop ? 32 : undefined }}>
             Get Listed!
           </Text>
-          <Text style={{ ...typography.body, color: colors.textSecondary, marginTop: spacing.xs }}>
+          <Text style={{ ...typography.body, color: isDesktop ? colors.onSurfaceVariant : colors.textSecondary, marginTop: spacing.xs }}>
             Grow your business by listing on Funxon.
           </Text>
         </View>
 
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={{ paddingHorizontal: spacing.lg, paddingTop: spacing.md }}
-        >
-          {/* List Your Venue */}
-          <TouchableOpacity
-            activeOpacity={0.9}
-            style={{ width: cardWidth, marginRight: spacing.md }}
-            onPress={() => {
-              if (session) {
-                navigation.navigate('ListersPortal');
-              } else {
-                (navigation as any).navigate('Auth', { screen: 'GuestPrompt', params: { label: 'Listers Portal' } });
-              }
-            }}
-          >
-            <View
-              style={GET_LISTED_CARD_STYLE}
+        {isDesktop ? (
+          <View style={desktopGridStyle as any}>
+            {/* List Your Venue */}
+            <TouchableOpacity
+              activeOpacity={0.9}
+              style={{ width: cardWidth, marginRight: 0, marginBottom: 24 }}
+              onPress={() => {
+                if (session) {
+                  navigation.navigate('ListersPortal');
+                } else {
+                  (navigation as any).navigate('Auth', { screen: 'GuestPrompt', params: { label: 'Listers Portal' } });
+                }
+              }}
             >
+              <View style={GET_LISTED_CARD_STYLE}>
               <NetworkImage
                 uri={'https://images.unsplash.com/photo-1464366400600-7168b8af9bc3?w=800&q=80'}
                 style={{ width: '100%', height: cardWidth * 0.65 }}
@@ -1729,7 +1935,7 @@ export default function AttendeeHomeScreen() {
           {/* List Your Services */}
           <TouchableOpacity
             activeOpacity={0.9}
-            style={{ width: cardWidth, marginRight: spacing.md }}
+            style={{ width: cardWidth, marginRight: 0, marginBottom: 24 }}
             onPress={() => {
               if (session) {
                 navigation.navigate('ListersPortal');
@@ -1738,9 +1944,7 @@ export default function AttendeeHomeScreen() {
               }
             }}
           >
-            <View
-              style={GET_LISTED_CARD_STYLE}
-            >
+            <View style={GET_LISTED_CARD_STYLE}>
               <NetworkImage
                 uri={'https://images.unsplash.com/photo-1621844061203-3f31a2a7d6ad?w=800&q=80'}
                 style={{ width: '100%', height: cardWidth * 0.65 }}
@@ -1772,7 +1976,7 @@ export default function AttendeeHomeScreen() {
           {/* Listers Portal */}
           <TouchableOpacity
             activeOpacity={0.9}
-            style={{ width: cardWidth, marginRight: spacing.md }}
+            style={{ width: cardWidth, marginRight: 0, marginBottom: 24 }}
             onPress={() => {
               if (session) {
                 navigation.navigate('ListersPortal');
@@ -1781,9 +1985,7 @@ export default function AttendeeHomeScreen() {
               }
             }}
           >
-            <View
-              style={GET_LISTED_CARD_STYLE}
-            >
+            <View style={GET_LISTED_CARD_STYLE}>
               <NetworkImage
                 uri={'https://images.unsplash.com/photo-1559136555-9303baea8ebd?w=800&q=80'}
                 style={{ width: '100%', height: cardWidth * 0.65 }}
@@ -1811,7 +2013,119 @@ export default function AttendeeHomeScreen() {
               </View>
             </View>
           </TouchableOpacity>
+        </View>
+        ) : (
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={{ paddingHorizontal: spacing.lg, paddingTop: spacing.md }}
+        >
+          {/* List Your Venue */}
+          <TouchableOpacity
+            activeOpacity={0.9}
+            style={{ width: cardWidth, marginRight: spacing.md }}
+            onPress={() => {
+              if (session) {
+                navigation.navigate('ListersPortal');
+              } else {
+                (navigation as any).navigate('Auth', { screen: 'GuestPrompt', params: { label: 'Listers Portal' } });
+              }
+            }}
+          >
+            <View style={GET_LISTED_CARD_STYLE}>
+              <NetworkImage
+                uri={'https://images.unsplash.com/photo-1464366400600-7168b8af9bc3?w=800&q=80'}
+                style={{ width: '100%', height: cardWidth * 0.65 }}
+                resizeMode="cover"
+              />
+              <View style={{ position: 'absolute', top: 0, left: 0, right: 0, height: cardWidth * 0.65, backgroundColor: 'rgba(0,0,0,0.35)' }} />
+              <View style={{ position: 'absolute', top: spacing.sm, left: spacing.sm }}>
+                <View style={{ backgroundColor: colors.textPrimary, paddingHorizontal: spacing.sm, paddingVertical: 3, borderRadius: radii.full }}>
+                  <Text style={{ ...typography.captionBold, color: '#fff', fontSize: 9 }}>VENUE</Text>
+                </View>
+              </View>
+              <View style={{ backgroundColor: colors.surface, padding: spacing.md }}>
+                <Text style={{ ...typography.titleLarge, color: colors.textPrimary }}>List Your Venue</Text>
+                <Text style={{ ...typography.caption, color: colors.textSecondary, marginTop: 3 }} numberOfLines={2}>Showcase your space to thousands of event planners</Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: spacing.sm }}>
+                  <MaterialIcons name="arrow-forward" size={14} color={colors.textPrimary} />
+                  <Text style={{ ...typography.captionSemiBold, color: colors.textPrimary, marginLeft: 4 }}>{session ? 'Go to portal' : 'Sign in to get started'}</Text>
+                </View>
+              </View>
+            </View>
+          </TouchableOpacity>
+
+          {/* List Your Services */}
+          <TouchableOpacity
+            activeOpacity={0.9}
+            style={{ width: cardWidth, marginRight: spacing.md }}
+            onPress={() => {
+              if (session) {
+                navigation.navigate('ListersPortal');
+              } else {
+                (navigation as any).navigate('Auth', { screen: 'GuestPrompt', params: { label: 'Listers Portal' } });
+              }
+            }}
+          >
+            <View style={GET_LISTED_CARD_STYLE}>
+              <NetworkImage
+                uri={'https://images.unsplash.com/photo-1621844061203-3f31a2a7d6ad?w=800&q=80'}
+                style={{ width: '100%', height: cardWidth * 0.65 }}
+                resizeMode="cover"
+              />
+              <View style={{ position: 'absolute', top: 0, left: 0, right: 0, height: cardWidth * 0.65, backgroundColor: 'rgba(0,0,0,0.35)' }} />
+              <View style={{ position: 'absolute', top: spacing.sm, left: spacing.sm }}>
+                <View style={{ backgroundColor: colors.primary, paddingHorizontal: spacing.sm, paddingVertical: 3, borderRadius: radii.full }}>
+                  <Text style={{ ...typography.captionBold, color: '#fff', fontSize: 9 }}>VENDOR</Text>
+                </View>
+              </View>
+              <View style={{ backgroundColor: colors.surface, padding: spacing.md }}>
+                <Text style={{ ...typography.titleLarge, color: colors.textPrimary }}>List Your Services</Text>
+                <Text style={{ ...typography.caption, color: colors.textSecondary, marginTop: 3 }} numberOfLines={2}>Reach clients looking for photographers, caterers & more</Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: spacing.sm }}>
+                  <MaterialIcons name="arrow-forward" size={14} color={colors.textPrimary} />
+                  <Text style={{ ...typography.captionSemiBold, color: colors.textPrimary, marginLeft: 4 }}>{session ? 'Go to portal' : 'Sign in to get started'}</Text>
+                </View>
+              </View>
+            </View>
+          </TouchableOpacity>
+
+          {/* Listers Portal */}
+          <TouchableOpacity
+            activeOpacity={0.9}
+            style={{ width: cardWidth, marginRight: spacing.md }}
+            onPress={() => {
+              if (session) {
+                navigation.navigate('ListersPortal');
+              } else {
+                (navigation as any).navigate('Auth', { screen: 'GuestPrompt', params: { label: 'Listers Portal' } });
+              }
+            }}
+          >
+            <View style={GET_LISTED_CARD_STYLE}>
+              <NetworkImage
+                uri={'https://images.unsplash.com/photo-1559136555-9303baea8ebd?w=800&q=80'}
+                style={{ width: '100%', height: cardWidth * 0.65 }}
+                resizeMode="cover"
+              />
+              <View style={{ position: 'absolute', top: 0, left: 0, right: 0, height: cardWidth * 0.65, backgroundColor: 'rgba(0,0,0,0.35)' }} />
+              <View style={{ position: 'absolute', top: spacing.sm, left: spacing.sm }}>
+                <View style={{ backgroundColor: '#6C47FF', paddingHorizontal: spacing.sm, paddingVertical: 3, borderRadius: radii.full }}>
+                  <Text style={{ ...typography.captionBold, color: '#fff', fontSize: 9 }}>PORTAL</Text>
+                </View>
+              </View>
+              <View style={{ backgroundColor: colors.surface, padding: spacing.md }}>
+                <Text style={{ ...typography.titleLarge, color: colors.textPrimary }}>Listers Portal</Text>
+                <Text style={{ ...typography.caption, color: colors.textSecondary, marginTop: 3 }} numberOfLines={2}>Manage your listings, enquiries and subscriptions</Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: spacing.sm }}>
+                  <MaterialIcons name="arrow-forward" size={14} color={colors.textPrimary} />
+                  <Text style={{ ...typography.captionSemiBold, color: colors.textPrimary, marginLeft: 4 }}>{session ? 'Open portal' : 'Sign in to access'}</Text>
+                </View>
+              </View>
+            </View>
+          </TouchableOpacity>
         </ScrollView>
+        )}
       </View>
 
       <View style={{ height: spacing.xl * 2 }} />

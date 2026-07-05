@@ -4,11 +4,13 @@ import { useNavigation } from '@react-navigation/native';
 import { useAuth } from '../auth/AuthContext';
 import { colors, spacing, radii, typography } from '../theme';
 import NotificationBell from './NotificationBell';
+import { useIsDesktop } from '../hooks/useIsDesktop';
 
 export default function AppHeader() {
   const { user, session, userRole } = useAuth();
   const navigation = useNavigation<any>();
   const isLister = userRole === 'vendor';
+  const isDesktop = useIsDesktop();
 
   const openDiscover = (params?: {
     category?: 'all' | 'venues' | 'vendors' | 'services';
@@ -40,6 +42,86 @@ export default function AppHeader() {
 
   const username = getUsername();
 
+  const navItems = [
+    { label: 'Home', onPress: () => navigation.navigate('Main', { screen: 'Home', params: { screen: 'VendorList' } }) },
+    { label: 'Venues', onPress: () => openDiscover({ category: 'venues', searchTitle: 'Discover Venues' }) },
+    { label: 'Vendors', onPress: () => openDiscover({ category: 'vendors', searchTitle: 'Discover Vendors and services' }) },
+    {
+      label: 'Listers Portal',
+      onPress: () => {
+        if (session && isLister) {
+          navigation.navigate('Main', { screen: 'Account', params: { screen: 'ListerPortfolio' } });
+        } else {
+          navigation.navigate('Main', { screen: 'Home', params: { screen: 'ListersPortal' } });
+        }
+      },
+    },
+  ];
+
+  // ─── Desktop Layout ───
+  if (isDesktop) {
+    return (
+      <View style={styles.wrapper as any}>
+        <View style={styles.desktopContainer as any}>
+          {/* Logo - Left */}
+          <TouchableOpacity
+            onPress={() => navigation.navigate('Main', { screen: 'Home', params: { screen: 'VendorList' } })}
+            style={styles.desktopLogoContainer}
+          >
+            <Image
+              source={require('../../assets/logo.png')}
+              style={styles.desktopLogo as any}
+              resizeMode="contain"
+            />
+          </TouchableOpacity>
+
+          {/* Navigation Links - Center */}
+          <View style={styles.desktopNav as any}>
+            {navItems.map((item) => (
+              <TouchableOpacity
+                key={item.label}
+                style={styles.desktopNavItem}
+                onPress={item.onPress}
+              >
+                <Text style={styles.desktopNavText}>{item.label}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+
+          {/* Actions - Right */}
+          <View style={styles.desktopActions}>
+            <Image
+              source={require('../../assets/sa-icon.png')}
+              style={styles.flagImage as any}
+              resizeMode="contain"
+            />
+            {session && <NotificationBell />}
+            {session ? (
+              <TouchableOpacity
+                style={styles.userContainer}
+                onPress={() => navigation.navigate('Account')}
+              >
+                <MaterialIcons name="person" size={20} color={colors.primary} />
+                {username && (
+                  <Text style={styles.greeting}>Hi {username}</Text>
+                )}
+              </TouchableOpacity>
+            ) : (
+              <TouchableOpacity
+                style={styles.loginIcon}
+                onPress={() => navigation.navigate('Auth', { screen: 'SignIn' })}
+              >
+                <MaterialIcons name="person" size={20} color={colors.primary} />
+                <Text style={styles.desktopLoginText}>Sign In</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+        </View>
+      </View>
+    );
+  }
+
+  // ─── Mobile Layout (unchanged) ───
   return (
     <View style={styles.wrapper as any}>
       <View style={styles.container as any}>
@@ -213,5 +295,52 @@ const styles = StyleSheet.create({
     color: colors.primary,
     fontWeight: '500',
     fontSize: 11,
+  },
+  // ─── Desktop styles ───
+  desktopContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    maxWidth: spacing.maxWidth,
+    width: '100%',
+    alignSelf: 'center' as const,
+    paddingHorizontal: spacing.marginDesktop,
+    paddingVertical: spacing.md,
+    backgroundColor: '#f7f5f0',
+    minHeight: 80,
+  } as any,
+  desktopLogoContainer: {
+    flex: 0,
+  },
+  desktopLogo: {
+    height: 48,
+    width: 140,
+  } as any,
+  desktopNav: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 32,
+  } as any,
+  desktopNavItem: {
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: radii.sm,
+  } as any,
+  desktopNavText: {
+    fontSize: 14,
+    fontWeight: '600' as const,
+    fontFamily: 'Montserrat_600SemiBold',
+    color: colors.onSurfaceVariant,
+  },
+  desktopActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 16,
+  },
+  desktopLoginText: {
+    ...typography.caption,
+    color: colors.primary,
+    fontWeight: '600' as const,
+    marginLeft: spacing.xs,
   },
 });

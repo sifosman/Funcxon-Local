@@ -1,9 +1,10 @@
 import { useMemo, useState } from 'react';
-import { Linking, Modal, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Linking, Modal, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View, Image } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { colors, spacing, radii, typography } from '../theme';
 import { SUPPORT_EMAIL, SUPPORT_WHATSAPP } from '../utils/env';
 import { supabase } from '../lib/supabaseClient';
+import { useIsDesktop } from '../hooks/useIsDesktop';
 
 type AppFooterProps = {
   onNavigateToFAQs?: () => void;
@@ -12,6 +13,7 @@ type AppFooterProps = {
 };
 
 export function AppFooter({ onNavigateToFAQs, onNavigateToTerms, onNavigateToHelpDesk }: AppFooterProps) {
+  const isDesktop = useIsDesktop();
   const [reviewModalVisible, setReviewModalVisible] = useState(false);
   const [reviewRating, setReviewRating] = useState(0);
   const [reviewComment, setReviewComment] = useState('');
@@ -75,6 +77,167 @@ export function AppFooter({ onNavigateToFAQs, onNavigateToTerms, onNavigateToHel
     }
   };
 
+  // ─── Desktop Layout ───
+  if (isDesktop) {
+    return (
+      <View style={styles.container}>
+        <View style={styles.divider} />
+        {/* 4-column grid */}
+        <View style={styles.desktopGrid as any}>
+          {/* Brand Column */}
+          <View style={styles.desktopBrandCol}>
+            <Image
+              source={require('../../assets/logo.png')}
+              style={styles.desktopFooterLogo as any}
+              resizeMode="contain"
+            />
+            <Text style={styles.desktopBrandTagline}>
+              South Africa's Premier Event Marketplace. Connecting visionary hosts with extraordinary spaces and talent.
+            </Text>
+            <TouchableOpacity
+              onPress={handleOpenReview}
+              style={styles.desktopReviewBtn as any}
+            >
+              <MaterialIcons name="star" size={16} color="#FFFFFF" />
+              <Text style={styles.desktopReviewText}>Submit a Funxon App Review</Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* Discover Column */}
+          <View style={styles.desktopCol}>
+            <Text style={styles.desktopColTitle}>Quick Links</Text>
+            <TouchableOpacity style={styles.desktopLinkRow} onPress={onNavigateToFAQs} disabled={!onNavigateToFAQs}>
+              <Text style={styles.desktopLinkText}>FAQ's</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.desktopLinkRow} onPress={onNavigateToHelpDesk} disabled={!onNavigateToHelpDesk}>
+              <Text style={styles.desktopLinkText}>Help Desk</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.desktopLinkRow} onPress={handleReportProblem}>
+              <Text style={styles.desktopLinkText}>Report a Problem</Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* Contact Column */}
+          <View style={styles.desktopCol}>
+            <Text style={styles.desktopColTitle}>Contact Us</Text>
+            <TouchableOpacity style={styles.desktopLinkRow} onPress={handleWhatsapp}>
+              <View style={styles.desktopContactRow}>
+                <MaterialIcons name="chat" size={16} color={colors.primary} />
+                <Text style={styles.desktopLinkText}>Chat via WhatsApp</Text>
+              </View>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.desktopLinkRow} onPress={handleEmail}>
+              <View style={styles.desktopContactRow}>
+                <MaterialIcons name="email" size={16} color={colors.primary} />
+                <Text style={styles.desktopLinkText}>Chat via Email</Text>
+              </View>
+            </TouchableOpacity>
+          </View>
+
+          {/* Legal Column */}
+          <View style={styles.desktopCol}>
+            <Text style={styles.desktopColTitle}>Legal & Help</Text>
+            <TouchableOpacity style={styles.desktopLinkRow} onPress={onNavigateToTerms} disabled={!onNavigateToTerms}>
+              <Text style={styles.desktopLinkText}>Terms & Policies</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+        {/* Copyright Banner */}
+        <View style={styles.desktopCopyrightBanner as any}>
+          <Text style={styles.desktopCopyright}>
+            © {new Date().getFullYear()} Funxon. South Africa's Premier Event Marketplace.
+          </Text>
+        </View>
+
+        {/* App Review Modal (shared) */}
+        <Modal visible={reviewModalVisible} transparent animationType="fade" onRequestClose={handleCloseReview}>
+          <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center', padding: spacing.lg }}>
+            <View style={{ backgroundColor: colors.surface, borderRadius: radii.lg, padding: spacing.lg, width: '100%', maxWidth: 400 }}>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.md }}>
+                <Text style={{ ...typography.titleMedium, color: colors.textPrimary }}>
+                  {reviewSubmitted ? 'Thank You!' : 'Rate Funxon'}
+                </Text>
+                <TouchableOpacity onPress={handleCloseReview}>
+                  <MaterialIcons name="close" size={24} color={colors.textMuted} />
+                </TouchableOpacity>
+              </View>
+              {reviewSubmitted ? (
+                <View style={{ alignItems: 'center', paddingVertical: spacing.lg }}>
+                  <MaterialIcons name="check-circle" size={48} color={colors.primary} />
+                  <Text style={{ ...typography.body, color: colors.textPrimary, textAlign: 'center', marginTop: spacing.md }}>
+                    Thank you for reviewing the app. We will contact you.
+                  </Text>
+                  <TouchableOpacity
+                    onPress={handleCloseReview}
+                    style={{ marginTop: spacing.lg, paddingVertical: spacing.sm, paddingHorizontal: spacing.lg, borderRadius: radii.md, backgroundColor: colors.primary }}
+                  >
+                    <Text style={{ ...typography.bodySemiBold, color: '#FFFFFF' }}>Close</Text>
+                  </TouchableOpacity>
+                </View>
+              ) : (
+                <View style={{ gap: spacing.md }}>
+                  <Text style={{ ...typography.caption, color: colors.textMuted }}>
+                    How would you rate your experience with the Funxon app?
+                  </Text>
+                  <View style={{ flexDirection: 'row', justifyContent: 'center', gap: spacing.sm }}>
+                    {[1, 2, 3, 4, 5].map((star) => (
+                      <TouchableOpacity key={star} onPress={() => setReviewRating(star)}>
+                        <MaterialIcons
+                          name={star <= reviewRating ? 'star' : 'star-border'}
+                          size={32}
+                          color={star <= reviewRating ? '#F59E0B' : colors.textMuted}
+                        />
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                  <View>
+                    <Text style={{ ...typography.caption, color: colors.textMuted, marginBottom: spacing.xs }}>
+                      Comments (optional)
+                    </Text>
+                    <TextInput
+                      value={reviewComment}
+                      onChangeText={setReviewComment}
+                      placeholder="Tell us what you think..."
+                      placeholderTextColor={colors.textMuted}
+                      multiline
+                      numberOfLines={4}
+                      style={{
+                        borderWidth: 1,
+                        borderColor: colors.borderSubtle,
+                        borderRadius: radii.md,
+                        paddingHorizontal: spacing.md,
+                        paddingVertical: spacing.sm,
+                        backgroundColor: colors.surfaceMuted,
+                        color: colors.textPrimary,
+                        minHeight: 80,
+                        textAlignVertical: 'top',
+                      }}
+                    />
+                  </View>
+                  <TouchableOpacity
+                    onPress={handleSubmitReview}
+                    disabled={reviewRating === 0 || reviewSubmitting}
+                    style={{
+                      paddingVertical: spacing.sm,
+                      borderRadius: radii.md,
+                      backgroundColor: reviewRating === 0 || reviewSubmitting ? colors.surfaceMuted : colors.primary,
+                      alignItems: 'center',
+                    }}
+                  >
+                    <Text style={{ ...typography.bodySemiBold, color: reviewRating === 0 || reviewSubmitting ? colors.textMuted : '#FFFFFF' }}>
+                      {reviewSubmitting ? 'Submitting...' : 'Submit Review'}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              )}
+            </View>
+          </View>
+        </Modal>
+      </View>
+    );
+  }
+
+  // ─── Mobile Layout (unchanged) ───
   return (
     <View style={styles.container}>
       {/* Divider line */}
@@ -390,5 +553,85 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
     textAlign: 'center',
     marginTop: spacing.sm,
+  },
+  // ─── Desktop footer styles ───
+  desktopGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    maxWidth: spacing.maxWidth,
+    width: '100%',
+    alignSelf: 'center' as const,
+    paddingHorizontal: spacing.marginDesktop,
+    paddingVertical: spacing.sectionPadding,
+    gap: spacing.gutter,
+  } as any,
+  desktopBrandCol: {
+    flex: 1,
+    minWidth: 200,
+    maxWidth: 280,
+    gap: spacing.md,
+  },
+  desktopFooterLogo: {
+    height: 48,
+    width: 140,
+  } as any,
+  desktopBrandTagline: {
+    fontSize: 14,
+    fontFamily: 'Montserrat_400Regular',
+    color: colors.onSurfaceVariant,
+    lineHeight: 22,
+  },
+  desktopReviewBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.primary,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: radii.md,
+    alignSelf: 'flex-start',
+    gap: spacing.xs,
+  } as any,
+  desktopReviewText: {
+    ...typography.captionSemiBold,
+    color: '#FFFFFF',
+  },
+  desktopCol: {
+    flex: 1,
+    minWidth: 160,
+    gap: spacing.sm,
+  },
+  desktopColTitle: {
+    fontSize: 12,
+    fontWeight: '600' as const,
+    fontFamily: 'Montserrat_600SemiBold',
+    color: colors.primary,
+    marginBottom: spacing.xs,
+    letterSpacing: 0.05,
+  },
+  desktopLinkRow: {
+    paddingVertical: 4,
+  },
+  desktopLinkText: {
+    fontSize: 14,
+    fontFamily: 'Montserrat_400Regular',
+    color: colors.onSurfaceVariant,
+  },
+  desktopContactRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  desktopCopyrightBanner: {
+    width: '100%',
+    backgroundColor: '#f7f5f0',
+    borderTopWidth: 1,
+    borderTopColor: colors.surfaceContainerHighest,
+    paddingVertical: spacing.md,
+    alignItems: 'center',
+  } as any,
+  desktopCopyright: {
+    fontSize: 14,
+    fontFamily: 'Montserrat_400Regular',
+    color: colors.onSurfaceVariant,
   },
 });
