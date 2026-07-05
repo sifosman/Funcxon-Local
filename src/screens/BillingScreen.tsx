@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, Linking, RefreshControl, ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Linking, Platform, RefreshControl, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -184,6 +184,23 @@ export default function BillingScreen() {
         setPayingNow(true);
         try {
             const nameParts = (billing.billing_name || billing.vendor_name || '').split(' ');
+            // On web, PayFast must redirect back to an actual https page (this web app's own
+            // origin), since browsers cannot navigate to the native-only `funxon://` custom URI
+            // scheme. On native, we route through the payfast-redirect edge function which 302s
+            // to the funxon:// deep link.
+            const webOrigin = Platform.OS === 'web' && typeof window !== 'undefined' ? window.location.origin : '';
+            const returnUrl = Platform.OS === 'web'
+                ? `${webOrigin}/payment/success`
+                : `${SUPABASE_URL}/functions/v1/payfast-redirect?type=success`;
+            const cancelUrl = Platform.OS === 'web'
+                ? `${webOrigin}/payment/cancel`
+                : `${SUPABASE_URL}/functions/v1/payfast-redirect?type=cancel`;
+            // Use the bare origin (not the full success path) as the web redirect target so that
+            // both the success AND cancel redirects (different paths) are detected by
+            // openAuthSessionAsync's URL match.
+            const paymentRedirectTarget = Platform.OS === 'web' ? webOrigin : 'funxon://payment/success';
+            const paymentCancelTarget = Platform.OS === 'web' ? cancelUrl : 'funxon://payment/cancel';
+
             const paymentData = buildPayFastPaymentData({
                 amount: price,
                 itemName: `Funxon ${billing.subscription_tier} Plan (${billing.billing_period || 'monthly'})`,
@@ -192,18 +209,18 @@ export default function BillingScreen() {
                 lastName: nameParts.slice(1).join(' ') || '',
                 email: billing.billing_email || '',
                 phone: billing.billing_phone || '',
-                returnUrl: `${SUPABASE_URL}/functions/v1/payfast-redirect?type=success`,
-                cancelUrl: `${SUPABASE_URL}/functions/v1/payfast-redirect?type=cancel`,
+                returnUrl,
+                cancelUrl,
                 notifyUrl: `${SUPABASE_URL}/functions/v1/payfast-itn`,
             });
 
             const checkoutUrl = getPayFastCheckoutUrl(paymentData);
-            const result = await WebBrowser.openAuthSessionAsync(checkoutUrl, 'funxon://payment/success');
+            const result = await WebBrowser.openAuthSessionAsync(checkoutUrl, paymentRedirectTarget);
 
             if (result.type === 'cancel' || result.type === 'dismiss') {
                 return;
             }
-            if (result.type === 'success' && result.url?.startsWith('funxon://payment/cancel')) {
+            if (result.type === 'success' && result.url?.startsWith(paymentCancelTarget)) {
                 return;
             }
 

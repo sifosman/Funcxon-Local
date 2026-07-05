@@ -304,8 +304,20 @@ export default function SubscriptionCheckoutScreen() {
 
   const supabaseBaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL || 'https://fhlocaqndxawkbztncwo.supabase.co';
   const notifyUrl = `${supabaseBaseUrl}/functions/v1/payfast-itn`;
-  const returnUrl = `${supabaseBaseUrl}/functions/v1/payfast-redirect?type=success`;
-  const cancelUrl = `${supabaseBaseUrl}/functions/v1/payfast-redirect?type=cancel`;
+  // On web, PayFast must redirect back to an actual https page (this web app's own origin),
+  // since browsers cannot navigate to the native-only `funxon://` custom URI scheme. On native,
+  // we route through the payfast-redirect edge function which 302s to the funxon:// deep link.
+  const webOrigin = Platform.OS === 'web' && typeof window !== 'undefined' ? window.location.origin : '';
+  const returnUrl = Platform.OS === 'web'
+    ? `${webOrigin}/payment/success`
+    : `${supabaseBaseUrl}/functions/v1/payfast-redirect?type=success`;
+  const cancelUrl = Platform.OS === 'web'
+    ? `${webOrigin}/payment/cancel`
+    : `${supabaseBaseUrl}/functions/v1/payfast-redirect?type=cancel`;
+  // Use the bare origin (not the full success path) as the web redirect target so that both the
+  // success AND cancel redirects (different paths) are detected by openAuthSessionAsync's URL match.
+  const paymentRedirectTarget = Platform.OS === 'web' ? webOrigin : 'funxon://payment/success';
+  const paymentCancelTarget = Platform.OS === 'web' ? cancelUrl : 'funxon://payment/cancel';
 
   useEffect(() => {
     if (!user?.id) return;
@@ -743,11 +755,11 @@ export default function SubscriptionCheckoutScreen() {
     const checkoutUrl = getPayFastCheckoutUrl(paymentData);
 
     try {
-      const result = await WebBrowser.openAuthSessionAsync(checkoutUrl, 'funxon://payment/success');
+      const result = await WebBrowser.openAuthSessionAsync(checkoutUrl, paymentRedirectTarget);
       if (result.type === 'cancel' || result.type === 'dismiss') {
         return;
       }
-      if (result.type === 'success' && result.url?.startsWith('funxon://payment/cancel')) {
+      if (result.type === 'success' && result.url?.startsWith(paymentCancelTarget)) {
         return;
       }
       // Treat success (or unknown) as completed payment and proceed

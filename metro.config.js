@@ -6,8 +6,8 @@ const config = getDefaultConfig(__dirname);
 // Prevent Windows EPERM crash in jest-worker during release builds
 config.maxWorkers = 1;
 
-// Exclude react-native-maps from web bundle
-config.resolver.platforms = ['ios', 'android', 'native'];
+// Include 'web' so .web.tsx overrides and expo export:web work correctly
+config.resolver.platforms = ['ios', 'android', 'web', 'native'];
 
 // Force @tanstack packages to use compiled ESM builds instead of raw TypeScript
 // source (react-native field: src/index.ts). The TypeScript source causes a

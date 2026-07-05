@@ -285,6 +285,52 @@ export default function PlannerScreen({ navigation }: PlannerProps) {
                 <MaterialIcons name="calendar-today" size={18} color={colors.primary} />
               </View>
             </View>
+            <View>
+              <Text style={{ ...typography.caption, color: colors.textMuted }}>My Event Guests</Text>
+              <TextInput
+                value={eventDetails.guests === 0 ? '' : String(eventDetails.guests)}
+                onChangeText={(value) => {
+                  const numeric = value.replace(/[^0-9]/g, '');
+                  setEventDetails((prev) => ({ ...prev, guests: numeric ? parseInt(numeric, 10) : 0 }));
+                }}
+                placeholder="Number of guests"
+                placeholderTextColor={colors.textMuted}
+                keyboardType="numeric"
+                style={{
+                  marginTop: spacing.xs,
+                  borderWidth: 1,
+                  borderColor: colors.borderSubtle,
+                  borderRadius: radii.md,
+                  paddingHorizontal: spacing.md,
+                  paddingVertical: spacing.sm,
+                  backgroundColor: colors.surfaceMuted,
+                  color: colors.textPrimary,
+                }}
+              />
+            </View>
+            <View>
+              <Text style={{ ...typography.caption, color: colors.textMuted }}>Additional Event Details</Text>
+              <TextInput
+                value={eventDetails.additionalNotes}
+                onChangeText={(value) => setEventDetails((prev) => ({ ...prev, additionalNotes: value }))}
+                placeholder="Any other details about your event"
+                placeholderTextColor={colors.textMuted}
+                multiline
+                numberOfLines={3}
+                style={{
+                  marginTop: spacing.xs,
+                  borderWidth: 1,
+                  borderColor: colors.borderSubtle,
+                  borderRadius: radii.md,
+                  paddingHorizontal: spacing.md,
+                  paddingVertical: spacing.sm,
+                  backgroundColor: colors.surfaceMuted,
+                  color: colors.textPrimary,
+                  minHeight: 64,
+                  textAlignVertical: 'top',
+                }}
+              />
+            </View>
           </View>
         </View>
 

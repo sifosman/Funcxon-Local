@@ -1248,9 +1248,20 @@ export default function VenueProfileScreen({ route, navigation }: Props) {
                       allowFullScreen
                     />
                   ) : (
-                    <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
-                      <Text style={{ ...typography.caption, color: colors.textMuted }}>Map unavailable</Text>
-                    </View>
+                    <TouchableOpacity
+                      onPress={handleOpenMap}
+                      style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: spacing.md }}
+                    >
+                      <MaterialIcons name="place" size={32} color={colors.primary} />
+                      {physicalAddress ? (
+                        <Text style={{ ...typography.caption, color: colors.textSecondary, textAlign: 'center', marginTop: spacing.xs }}>
+                          {physicalAddress}
+                        </Text>
+                      ) : null}
+                      <Text style={{ ...typography.caption, color: colors.primary, marginTop: spacing.xs }}>
+                        Open in Google Maps
+                      </Text>
+                    </TouchableOpacity>
                   )
                 ) : nativeMapHtml ? (
                   !mapImageFailed && staticMapUrl ? (

@@ -42,7 +42,10 @@ const navTheme = {
 };
 
 const linking: any = {
-  prefixes: ['funxon://'],
+  prefixes: [
+    'funxon://',
+    ...(Platform.OS === 'web' && typeof window !== 'undefined' ? [window.location.origin] : []),
+  ],
   config: {
     screens: {
       Main: {

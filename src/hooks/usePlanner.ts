@@ -82,6 +82,8 @@ export function usePlanner() {
     type: '',
     otherType: '',
     date: '',
+    guests: 0,
+    additionalNotes: '',
   });
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showCalendarDatePicker, setShowCalendarDatePicker] = useState(false);
