@@ -18,6 +18,7 @@ import { venueTypes, amenitiesList, venueCapacityOptions } from '../config/venue
 import { provinces } from '../config/locations';
 import MapRadiusSelector from '../components/MapRadiusSelector';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useIsDesktop } from '../hooks/useIsDesktop';
 
 type CategoryFilter = 'all' | 'venues' | 'vendors' | 'services';
 type SortBy = 'best-match' | 'rating-desc' | 'reviews-desc' | 'price-asc' | 'alphabetical';
@@ -37,6 +38,7 @@ const presetTitles: Record<DiscoverPresetFilter, string> = {
 export default function DiscoverScreen() {
   const navigation = useNavigation<DiscoverNavigation>();
   const route = useRoute<DiscoverRoute>();
+  const isDesktop = useIsDesktop();
   const [search, setSearch] = useState(route.params?.initialSearch ?? '');
 
   const [screenHeight, setScreenHeight] = useState(Dimensions.get('window').height);
@@ -748,7 +750,7 @@ export default function DiscoverScreen() {
 
         navigation.navigate('VendorProfile', { vendorId: item.id });
       }}
-      style={{ marginRight: featuredCard ? spacing.md : 0, marginBottom: featuredCard ? 0 : spacing.md, width: featuredCard ? 280 : '100%' }}
+      style={{ marginRight: featuredCard ? spacing.md : 0, marginBottom: featuredCard ? 0 : isDesktop ? 24 : spacing.md, width: featuredCard ? 280 : isDesktop ? 'calc(50% - 12px)' : '100%' }}
     >
       <View
         style={{
@@ -883,8 +885,8 @@ export default function DiscoverScreen() {
 
   return (
     <Animated.ScrollView
-      style={{ flex: 1, backgroundColor: colors.background }}
-      contentContainerStyle={{ paddingHorizontal: spacing.lg, paddingTop: spacing.sm, paddingBottom: spacing.xl }}
+      style={{ flex: 1, backgroundColor: isDesktop ? colors.surfaceBg : colors.background }}
+      contentContainerStyle={isDesktop ? { paddingHorizontal: 48, paddingTop: spacing.sm, paddingBottom: spacing.xl, maxWidth: 1200, width: '100%', alignSelf: 'center' } : { paddingHorizontal: spacing.lg, paddingTop: spacing.sm, paddingBottom: spacing.xl }}
       keyboardShouldPersistTaps="handled"
       scrollEventThrottle={16}
       onScroll={Animated.event(
@@ -907,6 +909,202 @@ export default function DiscoverScreen() {
           <Text style={{ ...typography.body, color: colors.textPrimary, marginLeft: spacing.xs }}>Back</Text>
         </TouchableOpacity>
       </Animated.View>
+
+      {isDesktop ? (
+        /* ─── Desktop Layout: Sidebar + Results Grid ─── */
+        <View style={{ flexDirection: 'row', gap: 24 } as any}>
+          {/* Sidebar Filters */}
+          <View style={{ width: 280, flexShrink: 0 } as any}>
+            <View style={{ backgroundColor: colors.surfaceContainerLowest, borderRadius: radii.lg, padding: 16, borderWidth: 1, borderColor: colors.surfaceContainerHighest } as any}>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+                <Text style={{ fontSize: 24, fontWeight: '600', fontFamily: 'Montserrat_600SemiBold', color: colors.primary }}>Filters</Text>
+                <TouchableOpacity onPress={clearFilters}>
+                  <Text style={{ fontSize: 14, fontFamily: 'Montserrat_400Regular', color: colors.primary }}>Clear all</Text>
+                </TouchableOpacity>
+              </View>
+
+              {/* Category tabs */}
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 16 }}>
+                {[
+                  { key: 'all' as CategoryFilter, label: 'All' },
+                  { key: 'venues' as CategoryFilter, label: 'Venues' },
+                  { key: 'vendors' as CategoryFilter, label: 'Vendors & Services' },
+                ].map((option) => {
+                  const selected = category === option.key;
+                  return (
+                    <TouchableOpacity
+                      key={option.key}
+                      onPress={() => setCategory(option.key)}
+                      style={{ paddingHorizontal: 12, paddingVertical: 6, borderRadius: radii.full, borderWidth: 1, borderColor: selected ? colors.primary : colors.outlineVariant, backgroundColor: selected ? colors.primary : colors.surface } as any}
+                    >
+                      <Text style={{ fontSize: 12, fontWeight: '600', fontFamily: 'Montserrat_600SemiBold', color: selected ? '#FFFFFF' : colors.onSurface }}>{option.label}</Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+
+              {/* Search */}
+              <View style={{ flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderColor: colors.outlineVariant, borderRadius: radii.md, paddingHorizontal: 12, paddingVertical: 8, marginBottom: 16 } as any}>
+                <MaterialIcons name="search" size={18} color={colors.outline} />
+                <TextInput
+                  value={search}
+                  onChangeText={setSearch}
+                  placeholder={getSearchPlaceholder()}
+                  placeholderTextColor={colors.outline}
+                  style={{ flex: 1, marginLeft: 8, fontSize: 14, fontFamily: 'Montserrat_400Regular', color: colors.onSurface } as any}
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                />
+                {search.length > 0 && (
+                  <TouchableOpacity onPress={() => setSearch('')}>
+                    <MaterialIcons name="close" size={16} color={colors.outline} />
+                  </TouchableOpacity>
+                )}
+              </View>
+
+              {/* Venue Type Dropdown */}
+              {(category === 'all' || category === 'venues') && (
+                <View style={{ marginBottom: 16 }}>
+                  <Text style={{ fontSize: 12, fontWeight: '600', fontFamily: 'Montserrat_600SemiBold', color: colors.onSurfaceVariant, marginBottom: 8, letterSpacing: 0.05 }}>Venue Type</Text>
+                  <TouchableOpacity onPress={() => { setDropdownSearch(''); setActiveDropdown('venue_type'); }} style={{ borderWidth: 1, borderColor: colors.outlineVariant, borderRadius: radii.md, paddingHorizontal: 12, paddingVertical: 10, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' } as any}>
+                    <Text style={{ fontSize: 14, fontFamily: 'Montserrat_400Regular', color: selectedVenueTypes.length > 0 ? colors.onSurface : colors.outline }} numberOfLines={1}>{selectedVenueTypes.length > 0 ? selectedVenueTypes.join(', ') : 'Any'}</Text>
+                    <MaterialIcons name="keyboard-arrow-down" size={20} color={colors.outline} />
+                  </TouchableOpacity>
+                </View>
+              )}
+
+              {/* Venue Amenities */}
+              {(category === 'all' || category === 'venues') && (
+                <View style={{ marginBottom: 16 }}>
+                  <Text style={{ fontSize: 12, fontWeight: '600', fontFamily: 'Montserrat_600SemiBold', color: colors.onSurfaceVariant, marginBottom: 8, letterSpacing: 0.05 }}>Amenities</Text>
+                  <TouchableOpacity onPress={() => { setDropdownSearch(''); setActiveDropdown('venue_amenities'); }} style={{ borderWidth: 1, borderColor: colors.outlineVariant, borderRadius: radii.md, paddingHorizontal: 12, paddingVertical: 10, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' } as any}>
+                    <Text style={{ fontSize: 14, fontFamily: 'Montserrat_400Regular', color: selectedVenueAmenities.length > 0 ? colors.onSurface : colors.outline }} numberOfLines={1}>{selectedVenueAmenities.length > 0 ? selectedVenueAmenities.join(', ') : 'Any'}</Text>
+                    <MaterialIcons name="keyboard-arrow-down" size={20} color={colors.outline} />
+                  </TouchableOpacity>
+                </View>
+              )}
+
+              {/* Capacity */}
+              {(category === 'all' || category === 'venues') && (
+                <View style={{ marginBottom: 16 }}>
+                  <Text style={{ fontSize: 12, fontWeight: '600', fontFamily: 'Montserrat_600SemiBold', color: colors.onSurfaceVariant, marginBottom: 8, letterSpacing: 0.05 }}>Capacity</Text>
+                  <TouchableOpacity onPress={() => { setDropdownSearch(''); setActiveDropdown('capacity'); }} style={{ borderWidth: 1, borderColor: colors.outlineVariant, borderRadius: radii.md, paddingHorizontal: 12, paddingVertical: 10, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' } as any}>
+                    <Text style={{ fontSize: 14, fontFamily: 'Montserrat_400Regular', color: selectedCapacity ? colors.onSurface : colors.outline }}>{selectedCapacity ?? 'Any'}</Text>
+                    <MaterialIcons name="keyboard-arrow-down" size={20} color={colors.outline} />
+                  </TouchableOpacity>
+                </View>
+              )}
+
+              {/* Province */}
+              <View style={{ marginBottom: 16 }}>
+                <Text style={{ fontSize: 12, fontWeight: '600', fontFamily: 'Montserrat_600SemiBold', color: colors.onSurfaceVariant, marginBottom: 8, letterSpacing: 0.05 }}>Province</Text>
+                <TouchableOpacity onPress={() => { setDropdownSearch(''); setActiveDropdown(category === 'vendors' || category === 'services' ? 'vendor_province' : 'province'); }} style={{ borderWidth: 1, borderColor: colors.outlineVariant, borderRadius: radii.md, paddingHorizontal: 12, paddingVertical: 10, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' } as any}>
+                  <Text style={{ fontSize: 14, fontFamily: 'Montserrat_400Regular', color: (category === 'vendors' || category === 'services' ? selectedVendorProvinces : selectedProvinces).length > 0 ? colors.onSurface : colors.outline }} numberOfLines={1}>{(category === 'vendors' || category === 'services' ? selectedVendorProvinces : selectedProvinces).length > 0 ? (category === 'vendors' || category === 'services' ? selectedVendorProvinces : selectedProvinces).join(', ') : 'Any'}</Text>
+                  <MaterialIcons name="keyboard-arrow-down" size={20} color={colors.outline} />
+                </TouchableOpacity>
+              </View>
+
+              {/* City */}
+              <View style={{ marginBottom: 16 }}>
+                <Text style={{ fontSize: 12, fontWeight: '600', fontFamily: 'Montserrat_600SemiBold', color: colors.onSurfaceVariant, marginBottom: 8, letterSpacing: 0.05 }}>City</Text>
+                <TouchableOpacity onPress={() => { setDropdownSearch(''); setActiveDropdown(category === 'vendors' || category === 'services' ? 'vendor_city' : 'city'); }} style={{ borderWidth: 1, borderColor: colors.outlineVariant, borderRadius: radii.md, paddingHorizontal: 12, paddingVertical: 10, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' } as any}>
+                  <Text style={{ fontSize: 14, fontFamily: 'Montserrat_400Regular', color: (category === 'vendors' || category === 'services' ? selectedVendorCities : selectedCities).length > 0 ? colors.onSurface : colors.outline }} numberOfLines={1}>{(category === 'vendors' || category === 'services' ? selectedVendorCities : selectedCities).length > 0 ? (category === 'vendors' || category === 'services' ? selectedVendorCities : selectedCities).join(', ') : 'Any'}</Text>
+                  <MaterialIcons name="keyboard-arrow-down" size={20} color={colors.outline} />
+                </TouchableOpacity>
+              </View>
+
+              {/* Vendor Category */}
+              {(category === 'all' || category === 'vendors' || category === 'services') && (
+                <View style={{ marginBottom: 16 }}>
+                  <Text style={{ fontSize: 12, fontWeight: '600', fontFamily: 'Montserrat_600SemiBold', color: colors.onSurfaceVariant, marginBottom: 8, letterSpacing: 0.05 }}>Vendor Category</Text>
+                  <TouchableOpacity onPress={() => { setDropdownSearch(''); setActiveDropdown('vendor_category'); }} style={{ borderWidth: 1, borderColor: colors.outlineVariant, borderRadius: radii.md, paddingHorizontal: 12, paddingVertical: 10, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' } as any}>
+                    <Text style={{ fontSize: 14, fontFamily: 'Montserrat_400Regular', color: selectedVendorCategories.length > 0 ? colors.onSurface : colors.outline }} numberOfLines={1}>{selectedVendorCategories.length > 0 ? selectedVendorCategories.map((id) => VENDOR_CATEGORIES.find((c) => c.id === id)?.label ?? id).join(', ') : 'Any'}</Text>
+                    <MaterialIcons name="keyboard-arrow-down" size={20} color={colors.outline} />
+                  </TouchableOpacity>
+                </View>
+              )}
+
+              {/* Service Type */}
+              {(category === 'all' || category === 'vendors' || category === 'services') && (
+                <View style={{ marginBottom: 16 }}>
+                  <Text style={{ fontSize: 12, fontWeight: '600', fontFamily: 'Montserrat_600SemiBold', color: colors.onSurfaceVariant, marginBottom: 8, letterSpacing: 0.05 }}>Service Type</Text>
+                  <TouchableOpacity onPress={() => { setDropdownSearch(''); setActiveDropdown('vendor_subcategory'); }} style={{ borderWidth: 1, borderColor: colors.outlineVariant, borderRadius: radii.md, paddingHorizontal: 12, paddingVertical: 10, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' } as any}>
+                    <Text style={{ fontSize: 14, fontFamily: 'Montserrat_400Regular', color: selectedVendorSubcategories.length > 0 ? colors.onSurface : colors.outline }} numberOfLines={1}>{selectedVendorSubcategories.length > 0 ? selectedVendorSubcategories.join(', ') : 'Any'}</Text>
+                    <MaterialIcons name="keyboard-arrow-down" size={20} color={colors.outline} />
+                  </TouchableOpacity>
+                </View>
+              )}
+
+              {/* Minimum rating */}
+              <View style={{ marginBottom: 16 }}>
+                <Text style={{ fontSize: 12, fontWeight: '600', fontFamily: 'Montserrat_600SemiBold', color: colors.onSurfaceVariant, marginBottom: 8, letterSpacing: 0.05 }}>Minimum rating</Text>
+                <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 } as any}>
+                  {[
+                    { label: 'Any', value: null },
+                    { label: '3.5+', value: 3.5 },
+                    { label: '4.0+', value: 4 },
+                    { label: '4.5+', value: 4.5 },
+                  ].map((option) => {
+                    const selected = minRating === option.value;
+                    return (
+                      <TouchableOpacity key={option.label} onPress={() => setMinRating(option.value)} style={{ paddingHorizontal: 12, paddingVertical: 6, borderRadius: radii.full, borderWidth: 1, borderColor: selected ? colors.primary : colors.outlineVariant, backgroundColor: selected ? colors.primary : colors.surface } as any}>
+                        <Text style={{ fontSize: 12, fontFamily: 'Montserrat_400Regular', color: selected ? '#FFFFFF' : colors.onSurface }}>{option.label}</Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+              </View>
+
+              {/* Toggles */}
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 } as any}>
+                <TouchableOpacity onPress={() => setOnlyWithPrice((prev) => !prev)} style={{ paddingHorizontal: 12, paddingVertical: 6, borderRadius: radii.full, borderWidth: 1, borderColor: onlyWithPrice ? colors.primary : colors.outlineVariant, backgroundColor: onlyWithPrice ? colors.primary : colors.surface } as any}>
+                  <Text style={{ fontSize: 12, fontFamily: 'Montserrat_400Regular', color: onlyWithPrice ? '#FFFFFF' : colors.onSurface }}>Only with price</Text>
+                </TouchableOpacity>
+                <TouchableOpacity onPress={() => setFeaturedOnly((prev) => !prev)} style={{ paddingHorizontal: 12, paddingVertical: 6, borderRadius: radii.full, borderWidth: 1, borderColor: featuredOnly ? colors.primary : colors.outlineVariant, backgroundColor: featuredOnly ? colors.primary : colors.surface } as any}>
+                  <Text style={{ fontSize: 12, fontFamily: 'Montserrat_400Regular', color: featuredOnly ? '#FFFFFF' : colors.onSurface }}>Featured focus</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+
+          {/* Results Grid */}
+          <View style={{ flex: 1 } as any}>
+            {/* Results header */}
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: colors.surfaceContainerLowest, borderRadius: radii.lg, padding: 16, borderWidth: 1, borderColor: colors.surfaceContainerHighest, marginBottom: 24 } as any}>
+              <View>
+                <Text style={{ fontSize: 24, fontWeight: '600', fontFamily: 'Montserrat_600SemiBold', color: colors.primary }}>{getDisplayTitle()}</Text>
+                <Text style={{ fontSize: 14, fontFamily: 'Montserrat_400Regular', color: colors.onSurfaceVariant, marginTop: 4 }}>{resultCountLabel}</Text>
+              </View>
+              <TouchableOpacity onPress={() => setShowSortOptions((prev) => !prev)} style={{ flexDirection: 'row', alignItems: 'center', gap: 8, borderWidth: 1, borderColor: colors.outlineVariant, borderRadius: radii.md, paddingHorizontal: 12, paddingVertical: 8 } as any}>
+                <MaterialIcons name="swap-vert" size={18} color={colors.onSurface} />
+                <Text style={{ fontSize: 14, fontFamily: 'Montserrat_400Regular', color: colors.onSurface }}>{sortBy.replace('-', ' ')}</Text>
+              </TouchableOpacity>
+            </View>
+
+            {shouldShowFeatured && (
+              <View style={{ marginBottom: 24 }}>
+                <Text style={{ fontSize: 20, fontWeight: '600', fontFamily: 'Montserrat_600SemiBold', color: colors.onSurface, marginBottom: 16 }}>Featured listings</Text>
+                <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 24 } as any}>
+                  {featuredItems.map((item) => renderListingCard(item, true))}
+                </View>
+              </View>
+            )}
+
+            {sorted.length === 0 ? (
+              <View style={{ backgroundColor: colors.surfaceContainerLowest, borderRadius: radii.lg, borderWidth: 1, borderColor: colors.surfaceContainerHighest, padding: 32, alignItems: 'center' } as any}>
+                <Text style={{ fontSize: 18, fontWeight: '600', fontFamily: 'Montserrat_600SemiBold', color: colors.onSurface, marginBottom: 8 }}>No listings found</Text>
+                <Text style={{ fontSize: 14, fontFamily: 'Montserrat_400Regular', color: colors.onSurfaceVariant, textAlign: 'center' }}>Try broadening your search, clearing a filter, or switching the selected category.</Text>
+              </View>
+            ) : (
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 24 } as any}>
+                {sorted.map((item) => renderListingCard(item))}
+              </View>
+            )}
+          </View>
+        </View>
+      ) : (
+      <>
+      {/* ─── Mobile Layout (unchanged) ─── */}
       <View
         style={{
           backgroundColor: colors.surface,
@@ -1090,6 +1288,8 @@ export default function DiscoverScreen() {
         </View>
       ) : (
         sorted.map((item) => renderListingCard(item))
+      )}
+      </>
       )}
 
       <Modal visible={showFilters} transparent animationType="fade" onRequestClose={() => setShowFilters(false)}>
