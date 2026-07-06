@@ -2258,25 +2258,39 @@ export default function AttendeeHomeScreen() {
       <Modal
         visible={openPicker !== null}
         transparent
-        animationType="slide"
+        animationType={isDesktop ? 'fade' : 'slide'}
         onRequestClose={() => setOpenPicker(null)}
       >
         <View
-          style={{
-            flex: 1,
-            backgroundColor: 'rgba(0,0,0,0.3)',
-            justifyContent: 'flex-end',
-          }}
+          style={isDesktop
+            ? { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center', padding: spacing.lg }
+            : { flex: 1, backgroundColor: 'rgba(0,0,0,0.3)', justifyContent: 'flex-end' }
+          }
         >
           <View
-            style={{
-              backgroundColor: colors.surface,
-              paddingHorizontal: spacing.lg,
-              paddingVertical: spacing.lg,
-              borderTopLeftRadius: radii.xl,
-              borderTopRightRadius: radii.xl,
-              maxHeight: '82%',
-            }}
+            style={isDesktop
+              ? {
+                  backgroundColor: colors.surface,
+                  borderRadius: radii.xl,
+                  maxWidth: 560,
+                  width: '100%',
+                  maxHeight: '80%',
+                  padding: spacing.xl,
+                  shadowColor: '#000',
+                  shadowOpacity: 0.2,
+                  shadowRadius: 30,
+                  shadowOffset: { width: 0, height: 8 },
+                  elevation: 20,
+                }
+              : {
+                  backgroundColor: colors.surface,
+                  paddingHorizontal: spacing.lg,
+                  paddingVertical: spacing.lg,
+                  borderTopLeftRadius: radii.xl,
+                  borderTopRightRadius: radii.xl,
+                  maxHeight: '82%',
+                }
+            }
           >
             <Text
               style={{
@@ -2743,25 +2757,39 @@ export default function AttendeeHomeScreen() {
       <Modal
         visible={showSortModal}
         transparent
-        animationType="slide"
+        animationType={isDesktop ? 'fade' : 'slide'}
         onRequestClose={() => setShowSortModal(false)}
       >
         <View
-          style={{
-            flex: 1,
-            backgroundColor: 'rgba(0,0,0,0.3)',
-            justifyContent: 'flex-end',
-          }}
+          style={isDesktop
+            ? { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center', padding: spacing.lg }
+            : { flex: 1, backgroundColor: 'rgba(0,0,0,0.3)', justifyContent: 'flex-end' }
+          }
         >
           <View
-            style={{
-              backgroundColor: colors.surface,
-              paddingHorizontal: spacing.lg,
-              paddingVertical: spacing.lg,
-              borderTopLeftRadius: radii.xl,
-              borderTopRightRadius: radii.xl,
-              maxHeight: '70%',
-            }}
+            style={isDesktop
+              ? {
+                  backgroundColor: colors.surface,
+                  borderRadius: radii.xl,
+                  maxWidth: 440,
+                  width: '100%',
+                  maxHeight: '70%',
+                  padding: spacing.xl,
+                  shadowColor: '#000',
+                  shadowOpacity: 0.2,
+                  shadowRadius: 30,
+                  shadowOffset: { width: 0, height: 8 },
+                  elevation: 20,
+                }
+              : {
+                  backgroundColor: colors.surface,
+                  paddingHorizontal: spacing.lg,
+                  paddingVertical: spacing.lg,
+                  borderTopLeftRadius: radii.xl,
+                  borderTopRightRadius: radii.xl,
+                  maxHeight: '70%',
+                }
+            }
           >
             <Text
               style={{

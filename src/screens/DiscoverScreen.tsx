@@ -36,6 +36,8 @@ const presetTitles: Record<DiscoverPresetFilter, string> = {
   featured: 'Featured Listings',
 };
 
+const AnimatedTouchableOpacity = Animated.createAnimatedComponent(TouchableOpacity);
+
 export default function DiscoverScreen() {
   const navigation = useNavigation<DiscoverNavigation>();
   const route = useRoute<DiscoverRoute>();
@@ -1190,8 +1192,18 @@ export default function DiscoverScreen() {
         )}
 
         <View style={{ flexDirection: 'row', columnGap: spacing.md, alignItems: 'center', justifyContent: 'center' }}>
-          <Animated.View
+          <AnimatedTouchableOpacity
+            onPress={() => setShowFilters((prev) => !prev)}
             style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              columnGap: spacing.xs,
+              paddingVertical: spacing.sm,
+              paddingHorizontal: spacing.lg,
+              backgroundColor: showFilters ? colors.primaryTeal : colors.primary,
+              borderColor: colors.primary,
+              borderWidth: 2,
+              borderRadius: radii.full,
               transform: [{ scale: filterGlowAnim }],
               shadowColor: colors.primary,
               shadowOpacity: 0.45,
@@ -1199,26 +1211,11 @@ export default function DiscoverScreen() {
               shadowOffset: { width: 0, height: 0 },
               elevation: 10,
             }}
+            accessibilityLabel="Open filters"
           >
-            <TouchableOpacity
-              onPress={() => setShowFilters((prev) => !prev)}
-              style={{
-                flexDirection: 'row',
-                alignItems: 'center',
-                columnGap: spacing.xs,
-                paddingVertical: spacing.sm,
-                paddingHorizontal: spacing.lg,
-                backgroundColor: showFilters ? colors.primaryTeal : colors.primary,
-                borderColor: colors.primary,
-                borderWidth: 2,
-                borderRadius: radii.full,
-              }}
-              accessibilityLabel="Open filters"
-            >
-              <MaterialIcons name="tune" size={20} color={colors.primaryForeground} />
-              <Text style={{ ...typography.buttonMedium, color: colors.primaryForeground }}>Filters</Text>
-            </TouchableOpacity>
-          </Animated.View>
+            <MaterialIcons name="tune" size={20} color={colors.primaryForeground} />
+            <Text style={{ ...typography.buttonMedium, color: colors.primaryForeground }}>Filters</Text>
+          </AnimatedTouchableOpacity>
           <TouchableOpacity
             onPress={() => setShowSortOptions((prev) => !prev)}
             style={{
@@ -1298,17 +1295,39 @@ export default function DiscoverScreen() {
           behavior="padding"
           style={{ flex: 1 }}
         >
-          <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.28)', justifyContent: 'flex-end' }}>
-            <TouchableOpacity style={{ flex: 1 }} activeOpacity={1} onPress={() => setShowFilters(false)} />
+          <View style={isDesktop
+            ? { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center', padding: spacing.lg }
+            : { flex: 1, backgroundColor: 'rgba(0,0,0,0.28)', justifyContent: 'flex-end' }
+          }>
+            {isDesktop ? (
+              <TouchableOpacity style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }} activeOpacity={1} onPress={() => setShowFilters(false)} />
+            ) : (
+              <TouchableOpacity style={{ flex: 1 }} activeOpacity={1} onPress={() => setShowFilters(false)} />
+            )}
             <View
-              style={{
-                backgroundColor: colors.surface,
-                borderTopLeftRadius: radii.xl,
-                borderTopRightRadius: radii.xl,
-                borderTopWidth: 1,
-                borderColor: colors.borderSubtle,
-                maxHeight: '92%',
-              }}
+              style={isDesktop
+                ? {
+                    backgroundColor: colors.surface,
+                    borderRadius: radii.xl,
+                    maxWidth: 640,
+                    width: '100%',
+                    maxHeight: '85%',
+                    padding: spacing.xl,
+                    shadowColor: '#000',
+                    shadowOpacity: 0.2,
+                    shadowRadius: 30,
+                    shadowOffset: { width: 0, height: 8 },
+                    elevation: 20,
+                  }
+                : {
+                    backgroundColor: colors.surface,
+                    borderTopLeftRadius: radii.xl,
+                    borderTopRightRadius: radii.xl,
+                    borderTopWidth: 1,
+                    borderColor: colors.borderSubtle,
+                    maxHeight: '92%',
+                  }
+              }
             >
               <View style={{ paddingHorizontal: spacing.lg, paddingTop: spacing.lg }}>
                 <View style={{ flexDirection: 'row', justifyContent: 'flex-end', alignItems: 'center', marginBottom: spacing.md }}>
@@ -1729,16 +1748,33 @@ export default function DiscoverScreen() {
         <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.28)', justifyContent: 'center', alignItems: 'center', padding: 24 }}>
           <TouchableOpacity style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }} activeOpacity={1} onPress={() => setShowSortOptions(false)} />
           <View
-            style={{
-              backgroundColor: colors.surface,
-              borderRadius: radii.xl,
-              padding: spacing.lg,
-              borderWidth: 1,
-              borderColor: colors.borderSubtle,
-              maxHeight: '60%',
-              width: '100%',
-              maxWidth: 420,
-            }}
+            style={isDesktop
+              ? {
+                  backgroundColor: colors.surface,
+                  borderRadius: radii.xl,
+                  padding: spacing.lg,
+                  borderWidth: 1,
+                  borderColor: colors.borderSubtle,
+                  maxHeight: '60%',
+                  width: '100%',
+                  maxWidth: 480,
+                  shadowColor: '#000',
+                  shadowOpacity: 0.2,
+                  shadowRadius: 30,
+                  shadowOffset: { width: 0, height: 8 },
+                  elevation: 20,
+                }
+              : {
+                  backgroundColor: colors.surface,
+                  borderRadius: radii.xl,
+                  padding: spacing.lg,
+                  borderWidth: 1,
+                  borderColor: colors.borderSubtle,
+                  maxHeight: '60%',
+                  width: '100%',
+                  maxWidth: 420,
+                }
+            }
           >
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.md }}>
               <Text style={{ ...typography.titleMedium, color: colors.textPrimary }}>Sort options</Text>
@@ -1783,21 +1819,43 @@ export default function DiscoverScreen() {
       </Modal>
 
       {/* Dropdown Picker Modal */}
-      <Modal visible={activeDropdown !== null} transparent animationType="slide" onRequestClose={() => setActiveDropdown(null)}>
+      <Modal visible={activeDropdown !== null} transparent animationType={isDesktop ? 'fade' : 'slide'} onRequestClose={() => setActiveDropdown(null)}>
         <KeyboardAvoidingView
           behavior="padding"
-          style={{ flex: 1, justifyContent: 'flex-end' }}
+          style={isDesktop ? { flex: 1 } : { flex: 1, justifyContent: 'flex-end' }}
         >
-          <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.3)', justifyContent: 'flex-end' }}>
-            <TouchableOpacity style={{ flex: 1 }} activeOpacity={1} onPress={() => setActiveDropdown(null)} />
+          <View style={isDesktop
+            ? { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center', padding: spacing.lg }
+            : { flex: 1, backgroundColor: 'rgba(0,0,0,0.3)', justifyContent: 'flex-end' }
+          }>
+            {isDesktop ? (
+              <TouchableOpacity style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }} activeOpacity={1} onPress={() => setActiveDropdown(null)} />
+            ) : (
+              <TouchableOpacity style={{ flex: 1 }} activeOpacity={1} onPress={() => setActiveDropdown(null)} />
+            )}
             <View
-              style={{
-                backgroundColor: colors.surface,
-                borderTopLeftRadius: radii.xl,
-                borderTopRightRadius: radii.xl,
-                padding: spacing.lg,
-                maxHeight: '75%',
-              }}
+              style={isDesktop
+                ? {
+                    backgroundColor: colors.surface,
+                    borderRadius: radii.xl,
+                    maxWidth: 480,
+                    width: '100%',
+                    maxHeight: '75%',
+                    padding: spacing.lg,
+                    shadowColor: '#000',
+                    shadowOpacity: 0.2,
+                    shadowRadius: 30,
+                    shadowOffset: { width: 0, height: 8 },
+                    elevation: 20,
+                  }
+                : {
+                    backgroundColor: colors.surface,
+                    borderTopLeftRadius: radii.xl,
+                    borderTopRightRadius: radii.xl,
+                    padding: spacing.lg,
+                    maxHeight: '75%',
+                  }
+              }
             >
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.md }}>
                 <Text style={{ ...typography.titleMedium, color: colors.textPrimary }}>
