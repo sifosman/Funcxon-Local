@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { WebView } from 'react-native-webview';
+import { useIsDesktop } from '../hooks/useIsDesktop';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -40,6 +41,7 @@ export default function ImageZoomModal({
   initialIndex = 0,
   onClose,
 }: ImageZoomModalProps) {
+  const isDesktop = useIsDesktop();
   const [index, setIndex] = useState(initialIndex);
   const safeItems = items.filter((i) => i?.url);
 
@@ -145,10 +147,10 @@ export default function ImageZoomModal({
           {/* Navigation arrows */}
           {safeItems.length > 1 && (
             <>
-              <TouchableOpacity onPress={goPrev} style={styles.navButtonLeft}>
+              <TouchableOpacity onPress={goPrev} style={[styles.navButtonLeft, isDesktop && styles.navButtonDesktop]}>
                 <MaterialIcons name="chevron-left" size={28} color="#FFFFFF" />
               </TouchableOpacity>
-              <TouchableOpacity onPress={goNext} style={styles.navButtonRight}>
+              <TouchableOpacity onPress={goNext} style={[styles.navButtonRight, isDesktop && styles.navButtonDesktop]}>
                 <MaterialIcons name="chevron-right" size={28} color="#FFFFFF" />
               </TouchableOpacity>
             </>
@@ -166,7 +168,8 @@ export default function ImageZoomModal({
           {/* Media */}
           <View style={styles.mediaContainer}>
             {currentItem?.type === 'video' ? (
-              <WebView
+              <View style={[styles.mediaWrapper, isDesktop && styles.mediaWrapperDesktop]}>
+                <WebView
                 source={{
                   html: `
                     <!DOCTYPE html>
@@ -194,9 +197,10 @@ export default function ImageZoomModal({
                 startInLoadingState
                 allowsFullscreen
               />
+              </View>
             ) : (
               <GestureDetector gesture={composed}>
-                <Animated.View style={[styles.imageWrapper, animatedStyle]}>
+                <Animated.View style={[styles.imageWrapper, isDesktop && styles.imageWrapperDesktop, animatedStyle]}>
                   <Animated.Image
                     source={{ uri: currentItem?.url }}
                     style={styles.image}
@@ -277,6 +281,25 @@ const styles = StyleSheet.create({
     height: SCREEN_H * 0.7,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  imageWrapperDesktop: {
+    width: '100%',
+    height: '100%',
+  },
+  mediaWrapper: {
+    width: '100%',
+    height: '100%',
+  },
+  mediaWrapperDesktop: {
+    maxWidth: 1000,
+    maxHeight: '85%',
+    alignSelf: 'center',
+  },
+  navButtonDesktop: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    marginTop: -24,
   },
   image: {
     width: '100%',

@@ -4,6 +4,7 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { colors, spacing, radii, typography } from '../theme';
 import { SUPPORT_EMAIL, SUPPORT_WHATSAPP } from '../utils/env';
 import ThemedAlert from './ThemedAlert';
+import { useIsDesktop } from '../hooks/useIsDesktop';
 
 type HelpCenterModalProps = {
   visible: boolean;
@@ -16,6 +17,7 @@ type HelpCenterModalProps = {
 export function HelpCenterModal({ visible, onClose, onNavigateToHelp, onDeleteAccount, userRole }: HelpCenterModalProps) {
   const [alertVisible, setAlertVisible] = useState(false);
   const isAttendee = userRole === 'attendee';
+  const isDesktop = useIsDesktop();
 
   const whatsappLink = useMemo(() => {
     const number = SUPPORT_WHATSAPP.replace(/[^0-9+]/g, '');
@@ -44,8 +46,107 @@ export function HelpCenterModal({ visible, onClose, onNavigateToHelp, onDeleteAc
     setAlertVisible(true);
   };
 
-  return (
-    <>
+  /* ─── Desktop Layout: centered dialog with 2×2 grid ─── */
+  const desktopModal = (
+    <Modal animationType="fade" visible={visible} transparent onRequestClose={onClose}>
+      <View style={styles.desktopBackdrop}>
+        <View style={styles.desktopDialog}>
+          <View style={styles.header}>
+            <Text style={styles.title}>Need help?</Text>
+            <TouchableOpacity onPress={onClose} hitSlop={12}>
+              <MaterialIcons name="close" size={22} color={colors.textMuted} />
+            </TouchableOpacity>
+          </View>
+
+          <ScrollView contentContainerStyle={styles.desktopContent} bounces={false}>
+            <View style={styles.desktopGrid}>
+              {/* Help Center */}
+              <View style={[styles.card, styles.desktopCard]}>
+                <View style={styles.cardHeader}>
+                  <View style={styles.iconCirclePrimary}>
+                    <MaterialIcons name="chat-bubble-outline" size={18} color={colors.primaryForeground} />
+                  </View>
+                  <Text style={styles.cardTitle}>Help Center</Text>
+                </View>
+                <Text style={styles.cardBody}>
+                  Browse FAQs for quick answers about quotes, portfolio creation, billing, and bookings.
+                </Text>
+                <TouchableOpacity
+                  style={styles.chip}
+                  onPress={() => {
+                    onClose();
+                    onNavigateToHelp?.();
+                  }}
+                >
+                  <Text style={styles.chipText}>View FAQs</Text>
+                </TouchableOpacity>
+              </View>
+
+              {/* Contact Support */}
+              <View style={[styles.card, styles.desktopCard]}>
+                <View style={styles.cardHeader}>
+                  <View style={styles.iconCircleGreen}>
+                    <MaterialIcons name="support-agent" size={18} color={colors.primaryForeground} />
+                  </View>
+                  <Text style={styles.cardTitle}>Contact Support</Text>
+                </View>
+                <Text style={styles.cardBody}>Chat with our help desk team or send us an email.</Text>
+                <View style={styles.actionsRow}>
+                  <TouchableOpacity style={styles.primaryBtn} onPress={handleWhatsapp}>
+                    <MaterialIcons name="chat" size={18} color={colors.primaryForeground} />
+                    <Text style={styles.primaryBtnText}>WhatsApp</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={styles.secondaryBtn} onPress={handleEmail}>
+                    <MaterialIcons name="email" size={18} color={colors.textPrimary} />
+                    <Text style={styles.secondaryBtnText}>Email us</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+
+              {/* Portfolio Manager */}
+              <View style={[styles.card, styles.desktopCard]}>
+                <View style={styles.cardHeader}>
+                  <View style={styles.iconCirclePurple}>
+                    <MaterialIcons name="person-pin" size={18} color={colors.primaryForeground} />
+                  </View>
+                  <Text style={styles.cardTitle}>Dedicated Portfolio Manager</Text>
+                </View>
+                <Text style={styles.cardBody}>
+                  {isAttendee
+                    ? "Need help planning your event? Request a dedicated portfolio manager to help you find the perfect venues and vendors."
+                    : "Get personalised guidance on portfolio setup, profile edits, ad placements, and troubleshooting."}
+                </Text>
+                <TouchableOpacity style={styles.secondaryBtn} onPress={handleRequestManager}>
+                  <MaterialIcons name="arrow-forward" size={18} color={colors.textPrimary} />
+                  <Text style={styles.secondaryBtnText}>Request a manager</Text>
+                </TouchableOpacity>
+              </View>
+
+              {/* Account Management */}
+              <View style={[styles.card, styles.desktopCard]}>
+                <View style={styles.cardHeader}>
+                  <View style={styles.iconCircleRed}>
+                    <MaterialIcons name="delete-outline" size={18} color={colors.primaryForeground} />
+                  </View>
+                  <Text style={styles.cardTitle}>Account Management</Text>
+                </View>
+                <Text style={styles.cardBody}>
+                  Manage your account settings or permanently delete your account and all associated data.
+                </Text>
+                <TouchableOpacity style={styles.dangerBtn} onPress={handleDeleteAccount}>
+                  <MaterialIcons name="delete" size={18} color="#FFFFFF" />
+                  <Text style={styles.dangerBtnText}>Delete Account</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </ScrollView>
+        </View>
+      </View>
+    </Modal>
+  );
+
+  /* ─── Mobile Layout: bottom sheet (unchanged) ─── */
+  const mobileModal = (
     <Modal animationType="slide" visible={visible} transparent onRequestClose={onClose}>
       <View style={styles.backdrop}>
         <View style={styles.sheet}>
@@ -135,6 +236,11 @@ export function HelpCenterModal({ visible, onClose, onNavigateToHelp, onDeleteAc
         </View>
       </View>
     </Modal>
+  );
+
+  return (
+    <>
+    {isDesktop ? desktopModal : mobileModal}
     <ThemedAlert
       visible={alertVisible}
       title="Delete Account"
@@ -302,5 +408,39 @@ const styles = StyleSheet.create({
     ...typography.body,
     color: '#FFFFFF',
     fontWeight: '700',
+  },
+  desktopBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: spacing.lg,
+  },
+  desktopDialog: {
+    backgroundColor: colors.surface,
+    borderRadius: radii.xl,
+    maxWidth: 640,
+    width: '100%',
+    maxHeight: '85%',
+    paddingTop: spacing.lg,
+    paddingBottom: spacing.xl,
+    shadowColor: '#000',
+    shadowOpacity: 0.2,
+    shadowRadius: 30,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 20,
+  },
+  desktopContent: {
+    paddingHorizontal: spacing.lg,
+    gap: spacing.md,
+  },
+  desktopGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.md,
+  },
+  desktopCard: {
+    flex: 1,
+    minWidth: '46%',
   },
 });

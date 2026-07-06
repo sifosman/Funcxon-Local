@@ -9,6 +9,7 @@ import {
   Pressable,
 } from 'react-native';
 import { colors, spacing, radii, typography } from '../theme';
+import { useIsDesktop } from '../hooks/useIsDesktop';
 
 type AlertButton = {
   text: string;
@@ -25,6 +26,7 @@ type ThemedAlertProps = {
 };
 
 export default function ThemedAlert({ visible, title, message, buttons, onDismiss }: ThemedAlertProps) {
+  const isDesktop = useIsDesktop();
   const fadeAnim = useState(new Animated.Value(0))[0];
   const slideAnim = useState(new Animated.Value(20))[0];
 
@@ -54,10 +56,11 @@ export default function ThemedAlert({ visible, title, message, buttons, onDismis
         <Animated.View
           style={[
             styles.box,
+            isDesktop && styles.boxDesktop,
             { opacity: fadeAnim, transform: [{ translateY: slideAnim }] },
           ]}
         >
-          <Text style={styles.title}>{title}</Text>
+          <Text style={[styles.title, isDesktop && styles.titleDesktop]}>{title}</Text>
           {message ? <Text style={styles.message}>{message}</Text> : null}
           <View style={styles.buttonRow}>
             {btnDefs.map((btn, i) => {
@@ -118,6 +121,14 @@ const styles = StyleSheet.create({
     shadowRadius: 20,
     shadowOffset: { width: 0, height: 8 },
     elevation: 8,
+  },
+  boxDesktop: {
+    maxWidth: 440,
+    shadowOpacity: 0.2,
+    shadowRadius: 30,
+  },
+  titleDesktop: {
+    fontSize: 22,
   },
   title: {
     ...typography.titleMedium,

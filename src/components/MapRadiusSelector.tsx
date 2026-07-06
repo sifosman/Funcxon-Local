@@ -13,6 +13,7 @@ import { colors, spacing, radii, typography } from '../theme';
 import * as ExpoLocation from 'expo-location';
 import { WebView } from 'react-native-webview';
 import ThemedAlert from './ThemedAlert';
+import { useIsDesktop } from '../hooks/useIsDesktop';
 
 interface LatLng {
   latitude: number;
@@ -42,6 +43,7 @@ export default function MapRadiusSelector({
   const [alertState, setAlertState] = useState<{visible: boolean; title: string; message: string} | null>(null);
   const webViewRef = useRef<any>(null);
   const hasAutoDetected = useRef(false);
+  const isDesktop = useIsDesktop();
 
   // Auto-detect user location when the modal opens
   useEffect(() => {
@@ -116,6 +118,195 @@ export default function MapRadiusSelector({
     return 'Very Wide Area';
   };
 
+  /* ─── Desktop Layout: centered dialog with two-column layout ─── */
+  if (isDesktop) {
+    return (
+      <>
+        <Modal
+          visible={visible}
+          animationType="fade"
+          transparent
+          onRequestClose={onClose}
+        >
+          <View style={styles.desktopBackdrop}>
+            <View style={styles.desktopDialog}>
+              {/* Close button top-right */}
+              <TouchableOpacity onPress={onClose} style={styles.desktopCloseButton}>
+                <MaterialIcons name="close" size={24} color={colors.textMuted} />
+              </TouchableOpacity>
+
+              <View style={styles.desktopTwoColumn}>
+                {/* Left column: Map */}
+                <View style={styles.desktopMapColumn}>
+                  {Platform.OS === 'web' ? (
+                    <iframe
+                      title="Google Map"
+                      style={{ width: '100%', height: '100%', border: 'none', borderRadius: radii.md } as any}
+                      src={`https://www.google.com/maps/embed/v1/place?key=AIzaSyBjd1KYtTaAzxzdw5ayGwwMu5Sex-gKQLI&q=${selectedLocation.latitude},${selectedLocation.longitude}&zoom=12`}
+                      allowFullScreen
+                    />
+                  ) : (
+                    <WebView
+                      ref={webViewRef}
+                      style={{ flex: 1, borderRadius: radii.md }}
+                      originWhitelist={['*']}
+                      javaScriptEnabled={true}
+                      source={{
+                        html: `
+                          <!DOCTYPE html>
+                          <html>
+                          <head>
+                            <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+                            <style>html,body,#map{margin:0;padding:0;width:100%;height:100%;}</style>
+                          </head>
+                          <body>
+                            <div id="map"></div>
+                            <script>
+                              let map, marker, circle;
+                              function initMap() {
+                                const center = {lat: ${selectedLocation.latitude}, lng: ${selectedLocation.longitude}};
+                                map = new google.maps.Map(document.getElementById('map'), {
+                                  center: center,
+                                  zoom: 11,
+                                  disableDefaultUI: true,
+                                  zoomControl: true,
+                                  gestureHandling: 'greedy',
+                                });
+                                marker = new google.maps.Marker({
+                                  position: center,
+                                  map: map,
+                                  draggable: false,
+                                });
+                                circle = new google.maps.Circle({
+                                  map: map,
+                                  center: center,
+                                  radius: ${radiusInMeters},
+                                  fillColor: '${colors.primary}',
+                                  fillOpacity: 0.15,
+                                  strokeColor: '${colors.primary}',
+                                  strokeWeight: 2,
+                                });
+                                map.addListener('click', function(e) {
+                                  const lat = e.latLng.lat();
+                                  const lng = e.latLng.lng();
+                                  marker.setPosition({lat, lng});
+                                  circle.setCenter({lat, lng});
+                                  window.ReactNativeWebView.postMessage(JSON.stringify({lat, lng}));
+                                });
+                              }
+                            </script>
+                            <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBjd1KYtTaAzxzdw5ayGwwMu5Sex-gKQLI&callback=initMap" async defer></script>
+                          </body>
+                          </html>
+                        `,
+                      }}
+                      onMessage={(event) => {
+                        try {
+                          const { lat, lng } = JSON.parse(event.nativeEvent.data);
+                          setSelectedLocation({ latitude: lat, longitude: lng });
+                        } catch (e) {
+                          // ignore parse errors
+                        }
+                      }}
+                    />
+                  )}
+                </View>
+
+                {/* Right column: Controls */}
+                <View style={styles.desktopControlsColumn}>
+                  {/* Location detect button */}
+                  <TouchableOpacity onPress={handleGetCurrentLocation} style={styles.desktopLocationButton}>
+                    {isLoading ? (
+                      <ActivityIndicator size="small" color={colors.primary} />
+                    ) : (
+                      <>
+                        <MaterialIcons name="my-location" size={20} color={colors.primary} />
+                        <Text style={styles.desktopLocationText}>Detect my location</Text>
+                      </>
+                    )}
+                  </TouchableOpacity>
+
+                  {/* Radius info */}
+                  <View style={styles.desktopRadiusInfo}>
+                    <Text style={styles.radiusTitle}>Search Radius</Text>
+                    <Text style={styles.radiusValue}>{radiusKm} km</Text>
+                    <Text style={styles.radiusDescription}>{getRadiusDescription()}</Text>
+                  </View>
+
+                  {/* Radius buttons */}
+                  <View style={styles.desktopRadiusButtons}>
+                    {radiusOptions.map((radius) => (
+                      <TouchableOpacity
+                        key={radius}
+                        onPress={() => handleRadiusChange(radius)}
+                        style={[
+                          styles.radiusButton,
+                          radiusKm === radius && styles.radiusButtonActive,
+                        ]}
+                      >
+                        <Text
+                          style={[
+                            styles.radiusButtonText,
+                            radiusKm === radius && styles.radiusButtonTextActive,
+                          ]}
+                        >
+                          {radius}km
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                    <TouchableOpacity
+                      onPress={handleAnyRadius}
+                      style={[
+                        styles.radiusButton,
+                        radiusKm === 100 && styles.radiusButtonActive,
+                      ]}
+                    >
+                      <Text
+                        style={[
+                          styles.radiusButtonText,
+                          radiusKm === 100 && styles.radiusButtonTextActive,
+                        ]}
+                      >
+                        Any
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+
+                  {/* Action buttons */}
+                  <View style={styles.desktopActions}>
+                    <TouchableOpacity
+                      onPress={handleCancelSelection}
+                      style={[styles.clearButton, { flex: 1 }]}
+                    >
+                      <Text style={styles.clearButtonText}>Cancel</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      onPress={handleApply}
+                      style={[styles.applyButton, { flex: 1 }]}
+                    >
+                      <Text style={styles.applyButtonText}>Apply</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              </View>
+            </View>
+          </View>
+        </Modal>
+
+        {alertState && (
+          <ThemedAlert
+            visible={alertState.visible}
+            title={alertState.title}
+            message={alertState.message}
+            buttons={[{ text: 'OK', style: 'default', onPress: () => setAlertState(null) }]}
+            onDismiss={() => setAlertState(null)}
+          />
+        )}
+      </>
+    );
+  }
+
+  /* ─── Mobile Layout: full-screen (unchanged) ─── */
   return (
     <Modal
       visible={visible}
@@ -426,5 +617,75 @@ const styles = StyleSheet.create({
     ...typography.body,
     color: '#FFFFFF',
     fontWeight: '600',
+  },
+  desktopBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: spacing.lg,
+  },
+  desktopDialog: {
+    backgroundColor: colors.surface,
+    borderRadius: radii.xl,
+    maxWidth: 900,
+    width: '100%',
+    maxHeight: '85%',
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOpacity: 0.2,
+    shadowRadius: 30,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 20,
+  },
+  desktopCloseButton: {
+    position: 'absolute',
+    top: spacing.sm,
+    right: spacing.sm,
+    zIndex: 30,
+    padding: spacing.sm,
+  },
+  desktopTwoColumn: {
+    flexDirection: 'row',
+    height: '100%',
+  },
+  desktopMapColumn: {
+    flex: 3,
+    padding: spacing.md,
+  },
+  desktopControlsColumn: {
+    flex: 2,
+    padding: spacing.lg,
+    justifyContent: 'space-between',
+  },
+  desktopLocationButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    borderRadius: radii.md,
+    backgroundColor: colors.accent,
+    alignSelf: 'flex-start',
+  },
+  desktopLocationText: {
+    ...typography.caption,
+    color: colors.textPrimary,
+    fontWeight: '600',
+  },
+  desktopRadiusInfo: {
+    alignItems: 'center',
+    paddingVertical: spacing.md,
+  },
+  desktopRadiusButtons: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+    gap: spacing.sm,
+  },
+  desktopActions: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+    paddingTop: spacing.md,
   },
 });
