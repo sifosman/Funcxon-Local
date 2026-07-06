@@ -351,6 +351,8 @@ export default function AttendeeHomeScreen() {
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
   const [showSortModal, setShowSortModal] = useState(false);
   const [showMapRadiusSelector, setShowMapRadiusSelector] = useState(false);
+  const [venueExpanded, setVenueExpanded] = useState(false);
+  const [vendorExpanded, setVendorExpanded] = useState(false);
   const [mapCenter, setMapCenter] = useState<{ latitude: number; longitude: number } | null>(null);
   const [mapRadius, setMapRadius] = useState<number>(20);
   const [helpVisible, setHelpVisible] = useState(false);
@@ -1566,14 +1568,29 @@ export default function AttendeeHomeScreen() {
           </TouchableOpacity>
         </View>
         {isDesktop ? (
+          <>
           <View style={desktopGridStyle as any}>
             {sortedFeaturedData
               .filter((item) => item.type === 'venue')
-              .slice(0, isDesktop ? 8 : 6)
+              .slice(0, isDesktop ? (venueExpanded ? 12 : 4) : 6)
               .map((item) =>
                 renderFeaturedCard(item, () => navigation.navigate('VenueProfile', { venueId: item.id })),
               )}
           </View>
+          {sortedFeaturedData.filter((item) => item.type === 'venue').length > 4 && (
+            <View style={{ alignItems: 'center', marginTop: spacing.md, marginBottom: spacing.sm }}>
+              <TouchableOpacity
+                onPress={() => setVenueExpanded(!venueExpanded)}
+                style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: spacing.sm, paddingHorizontal: spacing.lg, backgroundColor: colors.surface, borderRadius: radii.full, borderWidth: 1, borderColor: colors.borderSubtle }}
+              >
+                <Text style={{ ...typography.bodySemiBold, color: colors.secondaryBlue, marginRight: spacing.xs }}>
+                  {venueExpanded ? 'Show less' : 'View more'}
+                </Text>
+                <MaterialIcons name={venueExpanded ? 'keyboard-arrow-up' : 'keyboard-arrow-down'} size={20} color={colors.secondaryBlue} />
+              </TouchableOpacity>
+            </View>
+          )}
+          </>
         ) : (
           <ScrollView
             horizontal
@@ -1604,14 +1621,29 @@ export default function AttendeeHomeScreen() {
           </TouchableOpacity>
         </View>
         {isDesktop ? (
+          <>
           <View style={desktopGridStyle as any}>
             {sortedFeaturedData
               .filter((item) => item.type === 'vendor')
-              .slice(0, isDesktop ? 4 : 6)
+              .slice(0, isDesktop ? (vendorExpanded ? 12 : 4) : 6)
               .map((item) =>
                 renderFeaturedCard(item, () => navigation.navigate('VendorProfile', { vendorId: item.id })),
               )}
           </View>
+          {sortedFeaturedData.filter((item) => item.type === 'vendor').length > 4 && (
+            <View style={{ alignItems: 'center', marginTop: spacing.md, marginBottom: spacing.sm }}>
+              <TouchableOpacity
+                onPress={() => setVendorExpanded(!vendorExpanded)}
+                style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: spacing.sm, paddingHorizontal: spacing.lg, backgroundColor: colors.surface, borderRadius: radii.full, borderWidth: 1, borderColor: colors.borderSubtle }}
+              >
+                <Text style={{ ...typography.bodySemiBold, color: colors.secondaryBlue, marginRight: spacing.xs }}>
+                  {vendorExpanded ? 'Show less' : 'View more'}
+                </Text>
+                <MaterialIcons name={vendorExpanded ? 'keyboard-arrow-up' : 'keyboard-arrow-down'} size={20} color={colors.secondaryBlue} />
+              </TouchableOpacity>
+            </View>
+          )}
+          </>
         ) : (
           <ScrollView
             horizontal
@@ -1816,7 +1848,7 @@ export default function AttendeeHomeScreen() {
 
         {isDesktop ? (
           <View style={desktopGridStyle as any}>
-            {(blogPosts || []).slice(0, isDesktop ? 8 : 6).map((post) => (
+            {(blogPosts || []).slice(0, isDesktop ? 4 : 6).map((post) => (
               <TouchableOpacity
                 key={post.id}
                 activeOpacity={0.9}
