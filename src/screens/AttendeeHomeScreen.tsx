@@ -1388,6 +1388,7 @@ export default function AttendeeHomeScreen() {
             {/* Desktop Hero Search Bar */}
             {isDesktop && isFocused && (
             <View
+              testID="hero-search-bar"
               style={{
                 width: '100%',
                 maxWidth: 768,
@@ -1419,6 +1420,7 @@ export default function AttendeeHomeScreen() {
               >
                 <MaterialIcons name="search" size={20} color={colors.outline} />
                 <TextInput
+                  testID="hero-search-input"
                   value={heroSearch}
                   onChangeText={setHeroSearch}
                   onSubmitEditing={handleHeroSearch}
@@ -1472,6 +1474,7 @@ export default function AttendeeHomeScreen() {
                 </View>
 
                 <TouchableOpacity
+                  testID="hero-search-button"
                   onPress={handleHeroSearch}
                   style={{
                     backgroundColor: colors.primary,
