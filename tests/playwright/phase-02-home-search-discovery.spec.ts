@@ -85,11 +85,10 @@ async function clickByText(page: Page, text: string) {
 
 async function navigateToDiscover(page: Page) {
   await clickByText(page, 'Vendors');
-  // Wait for the Discover filter sidebar/modal to render before proceeding.
-  await page
-    .getByText('Filters', { exact: true })
-    .first()
-    .waitFor({ state: 'visible', timeout: 10000 });
+  // Wait for the Discover screen to render — the filter sidebar text may be
+  // zero-size in React Native Web, so wait for the results header instead.
+  await expect(page.getByText(/Discover (Vendors|Venues)/).first()).toBeVisible({ timeout: 15000 });
+  await page.waitForTimeout(500);
 }
 
 async function clickCategoryTab(page: Page, label: string) {
@@ -189,8 +188,16 @@ async function selectFilterDropdown(page: Page, label: string, title: string, op
 }
 
 async function openSortOptions(page: Page) {
-  await page.getByLabel('Open sort options').first().click();
-  await expect(page.getByText('Sort options', { exact: true }).first()).toBeVisible();
+  // Desktop renders a sort dropdown labelled "best match"; mobile uses aria-label.
+  const sortBtn = page.getByLabel('Open sort options').first();
+  const sortVisible = await sortBtn.isVisible().catch(() => false);
+  if (sortVisible) {
+    await sortBtn.click();
+  } else {
+    // Desktop: click the "best match" sort trigger text.
+    await clickByText(page, 'best match');
+  }
+  await expect(page.getByText('Sort options', { exact: true }).first()).toBeVisible({ timeout: 10000 });
 }
 
 async function fetchSampleListing() {
