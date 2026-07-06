@@ -1939,6 +1939,7 @@ const renderSidebar = () => (
         </View>
 
         <View style={{ borderTopWidth: 1, borderTopColor: colors.outlineVariant, paddingTop: spacing.lg, marginTop: spacing.lg }}>
+          {/* Venue identity row */}
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md, marginBottom: spacing.md }}>
             {venue.image_url ? (
               <View style={{ width: 48, height: 48, borderRadius: 24, overflow: 'hidden', backgroundColor: colors.surfaceBg }}>
@@ -1950,27 +1951,77 @@ const renderSidebar = () => (
               </View>
             )}
             <View style={{ flex: 1 }}>
-              <Text style={{ ...typography.bodySemiBold, color: colors.primary }}>{venue.name}</Text>
-              <Text style={{ ...typography.caption, color: colors.onSurfaceVariant }}>
-                {venue.city || venue.province || 'South Africa'}
-              </Text>
+              <Text style={{ ...typography.bodySemiBold, color: colors.textPrimary }}>{venue.name}</Text>
+              {venue.venue_type ? (
+                <Text style={{ ...typography.caption, color: colors.onSurfaceVariant }}>{venue.venue_type}</Text>
+              ) : null}
             </View>
           </View>
-          <TouchableOpacity
-            onPress={() => {
-              if (whatsappUrl) {
-                handleOpenUrl(whatsappUrl);
-              } else if (emailUrl) {
-                handleOpenUrl(emailUrl);
-              } else {
-                setAlertState({ visible: true, title: 'Contact', message: 'No contact details available.' });
-              }
-            }}
-          >
-            <Text style={{ ...typography.captionSemiBold, color: colors.primary, textDecorationLine: 'underline' }}>
-              Contact Host
-            </Text>
-          </TouchableOpacity>
+
+          {/* Address */}
+          {physicalAddress ? (
+            <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm, marginBottom: spacing.sm }}>
+              <MaterialIcons name="place" size={16} color={colors.outline} style={{ marginTop: 2 } as any} />
+              <Text style={{ ...typography.caption, color: colors.onSurfaceVariant, flex: 1, lineHeight: 18 }}>
+                {physicalAddress}
+              </Text>
+            </View>
+          ) : null}
+
+          {/* Contact details */}
+          <View style={{ gap: spacing.sm, marginTop: physicalAddress ? spacing.xs : 0 }}>
+            {venue.whatsapp_number ? (
+              <TouchableOpacity
+                onPress={() => handleOpenUrl(whatsappUrl)}
+                style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}
+              >
+                <MaterialIcons name="phone" size={16} color={colors.primaryTeal} />
+                <Text style={{ ...typography.caption, color: colors.primaryTeal }}>
+                  {venue.whatsapp_number}
+                </Text>
+              </TouchableOpacity>
+            ) : null}
+
+            {venue.contact_email ? (
+              <TouchableOpacity
+                onPress={() => handleOpenUrl(emailUrl)}
+                style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}
+              >
+                <MaterialIcons name="email" size={16} color={colors.primary} />
+                <Text style={{ ...typography.caption, color: colors.primary }}>
+                  {venue.contact_email}
+                </Text>
+              </TouchableOpacity>
+            ) : null}
+
+            {venue.website_url ? (
+              <TouchableOpacity
+                onPress={() => handleOpenUrl(venue.website_url!)}
+                style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}
+              >
+                <MaterialIcons name="language" size={16} color={colors.primary} />
+                <Text style={{ ...typography.caption, color: colors.primary }} numberOfLines={1}>
+                  {venue.website_url.replace(/^https?:\/\//, '')}
+                </Text>
+              </TouchableOpacity>
+            ) : null}
+
+            {venue.instagram_url ? (
+              <TouchableOpacity
+                onPress={() => handleOpenUrl(venue.instagram_url!)}
+                style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}
+              >
+                <MaterialIcons name="photo-camera" size={16} color={colors.primary} />
+                <Text style={{ ...typography.caption, color: colors.primary }} numberOfLines={1}>
+                  {venue.instagram_url.replace(/^https?:\/\/(www\.)?instagram\.com\//, '@').replace(/\/$/, '')}
+                </Text>
+              </TouchableOpacity>
+            ) : null}
+
+            {!venue.whatsapp_number && !venue.contact_email && !venue.website_url && !venue.instagram_url ? (
+              <Text style={{ ...typography.caption, color: colors.textMuted }}>No contact details available</Text>
+            ) : null}
+          </View>
         </View>
       </View>
     </View>
