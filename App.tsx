@@ -26,6 +26,7 @@ import { HelpCenterModal } from './src/components/HelpCenterModal';
 import DataConsentModal, { hasAcceptedDataConsent } from './src/components/DataConsentModal';
 import { useVendorStatus } from './src/hooks/useVendorStatus';
 import AppHeader from './src/components/AppHeader';
+import * as SystemUI from 'expo-system-ui';
 
 const queryClient = new QueryClient();
 
@@ -92,7 +93,14 @@ export default function App() {
       setConsentChecked(true);
     });
   }, []);
-  
+
+  // Enforce white body background on the web build (desktop view)
+  useEffect(() => {
+    if (Platform.OS === 'web') {
+      SystemUI.setBackgroundColorAsync(colors.background);
+    }
+  }, []);
+
   // Only load custom fonts on native platforms
   const [fontsLoaded] = useFonts({
     Montserrat_400Regular,
