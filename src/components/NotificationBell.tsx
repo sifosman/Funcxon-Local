@@ -1,9 +1,10 @@
-import { useEffect, useState } from 'react';
-import { View, Text, TouchableOpacity, Modal, ScrollView, ActivityIndicator } from 'react-native';
+import { useEffect, useState, useRef } from 'react';
+import { View, Text, TouchableOpacity, Modal, ScrollView, ActivityIndicator, Platform, Pressable } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { useAuth } from '../auth/AuthContext';
 import { colors, spacing, radii, typography } from '../theme';
+import { useIsDesktop } from '../hooks/useIsDesktop';
 import { fetchNotifications, fetchUnreadCount, markNotificationRead, markAllNotificationsRead, NotificationRow } from '../lib/notifications';
 
 const POLL_INTERVAL_MS = 30_000;
@@ -11,6 +12,7 @@ const POLL_INTERVAL_MS = 30_000;
 export default function NotificationBell() {
   const { user } = useAuth();
   const navigation = useNavigation<any>();
+  const isDesktop = useIsDesktop();
   const [open, setOpen] = useState(false);
   const [notifications, setNotifications] = useState<NotificationRow[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
@@ -146,109 +148,223 @@ export default function NotificationBell() {
       <Modal
         visible={open}
         transparent
-        animationType="slide"
+        animationType={isDesktop ? 'fade' : 'slide'}
         onRequestClose={() => setOpen(false)}
       >
-        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' }}>
-          <View
-            style={{
-              backgroundColor: colors.background,
-              borderTopLeftRadius: radii.xl,
-              borderTopRightRadius: radii.xl,
-              maxHeight: '80%',
-              paddingBottom: spacing.xl,
-            }}
-          >
+        <Pressable style={{ flex: 1 }} onPress={() => setOpen(false)}>
+          {/* Desktop: mini dropdown anchored top-right (booking.com style) */}
+          {isDesktop ? (
             <View
+              onStartShouldSetResponder={() => true}
               style={{
-                flexDirection: 'row',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                padding: spacing.lg,
-                borderBottomWidth: 1,
-                borderBottomColor: colors.borderSubtle,
+                position: 'absolute',
+                top: 64,
+                right: spacing.xl,
+                width: 380,
+                maxHeight: 500,
+                backgroundColor: colors.background,
+                borderRadius: radii.lg,
+                shadowColor: '#000',
+                shadowOffset: { width: 0, height: 8 },
+                shadowOpacity: 0.18,
+                shadowRadius: 24,
+                elevation: 12,
+                overflow: 'hidden',
               }}
             >
-              <Text style={{ ...typography.titleMedium, color: colors.textPrimary }}>Notifications</Text>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md }}>
-                <TouchableOpacity onPress={markAllRead}>
-                  <Text style={{ ...typography.bodySemiBold, color: colors.primary }}>Mark all read</Text>
-                </TouchableOpacity>
-                <TouchableOpacity onPress={() => setOpen(false)}>
-                  <MaterialIcons name="close" size={24} color={colors.textMuted} />
+              {/* Header */}
+              <View
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  paddingHorizontal: spacing.lg,
+                  paddingVertical: spacing.md,
+                  borderBottomWidth: 1,
+                  borderBottomColor: colors.borderSubtle,
+                }}
+              >
+                <Text style={{ ...typography.titleMedium, color: colors.textPrimary }}>Notifications</Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md }}>
+                  {unreadCount > 0 && (
+                    <TouchableOpacity onPress={markAllRead}>
+                      <Text style={{ ...typography.bodySemiBold, color: colors.primary }}>Mark all read</Text>
+                    </TouchableOpacity>
+                  )}
+                  <TouchableOpacity onPress={() => setOpen(false)}>
+                    <MaterialIcons name="close" size={20} color={colors.textMuted} />
+                  </TouchableOpacity>
+                </View>
+              </View>
+
+              {/* List */}
+              <ScrollView style={{ maxHeight: 420 }}>
+                {loading && notifications.length === 0 ? (
+                  <View style={{ padding: spacing.xl, alignItems: 'center' }}>
+                    <ActivityIndicator color={colors.primary} />
+                  </View>
+                ) : notifications.filter((n) => !n.read).length === 0 ? (
+                  <View style={{ padding: spacing.xl, alignItems: 'center' }}>
+                    <MaterialIcons name="notifications-none" size={40} color={colors.textMuted} />
+                    <Text style={{ ...typography.body, color: colors.textMuted, marginTop: spacing.sm }}>
+                      No notifications yet.
+                    </Text>
+                  </View>
+                ) : (
+                  notifications
+                    .filter((n) => !n.read)
+                    .map((n) => (
+                      <TouchableOpacity
+                        key={n.id}
+                        onPress={() => handleItemPress(n)}
+                        style={{
+                          paddingHorizontal: spacing.lg,
+                          paddingVertical: spacing.md,
+                          borderBottomWidth: 1,
+                          borderBottomColor: colors.borderSubtle,
+                          backgroundColor: n.read ? colors.surface : colors.primaryMuted,
+                        }}
+                      >
+                        <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm }}>
+                          {!n.read && (
+                            <View
+                              style={{
+                                width: 8,
+                                height: 8,
+                                borderRadius: radii.full,
+                                backgroundColor: colors.primary,
+                                marginTop: 6,
+                              }}
+                            />
+                          )}
+                          <View style={{ flex: 1 }}>
+                            <Text style={{ ...typography.bodySemiBold, color: colors.textPrimary }}>
+                              {n.title}
+                            </Text>
+                            <Text style={{ ...typography.body, color: colors.textSecondary, marginTop: 2 }}>
+                              {n.body}
+                            </Text>
+                            <Text style={{ ...typography.caption, color: colors.textMuted, marginTop: 2 }}>
+                              {formatTime(n.created_at)}
+                            </Text>
+                          </View>
+                        </View>
+                      </TouchableOpacity>
+                    ))
+                )}
+              </ScrollView>
+            </View>
+          ) : (
+            /* Mobile: bottom sheet (unchanged) */
+            <View
+              onStartShouldSetResponder={() => true}
+              style={{
+                flex: 1,
+                backgroundColor: 'rgba(0,0,0,0.5)',
+                justifyContent: 'flex-end',
+              }}
+            >
+              <View
+                style={{
+                  backgroundColor: colors.background,
+                  borderTopLeftRadius: radii.xl,
+                  borderTopRightRadius: radii.xl,
+                  maxHeight: '80%',
+                  paddingBottom: spacing.xl,
+                }}
+              >
+                <View
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    padding: spacing.lg,
+                    borderBottomWidth: 1,
+                    borderBottomColor: colors.borderSubtle,
+                  }}
+                >
+                  <Text style={{ ...typography.titleMedium, color: colors.textPrimary }}>Notifications</Text>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md }}>
+                    <TouchableOpacity onPress={markAllRead}>
+                      <Text style={{ ...typography.bodySemiBold, color: colors.primary }}>Mark all read</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity onPress={() => setOpen(false)}>
+                      <MaterialIcons name="close" size={24} color={colors.textMuted} />
+                    </TouchableOpacity>
+                  </View>
+                </View>
+
+                <ScrollView style={{ maxHeight: 400 }}>
+                  {loading && notifications.length === 0 ? (
+                    <View style={{ padding: spacing.xl, alignItems: 'center' }}>
+                      <ActivityIndicator color={colors.primary} />
+                    </View>
+                  ) : notifications.length === 0 ? (
+                    <View style={{ padding: spacing.xl, alignItems: 'center' }}>
+                      <MaterialIcons name="notifications-none" size={48} color={colors.textMuted} />
+                      <Text style={{ ...typography.body, color: colors.textMuted, marginTop: spacing.md }}>
+                        No notifications yet.
+                      </Text>
+                    </View>
+                  ) : (
+                    notifications
+                      .filter((n) => !n.read)
+                      .map((n) => (
+                      <TouchableOpacity
+                        key={n.id}
+                        onPress={() => handleItemPress(n)}
+                        style={{
+                          padding: spacing.lg,
+                          borderBottomWidth: 1,
+                          borderBottomColor: colors.borderSubtle,
+                          backgroundColor: n.read ? colors.surface : colors.primaryMuted,
+                        }}
+                      >
+                        <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm }}>
+                          {!n.read && (
+                            <View
+                              style={{
+                                width: 8,
+                                height: 8,
+                                borderRadius: radii.full,
+                                backgroundColor: colors.primary,
+                                marginTop: 6,
+                              }}
+                            />
+                          )}
+                          <View style={{ flex: 1 }}>
+                            <Text style={{ ...typography.bodySemiBold, color: colors.textPrimary }}>
+                              {n.title}
+                            </Text>
+                            <Text style={{ ...typography.body, color: colors.textSecondary, marginTop: spacing.xs }}>
+                              {n.body}
+                            </Text>
+                            <Text style={{ ...typography.caption, color: colors.textMuted, marginTop: spacing.xs }}>
+                              {formatTime(n.created_at)}
+                            </Text>
+                          </View>
+                        </View>
+                      </TouchableOpacity>
+                    ))
+                  )}
+                </ScrollView>
+
+                <TouchableOpacity
+                  onPress={() => setOpen(false)}
+                  style={{
+                    margin: spacing.lg,
+                    padding: spacing.md,
+                    borderRadius: radii.md,
+                    backgroundColor: colors.primary,
+                    alignItems: 'center',
+                  }}
+                >
+                  <Text style={{ ...typography.bodyBold, color: '#FFFFFF' }}>Close</Text>
                 </TouchableOpacity>
               </View>
             </View>
-
-            <ScrollView style={{ maxHeight: 400 }}>
-              {loading && notifications.length === 0 ? (
-                <View style={{ padding: spacing.xl, alignItems: 'center' }}>
-                  <ActivityIndicator color={colors.primary} />
-                </View>
-              ) : notifications.length === 0 ? (
-                <View style={{ padding: spacing.xl, alignItems: 'center' }}>
-                  <MaterialIcons name="notifications-none" size={48} color={colors.textMuted} />
-                  <Text style={{ ...typography.body, color: colors.textMuted, marginTop: spacing.md }}>
-                    No notifications yet.
-                  </Text>
-                </View>
-              ) : (
-                notifications
-                  .filter((n) => !n.read)
-                  .map((n) => (
-                  <TouchableOpacity
-                    key={n.id}
-                    onPress={() => handleItemPress(n)}
-                    style={{ 
-                      padding: spacing.lg,
-                      borderBottomWidth: 1,
-                      borderBottomColor: colors.borderSubtle,
-                      backgroundColor: n.read ? colors.surface : colors.primaryMuted,
-                    }}
-                  >
-                    <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm }}>
-                      {!n.read && (
-                        <View
-                          style={{
-                            width: 8,
-                            height: 8,
-                            borderRadius: radii.full,
-                            backgroundColor: colors.primary,
-                            marginTop: 6,
-                          }}
-                        />
-                      )}
-                      <View style={{ flex: 1 }}>
-                        <Text style={{ ...typography.bodySemiBold, color: colors.textPrimary }}>
-                          {n.title}
-                        </Text>
-                        <Text style={{ ...typography.body, color: colors.textSecondary, marginTop: spacing.xs }}>
-                          {n.body}
-                        </Text>
-                        <Text style={{ ...typography.caption, color: colors.textMuted, marginTop: spacing.xs }}>
-                          {formatTime(n.created_at)}
-                        </Text>
-                      </View>
-                    </View>
-                  </TouchableOpacity>
-                ))
-              )}
-            </ScrollView>
-
-            <TouchableOpacity
-              onPress={() => setOpen(false)}
-              style={{
-                margin: spacing.lg,
-                padding: spacing.md,
-                borderRadius: radii.md,
-                backgroundColor: colors.primary,
-                alignItems: 'center',
-              }}
-            >
-              <Text style={{ ...typography.bodyBold, color: '#FFFFFF' }}>Close</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
+          )}
+        </Pressable>
       </Modal>
     </>
   );
