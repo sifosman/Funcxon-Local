@@ -15,7 +15,7 @@ import {
 import ThemedAlert from '../components/ThemedAlert';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { MaterialIcons } from '@expo/vector-icons';
-import { useNavigation, useFocusEffect } from '@react-navigation/native';
+import { useNavigation, useFocusEffect, useIsFocused } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useQuery } from '@tanstack/react-query';
 
@@ -304,12 +304,15 @@ export default function AttendeeHomeScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<AttendeeStackParamList>>();
   const scrollViewRef = useRef<ScrollView>(null);
   const [search, setSearch] = useState('');
+  const [heroSearch, setHeroSearch] = useState('');
+  const [heroDate, setHeroDate] = useState('');
   const [serviceType, setServiceType] = useState<ServiceType>('All');
   const isDesktop = useIsDesktop();
+  const isFocused = useIsFocused();
 
-  // Responsive card width - aim for ~2.2 cards visible on mobile, 3 columns on desktop
+  // Responsive card width - aim for ~2.2 cards visible on mobile, 4 columns on desktop
   const [screenWidth, setScreenWidth] = useState(Dimensions.get('window').width);
-  const cardWidth = isDesktop ? (Math.min(screenWidth, 1200) - 48 * 2 - 24 * 2) / 3 : screenWidth / 2.2;
+  const cardWidth = isDesktop ? (Math.min(screenWidth, 1200) - 48 * 2 - 24 * 3) / 4 : screenWidth / 2.2;
 
   useEffect(() => {
     const subscription = Dimensions.addEventListener('change', ({ window }) => {
@@ -416,6 +419,15 @@ export default function AttendeeHomeScreen() {
       searchTitle: 'Search by Services',
       showFilters: true,
       category: 'services',
+    });
+  };
+
+  const handleHeroSearch = () => {
+    const query = heroSearch.trim();
+    navigation.navigate('Discover', {
+      initialSearch: query,
+      category: 'all',
+      searchTitle: query ? `Results for “${query}”` : undefined,
     });
   };
 
@@ -1342,7 +1354,11 @@ export default function AttendeeHomeScreen() {
   const desktopGridStyle = isDesktop ? {
     flexDirection: 'row' as const,
     flexWrap: 'wrap' as const,
+    justifyContent: 'center' as const,
     paddingHorizontal: 48,
+    maxWidth: 1200,
+    width: '100%',
+    alignSelf: 'center' as const,
     gap: 24,
   } : {};
 
@@ -1368,6 +1384,109 @@ export default function AttendeeHomeScreen() {
             <Text style={{ fontSize: 18, fontFamily: 'Montserrat_400Regular', color: 'rgba(255,255,255,0.9)', textAlign: 'center', maxWidth: 600, lineHeight: 28 }}>
               Discover the most exquisite venues and top-tier vendors across South Africa for your next celebration.
             </Text>
+
+            {/* Desktop Hero Search Bar */}
+            {isDesktop && isFocused && (
+            <View
+              style={{
+                width: '100%',
+                maxWidth: 768,
+                marginTop: 32,
+                backgroundColor: colors.surfaceContainerLowest,
+                borderRadius: radii.lg,
+                padding: 8,
+                flexDirection: 'row',
+                gap: 8,
+                shadowColor: '#000',
+                shadowOpacity: 0.12,
+                shadowRadius: 16,
+                shadowOffset: { width: 0, height: 4 },
+                elevation: 6,
+              }}
+            >
+              <View
+                style={{
+                  flex: 1,
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  backgroundColor: colors.surfaceContainerLowest,
+                  borderWidth: 1,
+                  borderColor: colors.brandPink,
+                  borderRadius: radii.md,
+                  paddingHorizontal: 16,
+                  paddingVertical: 12,
+                }}
+              >
+                <MaterialIcons name="search" size={20} color={colors.outline} />
+                <TextInput
+                  value={heroSearch}
+                  onChangeText={setHeroSearch}
+                  onSubmitEditing={handleHeroSearch}
+                  placeholder="Search venues, vendors, locations..."
+                  placeholderTextColor={colors.outline}
+                  returnKeyType="search"
+                  style={{
+                    flex: 1,
+                    marginLeft: 12,
+                    fontFamily: 'Montserrat_400Regular',
+                    fontSize: 16,
+                    color: colors.onSurface,
+                    borderWidth: 0,
+                    backgroundColor: 'transparent',
+                    padding: 0,
+                  }}
+                />
+              </View>
+
+              <View style={{ flexDirection: 'row', gap: 8 }}>
+                <View
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    backgroundColor: colors.surfaceContainerLowest,
+                    borderWidth: 1,
+                    borderColor: colors.brandPink,
+                    borderRadius: radii.md,
+                    paddingHorizontal: 16,
+                    paddingVertical: 12,
+                    minWidth: 150,
+                  }}
+                >
+                  <MaterialIcons name="calendar-today" size={20} color={colors.outline} />
+                  <TextInput
+                    value={heroDate}
+                    onChangeText={setHeroDate}
+                    placeholder="Dates"
+                    placeholderTextColor={colors.outline}
+                    style={{
+                      flex: 1,
+                      marginLeft: 8,
+                      fontFamily: 'Montserrat_400Regular',
+                      fontSize: 14,
+                      color: colors.onSurface,
+                      borderWidth: 0,
+                      backgroundColor: 'transparent',
+                      padding: 0,
+                    }}
+                  />
+                </View>
+
+                <TouchableOpacity
+                  onPress={handleHeroSearch}
+                  style={{
+                    backgroundColor: colors.primary,
+                    paddingHorizontal: 32,
+                    paddingVertical: 12,
+                    borderRadius: radii.md,
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                  }}
+                >
+                  <Text style={{ ...typography.labelLg, color: colors.primaryForeground }}>Search</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+            )}
           </View>
         </View>
       ) : (
@@ -1445,7 +1564,7 @@ export default function AttendeeHomeScreen() {
           <View style={desktopGridStyle as any}>
             {sortedFeaturedData
               .filter((item) => item.type === 'venue')
-              .slice(0, 6)
+              .slice(0, isDesktop ? 8 : 6)
               .map((item) =>
                 renderFeaturedCard(item, () => navigation.navigate('VenueProfile', { venueId: item.id })),
               )}
@@ -1483,7 +1602,7 @@ export default function AttendeeHomeScreen() {
           <View style={desktopGridStyle as any}>
             {sortedFeaturedData
               .filter((item) => item.type === 'vendor')
-              .slice(0, 6)
+              .slice(0, isDesktop ? 8 : 6)
               .map((item) =>
                 renderFeaturedCard(item, () => navigation.navigate('VendorProfile', { vendorId: item.id })),
               )}
@@ -1692,7 +1811,7 @@ export default function AttendeeHomeScreen() {
 
         {isDesktop ? (
           <View style={desktopGridStyle as any}>
-            {(blogPosts || []).slice(0, 6).map((post) => (
+            {(blogPosts || []).slice(0, isDesktop ? 8 : 6).map((post) => (
               <TouchableOpacity
                 key={post.id}
                 activeOpacity={0.9}

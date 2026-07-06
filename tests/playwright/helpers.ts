@@ -79,8 +79,11 @@ export async function openAccountTab(page: Page) {
 
 export async function openAccountMenuItem(page: Page, label: string) {
   // Try several selector strategies to locate the menu item
+  const slug = label.toLowerCase().replace(/\s+/g, '-');
   const candidates = [
-    // Primary: button role with case‑insensitive name
+    // Primary: testID derived from the menu item label (e.g. "Logout" -> "logout")
+    page.getByTestId(slug).first(),
+    // Button role with case‑insensitive name
     page.getByRole('button', { name: new RegExp(label, 'i') }).first(),
     // Role menuitem (fallback)
     page.getByRole('menuitem', { name: new RegExp(label, 'i') }).first(),
@@ -149,11 +152,11 @@ export async function isAuthenticated(page: Page): Promise<boolean> {
 
   try {
     await Promise.any([
-      expect(greeting).toBeVisible({ timeout: 5000 }),
-      expect(logout).toBeVisible({ timeout: 5000 }),
-      expect(userEmail).toBeVisible({ timeout: 5000 }),
-      expect(hello).toBeVisible({ timeout: 5000 }),
-      expect(myProfile).toBeVisible({ timeout: 5000 }),
+      expect(greeting).toBeVisible({ timeout: 10000 }),
+      expect(logout).toBeVisible({ timeout: 10000 }),
+      expect(userEmail).toBeVisible({ timeout: 10000 }),
+      expect(hello).toBeVisible({ timeout: 10000 }),
+      expect(myProfile).toBeVisible({ timeout: 10000 }),
     ]);
     return true;
   } catch (e) {
@@ -332,12 +335,24 @@ export async function loginFromWelcome(page: Page) {
     return;
   }
 
-  // Attempt to click the "Log in" button if it exists (welcome screen)
-  try {
-    await expect(page.getByText('Log in', { exact: true })).toBeVisible({ timeout: 5000 });
-    await page.getByText('Log in', { exact: true }).first().click();
-  } catch (e) {
-    console.log('Log in button not visible – assuming login form is already shown');
+  // The welcome screen may show a POPIA consent modal that blocks the login CTA.
+  await dismissConsentIfPresent(page);
+
+  // Attempt to click the "Log in" / "Sign in" button if it exists (welcome screen)
+  const signInTexts = ['Log in', 'Sign in'];
+  let signInClicked = false;
+  for (const text of signInTexts) {
+    try {
+      await expect(page.getByText(text, { exact: true })).toBeVisible({ timeout: 3000 });
+      await page.getByText(text, { exact: true }).first().click();
+      signInClicked = true;
+      break;
+    } catch (e) {
+      // try next label
+    }
+  }
+  if (!signInClicked) {
+    console.log('Log in/Sign in button not visible – assuming login form is already shown');
   }
 
   // Otherwise, ensure the welcome back text is present (optional)
@@ -382,3 +397,424 @@ export async function loginFromWelcome(page: Page) {
   console.log('[Login Helper] Login flow complete');
   await dismissConsentIfPresent(page);
 }
+
+/**
+ * Logs in using the supplied credentials. Assumes the page is already at the
+ * welcome/auth screen (callers usually invoke `gotoApp(page, '/auth')` first).
+ */
+export async function loginWithCredentials(
+  page: Page,
+  email: string,
+  password: string
+): Promise<void> {
+  if (await isAuthenticated(page)) {
+    console.log('Already authenticated – skipping login steps');
+    return;
+  }
+
+  try {
+    await expect(page.getByText('Log in', { exact: true })).toBeVisible({ timeout: 5000 });
+    await page.getByText('Log in', { exact: true }).first().click();
+  } catch (e) {
+    console.log('Log in button not visible – assuming login form is already shown');
+  }
+
+  await expect(page.getByPlaceholder('Email')).toBeVisible({ timeout: 5000 });
+  await page.getByPlaceholder('Email').fill(email);
+  await page.getByPlaceholder('Password').fill(password);
+  await page.getByText('Log in', { exact: true }).last().click();
+
+  await expect(page.getByText(/Hi /i).first()).toBeVisible({ timeout: 10000 });
+  console.log(`[loginWithCredentials] Logged in as ${email}`);
+}
+
+/**
+ * Logs in using the disposable test user created by `globalSetup` in
+ * `ensureTestUser.ts`. Throws if the credentials file is missing.
+ */
+export async function loginAsGlobalTestUser(page: Page): Promise<void> {
+  const creds = getGlobalTestUser();
+  if (!creds) {
+    throw new Error(
+      'Global test user credentials not found. Ensure globalSetup ran and wrote tests/playwright/.temp/test-user-credentials.json.'
+    );
+  }
+  await loginWithCredentials(page, creds.email, creds.password);
+}
+
+export interface TestUserCredentials {
+  email: string;
+  password: string;
+  fullName: string;
+}
+
+/**
+ * Loads environment variables from the project root .env file into process.env.
+ * This is useful for Playwright Node scripts that do not inherit Expo's env handling.
+ */
+export function loadEnv(): void {
+  try {
+    const dotenv = require('dotenv') as typeof import('dotenv');
+    const envPath = path.resolve(__dirname, '../../.env');
+    if (fs.existsSync(envPath)) {
+      dotenv.config({ path: envPath });
+    }
+  } catch {
+    // dotenv is optional; env vars may already be set by the shell
+  }
+}
+
+/**
+ * Creates a Supabase client authenticated as the given email/password.
+ * Useful for backend assertions when the service-role key is unavailable.
+ */
+export async function createAuthedSupabaseClient(email: string, password: string) {
+  const { url, anonKey } = getSupabaseCreds();
+  const client = createClient(url, anonKey, {
+    auth: { autoRefreshToken: false, persistSession: false },
+  });
+  const { data, error } = await client.auth.signInWithPassword({ email, password });
+  if (error || !data.session || !data.user) {
+    throw new Error(`Failed to sign in as ${email}: ${error?.message}`);
+  }
+  return { client, user: data.user };
+}
+
+/**
+ * Creates a Supabase client using the service-role key.
+ * Throws if SUPABASE_SERVICE_ROLE_KEY is not available.
+ */
+export function getServiceRoleClient() {
+  const { url, serviceRoleKey } = getSupabaseCreds();
+  if (!serviceRoleKey) {
+    throw new Error(
+      'SUPABASE_SERVICE_ROLE_KEY is required to create or clean up test vendors. Set it in your .env or environment.'
+    );
+  }
+  return createClient(url, serviceRoleKey, {
+    auth: { autoRefreshToken: false, persistSession: false },
+  });
+}
+
+/**
+ * Creates a minimal test vendor owned by the given auth user.
+ * Reuses an existing vendor for the user if one already exists.
+ */
+export async function ensureTestVendor(
+  authUserId: string,
+  options?: {
+    name?: string;
+    categoryId?: number;
+    address?: string;
+    city?: string;
+    province?: string;
+  }
+): Promise<{ id: number; name: string } | null> {
+  const supabase = getServiceRoleClient();
+
+  const { data: existing } = await supabase
+    .from('vendors')
+    .select('id, name')
+    .eq('user_id', authUserId)
+    .order('id', { ascending: true })
+    .limit(1)
+    .maybeSingle();
+
+  if (existing) return existing;
+
+  let categoryId = options?.categoryId;
+  if (!categoryId) {
+    const { data: categories } = await supabase.from('categories').select('id').limit(1);
+    categoryId = categories?.[0]?.id ?? 11;
+  }
+
+  const timestamp = Date.now();
+  const name = options?.name ?? `E2E Vendor ${timestamp}`;
+
+  const { data, error } = await supabase
+    .from('vendors')
+    .insert({
+      name,
+      category_id: categoryId,
+      user_id: authUserId,
+      address_line_1: options?.address ?? '123 Test Street',
+      city: options?.city ?? 'Johannesburg',
+      province: options?.province ?? 'Gauteng',
+      email: `e2e-vendor-${timestamp}@example.com`,
+      subscription_tier: 'get_started',
+      online_quotes: true,
+    })
+    .select('id, name')
+    .single();
+
+  if (error) {
+    console.error('[ensureTestVendor] Failed to create vendor:', error.message);
+    return null;
+  }
+
+  console.log(`[ensureTestVendor] Created vendor ${data.id} (${data.name}) for user ${authUserId}`);
+  return data;
+}
+
+/**
+ * Deletes all vendors (and their quote requests) owned by the given auth user.
+ */
+export async function deleteTestVendor(authUserId: string): Promise<void> {
+  const supabase = getServiceRoleClient();
+
+  const { data: vendors } = await supabase.from('vendors').select('id').eq('user_id', authUserId);
+  if (!vendors || vendors.length === 0) return;
+
+  const ids = vendors.map((v) => v.id);
+
+  await supabase.from('quote_requests').delete().in('vendor_id', ids);
+  await supabase.from('quote_revisions').delete().in('vendor_id', ids);
+  await supabase.from('gallery_media').delete().in('vendor_id', ids);
+  await supabase.from('vendor_catalogue_items').delete().in('vendor_id', ids);
+
+  const { error } = await supabase.from('vendors').delete().in('id', ids);
+  if (error) {
+    console.error('[deleteTestVendor] Failed to delete vendors:', error.message);
+  } else {
+    console.log(`[deleteTestVendor] Deleted ${ids.length} vendor(s) for user ${authUserId}`);
+  }
+}
+
+/**
+ * Returns the Supabase credentials from environment variables (preferring the project's .env).
+ */
+export function getSupabaseCreds() {
+  loadEnv();
+  return {
+    url: process.env.EXPO_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL || SUPABASE_URL,
+    anonKey: process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY || SUPABASE_ANON_KEY,
+    serviceRoleKey: process.env.SUPABASE_SERVICE_ROLE_KEY,
+  };
+}
+
+export const TEST_USER_CREDENTIALS_FILE = path.join(__dirname, '.temp', 'test-user-credentials.json');
+
+export function getGlobalTestUser(): (TestUserCredentials & { adminCreated?: boolean; userId?: string }) | null {
+  try {
+    const raw = fs.readFileSync(TEST_USER_CREDENTIALS_FILE, 'utf8');
+    return JSON.parse(raw);
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Creates a fresh disposable test user through the public sign-up UI.
+ * Returns the credentials so later tests can sign in or delete the user.
+ */
+export async function createTestUser(
+  page: Page,
+  options?: {
+    name?: string;
+    email?: string;
+    password?: string;
+    role?: 'attendee' | 'vendor' | 'venue';
+  }
+): Promise<TestUserCredentials> {
+  const timestamp = Date.now();
+  const fullName = options?.name || 'E2E Test User';
+  const email =
+    options?.email ||
+    process.env.PW_E2E_TEST_EMAIL ||
+    `e2e-test-${timestamp}@owdsolutions.co.za`;
+  const password =
+    options?.password ||
+    process.env.PW_E2E_TEST_PASSWORD ||
+    `TestPass${timestamp}!`;
+  const role = options?.role || 'attendee';
+
+  await gotoApp(page, '/auth');
+  await page.getByText('Get started', { exact: true }).first().click();
+  await expect(page.getByText('Create Your Account', { exact: true })).toBeVisible({ timeout: 10000 });
+
+  await page.getByPlaceholder('Name').fill(fullName);
+  await page.getByPlaceholder('Email').fill(email);
+  await page.getByPlaceholder('Password').first().fill(password);
+  await page.getByPlaceholder('Confirm Password').fill(password);
+
+  if (role !== 'attendee') {
+    const roleLabel = role === 'vendor' ? 'Vendor & Service Provider' : 'Venue';
+    await page.getByText(roleLabel, { exact: true }).click();
+  }
+
+  // Accept terms and privacy (the first matching text is terms, the second is privacy)
+  await page.getByText('I agree to the', { exact: false }).first().click();
+  await page.getByText('I accept the', { exact: false }).first().click();
+
+  await page.getByText('Sign up', { exact: true }).last().click();
+
+  // Wait for either immediate login (auto-confirmed projects) or the email confirmation screen
+  await Promise.race([
+    page.waitForSelector('text=/Hello,|Home|Account|Welcome Back/', { timeout: 30000 }),
+    page.waitForSelector('text=/Confirm your email|Email Confirmation|Verify your email/', { timeout: 30000 }),
+  ]).catch(() => {
+    console.warn('[createTestUser] Timed out waiting for post-sign-up screen');
+  });
+
+  await acceptPopiaConsent(page);
+
+  return { email, password, fullName };
+}
+
+/**
+ * Deletes a test user and all associated data by signing in and invoking the
+ * delete-user-account edge function. Falls back to the admin API if a service
+ * role key is available.
+ */
+export async function deleteTestUser(email: string, password: string): Promise<void> {
+  const { url, anonKey, serviceRoleKey } = getSupabaseCreds();
+
+  if (serviceRoleKey) {
+    const adminClient = createClient(url, serviceRoleKey, {
+      auth: { autoRefreshToken: false, persistSession: false },
+    });
+    const { data: users, error: listError } = await adminClient.auth.admin.listUsers();
+    if (listError) {
+      console.warn(`[deleteTestUser] Failed to list users: ${listError.message}`);
+      return;
+    }
+    const user = users?.users?.find((u) => u.email === email);
+    if (user) {
+      await adminClient.auth.admin.deleteUser(user.id);
+      console.log(`[deleteTestUser] Deleted ${email} via admin API`);
+    } else {
+      console.log(`[deleteTestUser] No auth user found for ${email}`);
+    }
+    return;
+  }
+
+  const userClient = createClient(url, anonKey, {
+    auth: { autoRefreshToken: false, persistSession: false },
+  });
+  const { data, error } = await userClient.auth.signInWithPassword({ email, password });
+  if (error || !data.session) {
+    console.warn(`[deleteTestUser] Could not sign in as ${email}: ${error?.message}`);
+    return;
+  }
+  const { error: fnError } = await userClient.functions.invoke('delete-user-account');
+  if (fnError) {
+    console.warn(`[deleteTestUser] delete-user-account failed: ${fnError.message}`);
+  } else {
+    console.log(`[deleteTestUser] Deleted ${email} via edge function`);
+  }
+}
+
+/**
+ * Accepts the POPIA data-consent modal if it is present.
+ */
+export async function acceptPopiaConsent(page: Page, options?: { analytics?: boolean }): Promise<void> {
+  const header = page.getByText('Your Privacy Matters', { exact: true }).first();
+  const isVisible = await header.isVisible().catch(() => false);
+  if (!isVisible) return;
+
+  await page.getByText('Essential Data Processing', { exact: true }).first().click();
+  if (options?.analytics) {
+    await page.getByText('Analytics & Improvement', { exact: true }).first().click();
+  }
+  await page.getByText('Accept & Continue', { exact: true }).click();
+  await page.waitForTimeout(300);
+}
+
+/**
+ * Clicks a bottom tab by its visible label (e.g. 'Home', 'Favourites', 'Quotes',
+ * 'Planner', 'Account').
+ */
+export async function clickBottomTab(page: Page, label: string): Promise<void> {
+  const tab = page.getByRole('tab', { name: new RegExp(label, 'i') }).first();
+  await expect(tab).toBeVisible({ timeout: 10000 });
+  await tab.click({ force: true });
+  await page.waitForTimeout(500);
+}
+
+/**
+ * Opens a listing card from Discover/Search results by matching the card name.
+ */
+export async function openListingCard(page: Page, nameRegex: RegExp | string): Promise<void> {
+  const card = page.getByText(nameRegex).first();
+  await expect(card).toBeVisible({ timeout: 10000 });
+  await card.click({ force: true });
+  await page.waitForTimeout(500);
+}
+
+/**
+ * Returns a Supabase client authenticated with the service-role key.
+ * Throws if SUPABASE_SERVICE_ROLE_KEY is not set.
+ */
+export function getServiceRoleSupabase() {
+  const { url, serviceRoleKey } = getSupabaseCreds();
+  if (!serviceRoleKey) {
+    throw new Error('SUPABASE_SERVICE_ROLE_KEY is required for this helper');
+  }
+  return createClient(url, serviceRoleKey, {
+    auth: { autoRefreshToken: false, persistSession: false },
+  });
+}
+
+/**
+ * Reads the current unread notification count from the bell badge.
+ */
+export async function getNotificationBellCount(page: Page): Promise<number> {
+  return page.evaluate(() => {
+    const allDivs = Array.from(document.querySelectorAll('div'));
+    const bell = allDivs.find((d) => {
+      const style = window.getComputedStyle(d);
+      if (style.cursor !== 'pointer') return false;
+      const children = Array.from(d.querySelectorAll('span, svg, i, div'));
+      return children.some((el) => {
+        const text = el.textContent?.trim() || '';
+        const aria = el.getAttribute('aria-label') || '';
+        return text === 'notifications' || aria === 'notifications';
+      });
+    });
+    if (!bell) return 0;
+
+    const badge = Array.from(bell.querySelectorAll('div')).find((child) => {
+      const style = window.getComputedStyle(child);
+      const rect = child.getBoundingClientRect();
+      const bg = style.backgroundColor.toLowerCase();
+      return (
+        (bg.includes('rgb(220, 38, 38)') || bg.includes('rgb(239, 68, 68)') || bg.includes('red')) &&
+        rect.width > 0 &&
+        rect.width <= 30 &&
+        rect.height > 0 &&
+        rect.height <= 30
+      );
+    });
+    if (!badge) return 0;
+    const text = badge.textContent?.trim() || '0';
+    const count = parseInt(text, 10);
+    return Number.isNaN(count) ? 0 : count;
+  });
+}
+
+/**
+ * Opens the notification bell dropdown.
+ */
+export async function clickNotificationBell(page: Page): Promise<void> {
+  const clicked = await page.evaluate(() => {
+    const allDivs = Array.from(document.querySelectorAll('div'));
+    const bell = allDivs.find((d) => {
+      const style = window.getComputedStyle(d);
+      if (style.cursor !== 'pointer') return false;
+      const children = Array.from(d.querySelectorAll('span, svg, i, div'));
+      return children.some((el) => {
+        const text = el.textContent?.trim() || '';
+        const aria = el.getAttribute('aria-label') || '';
+        return text === 'notifications' || aria === 'notifications';
+      });
+    });
+    if (bell) {
+      (bell as HTMLElement).click();
+      return true;
+    }
+    return false;
+  });
+  if (!clicked) throw new Error('Notification bell not found');
+  await page.waitForTimeout(300);
+}
+

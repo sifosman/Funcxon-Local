@@ -80,6 +80,7 @@ export default function AppHeader() {
             {navItems.map((item) => (
               <TouchableOpacity
                 key={item.label}
+                testID={item.label === 'Vendors' ? 'nav-vendors' : undefined}
                 style={styles.desktopNavItem}
                 onPress={item.onPress}
               >
@@ -183,6 +184,7 @@ export default function AppHeader() {
           <Text style={styles.navButtonText}>Venues</Text>
         </TouchableOpacity>
         <TouchableOpacity
+          testID="nav-vendors"
           style={styles.navButton}
           onPress={() => openDiscover({ category: 'vendors', searchTitle: 'Discover Vendors and services' })}
         >

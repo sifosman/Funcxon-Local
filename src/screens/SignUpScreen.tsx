@@ -379,6 +379,7 @@ export default function SignUpScreen({ navigation }: Props) {
       {/* Terms & Privacy Consent */}
       <View style={{ marginBottom: spacing.lg }}>
         <TouchableOpacity
+          testID="terms-checkbox"
           onPress={() => setTermsAccepted(!termsAccepted)}
           style={{ flexDirection: 'row', alignItems: 'flex-start', marginBottom: spacing.md }}
           activeOpacity={0.8}
@@ -412,6 +413,7 @@ export default function SignUpScreen({ navigation }: Props) {
         </TouchableOpacity>
 
         <TouchableOpacity
+          testID="privacy-checkbox"
           onPress={() => setPrivacyAccepted(!privacyAccepted)}
           style={{ flexDirection: 'row', alignItems: 'flex-start' }}
           activeOpacity={0.8}

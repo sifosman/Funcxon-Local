@@ -18,6 +18,7 @@ import { getLatestUserApplicationByType, isBlockingApplicationStatus } from '../
 import { savePendingSubscriptionCheckout } from '../lib/pendingSubscriptionCheckout';
 import { useApplicationForm } from '../context/ApplicationFormContext';
 import { colors, spacing, radii, typography } from '../theme';
+import { useIsDesktop } from '../hooks/useIsDesktop';
 import type { ProfileStackParamList } from '../navigation/ProfileNavigator';
 import ThemedAlert from '../components/ThemedAlert';
 
@@ -65,6 +66,7 @@ type VenueFeature = {
 export default function VenueListingPlansScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<ProfileStackParamList>>();
   const { user } = useAuth();
+  const isDesktop = useIsDesktop();
   const { setPortfolioType, updateStep4 } = useApplicationForm();
 
   const [containerWidth, setContainerWidth] = useState(0);
@@ -248,6 +250,143 @@ export default function VenueListingPlansScreen() {
 
   const selected = plans.find((p) => p.key === selectedPlan) ?? plans[0];
 
+  const renderDesktopPlanCard = (plan: VenuePlan) => {
+    return (
+      <TouchableOpacity
+        key={plan.key}
+        activeOpacity={0.9}
+        onPress={() => {
+          setSelectedPlan(plan.key);
+          setActiveIndex(plans.findIndex((p) => p.key === plan.key));
+          handleSelectPlan();
+        }}
+        style={{ flex: 1 }}
+      >
+        <View
+          style={{
+            height: 480,
+            borderRadius: radii.xl,
+            backgroundColor: plan.theme.background,
+            padding: spacing.lg,
+            borderWidth: 1,
+            borderColor: plan.theme.borderColor,
+            shadowColor: '#000',
+            shadowOffset: { width: 0, height: 4 },
+            shadowOpacity: 0.08,
+            shadowRadius: 12,
+            elevation: 5,
+          }}
+        >
+          {plan.badge ? (
+            <View
+              style={{
+                alignSelf: 'flex-start',
+                backgroundColor: plan.theme.accent,
+                borderRadius: radii.full,
+                paddingHorizontal: spacing.sm,
+                paddingVertical: 2,
+                marginBottom: spacing.sm,
+              }}
+            >
+              <Text style={{ ...typography.captionBold, color: plan.theme.buttonText, fontSize: 10 }}>
+                {plan.badge}
+              </Text>
+            </View>
+          ) : (
+            <View style={{ height: 22, marginBottom: spacing.sm }} />
+          )}
+
+          <Text style={{ ...typography.titleMedium, color: plan.theme.text, fontSize: 20, marginBottom: 2 }}>
+            {plan.title}
+          </Text>
+          <Text style={{ ...typography.caption, color: plan.theme.textMuted, marginBottom: spacing.sm, fontSize: 12 }}>
+            {plan.subtitle}
+          </Text>
+
+          <View style={{ marginBottom: spacing.sm }}>
+            {plan.priceWas ? (
+              <Text style={{ ...typography.caption, color: plan.theme.textMuted, textDecorationLine: 'line-through', marginBottom: 1, fontSize: 12 }}>
+                Was {plan.priceWas}
+              </Text>
+            ) : null}
+            <Text style={{ ...typography.displayLarge, color: plan.theme.text, fontSize: 28 }}>
+              {plan.priceNow}
+            </Text>
+            {plan.saveLabel ? (
+              <Text style={{ ...typography.captionBold, color: plan.theme.accent, marginTop: 1, fontSize: 12 }}>
+                {plan.saveLabel}
+              </Text>
+            ) : null}
+          </View>
+
+          <View style={{ height: 1, backgroundColor: plan.theme.borderColor, marginBottom: spacing.sm }} />
+
+          <View style={{ flex: 1, marginBottom: spacing.sm }}>
+            {features.slice(0, 8).map((feature) => {
+              const value = feature[plan.key];
+              return (
+                <View
+                  key={feature.label}
+                  style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 5 }}
+                >
+                  {typeof value === 'boolean' ? (
+                    <MaterialIcons
+                      name={value ? 'check-circle' : 'cancel'}
+                      size={14}
+                      color={value ? plan.theme.checkColor : plan.theme.textMuted}
+                    />
+                  ) : (
+                    <Text style={{ ...typography.captionSemiBold, color: plan.theme.text, fontSize: 11 }}>
+                      {value}
+                    </Text>
+                  )}
+                  <Text
+                    style={{
+                      ...typography.caption,
+                      color: plan.theme.textMuted,
+                      marginLeft: 4,
+                      flex: 1,
+                      fontSize: 11,
+                    }}
+                    numberOfLines={1}
+                  >
+                    {feature.label}
+                  </Text>
+                </View>
+              );
+            })}
+          </View>
+
+          <TouchableOpacity
+            onPress={() => {
+              setSelectedPlan(plan.key);
+              setActiveIndex(plans.findIndex((p) => p.key === plan.key));
+              handleSelectPlan();
+            }}
+            activeOpacity={0.85}
+            style={{
+              backgroundColor: plan.theme.buttonBg,
+              borderRadius: radii.md,
+              paddingVertical: spacing.sm,
+              alignItems: 'center',
+              marginTop: 'auto',
+            }}
+          >
+            <Text
+              style={{
+                ...typography.captionBold,
+                color: plan.theme.buttonText,
+                fontSize: 12,
+              }}
+            >
+              {plan.key === 'get_started' ? 'Choose Free' : 'Choose'}
+            </Text>
+          </TouchableOpacity>
+        </View>
+      </TouchableOpacity>
+    );
+  };
+
   const handleSnapToItem = useCallback((index: number) => {
     setActiveIndex(index);
     setSelectedPlan(plans[index].key);
@@ -342,27 +481,37 @@ export default function VenueListingPlansScreen() {
   };
 
   return (
-    <View style={{ flex: 1, backgroundColor: colors.background }}>
+    <View style={{ flex: 1, backgroundColor: isDesktop ? colors.surfaceBg : colors.background }}>
       <ScrollView contentContainerStyle={{ paddingBottom: spacing.xl }} showsVerticalScrollIndicator={false}>
+        <View style={isDesktop ? { maxWidth: 1200, width: '100%', alignSelf: 'center', paddingHorizontal: 48, paddingTop: spacing.sm, paddingBottom: spacing.xl } : undefined}>
         {/* Header */}
-        <View style={{ paddingHorizontal: spacing.lg, paddingTop: spacing.sm }}>
-          <TouchableOpacity
-            onPress={() => navigation.goBack()}
-            style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.sm }}
-          >
-            <MaterialIcons name="arrow-back" size={20} color={colors.textPrimary} />
-            <Text style={{ ...typography.body, color: colors.textPrimary, marginLeft: spacing.sm }}>Back</Text>
-          </TouchableOpacity>
+        <View style={{ paddingHorizontal: isDesktop ? 0 : spacing.lg, paddingTop: spacing.sm }}>
+          {isDesktop ? null : (
+            <TouchableOpacity
+              onPress={() => navigation.goBack()}
+              style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.sm }}
+            >
+              <MaterialIcons name="arrow-back" size={20} color={colors.textPrimary} />
+              <Text style={{ ...typography.body, color: colors.textPrimary, marginLeft: spacing.sm }}>Back</Text>
+            </TouchableOpacity>
+          )}
 
-          <Text style={{ ...typography.titleLarge, color: colors.textPrimary, marginBottom: spacing.xs }}>
+          <Text style={{ ...typography.titleLarge, color: colors.textPrimary, marginBottom: spacing.xs, fontSize: isDesktop ? 32 : undefined, fontWeight: isDesktop ? '600' : undefined }}>
             Venue Listing Plans
           </Text>
-          <Text style={{ ...typography.body, color: colors.textMuted, marginBottom: spacing.md }}>
+          <Text style={{ ...typography.body, color: isDesktop ? colors.onSurfaceVariant : colors.textMuted, marginBottom: spacing.md, fontSize: isDesktop ? 16 : undefined, lineHeight: isDesktop ? 24 : undefined }}>
             Limited-time launch offer — no hidden fees, zero commissions
           </Text>
         </View>
 
-        {/* Horizontal Swipeable Cards */}
+        {/* Desktop Grid / Mobile Carousel */}
+        {isDesktop ? (
+          <View style={{ marginBottom: spacing.lg, marginTop: spacing.xl } as any}>
+            <View style={{ flexDirection: 'row', gap: spacing.gutter } as any}>
+              {plans.map((plan) => renderDesktopPlanCard(plan))}
+            </View>
+          </View>
+        ) : (
         <View onLayout={(event) => setContainerWidth(event.nativeEvent.layout.width)} style={{ paddingVertical: spacing.xl, overflow: 'visible' }}>
           <Carousel
             ref={carouselRef}
@@ -592,39 +741,43 @@ export default function VenueListingPlansScreen() {
             }}
           />
         </View>
+      )}
 
         {/* Pagination Dots */}
-        <View
-          style={{
-            flexDirection: 'row',
-            justifyContent: 'center',
-            alignItems: 'center',
-            marginVertical: spacing.md,
-          }}
-        >
-          {plans.map((_, index) => (
-            <TouchableOpacity
-              key={index}
-              onPress={() => scrollToIndex(index)}
-              style={{
-                width: activeIndex === index ? 24 : 8,
-                height: 8,
-                borderRadius: 4,
-                backgroundColor: activeIndex === index ? colors.primary : colors.borderSubtle,
-                marginHorizontal: 4,
-              }}
-            />
-          ))}
-        </View>
+        {!isDesktop && (
+          <View
+            style={{
+              flexDirection: 'row',
+              justifyContent: 'center',
+              alignItems: 'center',
+              marginVertical: spacing.md,
+            }}
+          >
+            {plans.map((_, index) => (
+              <TouchableOpacity
+                key={index}
+                onPress={() => scrollToIndex(index)}
+                style={{
+                  width: activeIndex === index ? 24 : 8,
+                  height: 8,
+                  borderRadius: 4,
+                  backgroundColor: activeIndex === index ? colors.primary : colors.borderSubtle,
+                  marginHorizontal: 4,
+                }}
+              />
+            ))}
+          </View>
+        )}
 
         {/* Full Feature Comparison */}
-        <View style={{ paddingHorizontal: spacing.lg }}>
+        <View style={{ paddingHorizontal: isDesktop ? 0 : spacing.lg }}>
           <Text
             style={{
               ...typography.titleMedium,
               color: colors.textPrimary,
               marginBottom: spacing.md,
               marginTop: spacing.sm,
+              fontSize: isDesktop ? 24 : undefined,
             }}
           >
             Full Feature Comparison
@@ -632,10 +785,10 @@ export default function VenueListingPlansScreen() {
 
           <View
             style={{
-              backgroundColor: colors.surface,
+              backgroundColor: isDesktop ? colors.surfaceContainerLowest : colors.surface,
               borderRadius: radii.lg,
               borderWidth: 1,
-              borderColor: colors.borderSubtle,
+              borderColor: isDesktop ? colors.outlineVariant : colors.borderSubtle,
               overflow: 'hidden',
             }}
           >
@@ -684,7 +837,7 @@ export default function VenueListingPlansScreen() {
                     </View>
                   </View>
                   {showDivider ? (
-                    <View style={{ height: 1, backgroundColor: colors.borderSubtle }} />
+                    <View style={{ height: 1, backgroundColor: isDesktop ? colors.outlineVariant : colors.borderSubtle }} />
                   ) : null}
                 </View>
               );
@@ -693,7 +846,7 @@ export default function VenueListingPlansScreen() {
         </View>
 
         {/* Bottom CTA */}
-        <View style={{ paddingHorizontal: spacing.lg, marginTop: spacing.lg }}>
+        <View style={{ paddingHorizontal: isDesktop ? 0 : spacing.lg, marginTop: spacing.lg, maxWidth: isDesktop ? 720 : undefined, width: '100%', alignSelf: isDesktop ? 'center' : undefined }}>
           <TouchableOpacity
             onPress={handleSelectPlan}
             activeOpacity={0.9}
@@ -726,6 +879,7 @@ export default function VenueListingPlansScreen() {
           >
             Upgrade or cancel anytime. No hidden fees.
           </Text>
+        </View>
         </View>
       </ScrollView>
 

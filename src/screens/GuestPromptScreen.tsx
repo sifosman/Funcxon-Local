@@ -59,6 +59,7 @@ export default function GuestPromptScreen(props: Props) {
 
         <View style={{ width: '100%', maxWidth: isDesktop ? 480 : 320, gap: spacing.md } as any}>
           <TouchableOpacity
+            testID="guest-login"
             activeOpacity={0.9}
             onPress={() => navigation.getParent()?.navigate('Auth', { screen: 'SignIn' })}
             style={{
@@ -74,6 +75,7 @@ export default function GuestPromptScreen(props: Props) {
           </TouchableOpacity>
 
           <TouchableOpacity
+            testID="guest-get-started"
             activeOpacity={0.9}
             onPress={() => navigation.getParent()?.navigate('Auth', { screen: 'SignUp' })}
             style={{

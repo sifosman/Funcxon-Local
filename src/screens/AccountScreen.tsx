@@ -318,6 +318,7 @@ export default function AccountScreen() {
         return (
             <View key={item.id}>
                 <TouchableOpacity
+                    testID={item.id}
                     onPress={handlePress}
                     style={{
                         flexDirection: 'row',
