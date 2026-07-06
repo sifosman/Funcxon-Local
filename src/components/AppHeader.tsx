@@ -321,8 +321,10 @@ const styles = StyleSheet.create({
     width: 140,
   } as any,
   desktopNav: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     gap: 32,
   } as any,
   desktopNavItem: {
