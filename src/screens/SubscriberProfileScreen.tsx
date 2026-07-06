@@ -3,6 +3,7 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { colors, spacing, radii, typography } from '../theme';
+import { useIsDesktop } from '../hooks/useIsDesktop';
 
 type ProfileStackParamList = {
     AccountMain: undefined;
@@ -28,6 +29,7 @@ type MenuItem = {
 
 export default function SubscriberProfileScreen() {
     const navigation = useNavigation<NativeStackNavigationProp<ProfileStackParamList>>();
+    const isDesktop = useIsDesktop();
 
     const handleCreatePortfolio = () => {
         navigation.navigate('PortfolioType');
@@ -73,105 +75,177 @@ export default function SubscriberProfileScreen() {
     ];
 
     return (
-        <View style={{ flex: 1, backgroundColor: colors.background }}>
+        <View style={{ flex: 1, backgroundColor: isDesktop ? colors.surfaceBg : colors.background }}>
             <ScrollView contentContainerStyle={{ paddingBottom: spacing.xl }}>
-                {/* Back button */}
-                <View style={{ paddingHorizontal: spacing.lg, paddingTop: spacing.sm, paddingBottom: spacing.md }}>
-                    <TouchableOpacity
-                        onPress={() => navigation.navigate('AccountMain')}
-                        style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.sm }}
-                    >
-                        <MaterialIcons name="arrow-back" size={20} color={colors.textPrimary} />
-                        <Text style={{ ...typography.body, color: colors.textPrimary, marginLeft: spacing.sm }}>
-                            Back to My Account
-                        </Text>
-                    </TouchableOpacity>
+                {isDesktop ? (
+                    <View style={{ maxWidth: 1200, width: '100%', alignSelf: 'center', paddingHorizontal: 48, paddingTop: spacing.sm, paddingBottom: spacing.xl }}>
+                        {/* Header */}
+                        <View style={{ alignItems: 'center', marginBottom: spacing.xl }}>
+                            <Text style={{ ...typography.displayMedium, color: colors.textPrimary, marginBottom: spacing.xs }}>
+                                Welcome Back!
+                            </Text>
+                            <Text style={{ ...typography.body, color: colors.textMuted }}>
+                                What would you like to do today?
+                            </Text>
+                        </View>
 
-                    {/* Header */}
-                    <View style={{ alignItems: 'center', marginBottom: spacing.lg }}>
-                        <Text style={{ ...typography.displayMedium, color: colors.textPrimary, marginBottom: spacing.xs }}>
-                            Welcome Back!
-                        </Text>
-                        <Text style={{ ...typography.body, color: colors.textMuted }}>
-                            What would you like to do today?
-                        </Text>
-                    </View>
-                </View>
+                        {/* Profile Options - 4-card grid */}
+                        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 24 } as any}>
+                            {profileOptions.map((option) => (
+                                <TouchableOpacity
+                                    key={option.id}
+                                    onPress={() => {
+                                        if (option.id === 'create-portfolio') {
+                                            handleCreatePortfolio();
+                                            return;
+                                        }
 
-                {/* Profile Options */}
-                <View style={{ paddingHorizontal: spacing.lg }}>
-                    <View
-                        style={{
-                            borderRadius: radii.lg,
-                            overflow: 'hidden',
-                            backgroundColor: colors.surface,
-                            borderWidth: 1,
-                            borderColor: colors.borderSubtle,
-                            shadowColor: '#000',
-                            shadowOpacity: 0.05,
-                            shadowRadius: 8,
-                            shadowOffset: { width: 0, height: 2 },
-                            elevation: 2,
-                        }}
-                    >
-                        {profileOptions.map((option, index) => (
-                            <TouchableOpacity
-                                key={option.id}
-                                onPress={() => {
-                                    if (option.id === 'create-portfolio') {
-                                        handleCreatePortfolio();
-                                        return;
-                                    }
-
-                                    if (option.route) {
-                                        navigation.navigate(option.route);
-                                    }
-                                }}
-                                style={{
-                                    flexDirection: 'row',
-                                    alignItems: 'center',
-                                    justifyContent: 'space-between',
-                                    padding: spacing.lg,
-                                    borderBottomWidth: index < profileOptions.length - 1 ? 1 : 0,
-                                    borderBottomColor: colors.borderSubtle,
-                                }}
-                                activeOpacity={0.7}
-                            >
-                                <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
+                                        if (option.route) {
+                                            navigation.navigate(option.route);
+                                        }
+                                    }}
+                                    style={{
+                                        flex: 1,
+                                        minWidth: 240,
+                                        backgroundColor: colors.surfaceContainerLowest,
+                                        borderRadius: radii.lg,
+                                        padding: spacing.xl,
+                                        borderWidth: 1,
+                                        borderColor: colors.outlineVariant,
+                                    }}
+                                    activeOpacity={0.7}
+                                >
                                     <View
                                         style={{
-                                            width: 40,
-                                            height: 40,
+                                            width: 48,
+                                            height: 48,
                                             borderRadius: radii.lg,
                                             backgroundColor: option.iconBg,
                                             alignItems: 'center',
                                             justifyContent: 'center',
-                                            marginRight: spacing.md,
+                                            marginBottom: spacing.md,
                                         }}
                                     >
-                                        <MaterialIcons name={option.icon} size={20} color={option.iconColor} />
+                                        <MaterialIcons name={option.icon} size={24} color={option.iconColor} />
                                     </View>
-                                    <View style={{ flex: 1 }}>
-                                        <Text style={{ ...typography.bodyMedium, color: colors.textPrimary }}>
-                                            {option.title}
-                                        </Text>
-                                        <Text style={{ ...typography.caption, color: colors.textMuted, marginTop: 2 }}>
-                                            {option.description}
-                                        </Text>
-                                    </View>
-                                </View>
-                                <MaterialIcons name="chevron-right" size={20} color={colors.textMuted} />
-                            </TouchableOpacity>
-                        ))}
-                    </View>
-                </View>
+                                    <Text style={{ ...typography.titleMedium, color: colors.textPrimary, marginBottom: spacing.xs }}>
+                                        {option.title}
+                                    </Text>
+                                    <Text style={{ ...typography.body, color: colors.textMuted }}>
+                                        {option.description}
+                                    </Text>
+                                </TouchableOpacity>
+                            ))}
+                        </View>
 
-                {/* Help Text */}
-                <View style={{ marginTop: spacing.xl, marginHorizontal: spacing.lg, padding: spacing.lg, backgroundColor: colors.muted, borderRadius: radii.lg }}>
-                    <Text style={{ ...typography.caption, color: colors.textMuted, textAlign: 'center' }}>
-                        Create a new profile to list your services, or edit your existing portfolio to update your information.
-                    </Text>
-                </View>
+                        {/* Help Text */}
+                        <View style={{ marginTop: spacing.xl, padding: spacing.lg, backgroundColor: colors.muted, borderRadius: radii.lg, alignItems: 'center' }}>
+                            <Text style={{ ...typography.caption, color: colors.textMuted, textAlign: 'center' }}>
+                                Create a new profile to list your services, or edit your existing portfolio to update your information.
+                            </Text>
+                        </View>
+                    </View>
+                ) : (
+                    <>
+                        {/* Back button */}
+                        <View style={{ paddingHorizontal: spacing.lg, paddingTop: spacing.sm, paddingBottom: spacing.md }}>
+                            <TouchableOpacity
+                                onPress={() => navigation.navigate('AccountMain')}
+                                style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.sm }}
+                            >
+                                <MaterialIcons name="arrow-back" size={20} color={colors.textPrimary} />
+                                <Text style={{ ...typography.body, color: colors.textPrimary, marginLeft: spacing.sm }}>
+                                    Back to My Account
+                                </Text>
+                            </TouchableOpacity>
+
+                            {/* Header */}
+                            <View style={{ alignItems: 'center', marginBottom: spacing.lg }}>
+                                <Text style={{ ...typography.displayMedium, color: colors.textPrimary, marginBottom: spacing.xs }}>
+                                    Welcome Back!
+                                </Text>
+                                <Text style={{ ...typography.body, color: colors.textMuted }}>
+                                    What would you like to do today?
+                                </Text>
+                            </View>
+                        </View>
+
+                        {/* Profile Options */}
+                        <View style={{ paddingHorizontal: spacing.lg }}>
+                            <View
+                                style={{
+                                    borderRadius: radii.lg,
+                                    overflow: 'hidden',
+                                    backgroundColor: colors.surface,
+                                    borderWidth: 1,
+                                    borderColor: colors.borderSubtle,
+                                    shadowColor: '#000',
+                                    shadowOpacity: 0.05,
+                                    shadowRadius: 8,
+                                    shadowOffset: { width: 0, height: 2 },
+                                    elevation: 2,
+                                }}
+                            >
+                                {profileOptions.map((option, index) => (
+                                    <TouchableOpacity
+                                        key={option.id}
+                                        onPress={() => {
+                                            if (option.id === 'create-portfolio') {
+                                                handleCreatePortfolio();
+                                                return;
+                                            }
+
+                                            if (option.route) {
+                                                navigation.navigate(option.route);
+                                            }
+                                        }}
+                                        style={{
+                                            flexDirection: 'row',
+                                            alignItems: 'center',
+                                            justifyContent: 'space-between',
+                                            padding: spacing.lg,
+                                            borderBottomWidth: index < profileOptions.length - 1 ? 1 : 0,
+                                            borderBottomColor: colors.borderSubtle,
+                                        }}
+                                        activeOpacity={0.7}
+                                    >
+                                        <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
+                                            <View
+                                                style={{
+                                                    width: 40,
+                                                    height: 40,
+                                                    borderRadius: radii.lg,
+                                                    backgroundColor: option.iconBg,
+                                                    alignItems: 'center',
+                                                    justifyContent: 'center',
+                                                    marginRight: spacing.md,
+                                                }}
+                                            >
+                                                <MaterialIcons name={option.icon} size={20} color={option.iconColor} />
+                                            </View>
+                                            <View style={{ flex: 1 }}>
+                                                <Text style={{ ...typography.bodyMedium, color: colors.textPrimary }}>
+                                                    {option.title}
+                                                </Text>
+                                                <Text style={{ ...typography.caption, color: colors.textMuted, marginTop: 2 }}>
+                                                    {option.description}
+                                                </Text>
+                                            </View>
+                                        </View>
+                                        <MaterialIcons name="chevron-right" size={20} color={colors.textMuted} />
+                                    </TouchableOpacity>
+                                ))}
+                            </View>
+                        </View>
+
+                        {/* Help Text */}
+                        <View style={{ marginTop: spacing.xl, marginHorizontal: spacing.lg, padding: spacing.lg, backgroundColor: colors.muted, borderRadius: radii.lg }}>
+                            <Text style={{ ...typography.caption, color: colors.textMuted, textAlign: 'center' }}>
+                                Create a new profile to list your services, or edit your existing portfolio to update your information.
+                            </Text>
+                        </View>
+                    </>
+                )}
             </ScrollView>
         </View>
     );

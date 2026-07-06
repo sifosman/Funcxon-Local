@@ -7,6 +7,7 @@ import { useAuth } from '../auth/AuthContext';
 import { colors, spacing, radii, typography } from '../theme';
 import type { AttendeeStackParamList } from '../navigation/AttendeeNavigator';
 import ThemedAlert from '../components/ThemedAlert';
+import { useIsDesktop } from '../hooks/useIsDesktop';
 
 type Props = NativeStackScreenProps<AttendeeStackParamList, 'BookingDetail'>;
 
@@ -29,6 +30,7 @@ interface BookingDetail {
 export default function BookingDetailScreen({ route, navigation }: Props) {
   const { bookingId } = route.params;
   const { user } = useAuth();
+  const isDesktop = useIsDesktop();
   const [booking, setBooking] = useState<BookingDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -129,185 +131,380 @@ export default function BookingDetailScreen({ route, navigation }: Props) {
   }
 
   return (
-    <View style={{ flex: 1, backgroundColor: colors.background }}>
+    <View style={{ flex: 1, backgroundColor: isDesktop ? colors.surfaceBg : colors.background }}>
       <ScrollView contentContainerStyle={{ paddingBottom: spacing.xl }}>
-        <View style={{ paddingHorizontal: spacing.lg, paddingTop: spacing.sm, paddingBottom: spacing.md }}>
-          <TouchableOpacity
-            onPress={() => navigation.goBack()}
-            style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.sm }}
-          >
-            <MaterialIcons name="arrow-back" size={20} color={colors.textPrimary} />
-            <Text style={{ ...typography.body, color: colors.textPrimary, marginLeft: spacing.sm }}>Back</Text>
-          </TouchableOpacity>
+        {isDesktop ? (
+          <View style={{ maxWidth: 800, width: '100%', alignSelf: 'center', paddingHorizontal: 48, paddingTop: spacing.sm }}>
+            <Text style={{ ...typography.displayMedium, color: colors.textPrimary, marginBottom: spacing.xs }}>
+              Tour Booking
+            </Text>
+            <Text style={{ ...typography.body, color: colors.textMuted, marginBottom: spacing.lg }}>{booking.venue_name || 'Venue'}</Text>
 
-          <Text style={{ ...typography.displayMedium, color: colors.textPrimary, marginBottom: spacing.xs }}>
-            Tour Booking
-          </Text>
-          <Text style={{ ...typography.body, color: colors.textMuted }}>{booking.venue_name || 'Venue'}</Text>
-        </View>
-
-        <View style={{ paddingHorizontal: spacing.lg }}>
-          <View
-            style={{
-              backgroundColor: colors.surface,
-              borderRadius: radii.lg,
-              padding: spacing.lg,
-              borderWidth: 1,
-              borderColor: colors.borderSubtle,
-              marginBottom: spacing.md,
-            }}
-          >
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.md }}>
-              <Text style={{ ...typography.titleMedium, color: colors.textPrimary }}>Status</Text>
-              <View
-                style={{
-                  paddingHorizontal: spacing.md,
-                  paddingVertical: spacing.xs,
-                  borderRadius: radii.full,
-                  backgroundColor: statusMeta.bg,
-                }}
-              >
-                <Text style={{ ...typography.captionBold, color: statusMeta.color, textTransform: 'uppercase' }}>
-                  {statusMeta.label}
-                </Text>
-              </View>
-            </View>
-
-            {booking.status === 'confirmed' && (
-              <View style={{ backgroundColor: '#16A34A20', borderRadius: radii.md, padding: spacing.md, marginBottom: spacing.md }}>
-                <Text style={{ ...typography.bodySemiBold, color: '#16A34A', textAlign: 'center' }}>Tour Confirmed</Text>
-                <Text style={{ ...typography.body, color: '#16A34A', textAlign: 'center' }}>
-                  {formatDate(finalDate)} {finalTime}
-                </Text>
-              </View>
-            )}
-            {booking.status === 'cancelled' && (
-              <View style={{ backgroundColor: '#DC262620', borderRadius: radii.md, padding: spacing.md, marginBottom: spacing.md }}>
-                <Text style={{ ...typography.bodySemiBold, color: '#DC2626', textAlign: 'center' }}>Tour Cancelled</Text>
-                <Text style={{ ...typography.body, color: '#DC2626', textAlign: 'center' }}>This tour request has been cancelled.</Text>
-              </View>
-            )}
-            {booking.status === 'completed' && (
-              <View style={{ backgroundColor: `${colors.primary}20`, borderRadius: radii.md, padding: spacing.md, marginBottom: spacing.md }}>
-                <Text style={{ ...typography.bodySemiBold, color: colors.primary, textAlign: 'center' }}>Tour Completed</Text>
-                <Text style={{ ...typography.body, color: colors.textSecondary, textAlign: 'center' }}>
-                  {formatDate(finalDate)} {finalTime}
-                </Text>
-              </View>
-            )}
-
-            <View style={{ marginBottom: spacing.md }}>
-              <Text style={{ ...typography.caption, color: colors.textMuted }}>Requested Date</Text>
-              <Text style={{ ...typography.body, color: colors.textPrimary, marginTop: spacing.xs }}>
-                {formatDate(booking.requested_date)}
-              </Text>
-            </View>
-            <View style={{ marginBottom: spacing.md }}>
-              <Text style={{ ...typography.caption, color: colors.textMuted }}>Requested Time</Text>
-              <Text style={{ ...typography.body, color: colors.textPrimary, marginTop: spacing.xs }}>
-                {booking.requested_time || 'Any time'}
-              </Text>
-            </View>
-
-            {booking.status === 'countered' && (
-              <View style={{ backgroundColor: '#3B82F620', borderRadius: radii.md, padding: spacing.md, marginBottom: spacing.md }}>
-                <Text style={{ ...typography.bodySemiBold, color: '#3B82F6' }}>Venue proposed an alternative</Text>
-                <Text style={{ ...typography.body, color: colors.textPrimary, marginTop: spacing.xs }}>
-                  Date: {formatDate(booking.countered_date)}
-                </Text>
-                {booking.countered_time && (
-                  <Text style={{ ...typography.body, color: colors.textPrimary, marginTop: spacing.xs }}>
-                    Time: {booking.countered_time}
-                  </Text>
-                )}
-                {booking.countered_message && (
-                  <Text style={{ ...typography.body, color: colors.textSecondary, marginTop: spacing.xs }}>
-                    {booking.countered_message}
-                  </Text>
-                )}
-              </View>
-            )}
-
-            <View style={{ marginBottom: spacing.md }}>
-              <Text style={{ ...typography.caption, color: colors.textMuted }}>Visitor</Text>
-              <Text style={{ ...typography.body, color: colors.textPrimary, marginTop: spacing.xs }}>
-                {booking.requester_name || '—'}
-              </Text>
-            </View>
-            {booking.requester_email && (
-              <View style={{ marginBottom: spacing.md }}>
-                <Text style={{ ...typography.caption, color: colors.textMuted }}>Email</Text>
-                <Text style={{ ...typography.body, color: colors.textPrimary, marginTop: spacing.xs }}>
-                  {booking.requester_email}
-                </Text>
-              </View>
-            )}
-            {booking.requester_phone && (
-              <View style={{ marginBottom: spacing.md }}>
-                <Text style={{ ...typography.caption, color: colors.textMuted }}>Phone</Text>
-                <Text style={{ ...typography.body, color: colors.textPrimary, marginTop: spacing.xs }}>
-                  {booking.requester_phone}
-                </Text>
-              </View>
-            )}
-            {booking.message && (
-              <View style={{ marginBottom: spacing.md }}>
-                <Text style={{ ...typography.caption, color: colors.textMuted }}>Message</Text>
-                <Text style={{ ...typography.body, color: colors.textPrimary, marginTop: spacing.xs }}>
-                  {booking.message}
-                </Text>
-              </View>
-            )}
-
-            {booking.status === 'countered' && (
-              <View style={{ flexDirection: 'row', gap: spacing.sm, marginTop: spacing.sm }}>
-                <TouchableOpacity
-                  onPress={() => updateStatus('confirmed')}
-                  disabled={saving}
+            <View style={{ flexDirection: 'row', gap: spacing.gutter } as any}>
+              {/* Left column - booking details */}
+              <View style={{ flex: 1 }}>
+                <View
                   style={{
-                    flex: 1,
-                    paddingVertical: spacing.md,
-                    borderRadius: radii.md,
-                    backgroundColor: '#16A34A',
-                    alignItems: 'center',
-                    opacity: saving ? 0.6 : 1,
+                    backgroundColor: colors.surfaceContainerLowest,
+                    borderRadius: radii.lg,
+                    padding: spacing.lg,
+                    borderWidth: 1,
+                    borderColor: colors.outlineVariant,
                   }}
                 >
-                  <Text style={{ ...typography.bodyBold, color: '#FFFFFF' }}>Accept alternative</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  onPress={() => updateStatus('cancelled')}
-                  disabled={saving}
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.md }}>
+                    <Text style={{ ...typography.titleMedium, color: colors.textPrimary }}>Status</Text>
+                    <View
+                      style={{
+                        paddingHorizontal: spacing.md,
+                        paddingVertical: spacing.xs,
+                        borderRadius: radii.full,
+                        backgroundColor: statusMeta.bg,
+                      }}
+                    >
+                      <Text style={{ ...typography.captionBold, color: statusMeta.color, textTransform: 'uppercase' }}>
+                        {statusMeta.label}
+                      </Text>
+                    </View>
+                  </View>
+
+                  {booking.status === 'confirmed' && (
+                    <View style={{ backgroundColor: '#16A34A20', borderRadius: radii.md, padding: spacing.md, marginBottom: spacing.md }}>
+                      <Text style={{ ...typography.bodySemiBold, color: '#16A34A', textAlign: 'center' }}>Tour Confirmed</Text>
+                      <Text style={{ ...typography.body, color: '#16A34A', textAlign: 'center' }}>
+                        {formatDate(finalDate)} {finalTime}
+                      </Text>
+                    </View>
+                  )}
+                  {booking.status === 'cancelled' && (
+                    <View style={{ backgroundColor: '#DC262620', borderRadius: radii.md, padding: spacing.md, marginBottom: spacing.md }}>
+                      <Text style={{ ...typography.bodySemiBold, color: '#DC2626', textAlign: 'center' }}>Tour Cancelled</Text>
+                      <Text style={{ ...typography.body, color: '#DC2626', textAlign: 'center' }}>This tour request has been cancelled.</Text>
+                    </View>
+                  )}
+                  {booking.status === 'completed' && (
+                    <View style={{ backgroundColor: `${colors.primary}20`, borderRadius: radii.md, padding: spacing.md, marginBottom: spacing.md }}>
+                      <Text style={{ ...typography.bodySemiBold, color: colors.primary, textAlign: 'center' }}>Tour Completed</Text>
+                      <Text style={{ ...typography.body, color: colors.textSecondary, textAlign: 'center' }}>
+                        {formatDate(finalDate)} {finalTime}
+                      </Text>
+                    </View>
+                  )}
+
+                  <View style={{ marginBottom: spacing.md }}>
+                    <Text style={{ ...typography.caption, color: colors.textMuted }}>Requested Date</Text>
+                    <Text style={{ ...typography.body, color: colors.textPrimary, marginTop: spacing.xs }}>
+                      {formatDate(booking.requested_date)}
+                    </Text>
+                  </View>
+                  <View style={{ marginBottom: spacing.md }}>
+                    <Text style={{ ...typography.caption, color: colors.textMuted }}>Requested Time</Text>
+                    <Text style={{ ...typography.body, color: colors.textPrimary, marginTop: spacing.xs }}>
+                      {booking.requested_time || 'Any time'}
+                    </Text>
+                  </View>
+
+                  {booking.status === 'countered' && (
+                    <View style={{ backgroundColor: '#3B82F620', borderRadius: radii.md, padding: spacing.md, marginBottom: spacing.md }}>
+                      <Text style={{ ...typography.bodySemiBold, color: '#3B82F6' }}>Venue proposed an alternative</Text>
+                      <Text style={{ ...typography.body, color: colors.textPrimary, marginTop: spacing.xs }}>
+                        Date: {formatDate(booking.countered_date)}
+                      </Text>
+                      {booking.countered_time && (
+                        <Text style={{ ...typography.body, color: colors.textPrimary, marginTop: spacing.xs }}>
+                          Time: {booking.countered_time}
+                        </Text>
+                      )}
+                      {booking.countered_message && (
+                        <Text style={{ ...typography.body, color: colors.textSecondary, marginTop: spacing.xs }}>
+                          {booking.countered_message}
+                        </Text>
+                      )}
+                    </View>
+                  )}
+
+                  <View style={{ marginBottom: spacing.md }}>
+                    <Text style={{ ...typography.caption, color: colors.textMuted }}>Visitor</Text>
+                    <Text style={{ ...typography.body, color: colors.textPrimary, marginTop: spacing.xs }}>
+                      {booking.requester_name || '—'}
+                    </Text>
+                  </View>
+                  {booking.requester_email && (
+                    <View style={{ marginBottom: spacing.md }}>
+                      <Text style={{ ...typography.caption, color: colors.textMuted }}>Email</Text>
+                      <Text style={{ ...typography.body, color: colors.textPrimary, marginTop: spacing.xs }}>
+                        {booking.requester_email}
+                      </Text>
+                    </View>
+                  )}
+                  {booking.requester_phone && (
+                    <View style={{ marginBottom: spacing.md }}>
+                      <Text style={{ ...typography.caption, color: colors.textMuted }}>Phone</Text>
+                      <Text style={{ ...typography.body, color: colors.textPrimary, marginTop: spacing.xs }}>
+                        {booking.requester_phone}
+                      </Text>
+                    </View>
+                  )}
+                  {booking.message && (
+                    <View style={{ marginBottom: spacing.md }}>
+                      <Text style={{ ...typography.caption, color: colors.textMuted }}>Message</Text>
+                      <Text style={{ ...typography.body, color: colors.textPrimary, marginTop: spacing.xs }}>
+                        {booking.message}
+                      </Text>
+                    </View>
+                  )}
+                </View>
+              </View>
+
+              {/* Right column - action buttons */}
+              <View style={{ width: 280, gap: spacing.gutter } as any}>
+                <View
                   style={{
-                    flex: 1,
+                    backgroundColor: colors.surfaceContainerLowest,
+                    borderRadius: radii.lg,
+                    padding: spacing.lg,
+                    borderWidth: 1,
+                    borderColor: colors.outlineVariant,
+                  }}
+                >
+                  <Text style={{ ...typography.titleMedium, color: colors.textPrimary, marginBottom: spacing.md }}>Actions</Text>
+
+                  {booking.status === 'countered' && (
+                    <View style={{ gap: spacing.sm } as any}>
+                      <TouchableOpacity
+                        onPress={() => updateStatus('confirmed')}
+                        disabled={saving}
+                        style={{
+                          paddingVertical: spacing.md,
+                          borderRadius: radii.md,
+                          backgroundColor: '#16A34A',
+                          alignItems: 'center',
+                          opacity: saving ? 0.6 : 1,
+                        }}
+                      >
+                        <Text style={{ ...typography.bodyBold, color: '#FFFFFF' }}>Accept alternative</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        onPress={() => updateStatus('cancelled')}
+                        disabled={saving}
+                        style={{
+                          paddingVertical: spacing.md,
+                          borderRadius: radii.md,
+                          borderWidth: 1,
+                          borderColor: '#DC2626',
+                          alignItems: 'center',
+                          opacity: saving ? 0.6 : 1,
+                        }}
+                      >
+                        <Text style={{ ...typography.bodyBold, color: '#DC2626' }}>Decline</Text>
+                      </TouchableOpacity>
+                    </View>
+                  )}
+
+                  {booking.status !== 'countered' && (
+                    <Text style={{ ...typography.body, color: colors.textMuted, textAlign: 'center' }}>
+                      No actions available for this booking status.
+                    </Text>
+                  )}
+                </View>
+
+                <TouchableOpacity
+                  onPress={() => navigation.navigate('MyTours')}
+                  style={{
                     paddingVertical: spacing.md,
                     borderRadius: radii.md,
                     borderWidth: 1,
-                    borderColor: '#DC2626',
+                    borderColor: colors.outlineVariant,
                     alignItems: 'center',
-                    opacity: saving ? 0.6 : 1,
+                    backgroundColor: colors.surfaceContainerLowest,
                   }}
                 >
-                  <Text style={{ ...typography.bodyBold, color: '#DC2626' }}>Decline</Text>
+                  <Text style={{ ...typography.bodyBold, color: colors.textPrimary }}>Back to My Tours</Text>
                 </TouchableOpacity>
               </View>
-            )}
+            </View>
           </View>
+        ) : (
+          <>
+            <View style={{ paddingHorizontal: spacing.lg, paddingTop: spacing.sm, paddingBottom: spacing.md }}>
+              <TouchableOpacity
+                onPress={() => navigation.goBack()}
+                style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.sm }}
+              >
+                <MaterialIcons name="arrow-back" size={20} color={colors.textPrimary} />
+                <Text style={{ ...typography.body, color: colors.textPrimary, marginLeft: spacing.sm }}>Back</Text>
+              </TouchableOpacity>
 
-          <TouchableOpacity
-            onPress={() => navigation.navigate('MyTours')}
-            style={{
-              paddingVertical: spacing.md,
-              borderRadius: radii.md,
-              borderWidth: 1,
-              borderColor: colors.borderSubtle,
-              alignItems: 'center',
-              backgroundColor: colors.surface,
-            }}
-          >
-            <Text style={{ ...typography.bodyBold, color: colors.textPrimary }}>Back to My Tours</Text>
-          </TouchableOpacity>
-        </View>
+              <Text style={{ ...typography.displayMedium, color: colors.textPrimary, marginBottom: spacing.xs }}>
+                Tour Booking
+              </Text>
+              <Text style={{ ...typography.body, color: colors.textMuted }}>{booking.venue_name || 'Venue'}</Text>
+            </View>
+
+            <View style={{ paddingHorizontal: spacing.lg }}>
+              <View
+                style={{
+                  backgroundColor: colors.surface,
+                  borderRadius: radii.lg,
+                  padding: spacing.lg,
+                  borderWidth: 1,
+                  borderColor: colors.borderSubtle,
+                  marginBottom: spacing.md,
+                }}
+              >
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.md }}>
+                  <Text style={{ ...typography.titleMedium, color: colors.textPrimary }}>Status</Text>
+                  <View
+                    style={{
+                      paddingHorizontal: spacing.md,
+                      paddingVertical: spacing.xs,
+                      borderRadius: radii.full,
+                      backgroundColor: statusMeta.bg,
+                    }}
+                  >
+                    <Text style={{ ...typography.captionBold, color: statusMeta.color, textTransform: 'uppercase' }}>
+                      {statusMeta.label}
+                    </Text>
+                  </View>
+                </View>
+
+                {booking.status === 'confirmed' && (
+                  <View style={{ backgroundColor: '#16A34A20', borderRadius: radii.md, padding: spacing.md, marginBottom: spacing.md }}>
+                    <Text style={{ ...typography.bodySemiBold, color: '#16A34A', textAlign: 'center' }}>Tour Confirmed</Text>
+                    <Text style={{ ...typography.body, color: '#16A34A', textAlign: 'center' }}>
+                      {formatDate(finalDate)} {finalTime}
+                    </Text>
+                  </View>
+                )}
+                {booking.status === 'cancelled' && (
+                  <View style={{ backgroundColor: '#DC262620', borderRadius: radii.md, padding: spacing.md, marginBottom: spacing.md }}>
+                    <Text style={{ ...typography.bodySemiBold, color: '#DC2626', textAlign: 'center' }}>Tour Cancelled</Text>
+                    <Text style={{ ...typography.body, color: '#DC2626', textAlign: 'center' }}>This tour request has been cancelled.</Text>
+                  </View>
+                )}
+                {booking.status === 'completed' && (
+                  <View style={{ backgroundColor: `${colors.primary}20`, borderRadius: radii.md, padding: spacing.md, marginBottom: spacing.md }}>
+                    <Text style={{ ...typography.bodySemiBold, color: colors.primary, textAlign: 'center' }}>Tour Completed</Text>
+                    <Text style={{ ...typography.body, color: colors.textSecondary, textAlign: 'center' }}>
+                      {formatDate(finalDate)} {finalTime}
+                    </Text>
+                  </View>
+                )}
+
+                <View style={{ marginBottom: spacing.md }}>
+                  <Text style={{ ...typography.caption, color: colors.textMuted }}>Requested Date</Text>
+                  <Text style={{ ...typography.body, color: colors.textPrimary, marginTop: spacing.xs }}>
+                    {formatDate(booking.requested_date)}
+                  </Text>
+                </View>
+                <View style={{ marginBottom: spacing.md }}>
+                  <Text style={{ ...typography.caption, color: colors.textMuted }}>Requested Time</Text>
+                  <Text style={{ ...typography.body, color: colors.textPrimary, marginTop: spacing.xs }}>
+                    {booking.requested_time || 'Any time'}
+                  </Text>
+                </View>
+
+                {booking.status === 'countered' && (
+                  <View style={{ backgroundColor: '#3B82F620', borderRadius: radii.md, padding: spacing.md, marginBottom: spacing.md }}>
+                    <Text style={{ ...typography.bodySemiBold, color: '#3B82F6' }}>Venue proposed an alternative</Text>
+                    <Text style={{ ...typography.body, color: colors.textPrimary, marginTop: spacing.xs }}>
+                      Date: {formatDate(booking.countered_date)}
+                    </Text>
+                    {booking.countered_time && (
+                      <Text style={{ ...typography.body, color: colors.textPrimary, marginTop: spacing.xs }}>
+                        Time: {booking.countered_time}
+                      </Text>
+                    )}
+                    {booking.countered_message && (
+                      <Text style={{ ...typography.body, color: colors.textSecondary, marginTop: spacing.xs }}>
+                        {booking.countered_message}
+                      </Text>
+                    )}
+                  </View>
+                )}
+
+                <View style={{ marginBottom: spacing.md }}>
+                  <Text style={{ ...typography.caption, color: colors.textMuted }}>Visitor</Text>
+                  <Text style={{ ...typography.body, color: colors.textPrimary, marginTop: spacing.xs }}>
+                    {booking.requester_name || '—'}
+                  </Text>
+                </View>
+                {booking.requester_email && (
+                  <View style={{ marginBottom: spacing.md }}>
+                    <Text style={{ ...typography.caption, color: colors.textMuted }}>Email</Text>
+                    <Text style={{ ...typography.body, color: colors.textPrimary, marginTop: spacing.xs }}>
+                      {booking.requester_email}
+                    </Text>
+                  </View>
+                )}
+                {booking.requester_phone && (
+                  <View style={{ marginBottom: spacing.md }}>
+                    <Text style={{ ...typography.caption, color: colors.textMuted }}>Phone</Text>
+                    <Text style={{ ...typography.body, color: colors.textPrimary, marginTop: spacing.xs }}>
+                      {booking.requester_phone}
+                    </Text>
+                  </View>
+                )}
+                {booking.message && (
+                  <View style={{ marginBottom: spacing.md }}>
+                    <Text style={{ ...typography.caption, color: colors.textMuted }}>Message</Text>
+                    <Text style={{ ...typography.body, color: colors.textPrimary, marginTop: spacing.xs }}>
+                      {booking.message}
+                    </Text>
+                  </View>
+                )}
+
+                {booking.status === 'countered' && (
+                  <View style={{ flexDirection: 'row', gap: spacing.sm, marginTop: spacing.sm }}>
+                    <TouchableOpacity
+                      onPress={() => updateStatus('confirmed')}
+                      disabled={saving}
+                      style={{
+                        flex: 1,
+                        paddingVertical: spacing.md,
+                        borderRadius: radii.md,
+                        backgroundColor: '#16A34A',
+                        alignItems: 'center',
+                        opacity: saving ? 0.6 : 1,
+                      }}
+                    >
+                      <Text style={{ ...typography.bodyBold, color: '#FFFFFF' }}>Accept alternative</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      onPress={() => updateStatus('cancelled')}
+                      disabled={saving}
+                      style={{
+                        flex: 1,
+                        paddingVertical: spacing.md,
+                        borderRadius: radii.md,
+                        borderWidth: 1,
+                        borderColor: '#DC2626',
+                        alignItems: 'center',
+                        opacity: saving ? 0.6 : 1,
+                      }}
+                    >
+                      <Text style={{ ...typography.bodyBold, color: '#DC2626' }}>Decline</Text>
+                    </TouchableOpacity>
+                  </View>
+                )}
+              </View>
+
+              <TouchableOpacity
+                onPress={() => navigation.navigate('MyTours')}
+                style={{
+                  paddingVertical: spacing.md,
+                  borderRadius: radii.md,
+                  borderWidth: 1,
+                  borderColor: colors.borderSubtle,
+                  alignItems: 'center',
+                  backgroundColor: colors.surface,
+                }}
+              >
+                <Text style={{ ...typography.bodyBold, color: colors.textPrimary }}>Back to My Tours</Text>
+              </TouchableOpacity>
+            </View>
+          </>
+        )}
       </ScrollView>
 
       {alert && (
