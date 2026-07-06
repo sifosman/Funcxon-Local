@@ -507,11 +507,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     // --- WEB OAUTH FLOW (Facebook, Apple, or Web Platform) ---
     if (Platform.OS === 'web') {
-      // Get the current URL for the redirect
-      const redirectTo = typeof window !== 'undefined' 
+      // Use the web URL as the OAuth callback. This URL must be added to
+      // Supabase Auth > URL Configuration > Redirect URLs, otherwise Supabase
+      // falls back to the provider's default redirect URI (e.g. vibeventz://...).
+      const redirectTo = typeof window !== 'undefined'
         ? `${window.location.origin}/auth/callback`
         : undefined;
-      
+
+      console.log('[AuthContext] Web OAuth redirectTo:', redirectTo);
+
       const { error } = await supabase.auth.signInWithOAuth({
         provider,
         options: {
