@@ -51,6 +51,13 @@ const linking: any = {
     screens: {
       Main: {
         screens: {
+          Home: {
+            path: '',
+            screens: {
+              VendorList: '',
+            },
+          },
+          Favourites: 'favourites',
           Quotes: {
             path: 'quotes',
             screens: {
@@ -60,8 +67,11 @@ const linking: any = {
               QuoteHistory: 'history/:quoteRequestId',
             },
           },
+          Planner: 'planner',
           Account: {
+            path: 'account',
             screens: {
+              AccountMain: '',
               ApplicationStatus: 'application-status',
               VenueQuoteRequests: 'vendor/quotes',
               VendorQuoteCreate: 'vendor/quote/:quoteRequestId',
