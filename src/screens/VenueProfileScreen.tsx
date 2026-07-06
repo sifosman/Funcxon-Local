@@ -96,6 +96,7 @@ export default function VenueProfileScreen({ route, navigation }: Props) {
   const carouselRef = useRef<ICarouselInstance>(null);
   const [zoomVisible, setZoomVisible] = useState(false);
   const [zoomInitialIndex, setZoomInitialIndex] = useState(0);
+  const [galleryContainerWidth, setGalleryContainerWidth] = useState(Dimensions.get('window').width);
   const [favouriteIds, setFavouriteIds] = useState<{ vendorIds: number[]; venueIds: number[] }>({
     vendorIds: [],
     venueIds: [],
@@ -639,46 +640,73 @@ export default function VenueProfileScreen({ route, navigation }: Props) {
           borderColor: colors.borderSubtle,
         }}
       >
+        {/* Subscription badge */}
+        {venue.subscription_plan && venue.subscription_plan !== 'basic' && (
+          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.sm, gap: spacing.sm }}>
+            <View
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                backgroundColor: colors.primaryTeal + '18',
+                paddingHorizontal: spacing.sm,
+                paddingVertical: 3,
+                borderRadius: radii.full,
+                borderWidth: 1,
+                borderColor: colors.primaryTeal + '40',
+                gap: 4,
+              }}
+            >
+              <MaterialIcons name="verified" size={14} color={colors.primaryTeal} />
+              <Text style={{ ...typography.captionSemiBold, color: colors.primaryTeal, textTransform: 'capitalize' }}>
+                {venue.subscription_plan} Venue
+              </Text>
+            </View>
+          </View>
+        )}
+
         <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
           <View style={{ flex: 1, paddingRight: spacing.md }}>
-            <Text style={{ ...headerTitleLarge, color: colors.primary }}>{venue.name}</Text>
+            <Text style={{ ...(isDesktop ? typography.headlineMd : headerTitleLarge), color: colors.primary }}>{venue.name}</Text>
           </View>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
-            <TouchableOpacity
-              onPress={handleShare}
-              style={{
-                width: 40,
-                height: 40,
-                borderRadius: 20,
-                borderWidth: 1,
-                borderColor: colors.borderSubtle,
-                alignItems: 'center',
-                justifyContent: 'center',
-                backgroundColor: colors.surface,
-              }}
-            >
-              <MaterialIcons name="share" size={22} color={colors.textMuted} />
-            </TouchableOpacity>
-            <TouchableOpacity
-              onPress={handleToggleFavourite}
-              style={{
-                width: 40,
-                height: 40,
-                borderRadius: 20,
-                borderWidth: 1,
-                borderColor: colors.borderSubtle,
-                alignItems: 'center',
-                justifyContent: 'center',
-                backgroundColor: colors.surface,
-              }}
-            >
-              <MaterialIcons
-                name={isFavourite ? 'favorite' : 'favorite-border'}
-                size={24}
-                color={isFavourite ? colors.primaryTeal : colors.textMuted}
-              />
-            </TouchableOpacity>
-          </View>
+          {/* Only show fav/share buttons in header on mobile; desktop has them in sidebar */}
+          {!isDesktop && (
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
+              <TouchableOpacity
+                onPress={handleShare}
+                style={{
+                  width: 40,
+                  height: 40,
+                  borderRadius: 20,
+                  borderWidth: 1,
+                  borderColor: colors.borderSubtle,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  backgroundColor: colors.surface,
+                }}
+              >
+                <MaterialIcons name="share" size={22} color={colors.textMuted} />
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={handleToggleFavourite}
+                style={{
+                  width: 40,
+                  height: 40,
+                  borderRadius: 20,
+                  borderWidth: 1,
+                  borderColor: colors.borderSubtle,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  backgroundColor: colors.surface,
+                }}
+              >
+                <MaterialIcons
+                  name={isFavourite ? 'favorite' : 'favorite-border'}
+                  size={24}
+                  color={isFavourite ? colors.primaryTeal : colors.textMuted}
+                />
+              </TouchableOpacity>
+            </View>
+          )}
         </View>
 
         <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: spacing.sm }}>
@@ -717,159 +745,239 @@ export default function VenueProfileScreen({ route, navigation }: Props) {
           borderColor: colors.borderSubtle,
           overflow: 'hidden',
         }}
+        onLayout={(e) => setGalleryContainerWidth(e.nativeEvent.layout.width)}
       >
-        <View style={{ height: 220, backgroundColor: colors.surfaceMuted }}>
-          {galleryItems.length > 0 ? (
-            <>
-              <Carousel
-                ref={carouselRef}
-                width={Dimensions.get('window').width}
-                height={220}
-                data={galleryItems}
-                loop={galleryItems.length > 1}
-                pagingEnabled={false}
-                snapEnabled
-                onSnapToItem={(index) => setGalleryIndex(index)}
-                renderItem={({ item }) => (
+        {isDesktop ? (
+          /* Desktop photo grid: large hero + 2 stacked thumbnails */
+          galleryItems.length > 0 ? (
+            <View style={{ flexDirection: 'row', height: 320, gap: 2 }}>
+              {/* Hero image */}
+              <TouchableOpacity
+                activeOpacity={0.9}
+                onPress={() => { setZoomInitialIndex(0); setZoomVisible(true); }}
+                style={{ flex: 3 }}
+              >
+                <NetworkImage
+                  uri={galleryItems[0].url}
+                  style={{ width: '100%', height: '100%' }}
+                  resizeMode="cover"
+                />
+                {galleryItems[0].type === 'video' && (
+                  <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, alignItems: 'center', justifyContent: 'center' }}>
+                    <View style={{ width: 56, height: 56, borderRadius: 28, backgroundColor: 'rgba(0,0,0,0.6)', alignItems: 'center', justifyContent: 'center' }}>
+                      <MaterialIcons name="play-arrow" size={36} color="#FFFFFF" />
+                    </View>
+                  </View>
+                )}
+              </TouchableOpacity>
+              {/* Right column: 2 thumbnails stacked */}
+              {galleryItems.length > 1 && (
+                <View style={{ flex: 2, flexDirection: 'column', gap: 2 }}>
                   <TouchableOpacity
                     activeOpacity={0.9}
-                    onPress={() => {
-                      setZoomInitialIndex(galleryIndex);
-                      setZoomVisible(true);
-                    }}
-                    style={{ width: '100%', height: '100%' }}
+                    onPress={() => { setZoomInitialIndex(1); setZoomVisible(true); }}
+                    style={{ flex: 1 }}
                   >
-                    {item.type === 'video' ? (
-                      <View style={{ width: '100%', height: '100%', alignItems: 'center', justifyContent: 'center', backgroundColor: '#000' }}>
-                        <NetworkImage
-                          uri={item.url}
-                          style={{ width: '100%', height: '100%', position: 'absolute' }}
-                          resizeMode="cover"
-                          placeholderIcon="videocam"
-                          useLogoFallback={false}
-                        />
-                        <View style={{ width: 48, height: 48, borderRadius: 24, backgroundColor: 'rgba(0,0,0,0.6)', alignItems: 'center', justifyContent: 'center' }}>
-                          <MaterialIcons name="play-arrow" size={32} color="#FFFFFF" />
+                    <NetworkImage
+                      uri={galleryItems[1].url}
+                      style={{ width: '100%', height: '100%' }}
+                      resizeMode="cover"
+                    />
+                    {galleryItems[1].type === 'video' && (
+                      <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, alignItems: 'center', justifyContent: 'center' }}>
+                        <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(0,0,0,0.6)', alignItems: 'center', justifyContent: 'center' }}>
+                          <MaterialIcons name="play-arrow" size={24} color="#FFFFFF" />
                         </View>
                       </View>
-                    ) : (
-                      <NetworkImage uri={item.url} style={{ width: '100%', height: '100%' }} resizeMode="cover" />
                     )}
                   </TouchableOpacity>
-                )}
-              />
-              {galleryItems.length > 1 && (
-                <>
-                  <TouchableOpacity
-                    onPress={() => carouselRef.current?.prev()}
-                    style={{
-                      position: 'absolute',
-                      left: spacing.md,
-                      top: '50%',
-                      marginTop: -18,
-                      width: 36,
-                      height: 36,
-                      borderRadius: 18,
-                      backgroundColor: 'rgba(0,0,0,0.5)',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                    }}
-                  >
-                    <MaterialIcons name="chevron-left" size={24} color="#FFFFFF" />
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    onPress={() => carouselRef.current?.next()}
-                    style={{
-                      position: 'absolute',
-                      right: spacing.md,
-                      top: '50%',
-                      marginTop: -18,
-                      width: 36,
-                      height: 36,
-                      borderRadius: 18,
-                      backgroundColor: 'rgba(0,0,0,0.5)',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                    }}
-                  >
-                    <MaterialIcons name="chevron-right" size={24} color="#FFFFFF" />
-                  </TouchableOpacity>
-                  <View
-                    style={{
-                      position: 'absolute',
-                      bottom: spacing.md,
-                      left: 0,
-                      right: 0,
-                      flexDirection: 'row',
-                      justifyContent: 'center',
-                      gap: 6,
-                    }}
-                  >
-                    {galleryItems.map((_, idx) => (
-                      <View
-                        key={idx}
-                        style={{
-                          width: 8,
-                          height: 8,
-                          borderRadius: 4,
-                          backgroundColor: idx === galleryIndex ? '#FFFFFF' : 'rgba(255,255,255,0.4)',
-                        }}
+                  {galleryItems.length > 2 && (
+                    <TouchableOpacity
+                      activeOpacity={0.9}
+                      onPress={() => { setZoomInitialIndex(2); setZoomVisible(true); }}
+                      style={{ flex: 1, position: 'relative' }}
+                    >
+                      <NetworkImage
+                        uri={galleryItems[2].url}
+                        style={{ width: '100%', height: '100%' }}
+                        resizeMode="cover"
                       />
-                    ))}
-                  </View>
-                </>
-              )}
-            </>
-          ) : (
-            <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
-              <MaterialIcons name="image" size={48} color={colors.textMuted} />
-              <Text style={{ ...typography.caption, color: colors.textMuted, marginTop: spacing.sm }}>
-                No images available
-              </Text>
-            </View>
-          )}
-        </View>
-        {galleryItems.length > 1 && (
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            style={{ padding: spacing.md }}
-            snapToInterval={80 + spacing.sm}
-            decelerationRate="fast"
-          >
-            {galleryItems.map((item, idx) => (
-              <TouchableOpacity
-                key={item.url + idx}
-                onPress={() => {
-                  setGalleryIndex(idx);
-                  carouselRef.current?.scrollTo({ index: idx });
-                }}
-                style={{ marginRight: spacing.sm }}
-              >
-                <View style={{ position: 'relative' }}>
-                  <NetworkImage
-                    uri={item.url}
-                    style={{
-                      width: 80,
-                      height: 80,
-                      borderRadius: radii.md,
-                      backgroundColor: colors.surfaceMuted,
-                      borderWidth: idx === galleryIndex ? 2 : 0,
-                      borderColor: colors.textPrimary,
-                    }}
-                    resizeMode="cover"
-                    placeholderIcon={item.type === 'video' ? 'videocam' : 'image'}
-                    useLogoFallback={false}
-                  />
-                  {item.type === 'video' && (
-                    <View style={{ position: 'absolute', top: '50%', left: '50%', marginLeft: -10, marginTop: -10, width: 20, height: 20, borderRadius: 10, backgroundColor: 'rgba(0,0,0,0.6)', alignItems: 'center', justifyContent: 'center' }}>
-                      <MaterialIcons name="play-arrow" size={14} color="#FFFFFF" />
-                    </View>
+                      {galleryItems.length > 3 && (
+                        <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.45)', alignItems: 'center', justifyContent: 'center' }}>
+                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: 'rgba(255,255,255,0.15)', paddingHorizontal: spacing.md, paddingVertical: spacing.sm, borderRadius: radii.md, borderWidth: 1, borderColor: 'rgba(255,255,255,0.4)' }}>
+                            <MaterialIcons name="photo-library" size={16} color="#FFFFFF" />
+                            <Text style={{ ...typography.bodySemiBold, color: '#FFFFFF' }}>View all photos</Text>
+                          </View>
+                        </View>
+                      )}
+                    </TouchableOpacity>
                   )}
                 </View>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
+              )}
+            </View>
+          ) : (
+            <View style={{ height: 320, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.surfaceMuted }}>
+              <MaterialIcons name="image" size={48} color={colors.textMuted} />
+              <Text style={{ ...typography.caption, color: colors.textMuted, marginTop: spacing.sm }}>No images available</Text>
+            </View>
+          )
+        ) : (
+          /* Mobile: carousel + thumbnails */
+          <>
+            <View style={{ height: 220, backgroundColor: colors.surfaceMuted }}>
+              {galleryItems.length > 0 ? (
+                <>
+                  <Carousel
+                    ref={carouselRef}
+                    width={galleryContainerWidth || Dimensions.get('window').width}
+                    height={220}
+                    data={galleryItems}
+                    loop={galleryItems.length > 1}
+                    pagingEnabled={false}
+                    snapEnabled
+                    onSnapToItem={(index) => setGalleryIndex(index)}
+                    renderItem={({ item }) => (
+                      <TouchableOpacity
+                        activeOpacity={0.9}
+                        onPress={() => {
+                          setZoomInitialIndex(galleryIndex);
+                          setZoomVisible(true);
+                        }}
+                        style={{ width: '100%', height: '100%' }}
+                      >
+                        {item.type === 'video' ? (
+                          <View style={{ width: '100%', height: '100%', alignItems: 'center', justifyContent: 'center', backgroundColor: '#000' }}>
+                            <NetworkImage
+                              uri={item.url}
+                              style={{ width: '100%', height: '100%', position: 'absolute' }}
+                              resizeMode="cover"
+                              placeholderIcon="videocam"
+                              useLogoFallback={false}
+                            />
+                            <View style={{ width: 48, height: 48, borderRadius: 24, backgroundColor: 'rgba(0,0,0,0.6)', alignItems: 'center', justifyContent: 'center' }}>
+                              <MaterialIcons name="play-arrow" size={32} color="#FFFFFF" />
+                            </View>
+                          </View>
+                        ) : (
+                          <NetworkImage uri={item.url} style={{ width: '100%', height: '100%' }} resizeMode="cover" />
+                        )}
+                      </TouchableOpacity>
+                    )}
+                  />
+                  {galleryItems.length > 1 && (
+                    <>
+                      <TouchableOpacity
+                        onPress={() => carouselRef.current?.prev()}
+                        style={{
+                          position: 'absolute',
+                          left: spacing.md,
+                          top: '50%',
+                          marginTop: -18,
+                          width: 36,
+                          height: 36,
+                          borderRadius: 18,
+                          backgroundColor: 'rgba(0,0,0,0.5)',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                        }}
+                      >
+                        <MaterialIcons name="chevron-left" size={24} color="#FFFFFF" />
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        onPress={() => carouselRef.current?.next()}
+                        style={{
+                          position: 'absolute',
+                          right: spacing.md,
+                          top: '50%',
+                          marginTop: -18,
+                          width: 36,
+                          height: 36,
+                          borderRadius: 18,
+                          backgroundColor: 'rgba(0,0,0,0.5)',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                        }}
+                      >
+                        <MaterialIcons name="chevron-right" size={24} color="#FFFFFF" />
+                      </TouchableOpacity>
+                      <View
+                        style={{
+                          position: 'absolute',
+                          bottom: spacing.md,
+                          left: 0,
+                          right: 0,
+                          flexDirection: 'row',
+                          justifyContent: 'center',
+                          gap: 6,
+                        }}
+                      >
+                        {galleryItems.map((_, idx) => (
+                          <View
+                            key={idx}
+                            style={{
+                              width: 8,
+                              height: 8,
+                              borderRadius: 4,
+                              backgroundColor: idx === galleryIndex ? '#FFFFFF' : 'rgba(255,255,255,0.4)',
+                            }}
+                          />
+                        ))}
+                      </View>
+                    </>
+                  )}
+                </>
+              ) : (
+                <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+                  <MaterialIcons name="image" size={48} color={colors.textMuted} />
+                  <Text style={{ ...typography.caption, color: colors.textMuted, marginTop: spacing.sm }}>
+                    No images available
+                  </Text>
+                </View>
+              )}
+            </View>
+            {galleryItems.length > 1 && (
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                style={{ padding: spacing.md }}
+                snapToInterval={80 + spacing.sm}
+                decelerationRate="fast"
+              >
+                {galleryItems.map((item, idx) => (
+                  <TouchableOpacity
+                    key={item.url + idx}
+                    onPress={() => {
+                      setGalleryIndex(idx);
+                      carouselRef.current?.scrollTo({ index: idx });
+                    }}
+                    style={{ marginRight: spacing.sm }}
+                  >
+                    <View style={{ position: 'relative' }}>
+                      <NetworkImage
+                        uri={item.url}
+                        style={{
+                          width: 80,
+                          height: 80,
+                          borderRadius: radii.md,
+                          backgroundColor: colors.surfaceMuted,
+                          borderWidth: idx === galleryIndex ? 2 : 0,
+                          borderColor: colors.textPrimary,
+                        }}
+                        resizeMode="cover"
+                        placeholderIcon={item.type === 'video' ? 'videocam' : 'image'}
+                        useLogoFallback={false}
+                      />
+                      {item.type === 'video' && (
+                        <View style={{ position: 'absolute', top: '50%', left: '50%', marginLeft: -10, marginTop: -10, width: 20, height: 20, borderRadius: 10, backgroundColor: 'rgba(0,0,0,0.6)', alignItems: 'center', justifyContent: 'center' }}>
+                          <MaterialIcons name="play-arrow" size={14} color="#FFFFFF" />
+                        </View>
+                      )}
+                    </View>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            )}
+          </>
         )}
       </View>
 
