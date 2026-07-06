@@ -313,6 +313,8 @@ export default function AttendeeHomeScreen() {
   // Responsive card width - aim for ~2.2 cards visible on mobile, 4 columns on desktop
   const [screenWidth, setScreenWidth] = useState(Dimensions.get('window').width);
   const cardWidth = isDesktop ? (Math.min(screenWidth, 1200) - 48 * 2 - 24 * 3) / 4 : screenWidth / 2.2;
+  // Wider cards for the 3-card Get Listed section (falls back to cardWidth on mobile)
+  const getListedCardWidth = isDesktop ? (Math.min(screenWidth, 1200) - 48 * 2 - 24 * 2) / 3 : cardWidth;
 
   useEffect(() => {
     const subscription = Dimensions.addEventListener('change', ({ window }) => {
@@ -2017,7 +2019,7 @@ export default function AttendeeHomeScreen() {
             {/* List Your Venue */}
             <TouchableOpacity
               activeOpacity={0.9}
-              style={{ width: cardWidth, marginRight: 0, marginBottom: 24 }}
+              style={{ width: getListedCardWidth, marginRight: 0, marginBottom: 24 }}
               onPress={() => {
                 if (session) {
                   navigation.navigate('ListersPortal');
@@ -2029,10 +2031,10 @@ export default function AttendeeHomeScreen() {
               <View style={GET_LISTED_CARD_STYLE}>
               <NetworkImage
                 uri={'https://images.unsplash.com/photo-1464366400600-7168b8af9bc3?w=800&q=80'}
-                style={{ width: '100%', height: cardWidth * 0.65 }}
+                style={{ width: '100%', height: getListedCardWidth * 0.65 }}
                 resizeMode="cover"
               />
-              <View style={{ position: 'absolute', top: 0, left: 0, right: 0, height: cardWidth * 0.65, backgroundColor: 'rgba(0,0,0,0.35)' }} />
+              <View style={{ position: 'absolute', top: 0, left: 0, right: 0, height: getListedCardWidth * 0.65, backgroundColor: 'rgba(0,0,0,0.35)' }} />
               <View style={{ position: 'absolute', top: spacing.sm, left: spacing.sm }}>
                 <View style={{ backgroundColor: colors.textPrimary, paddingHorizontal: spacing.sm, paddingVertical: 3, borderRadius: radii.full }}>
                   <Text style={{ ...typography.captionBold, color: '#fff', fontSize: 9 }}>VENUE</Text>
@@ -2058,7 +2060,7 @@ export default function AttendeeHomeScreen() {
           {/* List Your Services */}
           <TouchableOpacity
             activeOpacity={0.9}
-            style={{ width: cardWidth, marginRight: 0, marginBottom: 24 }}
+            style={{ width: getListedCardWidth, marginRight: 0, marginBottom: 24 }}
             onPress={() => {
               if (session) {
                 navigation.navigate('ListersPortal');
@@ -2070,10 +2072,10 @@ export default function AttendeeHomeScreen() {
             <View style={GET_LISTED_CARD_STYLE}>
               <NetworkImage
                 uri={'https://images.unsplash.com/photo-1621844061203-3f31a2a7d6ad?w=800&q=80'}
-                style={{ width: '100%', height: cardWidth * 0.65 }}
+                style={{ width: '100%', height: getListedCardWidth * 0.65 }}
                 resizeMode="cover"
               />
-              <View style={{ position: 'absolute', top: 0, left: 0, right: 0, height: cardWidth * 0.65, backgroundColor: 'rgba(0,0,0,0.35)' }} />
+              <View style={{ position: 'absolute', top: 0, left: 0, right: 0, height: getListedCardWidth * 0.65, backgroundColor: 'rgba(0,0,0,0.35)' }} />
               <View style={{ position: 'absolute', top: spacing.sm, left: spacing.sm }}>
                 <View style={{ backgroundColor: colors.primary, paddingHorizontal: spacing.sm, paddingVertical: 3, borderRadius: radii.full }}>
                   <Text style={{ ...typography.captionBold, color: '#fff', fontSize: 9 }}>VENDOR</Text>
@@ -2099,7 +2101,7 @@ export default function AttendeeHomeScreen() {
           {/* Listers Portal */}
           <TouchableOpacity
             activeOpacity={0.9}
-            style={{ width: cardWidth, marginRight: 0, marginBottom: 24 }}
+            style={{ width: getListedCardWidth, marginRight: 0, marginBottom: 24 }}
             onPress={() => {
               if (session) {
                 navigation.navigate('ListersPortal');
@@ -2111,10 +2113,10 @@ export default function AttendeeHomeScreen() {
             <View style={GET_LISTED_CARD_STYLE}>
               <NetworkImage
                 uri={'https://images.unsplash.com/photo-1559136555-9303baea8ebd?w=800&q=80'}
-                style={{ width: '100%', height: cardWidth * 0.65 }}
+                style={{ width: '100%', height: getListedCardWidth * 0.65 }}
                 resizeMode="cover"
               />
-              <View style={{ position: 'absolute', top: 0, left: 0, right: 0, height: cardWidth * 0.65, backgroundColor: 'rgba(0,0,0,0.35)' }} />
+              <View style={{ position: 'absolute', top: 0, left: 0, right: 0, height: getListedCardWidth * 0.65, backgroundColor: 'rgba(0,0,0,0.35)' }} />
               <View style={{ position: 'absolute', top: spacing.sm, left: spacing.sm }}>
                 <View style={{ backgroundColor: '#6C47FF', paddingHorizontal: spacing.sm, paddingVertical: 3, borderRadius: radii.full }}>
                   <Text style={{ ...typography.captionBold, color: '#fff', fontSize: 9 }}>PORTAL</Text>
@@ -2158,10 +2160,10 @@ export default function AttendeeHomeScreen() {
             <View style={GET_LISTED_CARD_STYLE}>
               <NetworkImage
                 uri={'https://images.unsplash.com/photo-1464366400600-7168b8af9bc3?w=800&q=80'}
-                style={{ width: '100%', height: cardWidth * 0.65 }}
+                style={{ width: '100%', height: getListedCardWidth * 0.65 }}
                 resizeMode="cover"
               />
-              <View style={{ position: 'absolute', top: 0, left: 0, right: 0, height: cardWidth * 0.65, backgroundColor: 'rgba(0,0,0,0.35)' }} />
+              <View style={{ position: 'absolute', top: 0, left: 0, right: 0, height: getListedCardWidth * 0.65, backgroundColor: 'rgba(0,0,0,0.35)' }} />
               <View style={{ position: 'absolute', top: spacing.sm, left: spacing.sm }}>
                 <View style={{ backgroundColor: colors.textPrimary, paddingHorizontal: spacing.sm, paddingVertical: 3, borderRadius: radii.full }}>
                   <Text style={{ ...typography.captionBold, color: '#fff', fontSize: 9 }}>VENUE</Text>
@@ -2193,10 +2195,10 @@ export default function AttendeeHomeScreen() {
             <View style={GET_LISTED_CARD_STYLE}>
               <NetworkImage
                 uri={'https://images.unsplash.com/photo-1621844061203-3f31a2a7d6ad?w=800&q=80'}
-                style={{ width: '100%', height: cardWidth * 0.65 }}
+                style={{ width: '100%', height: getListedCardWidth * 0.65 }}
                 resizeMode="cover"
               />
-              <View style={{ position: 'absolute', top: 0, left: 0, right: 0, height: cardWidth * 0.65, backgroundColor: 'rgba(0,0,0,0.35)' }} />
+              <View style={{ position: 'absolute', top: 0, left: 0, right: 0, height: getListedCardWidth * 0.65, backgroundColor: 'rgba(0,0,0,0.35)' }} />
               <View style={{ position: 'absolute', top: spacing.sm, left: spacing.sm }}>
                 <View style={{ backgroundColor: colors.primary, paddingHorizontal: spacing.sm, paddingVertical: 3, borderRadius: radii.full }}>
                   <Text style={{ ...typography.captionBold, color: '#fff', fontSize: 9 }}>VENDOR</Text>
@@ -2228,10 +2230,10 @@ export default function AttendeeHomeScreen() {
             <View style={GET_LISTED_CARD_STYLE}>
               <NetworkImage
                 uri={'https://images.unsplash.com/photo-1559136555-9303baea8ebd?w=800&q=80'}
-                style={{ width: '100%', height: cardWidth * 0.65 }}
+                style={{ width: '100%', height: getListedCardWidth * 0.65 }}
                 resizeMode="cover"
               />
-              <View style={{ position: 'absolute', top: 0, left: 0, right: 0, height: cardWidth * 0.65, backgroundColor: 'rgba(0,0,0,0.35)' }} />
+              <View style={{ position: 'absolute', top: 0, left: 0, right: 0, height: getListedCardWidth * 0.65, backgroundColor: 'rgba(0,0,0,0.35)' }} />
               <View style={{ position: 'absolute', top: spacing.sm, left: spacing.sm }}>
                 <View style={{ backgroundColor: '#6C47FF', paddingHorizontal: spacing.sm, paddingVertical: 3, borderRadius: radii.full }}>
                   <Text style={{ ...typography.captionBold, color: '#fff', fontSize: 9 }}>PORTAL</Text>

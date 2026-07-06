@@ -80,7 +80,7 @@ export function AppFooter({ onNavigateToFAQs, onNavigateToTerms, onNavigateToHel
   // ─── Desktop Layout ───
   if (isDesktop) {
     return (
-      <View style={styles.container}>
+      <View style={[styles.container, { backgroundColor: colors.brandPink }]}>
         <View style={styles.divider} />
         {/* 4-column grid */}
         <View style={styles.desktopGrid as any}>
@@ -623,7 +623,7 @@ const styles = StyleSheet.create({
   },
   desktopCopyrightBanner: {
     width: '100%',
-    backgroundColor: '#f7f5f0',
+    backgroundColor: colors.brandPink,
     borderTopWidth: 1,
     borderTopColor: colors.surfaceContainerHighest,
     paddingVertical: spacing.md,
