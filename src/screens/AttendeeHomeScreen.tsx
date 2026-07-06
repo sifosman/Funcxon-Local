@@ -1605,7 +1605,7 @@ export default function AttendeeHomeScreen() {
           <View style={desktopGridStyle as any}>
             {sortedFeaturedData
               .filter((item) => item.type === 'vendor')
-              .slice(0, isDesktop ? 8 : 6)
+              .slice(0, isDesktop ? 4 : 6)
               .map((item) =>
                 renderFeaturedCard(item, () => navigation.navigate('VendorProfile', { vendorId: item.id })),
               )}
