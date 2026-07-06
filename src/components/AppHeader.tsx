@@ -43,11 +43,12 @@ export default function AppHeader() {
   const username = getUsername();
 
   const navItems = [
-    { label: 'Home', onPress: () => navigation.navigate('Main', { screen: 'Home', params: { screen: 'VendorList' } }) },
-    { label: 'Venues', onPress: () => openDiscover({ category: 'venues', searchTitle: 'Discover Venues' }) },
-    { label: 'Vendors', onPress: () => openDiscover({ category: 'vendors', searchTitle: 'Discover Vendors and services' }) },
+    { label: 'Home', icon: 'home', onPress: () => navigation.navigate('Main', { screen: 'Home', params: { screen: 'VendorList' } }) },
+    { label: 'Venues', icon: 'location-city', onPress: () => openDiscover({ category: 'venues', searchTitle: 'Discover Venues' }) },
+    { label: 'Vendors', icon: 'store', onPress: () => openDiscover({ category: 'vendors', searchTitle: 'Discover Vendors and services' }) },
     {
       label: 'Listers Portal',
+      icon: 'list',
       onPress: () => {
         if (session && isLister) {
           navigation.navigate('Main', { screen: 'Account', params: { screen: 'ListerPortfolio' } });
@@ -84,6 +85,7 @@ export default function AppHeader() {
                 style={styles.desktopNavItem}
                 onPress={item.onPress}
               >
+                <MaterialIcons name={item.icon as any} size={18} color={colors.primary} />
                 <Text style={styles.desktopNavText}>{item.label}</Text>
               </TouchableOpacity>
             ))}
@@ -96,7 +98,7 @@ export default function AppHeader() {
               style={styles.flagImage as any}
               resizeMode="contain"
             />
-            {session && <NotificationBell />}
+            <NotificationBell />
             {session ? (
               <TouchableOpacity
                 style={styles.userContainer}
@@ -109,7 +111,7 @@ export default function AppHeader() {
               </TouchableOpacity>
             ) : (
               <TouchableOpacity
-                style={styles.loginIcon}
+                style={styles.desktopLoginButton}
                 onPress={() => navigation.navigate('Auth', { screen: 'SignIn' })}
               >
                 <MaterialIcons name="person" size={20} color={colors.primary} />
@@ -324,6 +326,9 @@ const styles = StyleSheet.create({
     gap: 32,
   } as any,
   desktopNavItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: radii.sm,
@@ -337,12 +342,23 @@ const styles = StyleSheet.create({
   desktopActions: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 16,
+    gap: 8,
   },
+  desktopLoginButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: radii.full,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.primary,
+    minHeight: 40,
+  } as any,
   desktopLoginText: {
-    ...typography.caption,
+    ...typography.bodySemiBold,
     color: colors.primary,
-    fontWeight: '600' as const,
-    marginLeft: spacing.xs,
+    fontSize: 13,
   },
 });

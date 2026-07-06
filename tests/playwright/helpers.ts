@@ -736,8 +736,20 @@ export async function clickBottomTab(page: Page, label: string): Promise<void> {
  */
 export async function openListingCard(page: Page, nameRegex: RegExp | string): Promise<void> {
   const card = page.getByText(nameRegex).first();
-  await expect(card).toBeVisible({ timeout: 10000 });
-  await card.click({ force: true });
+  await expect(card).toBeAttached({ timeout: 10000 });
+  // React Native Web renders text in zero-size elements; use DOM click to bypass Playwright's visibility check.
+  await card.evaluate((el) => {
+    let target: Element | null = el.parentElement;
+    while (target && target !== document.body) {
+      const style = window.getComputedStyle(target);
+      if (style.cursor === 'pointer' || target.getAttribute('role') === 'button') {
+        (target as HTMLElement).click();
+        return;
+      }
+      target = target.parentElement;
+    }
+    (el as HTMLElement).click();
+  });
   await page.waitForTimeout(500);
 }
 
@@ -757,11 +769,33 @@ export function getServiceRoleSupabase() {
 
 /**
  * Reads the current unread notification count from the bell badge.
+ * Detects the bell by looking for a red badge element (common across layouts)
+ * or by the traditional 'notifications' text/aria-label.
  */
 export async function getNotificationBellCount(page: Page): Promise<number> {
   return page.evaluate(() => {
-    const allDivs = Array.from(document.querySelectorAll('div'));
-    const bell = allDivs.find((d) => {
+    // Strategy 1: Find a red badge directly (works on desktop where bell uses MaterialIcons font)
+    const allEls = Array.from(document.querySelectorAll('div, span'));
+    const redBadge = allEls.find((e) => {
+      const style = window.getComputedStyle(e);
+      const rect = e.getBoundingClientRect();
+      const bg = style.backgroundColor.toLowerCase();
+      return (
+        (bg.includes('rgb(220, 38, 38)') || bg.includes('rgb(239, 68, 68)') || bg.includes('red')) &&
+        rect.width > 0 &&
+        rect.width <= 40 &&
+        rect.height > 0 &&
+        rect.height <= 40
+      );
+    });
+    if (redBadge) {
+      const text = redBadge.textContent?.trim() || '0';
+      const count = parseInt(text, 10);
+      return Number.isNaN(count) ? 0 : count;
+    }
+
+    // Strategy 2: Find by 'notifications' text/aria-label (mobile layout)
+    const bell = allEls.find((d) => {
       const style = window.getComputedStyle(d);
       if (style.cursor !== 'pointer') return false;
       const children = Array.from(d.querySelectorAll('span, svg, i, div'));
@@ -771,34 +805,66 @@ export async function getNotificationBellCount(page: Page): Promise<number> {
         return text === 'notifications' || aria === 'notifications';
       });
     });
-    if (!bell) return 0;
-
-    const badge = Array.from(bell.querySelectorAll('div')).find((child) => {
-      const style = window.getComputedStyle(child);
-      const rect = child.getBoundingClientRect();
-      const bg = style.backgroundColor.toLowerCase();
-      return (
-        (bg.includes('rgb(220, 38, 38)') || bg.includes('rgb(239, 68, 68)') || bg.includes('red')) &&
-        rect.width > 0 &&
-        rect.width <= 30 &&
-        rect.height > 0 &&
-        rect.height <= 30
-      );
-    });
-    if (!badge) return 0;
-    const text = badge.textContent?.trim() || '0';
-    const count = parseInt(text, 10);
-    return Number.isNaN(count) ? 0 : count;
+    if (bell) {
+      const badge = Array.from(bell.querySelectorAll('div')).find((child) => {
+        const style = window.getComputedStyle(child);
+        const rect = child.getBoundingClientRect();
+        const bg = style.backgroundColor.toLowerCase();
+        return (
+          (bg.includes('rgb(220, 38, 38)') || bg.includes('rgb(239, 68, 68)') || bg.includes('red')) &&
+          rect.width > 0 &&
+          rect.width <= 30 &&
+          rect.height > 0 &&
+          rect.height <= 30
+        );
+      });
+      if (badge) {
+        const text = badge.textContent?.trim() || '0';
+        const count = parseInt(text, 10);
+        return Number.isNaN(count) ? 0 : count;
+      }
+    }
+    return 0;
   });
 }
 
 /**
  * Opens the notification bell dropdown.
+ * Finds the bell by red badge, MaterialIcons font, or 'notifications' text/aria-label.
  */
 export async function clickNotificationBell(page: Page): Promise<void> {
   const clicked = await page.evaluate(() => {
-    const allDivs = Array.from(document.querySelectorAll('div'));
-    const bell = allDivs.find((d) => {
+    const allEls = Array.from(document.querySelectorAll('div, span'));
+
+    // Strategy 1: Find red badge and click its clickable parent
+    const redBadge = allEls.find((e) => {
+      const style = window.getComputedStyle(e);
+      const rect = e.getBoundingClientRect();
+      const bg = style.backgroundColor.toLowerCase();
+      return (
+        (bg.includes('rgb(220, 38, 38)') || bg.includes('rgb(239, 68, 68)') || bg.includes('red')) &&
+        rect.width > 0 &&
+        rect.width <= 40
+      );
+    });
+    if (redBadge) {
+      // Walk up to find a clickable ancestor
+      let el: Element | null = redBadge;
+      while (el && el !== document.body) {
+        const style = window.getComputedStyle(el);
+        if (style.cursor === 'pointer') {
+          (el as HTMLElement).click();
+          return true;
+        }
+        el = el.parentElement;
+      }
+      // Fallback: click the badge itself
+      (redBadge as HTMLElement).click();
+      return true;
+    }
+
+    // Strategy 2: Find by 'notifications' text/aria-label
+    const bell = allEls.find((d) => {
       const style = window.getComputedStyle(d);
       if (style.cursor !== 'pointer') return false;
       const children = Array.from(d.querySelectorAll('span, svg, i, div'));

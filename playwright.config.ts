@@ -20,6 +20,9 @@ export default defineConfig({
       name: 'chromium',
       use: {
         ...devices['Desktop Chrome'],
+        launchOptions: {
+          executablePath: '/var/lib/flatpak/app/com.google.Chrome/x86_64/stable/active/files/extra/chrome',
+        },
       },
     },
   ],

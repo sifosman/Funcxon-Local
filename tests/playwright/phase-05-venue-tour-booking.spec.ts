@@ -127,11 +127,16 @@ test.describe('Phase 5 — Venue Tour Booking Flow', () => {
     let testUserId: string | undefined = creds?.userId;
     if (!testUserId) {
       try {
-        const authedClient = await createAuthedSupabaseClient(loggedInEmail, loggedInPassword);
-        const { data: authData } = await authedClient.auth.getUser();
-        testUserId = authData.user?.id;
+        const { user } = await createAuthedSupabaseClient(loggedInEmail, loggedInPassword);
+        testUserId = user.id;
       } catch {
-        console.log('[Phase 5] Could not resolve test user auth ID; notification tests will be skipped');
+        // Fallback: use the known auth ID for the default test user
+        if (loggedInEmail === 'mohamed@owdsolutions.co.za') {
+          testUserId = '18d2f5f5-6fe7-4cff-b54a-edcb810295db';
+          console.log('[Phase 5] Using known auth ID for mohamed@owdsolutions.co.za');
+        } else {
+          console.log('[Phase 5] Could not resolve test user auth ID; notification tests will be skipped');
+        }
       }
     }
 
@@ -213,39 +218,38 @@ test.describe('Phase 5 — Venue Tour Booking Flow', () => {
     console.log('[Phase 5] Owner-side simulation completed via RPC');
 
     // ─── 4. As the requester, open My Tours and view the proposed alternative ───
-    // Handle both desktop (top nav) and mobile (bottom tabs) layouts.
-    const accountTab = page.getByRole('tab', { name: /Account/i }).first();
-    if (await accountTab.isVisible().catch(() => false)) {
-      await accountTab.click({ force: true });
-      await page.waitForTimeout(1000);
+    // Navigate within the app (don't use page.goto which loses React Native Web auth state).
+    // Click Home nav link to get back to the main layout with sidebar.
+    const homeLink = page.getByText('Home', { exact: true }).first();
+    if (await homeLink.isVisible({ timeout: 5000 }).catch(() => false)) {
+      await homeLink.click({ force: true });
+      await page.waitForTimeout(2000);
+    }
+    console.log('[Phase 5] Navigated back to home, URL:', page.url());
+
+    // Desktop: sidebar should show "My Bookings" link
+    const myBookingsLink = page.getByText('My Bookings', { exact: true }).first();
+    if (await myBookingsLink.isVisible({ timeout: 5000 }).catch(() => false)) {
+      await myBookingsLink.click({ force: true });
+      await page.waitForTimeout(3000);
     } else {
-      // Desktop: look for user avatar / profile menu in top nav
-      const avatar = page.locator('[data-testid*="avatar"], [aria-label*="account"], [aria-label*="profile"]').first();
-      if (await avatar.isVisible().catch(() => false)) {
-        await avatar.click({ force: true });
+      // Mobile: try bottom tab Account first, then My Bookings
+      const accountTab = page.getByRole('tab', { name: /Account/i }).first();
+      if (await accountTab.isVisible().catch(() => false)) {
+        await accountTab.click({ force: true });
         await page.waitForTimeout(1000);
-      } else {
-        // Try clicking the user name/email in the sidebar
-        const userMenu = page.getByText(loggedInEmail).first();
-        if (await userMenu.isVisible().catch(() => false)) {
-          await userMenu.click({ force: true });
-          await page.waitForTimeout(1000);
+        const myBookings2 = page.getByText('My Bookings', { exact: true }).first();
+        if (await myBookings2.isVisible({ timeout: 5000 }).catch(() => false)) {
+          await myBookings2.click({ force: true });
+          await page.waitForTimeout(3000);
         }
       }
     }
 
-    // Try to open My Bookings / My Tours
-    const myBookingsLink = page.getByText(/My Bookings|My Tours/i).first();
-    if (await myBookingsLink.isVisible().catch(() => false)) {
-      await myBookingsLink.click({ force: true });
-      await page.waitForTimeout(2000);
-    }
-
-    // Look for the countered booking
+    // Look for the countered booking in My Tours / My Bookings
     const counteredText = page.getByText(/Venue proposed an alternative|Alternative proposed|countered/i).first();
     if (await counteredText.isVisible({ timeout: 15000 }).catch(() => false)) {
       console.log('[Phase 5] Found countered booking in My Tours');
-      // Click into the booking detail
       await counteredText.click({ force: true });
       await page.waitForTimeout(2000);
 
@@ -267,11 +271,15 @@ test.describe('Phase 5 — Venue Tour Booking Flow', () => {
         expect(finalRow?.countered_time).toBe('14:00');
         console.log('[Phase 5] Booking status verified as confirmed via RPC');
       } else {
-        console.log('[Phase 5] Accept alternative button not found; UI may differ');
+        console.log('[Phase 5] Accept alternative button not found; verifying counter via RPC');
+        const { data: statusCheck, error: statusError } = await supabase
+          .rpc('get_test_booking_status', { p_booking_id: bookingRow.id });
+        expect(statusError).toBeNull();
+        expect(statusCheck?.[0]?.status).toBe('countered');
+        console.log('[Phase 5] Backend verified: booking status is countered via RPC');
       }
     } else {
       console.log('[Phase 5] Countered booking not visible in My Tours; verifying via backend RPC instead');
-      // Verify the counter was applied via RPC
       const { data: statusCheck, error: statusError } = await supabase
         .rpc('get_test_booking_status', { p_booking_id: bookingRow.id });
       expect(statusError).toBeNull();
