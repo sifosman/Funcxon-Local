@@ -808,64 +808,135 @@ export default function SubscriptionPlansScreen() {
             Full Feature Comparison
           </Text>
 
-          <View
-            style={{
-              backgroundColor: isDesktop ? colors.surfaceContainerLowest : colors.surface,
-              borderRadius: radii.lg,
-              borderWidth: 1,
-              borderColor: isDesktop ? colors.outlineVariant : colors.borderSubtle,
-              overflow: 'hidden',
-            }}
-          >
-            {features.map((feature, idx) => {
-              const value = feature[selectedPlan];
-              const showDivider = idx !== features.length - 1;
-
-              return (
-                <View key={feature.label}>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ minWidth: '100%' }}>
+            <View
+              style={{
+                backgroundColor: isDesktop ? colors.surfaceContainerLowest : colors.surface,
+                borderRadius: radii.lg,
+                borderWidth: 1,
+                borderColor: isDesktop ? colors.outlineVariant : colors.borderSubtle,
+                overflow: 'hidden',
+                minWidth: '100%',
+              }}
+            >
+              {/* Header */}
+              <View
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  borderBottomWidth: 1,
+                  borderBottomColor: isDesktop ? colors.outlineVariant : colors.borderSubtle,
+                  backgroundColor: isDesktop ? colors.surfaceContainerLow : colors.surface,
+                }}
+              >
+                <View style={{ width: 140, paddingHorizontal: spacing.lg, paddingVertical: spacing.md }}>
+                  <Text style={{ ...typography.captionBold, color: colors.textPrimary }}>Feature</Text>
+                </View>
+                {plans.map((plan) => (
                   <View
+                    key={plan.key}
                     style={{
-                      flexDirection: 'row',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      paddingHorizontal: spacing.lg,
+                      flex: 1,
+                      minWidth: 70,
+                      paddingHorizontal: spacing.sm,
                       paddingVertical: spacing.md,
+                      alignItems: 'center',
+                      justifyContent: 'center',
                     }}
                   >
                     <Text
                       style={{
-                        ...typography.body,
+                        ...typography.captionBold,
                         color: colors.textPrimary,
-                        flex: 1,
-                        paddingRight: spacing.md,
+                        fontSize: 11,
+                        textAlign: 'center',
                       }}
+                      numberOfLines={2}
                     >
-                      {feature.label}
+                      {plan.title}
                     </Text>
-                    <View style={{ width: 60, alignItems: 'flex-end' }}>
-                      {typeof value === 'boolean' ? (
-                        <MaterialIcons
-                          name={value ? 'check-circle' : 'cancel'}
-                          size={18}
-                          color={value ? colors.primaryTeal : colors.textMuted}
-                        />
-                      ) : (
+                  </View>
+                ))}
+              </View>
+
+              {/* Feature rows */}
+              {features.map((feature, idx) => {
+                const showDivider = idx !== features.length - 1;
+                return (
+                  <View key={feature.label}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                      <View
+                        style={{
+                          width: 140,
+                          paddingHorizontal: spacing.lg,
+                          paddingVertical: spacing.md,
+                        }}
+                      >
                         <Text
                           style={{
-                            ...typography.captionSemiBold,
+                            ...typography.body,
                             color: colors.textPrimary,
+                            fontSize: 12,
                           }}
                         >
-                          {value}
+                          {feature.label}
                         </Text>
-                      )}
+                      </View>
+                      {plans.map((plan) => {
+                        const value = feature[plan.key];
+                        return (
+                          <View
+                            key={plan.key}
+                            style={{
+                              flex: 1,
+                              minWidth: 70,
+                              paddingHorizontal: spacing.sm,
+                              paddingVertical: spacing.md,
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                            }}
+                          >
+                            {typeof value === 'boolean' ? (
+                              value ? (
+                                <View
+                                  style={{
+                                    backgroundColor: '#22C55E',
+                                    borderRadius: radii.full,
+                                    width: 24,
+                                    height: 24,
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                  }}
+                                >
+                                  <MaterialIcons name="check" size={16} color="#FFFFFF" />
+                                </View>
+                              ) : (
+                                <MaterialIcons name="close" size={20} color={colors.destructive} />
+                              )
+                            ) : (
+                              <Text
+                                style={{
+                                  ...typography.captionSemiBold,
+                                  color: colors.textPrimary,
+                                  fontSize: 11,
+                                  textAlign: 'center',
+                                }}
+                              >
+                                {value}
+                              </Text>
+                            )}
+                          </View>
+                        );
+                      })}
                     </View>
+                    {showDivider ? (
+                      <View style={{ height: 1, backgroundColor: isDesktop ? colors.outlineVariant : colors.borderSubtle }} />
+                    ) : null}
                   </View>
-                  {showDivider ? <View style={{ height: 1, backgroundColor: isDesktop ? colors.outlineVariant : colors.borderSubtle }} /> : null}
-                </View>
-              );
-            })}
-          </View>
+                );
+              })}
+            </View>
+          </ScrollView>
         </View>
 
         {/* Bottom CTA */}
