@@ -27,8 +27,8 @@ const ACTIVE_SCALE = 1.02;
 const SIDE_SCALE = 0.88;
 const FAR_SCALE = 0.65;
 const ACTIVE_OPACITY = 1;
-const SIDE_OPACITY = 0.92;
-const FAR_OPACITY = 0.7;
+const SIDE_OPACITY = 0.98;
+const FAR_OPACITY = 0.95;
 
 type PlanKey = 'get_started' | 'monthly' | '6_month' | '12_month';
 
@@ -132,15 +132,15 @@ export default function VenueListingPlansScreen() {
         saveLabel: 'SAVE 30%',
         outcomes: 'Unlock Full Features',
         theme: {
-          background: '#030255',
-          backgroundLight: '#1A1948',
+          background: '#ff6b5d',
+          backgroundLight: '#ff8a7d',
           text: '#FFFFFF',
-          textMuted: 'rgba(255,255,255,0.75)',
-          accent: '#b9c4eb',
+          textMuted: 'rgba(255,255,255,0.85)',
+          accent: '#FFFFFF',
           buttonBg: '#FFFFFF',
-          buttonText: '#030255',
-          checkColor: '#b9c4eb',
-          borderColor: 'rgba(255,255,255,0.2)',
+          buttonText: '#ff6b5d',
+          checkColor: '#FFFFFF',
+          borderColor: 'rgba(255,255,255,0.3)',
         },
       },
       {
@@ -153,15 +153,15 @@ export default function VenueListingPlansScreen() {
         saveLabel: 'SAVE 35%',
         outcomes: 'Maximum Exposure',
         theme: {
-          background: '#1e3a8a',
-          backgroundLight: '#1e3a8a',
+          background: '#123f5c',
+          backgroundLight: '#1a567a',
           text: '#FFFFFF',
-          textMuted: 'rgba(255,255,255,0.75)',
-          accent: '#FFD700',
-          buttonBg: '#FFD700',
-          buttonText: '#000000',
-          checkColor: '#FFD700',
-          borderColor: 'rgba(255,255,255,0.2)',
+          textMuted: 'rgba(255,255,255,0.85)',
+          accent: '#FFFFFF',
+          buttonBg: '#FFFFFF',
+          buttonText: '#123f5c',
+          checkColor: '#FFFFFF',
+          borderColor: 'rgba(255,255,255,0.3)',
         },
       },
       {
@@ -174,15 +174,15 @@ export default function VenueListingPlansScreen() {
         saveLabel: 'SAVE 40%',
         outcomes: 'Maximum Exposure',
         theme: {
-          background: '#000000',
-          backgroundLight: '#1a1a5c',
+          background: '#94064d',
+          backgroundLight: '#b3085a',
           text: '#FFFFFF',
-          textMuted: 'rgba(255,255,255,0.75)',
-          accent: '#b9c4eb',
-          buttonBg: '#b9c4eb',
-          buttonText: '#000000',
-          checkColor: '#b9c4eb',
-          borderColor: 'rgba(255,255,255,0.2)',
+          textMuted: 'rgba(255,255,255,0.85)',
+          accent: '#FFFFFF',
+          buttonBg: '#FFFFFF',
+          buttonText: '#94064d',
+          checkColor: '#FFFFFF',
+          borderColor: 'rgba(255,255,255,0.3)',
         },
       },
     ],

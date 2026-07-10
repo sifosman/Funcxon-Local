@@ -27,8 +27,8 @@ const ACTIVE_SCALE = 1.02;
 const SIDE_SCALE = 0.88;
 const FAR_SCALE = 0.65;
 const ACTIVE_OPACITY = 1;
-const SIDE_OPACITY = 0.92;
-const FAR_OPACITY = 0.7;
+const SIDE_OPACITY = 0.98;
+const FAR_OPACITY = 0.95;
 
 type BillingPeriod = 'monthly' | 'yearly';
 type PlanKey = 'get_started' | 'premium' | 'premium_plus';
@@ -141,15 +141,15 @@ export default function SubscriptionPlansScreen() {
         saveLabel: '1 Month Free',
         outcomes: 'Secure Bookings Online',
         theme: {
-          background: '#030255',
-          backgroundLight: '#1a1a5c',
+          background: '#123f5c',
+          backgroundLight: '#1a567a',
           text: '#FFFFFF',
-          textMuted: 'rgba(255,255,255,0.75)',
-          accent: '#b9c4eb',
+          textMuted: 'rgba(255,255,255,0.85)',
+          accent: '#FFFFFF',
           buttonBg: '#FFFFFF',
-          buttonText: '#030255',
-          checkColor: '#b9c4eb',
-          borderColor: 'rgba(255,255,255,0.2)',
+          buttonText: '#123f5c',
+          checkColor: '#FFFFFF',
+          borderColor: 'rgba(255,255,255,0.3)',
         },
       },
       {
@@ -162,15 +162,15 @@ export default function SubscriptionPlansScreen() {
         saveLabel: '1 Month Free',
         outcomes: 'Maximum Exposure & Bookings',
         theme: {
-          background: '#000000',
-          backgroundLight: '#1a1a5c',
+          background: '#94064d',
+          backgroundLight: '#b3085a',
           text: '#FFFFFF',
-          textMuted: 'rgba(255,255,255,0.75)',
-          accent: '#FFD700',
-          buttonBg: '#FFD700',
-          buttonText: '#000000',
-          checkColor: '#FFD700',
-          borderColor: 'rgba(255,255,255,0.2)',
+          textMuted: 'rgba(255,255,255,0.85)',
+          accent: '#FFFFFF',
+          buttonBg: '#FFFFFF',
+          buttonText: '#94064d',
+          checkColor: '#FFFFFF',
+          borderColor: 'rgba(255,255,255,0.3)',
         },
       },
     ],
@@ -464,7 +464,7 @@ export default function SubscriptionPlansScreen() {
             borderWidth: 1,
             borderColor: isDesktop ? colors.outlineVariant : colors.borderSubtle,
             maxWidth: isDesktop ? 400 : undefined,
-            alignSelf: isDesktop ? 'center' : undefined,
+            alignSelf: isDesktop ? 'center' : 'stretch',
           }}
         >
           <TouchableOpacity
@@ -478,6 +478,7 @@ export default function SubscriptionPlansScreen() {
             onPress={() => setSelectedBilling('monthly')}
           >
             <Text
+              numberOfLines={1}
               style={{
                 ...typography.captionSemiBold,
                 color: selectedBilling === 'monthly' ? colors.primaryForeground : colors.textMuted,
@@ -497,6 +498,7 @@ export default function SubscriptionPlansScreen() {
             onPress={() => setSelectedBilling('yearly')}
           >
             <Text
+              numberOfLines={1}
               style={{
                 ...typography.captionSemiBold,
                 color: selectedBilling === 'yearly' ? colors.primaryForeground : colors.textMuted,
