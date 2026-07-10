@@ -26,6 +26,11 @@ export const colors = {
   accent: '#f2f7ff', // very light blue
   accentForeground: '#000000',
 
+  // New 2026 accent colours
+  cta: '#1ea5c9', // medium turquoise - primary CTA buttons / active states
+  accentBright: '#62d9dd', // bright teal - small badges/labels
+  accentSoft: '#a4deff', // light sky blue - soft accent surfaces
+
   // Text colors
   textPrimary: '#000000', // black (mandatory)
   textSecondary: '#000000', // black

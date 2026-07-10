@@ -825,7 +825,7 @@ return (
                 onPress={handleSaveEdit}
                 style={{
                   marginTop: spacing.lg,
-                  backgroundColor: colors.textPrimary,
+                  backgroundColor: colors.cta,
                   paddingVertical: spacing.md,
                   borderRadius: radii.md,
                   alignItems: 'center',

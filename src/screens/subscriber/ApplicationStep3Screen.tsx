@@ -566,7 +566,7 @@ export default function ApplicationStep3Screen() {
               onPress={handlePickImages}
               style={{
                 borderWidth: 2,
-                borderColor: colors.textPrimary,
+                borderColor: colors.primary,
                 borderStyle: 'dashed',
                 borderRadius: radii.md,
                 padding: spacing.xl,
@@ -788,7 +788,7 @@ export default function ApplicationStep3Screen() {
                 flex: 1,
                 backgroundColor: cardSurface,
                 borderWidth: 1,
-                borderColor: colors.textPrimary,
+                borderColor: colors.primary,
                 paddingVertical: spacing.md,
                 borderRadius: radii.md,
                 alignItems: 'center',
@@ -802,7 +802,7 @@ export default function ApplicationStep3Screen() {
               onPress={handleNext}
               style={{
                 flex: 1,
-                backgroundColor: colors.textPrimary,
+                backgroundColor: colors.cta,
                 paddingVertical: spacing.md,
                 borderRadius: radii.md,
                 flexDirection: 'row',

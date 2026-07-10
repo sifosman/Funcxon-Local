@@ -237,7 +237,7 @@ export default function BlogDetailScreen() {
                   width: 48,
                   height: 48,
                   borderRadius: 24,
-                  backgroundColor: colors.accent,
+                  backgroundColor: colors.accentSoft,
                   justifyContent: 'center',
                   alignItems: 'center',
                   marginRight: spacing.sm,
@@ -455,7 +455,7 @@ export default function BlogDetailScreen() {
 
           <View
             style={{
-              backgroundColor: colors.accent,
+              backgroundColor: colors.accentSoft,
               paddingHorizontal: spacing.sm,
               paddingVertical: spacing.xs,
               borderRadius: radii.sm,
@@ -507,7 +507,7 @@ export default function BlogDetailScreen() {
                     width: 40,
                     height: 40,
                     borderRadius: 20,
-                    backgroundColor: colors.accent,
+                    backgroundColor: colors.accentSoft,
                     justifyContent: 'center',
                     alignItems: 'center',
                     marginRight: spacing.sm,

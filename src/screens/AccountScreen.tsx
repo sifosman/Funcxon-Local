@@ -416,7 +416,7 @@ export default function AccountScreen() {
                                                         paddingHorizontal: spacing.md,
                                                         paddingVertical: spacing.xs,
                                                         borderRadius: radii.full,
-                                                        backgroundColor: userRole === 'vendor' ? colors.textPrimary : colors.accent,
+                                                        backgroundColor: userRole === 'vendor' ? colors.primary : colors.accent,
                                                     }}
                                                 >
                                                     <Text
@@ -450,7 +450,7 @@ export default function AccountScreen() {
                                                             paddingVertical: spacing.xs,
                                                             borderRadius: radii.full,
                                                             borderWidth: 1,
-                                                            borderColor: colors.textPrimary,
+                                                            borderColor: colors.primary,
                                                         }}
                                                     >
                                                         <Text style={{ ...typography.labelMd, color: colors.textPrimary }}>Upgrade</Text>
@@ -480,7 +480,7 @@ export default function AccountScreen() {
                                                 paddingHorizontal: spacing.md,
                                                 paddingVertical: spacing.xs,
                                                 borderRadius: radii.full,
-                                                backgroundColor: userRole === 'vendor' ? colors.textPrimary : colors.accent,
+                                                backgroundColor: userRole === 'vendor' ? colors.primary : colors.accent,
                                             }}
                                         >
                                             <Text
@@ -515,7 +515,7 @@ export default function AccountScreen() {
                                                     paddingVertical: spacing.xs,
                                                     borderRadius: radii.full,
                                                     borderWidth: 1,
-                                                    borderColor: colors.textPrimary,
+                                                    borderColor: colors.primary,
                                                 }}
                                             >
                                                 <Text style={{ ...typography.captionSemiBold, color: colors.textPrimary, fontSize: 10 }}>Upgrade</Text>

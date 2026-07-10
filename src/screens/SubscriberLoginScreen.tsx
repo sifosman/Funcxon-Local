@@ -188,7 +188,7 @@ export default function SubscriberLoginScreen() {
                 onPress={handleLogin}
                 disabled={loading}
                 style={{
-                    backgroundColor: colors.textPrimary,
+                    backgroundColor: colors.cta,
                     paddingVertical: spacing.md,
                     borderRadius: radii.lg,
                     alignItems: 'center',

@@ -471,7 +471,7 @@ export default function DataConsentModal({ visible, onAccept }: DataConsentModal
                     borderRadius: radii.lg,
                     padding: spacing.lg,
                     borderWidth: 1,
-                    borderColor: essentialAccepted ? colors.textPrimary : colors.borderSubtle,
+                    borderColor: essentialAccepted ? colors.cta : colors.borderSubtle,
                   }}
                 >
                   <View
@@ -480,8 +480,8 @@ export default function DataConsentModal({ visible, onAccept }: DataConsentModal
                       height: 24,
                       borderRadius: 6,
                       borderWidth: 2,
-                      borderColor: essentialAccepted ? colors.textPrimary : colors.borderSubtle,
-                      backgroundColor: essentialAccepted ? colors.textPrimary : colors.surface,
+                      borderColor: essentialAccepted ? colors.cta : colors.borderSubtle,
+                      backgroundColor: essentialAccepted ? colors.cta : colors.surface,
                       alignItems: 'center',
                       justifyContent: 'center',
                       marginRight: spacing.md,
@@ -496,14 +496,14 @@ export default function DataConsentModal({ visible, onAccept }: DataConsentModal
                       </Text>
                       <View
                         style={{
-                          backgroundColor: colors.textPrimary,
+                          backgroundColor: colors.accentBright,
                           paddingHorizontal: spacing.sm,
                           paddingVertical: 2,
                           borderRadius: radii.sm,
                           marginLeft: spacing.sm,
                         }}
                       >
-                        <Text style={{ fontSize: 9, fontWeight: '700', color: '#FFFFFF' }}>REQUIRED</Text>
+                        <Text style={{ fontSize: 9, fontWeight: '700', color: colors.textPrimary }}>REQUIRED</Text>
                       </View>
                     </View>
                     <Text style={{ ...typography.caption, color: colors.textMuted, lineHeight: 18 }}>
@@ -522,7 +522,7 @@ export default function DataConsentModal({ visible, onAccept }: DataConsentModal
                     borderRadius: radii.lg,
                     padding: spacing.lg,
                     borderWidth: 1,
-                    borderColor: analyticsAccepted ? colors.textPrimary : colors.borderSubtle,
+                    borderColor: analyticsAccepted ? colors.cta : colors.borderSubtle,
                   }}
                 >
                   <View
@@ -531,8 +531,8 @@ export default function DataConsentModal({ visible, onAccept }: DataConsentModal
                       height: 24,
                       borderRadius: 6,
                       borderWidth: 2,
-                      borderColor: analyticsAccepted ? colors.textPrimary : colors.borderSubtle,
-                      backgroundColor: analyticsAccepted ? colors.textPrimary : colors.surface,
+                      borderColor: analyticsAccepted ? colors.cta : colors.borderSubtle,
+                      backgroundColor: analyticsAccepted ? colors.cta : colors.surface,
                       alignItems: 'center',
                       justifyContent: 'center',
                       marginRight: spacing.md,
@@ -586,7 +586,7 @@ export default function DataConsentModal({ visible, onAccept }: DataConsentModal
                 onPress={handleAccept}
                 disabled={!canProceed}
                 style={{
-                  backgroundColor: canProceed ? colors.textPrimary : colors.borderSubtle,
+                  backgroundColor: canProceed ? colors.cta : colors.borderSubtle,
                   paddingVertical: spacing.md + 2,
                   borderRadius: radii.lg,
                   alignItems: 'center',

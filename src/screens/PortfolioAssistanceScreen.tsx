@@ -286,7 +286,7 @@ export default function PortfolioAssistanceScreen() {
         width: isDesktop ? 64 : 80,
         height: isDesktop ? 64 : 80,
         borderRadius: isDesktop ? 32 : 40,
-        backgroundColor: colors.textPrimary,
+        backgroundColor: colors.cta,
         justifyContent: 'center',
         alignItems: 'center',
         marginBottom: spacing.md

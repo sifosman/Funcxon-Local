@@ -350,7 +350,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.xs,
     borderRadius: radii.full,
-    backgroundColor: colors.accent,
+    backgroundColor: colors.accentSoft,
   },
   chipText: {
     ...typography.caption,

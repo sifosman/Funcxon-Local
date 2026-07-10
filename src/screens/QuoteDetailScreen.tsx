@@ -583,7 +583,7 @@ export default function QuoteDetailScreen() {
             paddingVertical: spacing.sm,
             borderRadius: radii.md,
             borderWidth: 1,
-            borderColor: colors.textPrimary,
+            borderColor: colors.primary,
             alignItems: 'center',
             justifyContent: 'center',
           }}

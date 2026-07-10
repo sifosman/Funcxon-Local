@@ -596,7 +596,7 @@ const styles = StyleSheet.create({
     gap: spacing.md,
   },
   ctaButton: {
-    backgroundColor: colors.textPrimary,
+    backgroundColor: colors.cta,
     paddingVertical: spacing.lg,
     paddingHorizontal: spacing.xl,
     borderRadius: radii.lg,
@@ -623,7 +623,7 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
   },
   featuredButton: {
-    backgroundColor: colors.textPrimary,
+    backgroundColor: colors.cta,
     paddingVertical: spacing.md,
     paddingHorizontal: spacing.xl,
     borderRadius: radii.lg,

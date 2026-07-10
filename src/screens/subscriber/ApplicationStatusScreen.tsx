@@ -126,7 +126,7 @@ export default function ApplicationStatusScreen() {
         onPress={() => navigation.navigate('PortfolioType')}
         style={{
           alignSelf: 'flex-start',
-          backgroundColor: colors.textPrimary,
+          backgroundColor: colors.cta,
           paddingHorizontal: spacing.lg,
           paddingVertical: spacing.md,
           borderRadius: radii.md,

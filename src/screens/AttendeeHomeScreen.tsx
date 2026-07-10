@@ -1871,13 +1871,13 @@ export default function AttendeeHomeScreen() {
                     resizeMode="cover"
                     placeholderIcon="article"
                     placeholderIconSize={40}
-                    placeholderBg={colors.accent}
+                    placeholderBg={colors.accentSoft}
                   />
                   <View style={{ flex: 1, padding: spacing.md, justifyContent: 'space-between' }}>
                     <View>
                       <View
                         style={{
-                          backgroundColor: colors.accent,
+                          backgroundColor: colors.accentSoft,
                           paddingHorizontal: spacing.sm,
                           paddingVertical: spacing.xs,
                           borderRadius: radii.sm,
@@ -1966,13 +1966,13 @@ export default function AttendeeHomeScreen() {
                   resizeMode="cover"
                   placeholderIcon="article"
                   placeholderIconSize={40}
-                  placeholderBg={colors.accent}
+                  placeholderBg={colors.accentSoft}
                 />
                 <View style={{ flex: 1, padding: spacing.md, justifyContent: 'space-between' }}>
                   <View>
                     <View
                       style={{
-                        backgroundColor: colors.accent,
+                        backgroundColor: colors.accentSoft,
                         paddingHorizontal: spacing.sm,
                         paddingVertical: spacing.xs,
                         borderRadius: radii.sm,
@@ -2068,8 +2068,8 @@ export default function AttendeeHomeScreen() {
               />
               <View style={{ position: 'absolute', top: 0, left: 0, right: 0, height: getListedCardWidth * 0.65, backgroundColor: 'rgba(0,0,0,0.35)' }} />
               <View style={{ position: 'absolute', top: spacing.sm, left: spacing.sm }}>
-                <View style={{ backgroundColor: colors.textPrimary, paddingHorizontal: spacing.sm, paddingVertical: 3, borderRadius: radii.full }}>
-                  <Text style={{ ...typography.captionBold, color: '#fff', fontSize: 9 }}>VENUE</Text>
+                <View style={{ backgroundColor: colors.accentBright, paddingHorizontal: spacing.sm, paddingVertical: 3, borderRadius: radii.full }}>
+                  <Text style={{ ...typography.captionBold, color: colors.textPrimary, fontSize: 9 }}>VENUE</Text>
                 </View>
               </View>
               <View style={{ backgroundColor: colors.surface, padding: spacing.md }}>
@@ -2197,8 +2197,8 @@ export default function AttendeeHomeScreen() {
               />
               <View style={{ position: 'absolute', top: 0, left: 0, right: 0, height: getListedCardWidth * 0.65, backgroundColor: 'rgba(0,0,0,0.35)' }} />
               <View style={{ position: 'absolute', top: spacing.sm, left: spacing.sm }}>
-                <View style={{ backgroundColor: colors.textPrimary, paddingHorizontal: spacing.sm, paddingVertical: 3, borderRadius: radii.full }}>
-                  <Text style={{ ...typography.captionBold, color: '#fff', fontSize: 9 }}>VENUE</Text>
+                <View style={{ backgroundColor: colors.accentBright, paddingHorizontal: spacing.sm, paddingVertical: 3, borderRadius: radii.full }}>
+                  <Text style={{ ...typography.captionBold, color: colors.textPrimary, fontSize: 9 }}>VENUE</Text>
                 </View>
               </View>
               <View style={{ backgroundColor: colors.surface, padding: spacing.md }}>

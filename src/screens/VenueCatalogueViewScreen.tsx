@@ -159,14 +159,14 @@ export default function VenueCatalogueViewScreen({ route, navigation }: Props) {
           borderRadius: radii.lg,
           backgroundColor: colors.surfaceContainerLowest,
           borderWidth: 2,
-          borderColor: isSelected ? colors.textPrimary : colors.outlineVariant,
+          borderColor: isSelected ? colors.cta : colors.outlineVariant,
           overflow: 'hidden',
         } as any) : {
           flexDirection: 'row',
           borderRadius: radii.lg,
           backgroundColor: colors.surface,
           borderWidth: 2,
-          borderColor: isSelected ? colors.textPrimary : colors.borderSubtle,
+          borderColor: isSelected ? colors.cta : colors.borderSubtle,
           overflow: 'hidden',
         }}
       >
@@ -424,7 +424,7 @@ export default function VenueCatalogueViewScreen({ route, navigation }: Props) {
                 justifyContent: 'center',
                 paddingVertical: spacing.md,
                 borderRadius: radii.lg,
-                backgroundColor: selectedItems.length > 0 ? colors.textPrimary : colors.surfaceMuted,
+                backgroundColor: selectedItems.length > 0 ? colors.cta : colors.surfaceMuted,
                 gap: spacing.sm,
                 ...(isDesktop ? { maxWidth: 800, width: '100%', alignSelf: 'center' } : {}),
               }}

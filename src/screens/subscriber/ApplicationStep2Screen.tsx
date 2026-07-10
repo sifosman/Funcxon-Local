@@ -64,8 +64,8 @@ export default function ApplicationStep2Screen() {
             height: 22,
             borderRadius: 5,
             borderWidth: 1,
-            borderColor: opts.isSelected ? colors.textPrimary : colors.borderStrong,
-            backgroundColor: opts.isSelected ? colors.textPrimary : cardSurface,
+            borderColor: opts.isSelected ? colors.cta : colors.borderStrong,
+            backgroundColor: opts.isSelected ? colors.cta : cardSurface,
             alignItems: 'center',
             justifyContent: 'center',
             marginRight: spacing.md,
@@ -108,8 +108,8 @@ export default function ApplicationStep2Screen() {
             height: 22,
             borderRadius: 5,
             borderWidth: 1,
-            borderColor: opts.isSelected ? colors.textPrimary : colors.borderStrong,
-            backgroundColor: opts.isSelected ? colors.textPrimary : cardSurface,
+            borderColor: opts.isSelected ? colors.cta : colors.borderStrong,
+            backgroundColor: opts.isSelected ? colors.cta : cardSurface,
             alignItems: 'center',
             justifyContent: 'center',
             marginRight: spacing.md,
@@ -316,9 +316,9 @@ export default function ApplicationStep2Screen() {
                           paddingHorizontal: spacing.md,
                           paddingVertical: spacing.sm,
                           borderRadius: radii.full,
-                          backgroundColor: isSelected ? colors.textPrimary : cardSurface,
+                          backgroundColor: isSelected ? colors.cta : cardSurface,
                           borderWidth: 1,
-                          borderColor: isSelected ? colors.textPrimary : cardBorder,
+                          borderColor: isSelected ? colors.cta : cardBorder,
                         }}
                       >
                         <Text style={{ ...typography.body, color: isSelected ? '#FFFFFF' : colors.textPrimary, fontSize: 13 }}>
@@ -623,7 +623,7 @@ export default function ApplicationStep2Screen() {
                         borderRadius: radii.md,
                         backgroundColor: isSelected ? '#f2f7ff' : cardSurface,
                         borderWidth: 1,
-                        borderColor: isSelected ? colors.textPrimary : cardBorder,
+                        borderColor: isSelected ? colors.cta : cardBorder,
                       }}
                     >
                       <View style={{ flex: 1 }}>
@@ -684,9 +684,9 @@ export default function ApplicationStep2Screen() {
                                   paddingHorizontal: spacing.md,
                                   paddingVertical: spacing.sm,
                                   borderRadius: radii.full,
-                                  backgroundColor: isSelected ? colors.textPrimary : cardSurface,
+                                  backgroundColor: isSelected ? colors.cta : cardSurface,
                                   borderWidth: 1,
-                                  borderColor: isSelected ? colors.textPrimary : cardBorder,
+                                  borderColor: isSelected ? colors.cta : cardBorder,
                                 }}
                               >
                                 <Text style={{ ...typography.body, color: isSelected ? '#FFFFFF' : colors.textPrimary, fontSize: 13 }}>
@@ -732,9 +732,9 @@ export default function ApplicationStep2Screen() {
                           paddingHorizontal: spacing.md,
                           paddingVertical: spacing.sm,
                           borderRadius: radii.full,
-                          backgroundColor: isSelected ? colors.textPrimary : cardSurface,
+                          backgroundColor: isSelected ? colors.cta : cardSurface,
                           borderWidth: 1,
-                          borderColor: isSelected ? colors.textPrimary : cardBorder,
+                          borderColor: isSelected ? colors.cta : cardBorder,
                         }}
                       >
                         <Text style={{ ...typography.body, color: isSelected ? '#FFFFFF' : colors.textPrimary, fontSize: 13 }}>
@@ -774,9 +774,9 @@ export default function ApplicationStep2Screen() {
                 paddingHorizontal: spacing.md,
                 paddingVertical: spacing.sm,
                 borderRadius: radii.full,
-                backgroundColor: allProvincesSelected ? colors.textPrimary : cardSurface,
+                backgroundColor: allProvincesSelected ? colors.cta : cardSurface,
                 borderWidth: 1,
-                borderColor: colors.textPrimary,
+                borderColor: colors.cta,
                 marginBottom: spacing.md,
               }}
             >
@@ -795,9 +795,9 @@ export default function ApplicationStep2Screen() {
                       paddingHorizontal: spacing.md,
                       paddingVertical: spacing.sm,
                       borderRadius: radii.full,
-                      backgroundColor: isSelected ? colors.textPrimary : cardSurface,
+                      backgroundColor: isSelected ? colors.cta : cardSurface,
                       borderWidth: 1,
-                      borderColor: isSelected ? colors.textPrimary : cardBorder,
+                      borderColor: isSelected ? colors.cta : cardBorder,
                     }}
                   >
                     <Text style={{ ...typography.body, color: isSelected ? '#FFFFFF' : colors.textPrimary, fontSize: 13 }}>
@@ -842,9 +842,9 @@ export default function ApplicationStep2Screen() {
                   paddingHorizontal: spacing.md,
                   paddingVertical: spacing.sm,
                   borderRadius: radii.full,
-                  backgroundColor: allCitiesSelected ? colors.textPrimary : cardSurface,
+                  backgroundColor: allCitiesSelected ? colors.cta : cardSurface,
                   borderWidth: 1,
-                  borderColor: colors.textPrimary,
+                  borderColor: colors.cta,
                   marginBottom: spacing.md,
                   opacity: getAvailableCities().length === 0 ? 0.5 : 1,
                 }}
@@ -864,9 +864,9 @@ export default function ApplicationStep2Screen() {
                         paddingHorizontal: spacing.md,
                         paddingVertical: spacing.sm,
                         borderRadius: radii.full,
-                        backgroundColor: isSelected ? colors.textPrimary : cardSurface,
+                        backgroundColor: isSelected ? colors.cta : cardSurface,
                         borderWidth: 1,
-                        borderColor: isSelected ? colors.textPrimary : cardBorder,
+                        borderColor: isSelected ? colors.cta : cardBorder,
                       }}
                     >
                       <Text style={{ ...typography.body, color: isSelected ? '#FFFFFF' : colors.textPrimary, fontSize: 13 }}>
@@ -939,7 +939,7 @@ export default function ApplicationStep2Screen() {
                 flex: 1,
                 backgroundColor: cardSurface,
                 borderWidth: 1,
-                borderColor: colors.textPrimary,
+                borderColor: colors.primary,
                 paddingVertical: spacing.md,
                 borderRadius: radii.md,
                 alignItems: 'center',
@@ -953,7 +953,7 @@ export default function ApplicationStep2Screen() {
               onPress={handleNext}
               style={{
                 flex: 1,
-                backgroundColor: colors.textPrimary,
+                backgroundColor: colors.cta,
                 paddingVertical: spacing.md,
                 borderRadius: radii.md,
                 flexDirection: 'row',

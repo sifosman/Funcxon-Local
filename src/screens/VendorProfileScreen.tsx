@@ -568,7 +568,7 @@ export default function VendorProfileScreen({ route, navigation }: Props) {
                 width: 6,
                 height: 6,
                 borderRadius: 3,
-                backgroundColor: colors.textPrimary,
+                backgroundColor: colors.cta,
                 marginRight: spacing.sm,
               }}
             />
@@ -1009,7 +1009,7 @@ export default function VendorProfileScreen({ route, navigation }: Props) {
                           borderRadius: radii.md,
                           backgroundColor: colors.surfaceMuted,
                           borderWidth: idx === galleryIndex ? 2 : 0,
-                          borderColor: colors.textPrimary,
+                          borderColor: colors.cta,
                         }}
                         resizeMode="cover"
                         placeholderIcon={item.type === 'video' ? 'videocam' : 'image'}
@@ -1064,7 +1064,7 @@ export default function VendorProfileScreen({ route, navigation }: Props) {
                 flex: 1,
                 paddingVertical: spacing.sm,
                 borderRadius: radii.full,
-                backgroundColor: isActive ? colors.textPrimary : 'transparent',
+                backgroundColor: isActive ? colors.cta : 'transparent',
                 alignItems: 'center',
               }}
             >
@@ -1300,7 +1300,7 @@ export default function VendorProfileScreen({ route, navigation }: Props) {
                   paddingVertical: spacing.sm,
                   borderRadius: radii.md,
                   borderWidth: 1,
-                  borderColor: colors.textPrimary,
+                  borderColor: colors.primary,
                   alignItems: 'center',
                   flexDirection: 'row',
                   justifyContent: 'center',
@@ -1383,7 +1383,7 @@ export default function VendorProfileScreen({ route, navigation }: Props) {
             <TouchableOpacity
               onPress={goToQuoteRequest}
               style={{
-                backgroundColor: colors.textPrimary,
+                backgroundColor: colors.cta,
                 paddingVertical: spacing.md,
                 borderRadius: radii.md,
                 alignItems: 'center',
@@ -1444,7 +1444,7 @@ export default function VendorProfileScreen({ route, navigation }: Props) {
                         overflow: 'hidden',
                       }}
                     >
-                      <View style={{ width: `${progress * 100}%`, height: '100%', backgroundColor: colors.textPrimary }} />
+                      <View style={{ width: `${progress * 100}%`, height: '100%', backgroundColor: colors.cta }} />
                     </View>
                     <Text style={{ ...typography.caption, color: colors.textMuted, width: 20, textAlign: 'right' }}>
                       {count}
@@ -1756,7 +1756,7 @@ export default function VendorProfileScreen({ route, navigation }: Props) {
             }
             style={{
               marginTop: spacing.md,
-              backgroundColor: colors.textPrimary,
+              backgroundColor: colors.cta,
               paddingVertical: spacing.md,
               borderRadius: radii.md,
               alignItems: 'center',
@@ -2039,4 +2039,3 @@ const renderSidebar = () => (
     </ScrollView>
   );
 }
-

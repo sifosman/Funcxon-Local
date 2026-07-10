@@ -602,7 +602,7 @@ export default function VenueProfileScreen({ route, navigation }: Props) {
                 width: 6,
                 height: 6,
                 borderRadius: 3,
-                backgroundColor: colors.textPrimary,
+                backgroundColor: colors.cta,
                 marginRight: spacing.sm,
               }}
             />
@@ -961,7 +961,7 @@ export default function VenueProfileScreen({ route, navigation }: Props) {
                           borderRadius: radii.md,
                           backgroundColor: colors.surfaceMuted,
                           borderWidth: idx === galleryIndex ? 2 : 0,
-                          borderColor: colors.textPrimary,
+                          borderColor: colors.cta,
                         }}
                         resizeMode="cover"
                         placeholderIcon={item.type === 'video' ? 'videocam' : 'image'}
@@ -1016,7 +1016,7 @@ export default function VenueProfileScreen({ route, navigation }: Props) {
                 flex: 1,
                 paddingVertical: spacing.sm,
                 borderRadius: radii.full,
-                backgroundColor: isActive ? colors.textPrimary : 'transparent',
+                backgroundColor: isActive ? colors.cta : 'transparent',
                 alignItems: 'center',
               }}
             >
@@ -1181,7 +1181,7 @@ export default function VenueProfileScreen({ route, navigation }: Props) {
                 justifyContent: 'center',
                 paddingVertical: spacing.md,
                 borderRadius: radii.lg,
-                backgroundColor: colors.textPrimary,
+                backgroundColor: colors.cta,
                 gap: spacing.sm,
               }}
             >
@@ -1392,7 +1392,7 @@ export default function VenueProfileScreen({ route, navigation }: Props) {
                   paddingVertical: spacing.sm,
                   borderRadius: radii.md,
                   borderWidth: 1,
-                  borderColor: colors.textPrimary,
+                  borderColor: colors.primary,
                   alignItems: 'center',
                   flexDirection: 'row',
                   justifyContent: 'center',
@@ -1469,7 +1469,7 @@ export default function VenueProfileScreen({ route, navigation }: Props) {
                       width: 6,
                       height: 6,
                       borderRadius: 3,
-                      backgroundColor: colors.textPrimary,
+                      backgroundColor: colors.cta,
                       marginRight: spacing.sm,
                     }}
                   />
@@ -1824,7 +1824,7 @@ export default function VenueProfileScreen({ route, navigation }: Props) {
             }}
             style={{
               marginTop: spacing.md,
-              backgroundColor: colors.textPrimary,
+              backgroundColor: colors.cta,
               paddingVertical: spacing.md,
               borderRadius: radii.md,
               alignItems: 'center',
@@ -2092,4 +2092,3 @@ const renderSidebar = () => (
     </ScrollView>
   );
 }
-

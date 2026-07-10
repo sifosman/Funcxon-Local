@@ -143,7 +143,7 @@ export default function ChangePasswordScreen() {
               disabled={saving}
               style={{
                 marginTop: spacing.md,
-                backgroundColor: colors.textPrimary,
+                backgroundColor: colors.cta,
                 paddingVertical: spacing.md,
                 borderRadius: radii.lg,
                 alignItems: 'center',
@@ -184,7 +184,7 @@ export default function ChangePasswordScreen() {
                 disabled={saving}
                 style={{
                   marginTop: spacing.md,
-                  backgroundColor: colors.textPrimary,
+                  backgroundColor: colors.cta,
                   paddingVertical: spacing.md,
                   borderRadius: radii.lg,
                   alignItems: 'center',

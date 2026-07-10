@@ -140,7 +140,7 @@ export default function ListersPortalScreen() {
       <View style={{ gap: spacing.md } as any}>
         <TouchableOpacity
           style={{
-            backgroundColor: colors.textPrimary,
+            backgroundColor: colors.cta,
             borderRadius: radii.lg,
             paddingVertical: spacing.lg,
             alignItems: 'center',
@@ -229,7 +229,7 @@ export default function ListersPortalScreen() {
                 width: 56,
                 height: 56,
                 borderRadius: 28,
-                backgroundColor: colors.accent,
+                backgroundColor: colors.accentSoft,
                 alignItems: 'center',
                 justifyContent: 'center',
                 marginBottom: spacing.lg,
@@ -299,13 +299,13 @@ export default function ListersPortalScreen() {
             {post.cover_image_url ? (
               <Image source={{ uri: post.cover_image_url }} style={{ width: '100%', height: 160 }} resizeMode="cover" />
             ) : (
-              <View style={{ width: '100%', height: 160, backgroundColor: colors.accent, justifyContent: 'center', alignItems: 'center' }}>
+              <View style={{ width: '100%', height: 160, backgroundColor: colors.accentSoft, justifyContent: 'center', alignItems: 'center' }}>
                 <MaterialIcons name="article" size={40} color={colors.primary} />
               </View>
             )}
             <View style={{ flex: 1, padding: spacing.lg, justifyContent: 'space-between' }}>
               <View>
-                <View style={{ backgroundColor: colors.accent, paddingHorizontal: spacing.sm, paddingVertical: spacing.xs, borderRadius: radii.sm, alignSelf: 'flex-start', marginBottom: spacing.sm }}>
+                <View style={{ backgroundColor: colors.accentSoft, paddingHorizontal: spacing.sm, paddingVertical: spacing.xs, borderRadius: radii.sm, alignSelf: 'flex-start', marginBottom: spacing.sm }}>
                   <Text style={{ color: colors.primary, fontSize: 12, fontWeight: '600', fontFamily: 'Montserrat_600SemiBold' }}>{post.category}</Text>
                 </View>
                 <Text style={{ ...typography.titleMedium, color: colors.textPrimary, marginBottom: spacing.xs, fontSize: 15 }} numberOfLines={2}>{post.title}</Text>
@@ -787,7 +787,7 @@ const styles = StyleSheet.create({
     marginBottom: spacing.xl,
   },
   ctaButtonPrimary: {
-    backgroundColor: colors.textPrimary,
+    backgroundColor: colors.cta,
     paddingVertical: spacing.lg,
     paddingHorizontal: spacing.xl,
     borderRadius: radii.lg,

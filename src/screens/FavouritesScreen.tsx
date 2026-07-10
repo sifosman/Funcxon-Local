@@ -258,7 +258,7 @@ export default function FavouritesScreen() {
                   paddingVertical: spacing.sm,
                   borderRadius: radii.md,
                   alignItems: 'center',
-                  backgroundColor: hasNoteChange && !isSaving ? colors.textPrimary : colors.surfaceMuted,
+                  backgroundColor: hasNoteChange && !isSaving ? colors.cta : colors.surfaceMuted,
                 }}
               >
                 <Text style={{ ...typography.caption, color: hasNoteChange && !isSaving ? '#FFFFFF' : colors.textMuted }}>

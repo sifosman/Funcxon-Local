@@ -108,7 +108,7 @@ export default function MarketingPermissionsScreen() {
               <Switch
                 value={marketingOptIn}
                 onValueChange={setMarketingOptIn}
-                trackColor={{ false: colors.outlineVariant, true: colors.textPrimary }}
+                trackColor={{ false: colors.outlineVariant, true: colors.cta }}
                 thumbColor="#FFFFFF"
               />
             </View>
@@ -132,7 +132,7 @@ export default function MarketingPermissionsScreen() {
               <Switch
                 value={marketingOptWhatsapp}
                 onValueChange={setMarketingOptWhatsapp}
-                trackColor={{ false: colors.outlineVariant, true: colors.textPrimary }}
+                trackColor={{ false: colors.outlineVariant, true: colors.cta }}
                 thumbColor="#FFFFFF"
               />
             </View>
@@ -142,7 +142,7 @@ export default function MarketingPermissionsScreen() {
               disabled={loading || saving}
               style={{
                 marginTop: spacing.xl,
-                backgroundColor: colors.textPrimary,
+                backgroundColor: colors.cta,
                 paddingVertical: spacing.md,
                 borderRadius: radii.lg,
                 alignItems: 'center',
@@ -196,7 +196,7 @@ export default function MarketingPermissionsScreen() {
                 <Switch
                   value={marketingOptIn}
                   onValueChange={setMarketingOptIn}
-                  trackColor={{ false: colors.borderSubtle, true: colors.textPrimary }}
+                  trackColor={{ false: colors.borderSubtle, true: colors.cta }}
                   thumbColor="#FFFFFF"
                 />
               </View>
@@ -220,7 +220,7 @@ export default function MarketingPermissionsScreen() {
                 <Switch
                   value={marketingOptWhatsapp}
                   onValueChange={setMarketingOptWhatsapp}
-                  trackColor={{ false: colors.borderSubtle, true: colors.textPrimary }}
+                  trackColor={{ false: colors.borderSubtle, true: colors.cta }}
                   thumbColor="#FFFFFF"
                 />
               </View>
@@ -230,7 +230,7 @@ export default function MarketingPermissionsScreen() {
                 disabled={loading || saving}
                 style={{
                   marginTop: spacing.xl,
-                  backgroundColor: colors.textPrimary,
+                  backgroundColor: colors.cta,
                   paddingVertical: spacing.md,
                   borderRadius: radii.lg,
                   alignItems: 'center',

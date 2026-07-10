@@ -1042,7 +1042,7 @@ export default function UpdateVendorPortfolioScreen() {
                                                         borderRadius: radii.full,
                                                         backgroundColor: '#f2f7ff',
                                                         borderWidth: 1,
-                                                        borderColor: colors.textPrimary,
+                                                        borderColor: colors.primary,
                                                     }}
                                                 >
                                                     <Text style={{ ...typography.caption, color: colors.textPrimary }}>{tag}</Text>

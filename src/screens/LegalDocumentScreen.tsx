@@ -92,7 +92,7 @@ export default function LegalDocumentScreen() {
           onPress={() => navigation.goBack()}
           style={{
             marginTop: spacing.lg,
-            backgroundColor: colors.textPrimary,
+            backgroundColor: colors.cta,
             paddingHorizontal: spacing.xl,
             paddingVertical: spacing.md,
             borderRadius: radii.md,
@@ -124,7 +124,7 @@ export default function LegalDocumentScreen() {
           {/* Title Card */}
           <View
             style={{
-              backgroundColor: colors.textPrimary,
+              backgroundColor: colors.primary,
               borderRadius: radii.lg,
               padding: spacing.xl,
               marginBottom: spacing.lg,
