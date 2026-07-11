@@ -1439,6 +1439,7 @@ export default function AttendeeHomeScreen() {
                     color: colors.onSurface,
                     borderWidth: 0,
                     backgroundColor: 'transparent',
+                    outlineWidth: 0,
                     padding: 0,
                   }}
                 />
@@ -1472,6 +1473,7 @@ export default function AttendeeHomeScreen() {
                       color: colors.onSurface,
                       borderWidth: 0,
                       backgroundColor: 'transparent',
+                      outlineWidth: 0,
                       padding: 0,
                     }}
                   />
