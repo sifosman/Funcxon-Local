@@ -78,7 +78,7 @@ export default function SubscriberProfileScreen() {
         <View style={{ flex: 1, backgroundColor: isDesktop ? colors.surfaceBg : colors.background }}>
             <ScrollView contentContainerStyle={{ paddingBottom: spacing.xl }}>
                 {isDesktop ? (
-                    <View style={{ maxWidth: 1200, width: '100%', alignSelf: 'center', paddingHorizontal: 48, paddingTop: spacing.sm, paddingBottom: spacing.xl }}>
+                    <View style={{ maxWidth: 1200, width: '100%', alignSelf: 'center', paddingHorizontal: 48, paddingTop: spacing.xl, paddingBottom: spacing.xl }}>
                         {/* Header */}
                         <View style={{ alignItems: 'center', marginBottom: spacing.xl }}>
                             <Text style={{ ...typography.displayMedium, color: colors.textPrimary, marginBottom: spacing.xs }}>

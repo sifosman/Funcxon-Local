@@ -889,7 +889,7 @@ export default function DiscoverScreen() {
   return (
     <Animated.ScrollView
       style={{ flex: 1, backgroundColor: isDesktop ? colors.surfaceBg : colors.background }}
-      contentContainerStyle={isDesktop ? { paddingHorizontal: 48, paddingTop: spacing.sm, paddingBottom: spacing.xl, maxWidth: 1200, width: '100%', alignSelf: 'center' } : { paddingHorizontal: spacing.lg, paddingTop: spacing.sm, paddingBottom: spacing.xl }}
+      contentContainerStyle={isDesktop ? { paddingHorizontal: 48, paddingTop: spacing.xl, paddingBottom: spacing.xl, maxWidth: 1200, width: '100%', alignSelf: 'center' } : { paddingHorizontal: spacing.lg, paddingTop: spacing.sm, paddingBottom: spacing.xl }}
       keyboardShouldPersistTaps="handled"
       scrollEventThrottle={16}
       onScroll={Animated.event(

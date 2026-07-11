@@ -249,7 +249,7 @@ export default function BlogListScreen() {
         <ScrollView
           contentContainerStyle={{
             paddingHorizontal: 48,
-            paddingTop: spacing.sm,
+            paddingTop: spacing.xl,
             paddingBottom: spacing.xxl,
             maxWidth: 1200,
             width: '100%',

@@ -201,7 +201,7 @@ export default function BlogDetailScreen() {
   }
 
   const renderDesktopArticle = () => (
-    <View style={{ paddingHorizontal: 48, paddingTop: spacing.sm, paddingBottom: spacing.lg, maxWidth: 1200, width: '100%', alignSelf: 'center' }}>
+    <View style={{ paddingHorizontal: 48, paddingTop: spacing.xl, paddingBottom: spacing.lg, maxWidth: 1200, width: '100%', alignSelf: 'center' }}>
       <View style={{ marginBottom: spacing.lg }}>
         <Text style={{ ...typography.labelMd, color: colors.dustyRose, marginBottom: spacing.sm, textTransform: 'uppercase', letterSpacing: 0.05 }}>
           {post.category}

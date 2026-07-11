@@ -21,7 +21,7 @@ export default function AdminDashboardScreen() {
           style={{ flex: 1 }}
           contentContainerStyle={{
             paddingHorizontal: 48,
-            paddingTop: spacing.sm,
+            paddingTop: spacing.xl,
             paddingBottom: 120,
             maxWidth: 1200,
             width: '100%',

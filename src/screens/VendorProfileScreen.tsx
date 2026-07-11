@@ -1795,28 +1795,31 @@ const renderSidebar = () => (
           shadowOffset: { width: 0, height: 3 },
         }}
       >
-        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: spacing.lg }}>
-          <View>
-            {vendor.price_range ? (
-              <Text style={{ ...typography.headlineMd, color: colors.primary }}>
-                {vendor.price_range}
+        <View style={{ marginBottom: spacing.lg }}>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+            <View style={{ flex: 1, paddingRight: spacing.md }}>
+              {vendor.price_range ? (
+                <Text style={{ ...typography.headlineMd, color: colors.primary }}>
+                  {vendor.price_range}
+                </Text>
+              ) : (
+                <Text style={{ ...typography.headlineMd, color: colors.primary }}>
+                  Request a quote
+                </Text>
+              )}
+              <Text style={{ ...typography.body, color: colors.onSurfaceVariant }}>
+                Pricing details
               </Text>
-            ) : (
-              <Text style={{ ...typography.headlineMd, color: colors.primary }}>
-                Request a quote
-              </Text>
-            )}
-            <Text style={{ ...typography.body, color: colors.onSurfaceVariant }}>
-              Pricing details
-            </Text>
+            </View>
           </View>
-          <View style={{ flexDirection: 'row', gap: spacing.sm }}>
+
+          <View style={{ flexDirection: 'row', justifyContent: 'flex-end', gap: spacing.sm, marginTop: spacing.md }}>
             <TouchableOpacity
               onPress={handleToggleFavourite}
               style={{
-                width: 40,
-                height: 40,
-                borderRadius: 20,
+                width: 36,
+                height: 36,
+                borderRadius: 18,
                 borderWidth: 1,
                 borderColor: colors.outlineVariant,
                 alignItems: 'center',
@@ -1826,16 +1829,16 @@ const renderSidebar = () => (
             >
               <MaterialIcons
                 name={favouriteIds.vendorIds.includes(vendor.id) ? 'favorite' : 'favorite-border'}
-                size={22}
+                size={20}
                 color={favouriteIds.vendorIds.includes(vendor.id) ? colors.primaryTeal : colors.outline}
               />
             </TouchableOpacity>
             <TouchableOpacity
               onPress={handleShare}
               style={{
-                width: 40,
-                height: 40,
-                borderRadius: 20,
+                width: 36,
+                height: 36,
+                borderRadius: 18,
                 borderWidth: 1,
                 borderColor: colors.outlineVariant,
                 alignItems: 'center',
@@ -1843,7 +1846,7 @@ const renderSidebar = () => (
                 backgroundColor: colors.surfaceBg,
               }}
             >
-              <MaterialIcons name="share" size={22} color={colors.outline} />
+              <MaterialIcons name="share" size={20} color={colors.outline} />
             </TouchableOpacity>
           </View>
         </View>
@@ -1974,7 +1977,7 @@ const renderSidebar = () => (
   return (
     <ScrollView
       style={{ flex: 1, backgroundColor: isDesktop ? colors.surfaceBg : colors.background }}
-      contentContainerStyle={isDesktop ? { paddingHorizontal: 48, paddingBottom: spacing.lg, paddingTop: spacing.sm, maxWidth: 1200, width: '100%', alignSelf: 'center' } : { paddingHorizontal: spacing.lg, paddingBottom: spacing.lg, paddingTop: spacing.sm }}
+      contentContainerStyle={isDesktop ? { paddingHorizontal: 48, paddingBottom: spacing.lg, paddingTop: spacing.xl, maxWidth: 1200, width: '100%', alignSelf: 'center' } : { paddingHorizontal: spacing.lg, paddingBottom: spacing.lg, paddingTop: spacing.sm }}
     >
       {isDesktop ? null : (
         <TouchableOpacity

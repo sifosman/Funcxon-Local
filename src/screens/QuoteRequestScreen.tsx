@@ -873,7 +873,7 @@ export default function QuoteRequestScreen({ route, navigation }: Props) {
     >
       <ScrollView
         style={{ flex: 1, backgroundColor: isDesktop ? colors.surfaceBg : colors.background }}
-        contentContainerStyle={isDesktop ? { paddingHorizontal: 48, paddingTop: spacing.sm, paddingBottom: 160, maxWidth: 1200, width: '100%', alignSelf: 'center' } : { paddingHorizontal: spacing.lg, paddingTop: spacing.sm, paddingBottom: 160 }}
+        contentContainerStyle={isDesktop ? { paddingHorizontal: 48, paddingTop: spacing.xl, paddingBottom: 160, maxWidth: 1200, width: '100%', alignSelf: 'center' } : { paddingHorizontal: spacing.lg, paddingTop: spacing.sm, paddingBottom: 160 }}
         keyboardShouldPersistTaps="handled"
       >
         {isDesktop ? null : (

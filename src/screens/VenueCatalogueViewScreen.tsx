@@ -255,7 +255,7 @@ export default function VenueCatalogueViewScreen({ route, navigation }: Props) {
     >
       <ScrollView
         style={{ flex: 1 }}
-        contentContainerStyle={isDesktop ? { paddingHorizontal: 48, paddingTop: spacing.sm, paddingBottom: 140, maxWidth: 1200, width: '100%', alignSelf: 'center' } : { paddingHorizontal: spacing.lg, paddingTop: spacing.sm, paddingBottom: 140 }}
+        contentContainerStyle={isDesktop ? { paddingHorizontal: 48, paddingTop: spacing.xl, paddingBottom: 140, maxWidth: 1200, width: '100%', alignSelf: 'center' } : { paddingHorizontal: spacing.lg, paddingTop: spacing.sm, paddingBottom: 140 }}
         keyboardShouldPersistTaps="handled"
       >
         {isDesktop ? null : (

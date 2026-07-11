@@ -308,7 +308,7 @@ export default function FavouritesScreen() {
         onScroll={(e) => {
           lastOffsetRef.current = e.nativeEvent.contentOffset.y;
         }}
-        contentContainerStyle={isDesktop ? { flexGrow: 1, paddingHorizontal: 48, paddingTop: spacing.sm, paddingBottom: spacing.xl, maxWidth: 1200, width: '100%', alignSelf: 'center' } : { flexGrow: 1, paddingHorizontal: spacing.lg, paddingTop: spacing.sm, paddingBottom: spacing.xl }}
+        contentContainerStyle={isDesktop ? { flexGrow: 1, paddingHorizontal: 48, paddingTop: spacing.xl, paddingBottom: spacing.xl, maxWidth: 1200, width: '100%', alignSelf: 'center' } : { flexGrow: 1, paddingHorizontal: spacing.lg, paddingTop: spacing.sm, paddingBottom: spacing.xl }}
       >
         {isDesktop ? (
           <View style={{ marginBottom: spacing.lg, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end' }}>

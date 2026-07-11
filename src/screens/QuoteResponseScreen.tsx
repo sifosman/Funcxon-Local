@@ -274,7 +274,7 @@ export default function QuoteResponseScreen() {
     <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <ScrollView style={{ flex: 1, backgroundColor: isDesktop ? colors.surfaceBg : colors.background }} contentContainerStyle={{ paddingBottom: isDesktop ? spacing.xl : 120 }}>
         {isDesktop ? (
-          <View style={{ maxWidth: 1200, width: '100%', alignSelf: 'center', paddingHorizontal: 48, paddingTop: spacing.sm }}>
+          <View style={{ maxWidth: 1200, width: '100%', alignSelf: 'center', paddingHorizontal: 48, paddingTop: spacing.xl }}>
             {/* Header */}
             <Text style={{ ...typography.displayMedium, color: colors.textPrimary, marginBottom: spacing.xs }}>
               Review Quote

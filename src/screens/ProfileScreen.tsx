@@ -22,7 +22,7 @@ export default function ProfileScreen() {
         contentContainerStyle={isDesktop ? { paddingBottom: spacing.xxl } : { paddingHorizontal: spacing.lg, paddingVertical: spacing.lg, paddingBottom: spacing.xxl }}
       >
         {isDesktop ? (
-          <View style={{ maxWidth: 1200, width: '100%', alignSelf: 'center', paddingHorizontal: 48, paddingTop: spacing.sm, paddingBottom: spacing.xxl }}>
+          <View style={{ maxWidth: 1200, width: '100%', alignSelf: 'center', paddingHorizontal: 48, paddingTop: spacing.xl, paddingBottom: spacing.xxl }}>
             <View
               style={{
                 maxWidth: 720,

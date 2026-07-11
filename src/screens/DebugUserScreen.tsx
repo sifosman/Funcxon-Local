@@ -81,7 +81,7 @@ export default function DebugUserScreen() {
         isDesktop
           ? {
               paddingHorizontal: 48,
-              paddingTop: spacing.sm,
+              paddingTop: spacing.xl,
               paddingBottom: spacing.lg,
               maxWidth: 1200,
               width: '100%',

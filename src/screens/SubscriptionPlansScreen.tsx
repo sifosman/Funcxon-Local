@@ -431,7 +431,7 @@ export default function SubscriptionPlansScreen() {
   return (
     <View style={{ flex: 1, backgroundColor: isDesktop ? colors.surfaceBg : colors.background }}>
       <ScrollView contentContainerStyle={{ paddingBottom: spacing.xl }} showsVerticalScrollIndicator={false}>
-        <View style={isDesktop ? { maxWidth: 1200, width: '100%', alignSelf: 'center', paddingHorizontal: 48, paddingTop: spacing.sm, paddingBottom: spacing.xl } : undefined}>
+        <View style={isDesktop ? { maxWidth: 1200, width: '100%', alignSelf: 'center', paddingHorizontal: 48, paddingTop: spacing.xl, paddingBottom: spacing.xl } : undefined}>
           {/* Header */}
           <View style={{ paddingHorizontal: isDesktop ? 0 : spacing.lg, paddingTop: spacing.sm }}>
             {isDesktop ? null : (

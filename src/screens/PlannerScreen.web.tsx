@@ -621,7 +621,7 @@ return (
     <KeyboardAvoidingView style={{ flex: 1, backgroundColor: isDesktop ? colors.surfaceBg : colors.background }} behavior="height" keyboardVerticalOffset={0}>
       <ScrollView
         style={{ flex: 1, backgroundColor: isDesktop ? colors.surfaceBg : colors.background }}
-        contentContainerStyle={isDesktop ? { paddingHorizontal: 48, paddingTop: spacing.sm, paddingBottom: 120, maxWidth: 1200, width: '100%', alignSelf: 'center' } : { paddingHorizontal: spacing.lg, paddingTop: spacing.sm, paddingBottom: 120 }}
+        contentContainerStyle={isDesktop ? { paddingHorizontal: 48, paddingTop: spacing.xl, paddingBottom: 120, maxWidth: 1200, width: '100%', alignSelf: 'center' } : { paddingHorizontal: spacing.lg, paddingTop: spacing.sm, paddingBottom: 120 }}
       >
         {isDesktop ? null : (
           <TouchableOpacity

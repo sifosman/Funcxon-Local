@@ -375,7 +375,7 @@ export default function AccountScreen() {
         <View style={{ flex: 1, backgroundColor: isDesktop ? colors.surfaceBg : colors.background }}>
             <ScrollView contentContainerStyle={{ paddingBottom: spacing.xl }}>
                 {isDesktop ? (
-                    <View style={{ maxWidth: 1200, width: '100%', alignSelf: 'center', paddingHorizontal: 48, paddingTop: spacing.sm, paddingBottom: spacing.xl }}>
+                    <View style={{ maxWidth: 1200, width: '100%', alignSelf: 'center', paddingHorizontal: 48, paddingTop: spacing.xl, paddingBottom: spacing.xl }}>
                         <View style={{ flexDirection: 'row', gap: spacing.gutter } as any}>
                             <View style={{ width: 320, gap: spacing.gutter } as any}>
                                 <View

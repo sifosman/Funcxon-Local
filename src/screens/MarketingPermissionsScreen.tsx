@@ -69,7 +69,7 @@ export default function MarketingPermissionsScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: isDesktop ? colors.surfaceBg : colors.background }}>
-      <ScrollView contentContainerStyle={isDesktop ? { paddingHorizontal: 48, paddingTop: spacing.sm, paddingBottom: spacing.xxl, maxWidth: 1200, width: '100%', alignSelf: 'center' } : { paddingHorizontal: spacing.lg, paddingTop: spacing.sm, paddingBottom: spacing.xl }}>
+      <ScrollView contentContainerStyle={isDesktop ? { paddingHorizontal: 48, paddingTop: spacing.xl, paddingBottom: spacing.xxl, maxWidth: 1200, width: '100%', alignSelf: 'center' } : { paddingHorizontal: spacing.lg, paddingTop: spacing.sm, paddingBottom: spacing.xl }}>
         {isDesktop ? (
           <View
             style={{

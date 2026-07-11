@@ -1104,7 +1104,7 @@ export default function SubscriptionCheckoutScreen() {
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       keyboardVerticalOffset={Platform.OS === 'ios' ? spacing.lg : 0}
     >
-      <ScrollView ref={scrollViewRef} contentContainerStyle={isDesktop ? { paddingHorizontal: 48, paddingTop: spacing.sm, paddingBottom: 120, maxWidth: 1200, width: '100%', alignSelf: 'center' } : { paddingBottom: 120 }} keyboardShouldPersistTaps="handled">
+      <ScrollView ref={scrollViewRef} contentContainerStyle={isDesktop ? { paddingHorizontal: 48, paddingTop: spacing.xl, paddingBottom: 120, maxWidth: 1200, width: '100%', alignSelf: 'center' } : { paddingBottom: 120 }} keyboardShouldPersistTaps="handled">
         {isDesktop ? (
           <View style={{ flexDirection: 'row', gap: spacing.gutter } as any}>
             <View style={{ flex: 2, gap: spacing.gutter } as any}>

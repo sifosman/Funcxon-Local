@@ -946,7 +946,7 @@ export default function QuoteDetailScreen() {
         style={{ flex: 1, backgroundColor: isDesktop ? colors.surfaceBg : colors.background }}
         contentContainerStyle={isDesktop ? {
           paddingHorizontal: 48,
-          paddingTop: spacing.sm,
+          paddingTop: spacing.xl,
           paddingBottom: spacing.xl,
           maxWidth: 1200,
           width: '100%',

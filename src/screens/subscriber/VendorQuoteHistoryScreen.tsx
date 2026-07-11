@@ -196,7 +196,7 @@ export default function VendorQuoteHistoryScreen() {
     <View style={{ flex: 1, backgroundColor: isDesktop ? colors.surfaceBg : colors.background }}>
       <ScrollView contentContainerStyle={{ paddingBottom: spacing.xl }}>
         {isDesktop ? (
-          <View style={{ maxWidth: 1200, width: '100%', alignSelf: 'center', paddingHorizontal: 48, paddingTop: spacing.sm }}>
+          <View style={{ maxWidth: 1200, width: '100%', alignSelf: 'center', paddingHorizontal: 48, paddingTop: spacing.xl }}>
             {/* Header */}
             <Text style={{ ...typography.displayMedium, color: colors.textPrimary, marginBottom: spacing.xs }}>
               Quote History

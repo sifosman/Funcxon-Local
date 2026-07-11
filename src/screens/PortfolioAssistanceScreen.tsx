@@ -428,7 +428,7 @@ export default function PortfolioAssistanceScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: isDesktop ? colors.surfaceBg : colors.background }}>
-      <ScrollView contentContainerStyle={isDesktop ? { paddingHorizontal: 48, paddingTop: spacing.sm, paddingBottom: spacing.xl, maxWidth: 1200, width: '100%', alignSelf: 'center' } : { paddingBottom: spacing.xl }}>
+      <ScrollView contentContainerStyle={isDesktop ? { paddingHorizontal: 48, paddingTop: spacing.xl, paddingBottom: spacing.xl, maxWidth: 1200, width: '100%', alignSelf: 'center' } : { paddingBottom: spacing.xl }}>
         {isDesktop ? (
           <>
             {renderHeader()}
