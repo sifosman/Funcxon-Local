@@ -8,7 +8,7 @@ import { colors, spacing, radii, typography } from '../../theme';
 import { supabase } from '../../lib/supabaseClient';
 import { uploadFileToStorage } from '../../lib/applicationService';
 import { getVendorPhotoLimit, getVendorVideoLimit } from '../../lib/subscription';
-import { createGalleryMediaRecord } from '../../lib/mediaUpload';
+import { createGalleryMediaRecord, deactivateGalleryMediaRecord } from '../../lib/mediaUpload';
 import { normalizePhoneNumber } from '../../utils/phoneNormalization';
 import { useAuth } from '../../auth/AuthContext';
 import ThemedAlert from '../../components/ThemedAlert';
@@ -166,6 +166,7 @@ export default function UpdateVendorPortfolioScreen() {
                     .from('gallery_media')
                     .select('media_url, media_type')
                     .eq('vendor_id', vendorData.id)
+                    .eq('is_active', true)
                     .order('created_at', { ascending: false });
                 const videoUrls = (gallery || [])
                     .filter((g: any) => g.media_type === 'video')
@@ -301,10 +302,17 @@ export default function UpdateVendorPortfolioScreen() {
     };
 
     const handleRemoveAdditionalPhoto = (index: number) => {
+        const removedUrl = additionalPhotos[index];
         setAdditionalPhotos((prev) => prev.filter((_, i) => i !== index));
+        if (removedUrl && vendor?.id) {
+            deactivateGalleryMediaRecord(removedUrl, { vendorId: vendor.id });
+        }
     };
 
     const handleRemoveMainImage = () => {
+        if (imageUrl && vendor?.id) {
+            deactivateGalleryMediaRecord(imageUrl, { vendorId: vendor.id });
+        }
         setImageUrl(null);
     };
 
@@ -349,7 +357,11 @@ export default function UpdateVendorPortfolioScreen() {
     };
 
     const handleRemoveVideo = (index: number) => {
+        const removedUrl = videos[index];
         setVideos((prev) => prev.filter((_, i) => i !== index));
+        if (removedUrl && vendor?.id) {
+            deactivateGalleryMediaRecord(removedUrl, { vendorId: vendor.id });
+        }
     };
 
     useEffect(() => {

@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -8,7 +8,7 @@ import {
   Image,
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
-import { useNavigation, useFocusEffect } from '@react-navigation/native';
+import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '../auth/AuthContext';
@@ -72,14 +72,8 @@ export default function ListersPortalScreen() {
   const username = getUsername();
   const isLister = !!session && userRole === 'vendor';
 
-  useFocusEffect(
-    useCallback(() => {
-      if (isLister) {
-        const parentNav = navigation.getParent()?.getParent() as any;
-        parentNav?.navigate?.('Account');
-      }
-    }, [isLister, navigation])
-  );
+  // Item 29: Always render the Listers Portal button — no auto-redirect.
+  // Logged-in listers tap the button to enter portfolio management.
 
   const renderStars = (rating: number) => {
     return Array.from({ length: 5 }, (_, i) => (
@@ -94,6 +88,12 @@ export default function ListersPortalScreen() {
 
   const handleLogin = () => {
     (navigation as any).navigate('Auth', { screen: 'SignIn' });
+  };
+
+  const handleEnterPortfolio = () => {
+    // Logged-in listers go straight to portfolio management (no re-auth)
+    const parentNav = navigation.getParent()?.getParent() as any;
+    parentNav?.navigate?.('Account', { screen: 'ListerPortfolio' });
   };
 
   const handleRegisterVenue = () => {
@@ -507,18 +507,22 @@ export default function ListersPortalScreen() {
         desktopContent
       ) : (
         <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
-          {/* Login / Greeting Section */}
+          {/* Login / Portal Entry Section */}
           <View style={styles.authSection}>
-            {session ? (
-              <View style={styles.greetingContainer}>
-                <MaterialIcons name="person" size={24} color={colors.primary} />
-                <Text style={styles.greetingText}>Hi {username}</Text>
-              </View>
-            ) : (
-              <TouchableOpacity style={styles.loginButton} onPress={handleLogin}>
-                <MaterialIcons name="login" size={20} color={colors.surface} />
-                <Text style={styles.loginButtonText}>LOGIN</Text>
-              </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.loginButton}
+              onPress={isLister ? handleEnterPortfolio : handleLogin}
+              activeOpacity={0.9}
+            >
+              <MaterialIcons name={isLister ? 'dashboard' : 'login'} size={20} color={colors.surface} />
+              <Text style={styles.loginButtonText}>
+                {isLister ? 'ENTER PORTFOLIO DASHBOARD' : 'LOG IN TO LISTERS PORTAL'}
+              </Text>
+            </TouchableOpacity>
+            {session && !isLister && (
+              <Text style={{ ...typography.caption, color: colors.textSecondary, marginTop: spacing.sm, textAlign: 'center' }}>
+                Your account is not a lister account. Register below to become one.
+              </Text>
             )}
           </View>
 

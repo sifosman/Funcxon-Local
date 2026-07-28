@@ -140,24 +140,25 @@ export default function ListerPortfolioScreen() {
   };
 
   const handleDeleteAccount = async () => {
+    if (!user?.id) return;
     try {
-      const { data, error } = await supabase.functions.invoke('delete-user-account', {});
-      if (error || !data?.success) {
-        throw new Error(error?.message || data?.error || 'Failed to delete account');
-      }
+      const { error } = await supabase
+        .from('account_deletion_requests')
+        .insert({ user_id: user.id, status: 'pending' });
 
-      try {
-        await signOut();
-      } catch (signOutErr) {
-        console.warn('Sign out after account deletion failed (ignored):', signOutErr);
-      }
-      const rootNav = navigation.getParent()?.getParent() as any;
-      rootNav?.navigate?.('Auth', { screen: 'SignIn' });
+      if (error) throw error;
+
+      setAlertState({
+        visible: true,
+        title: 'Request Submitted',
+        message: 'Your account deletion request has been submitted. Our admin team will review and process it within 48 hours. You will be notified once it is completed.',
+        buttons: [{ text: 'OK', style: 'default', onPress: () => setAlertState(null) }],
+      });
     } catch (err: any) {
       setAlertState({
         visible: true,
-        title: 'Deletion Failed',
-        message: err?.message || 'Could not delete account. Please try again or contact support.',
+        title: 'Request Failed',
+        message: err?.message || 'Could not submit deletion request. Please try again or contact support.',
         buttons: [{ text: 'OK', style: 'default', onPress: () => setAlertState(null) }],
       });
     }
@@ -322,12 +323,12 @@ export default function ListerPortfolioScreen() {
       action: () => {
         setAlertState({
           visible: true,
-          title: 'Delete Account',
-          message: 'This will permanently delete your account and all associated data. Are you absolutely sure?',
+          title: 'Request Account Deletion',
+          message: 'Your request will be sent to our admin team for review. Your account and data will be permanently deleted once approved (usually within 48 hours). Continue?',
           buttons: [
             { text: 'Cancel', style: 'cancel', onPress: () => setAlertState(null) },
             {
-              text: 'Delete Forever',
+              text: 'Submit Request',
               style: 'destructive',
               onPress: () => { setAlertState(null); handleDeleteAccount(); },
             },

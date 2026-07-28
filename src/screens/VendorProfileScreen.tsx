@@ -5,6 +5,7 @@ import type { ICarouselInstance } from 'react-native-reanimated-carousel';
 import ThemedAlert from '../components/ThemedAlert';
 import NetworkImage from '../components/NetworkImage';
 import ImageZoomModal, { type GalleryItem } from '../components/ImageZoomModal';
+import VideoThumbnail from '../components/VideoThumbnail';
 import { useQuery} from '@tanstack/react-query';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { WebView } from 'react-native-webview';
@@ -657,38 +658,6 @@ export default function VendorProfileScreen({ route, navigation }: Props) {
           borderColor: colors.borderSubtle,
         }}
       >
-        {/* Subscription badge row */}
-        {vendor.subscription_tier && vendor.subscription_tier !== 'free' && (
-          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.sm, gap: spacing.sm }}>
-            <View
-              style={{
-                flexDirection: 'row',
-                alignItems: 'center',
-                backgroundColor: colors.primaryTeal + '18',
-                paddingHorizontal: spacing.sm,
-                paddingVertical: 3,
-                borderRadius: radii.full,
-                borderWidth: 1,
-                borderColor: colors.primaryTeal + '40',
-                gap: 4,
-              }}
-            >
-              <MaterialIcons name="verified" size={14} color={colors.primaryTeal} />
-              <Text style={{ ...typography.captionSemiBold, color: colors.primaryTeal, textTransform: 'capitalize' }}>
-                {vendor.subscription_tier} Vendor
-              </Text>
-            </View>
-            {averageRating !== null && (
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                <MaterialIcons name="star" size={14} color="#F59E0B" />
-                <Text style={{ ...typography.captionSemiBold, color: colors.textSecondary }}>
-                  {averageRating.toFixed(1)} ({reviewCount} review{reviewCount === 1 ? '' : 's'})
-                </Text>
-              </View>
-            )}
-          </View>
-        )}
-
         <View style={{ flexDirection: 'row', alignItems: isDesktop ? 'flex-start' : 'center', justifyContent: 'space-between' }}>
           <View style={{ flex: 1, paddingRight: spacing.md }}>
             <Text style={{ ...(isDesktop ? typography.headlineMd : typography.titleLarge), color: colors.primary }}>{name}</Text>
@@ -712,7 +681,7 @@ export default function VendorProfileScreen({ route, navigation }: Props) {
                 <MaterialIcons
                   name={favouriteIds.vendorIds.includes(vendor.id) ? 'favorite' : 'favorite-border'}
                   size={18}
-                  color={favouriteIds.vendorIds.includes(vendor.id) ? colors.primaryTeal : colors.textMuted}
+                  color={favouriteIds.vendorIds.includes(vendor.id) ? colors.coral : colors.textMuted}
                 />
               </TouchableOpacity>
               <TouchableOpacity
@@ -758,8 +727,8 @@ export default function VendorProfileScreen({ route, navigation }: Props) {
           </View>
         )}
 
-        {/* Show rating row on mobile (desktop shows in badge row above) */}
-        {!isDesktop && averageRating !== null && (!vendor.subscription_tier || vendor.subscription_tier === 'free') && (
+        {/* Show rating row on mobile */}
+        {!isDesktop && averageRating !== null && (
           <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: spacing.xs }}>
             <MaterialIcons name="star" size={16} color="#F59E0B" />
             <Text style={{ ...typography.body, color: colors.textSecondary, marginLeft: 6 }}>
@@ -796,73 +765,33 @@ export default function VendorProfileScreen({ route, navigation }: Props) {
         onLayout={(e) => setGalleryContainerWidth(e.nativeEvent.layout.width)}
       >
         {isDesktop ? (
-          /* Desktop photo grid: large hero + 2 stacked thumbnails */
+          /* Desktop: single hero image */
           galleryItems.length > 0 ? (
-            <View style={{ flexDirection: 'row', height: 320, gap: 2 }}>
-              {/* Hero image */}
-              <TouchableOpacity
-                activeOpacity={0.9}
-                onPress={() => { setZoomInitialIndex(0); setZoomVisible(true); }}
-                style={{ flex: 3 }}
-              >
+            <TouchableOpacity
+              activeOpacity={0.9}
+              onPress={() => { setZoomInitialIndex(0); setZoomVisible(true); }}
+              style={{ height: 320 }}
+            >
+              {galleryItems[0].type === 'video' ? (
+                <VideoThumbnail
+                  uri={galleryItems[0].url}
+                  style={{ width: '100%', height: '100%' }}
+                  playIconSize={36}
+                />
+              ) : (
                 <NetworkImage
                   uri={galleryItems[0].url}
                   style={{ width: '100%', height: '100%' }}
                   resizeMode="cover"
                 />
-                {galleryItems[0].type === 'video' && (
-                  <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, alignItems: 'center', justifyContent: 'center' }}>
-                    <View style={{ width: 56, height: 56, borderRadius: 28, backgroundColor: 'rgba(0,0,0,0.6)', alignItems: 'center', justifyContent: 'center' }}>
-                      <MaterialIcons name="play-arrow" size={36} color="#FFFFFF" />
-                    </View>
-                  </View>
-                )}
-              </TouchableOpacity>
-              {/* Right column: 2 thumbnails stacked */}
+              )}
               {galleryItems.length > 1 && (
-                <View style={{ flex: 2, flexDirection: 'column', gap: 2 }}>
-                  <TouchableOpacity
-                    activeOpacity={0.9}
-                    onPress={() => { setZoomInitialIndex(1); setZoomVisible(true); }}
-                    style={{ flex: 1 }}
-                  >
-                    <NetworkImage
-                      uri={galleryItems[1].url}
-                      style={{ width: '100%', height: '100%' }}
-                      resizeMode="cover"
-                    />
-                    {galleryItems[1].type === 'video' && (
-                      <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, alignItems: 'center', justifyContent: 'center' }}>
-                        <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(0,0,0,0.6)', alignItems: 'center', justifyContent: 'center' }}>
-                          <MaterialIcons name="play-arrow" size={24} color="#FFFFFF" />
-                        </View>
-                      </View>
-                    )}
-                  </TouchableOpacity>
-                  {galleryItems.length > 2 && (
-                    <TouchableOpacity
-                      activeOpacity={0.9}
-                      onPress={() => { setZoomInitialIndex(2); setZoomVisible(true); }}
-                      style={{ flex: 1, position: 'relative' }}
-                    >
-                      <NetworkImage
-                        uri={galleryItems[2].url}
-                        style={{ width: '100%', height: '100%' }}
-                        resizeMode="cover"
-                      />
-                      {galleryItems.length > 3 && (
-                        <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.45)', alignItems: 'center', justifyContent: 'center' }}>
-                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: 'rgba(255,255,255,0.15)', paddingHorizontal: spacing.md, paddingVertical: spacing.sm, borderRadius: radii.md, borderWidth: 1, borderColor: 'rgba(255,255,255,0.4)' }}>
-                            <MaterialIcons name="photo-library" size={16} color="#FFFFFF" />
-                            <Text style={{ ...typography.bodySemiBold, color: '#FFFFFF' }}>View all photos</Text>
-                          </View>
-                        </View>
-                      )}
-                    </TouchableOpacity>
-                  )}
+                <View style={{ position: 'absolute', bottom: spacing.md, right: spacing.md, flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: 'rgba(255,255,255,0.15)', paddingHorizontal: spacing.md, paddingVertical: spacing.sm, borderRadius: radii.md, borderWidth: 1, borderColor: 'rgba(255,255,255,0.4)' }}>
+                  <MaterialIcons name="photo-library" size={16} color="#FFFFFF" />
+                  <Text style={{ ...typography.bodySemiBold, color: '#FFFFFF' }}>View all photos</Text>
                 </View>
               )}
-            </View>
+            </TouchableOpacity>
           ) : (
             <View style={{ height: 320, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.surfaceMuted }}>
               <MaterialIcons name="image" size={48} color={colors.textMuted} />
@@ -870,7 +799,7 @@ export default function VendorProfileScreen({ route, navigation }: Props) {
             </View>
           )
         ) : (
-          /* Mobile: carousel + thumbnails */
+          /* Mobile: carousel only */
           <>
             <View style={{ height: 220, backgroundColor: colors.surfaceMuted }}>
               {galleryItems.length > 0 ? (
@@ -894,18 +823,11 @@ export default function VendorProfileScreen({ route, navigation }: Props) {
                         style={{ width: '100%', height: '100%' }}
                       >
                         {item.type === 'video' ? (
-                          <View style={{ width: '100%', height: '100%', alignItems: 'center', justifyContent: 'center', backgroundColor: '#000' }}>
-                            <NetworkImage
-                              uri={item.url}
-                              style={{ width: '100%', height: '100%', position: 'absolute' }}
-                              resizeMode="cover"
-                              placeholderIcon="videocam"
-                              useLogoFallback={false}
-                            />
-                            <View style={{ width: 48, height: 48, borderRadius: 24, backgroundColor: 'rgba(0,0,0,0.6)', alignItems: 'center', justifyContent: 'center' }}>
-                              <MaterialIcons name="play-arrow" size={32} color="#FFFFFF" />
-                            </View>
-                          </View>
+                          <VideoThumbnail
+                            uri={item.url}
+                            style={{ width: '100%', height: '100%' }}
+                            playIconSize={32}
+                          />
                         ) : (
                           <NetworkImage uri={item.url} style={{ width: '100%', height: '100%' }} resizeMode="cover" />
                         )}
@@ -983,48 +905,6 @@ export default function VendorProfileScreen({ route, navigation }: Props) {
                 </View>
               )}
             </View>
-            {galleryItems.length > 1 && (
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                style={{ padding: spacing.md }}
-                snapToInterval={80 + spacing.sm}
-                decelerationRate="fast"
-              >
-                {galleryItems.map((item, idx) => (
-                  <TouchableOpacity
-                    key={item.url + idx}
-                    onPress={() => {
-                      setGalleryIndex(idx);
-                      carouselRef.current?.scrollTo({ index: idx });
-                    }}
-                    style={{ marginRight: spacing.sm }}
-                  >
-                    <View style={{ position: 'relative' }}>
-                      <NetworkImage
-                        uri={item.url}
-                        style={{
-                          width: 80,
-                          height: 80,
-                          borderRadius: radii.md,
-                          backgroundColor: colors.surfaceMuted,
-                          borderWidth: idx === galleryIndex ? 2 : 0,
-                          borderColor: colors.cta,
-                        }}
-                        resizeMode="cover"
-                        placeholderIcon={item.type === 'video' ? 'videocam' : 'image'}
-                        useLogoFallback={false}
-                      />
-                      {item.type === 'video' && (
-                        <View style={{ position: 'absolute', top: '50%', left: '50%', marginLeft: -10, marginTop: -10, width: 20, height: 20, borderRadius: 10, backgroundColor: 'rgba(0,0,0,0.6)', alignItems: 'center', justifyContent: 'center' }}>
-                          <MaterialIcons name="play-arrow" size={14} color="#FFFFFF" />
-                        </View>
-                      )}
-                    </View>
-                  </TouchableOpacity>
-                ))}
-              </ScrollView>
-            )}
           </>
         )}
       </View>
@@ -1064,7 +944,7 @@ export default function VendorProfileScreen({ route, navigation }: Props) {
                 flex: 1,
                 paddingVertical: spacing.sm,
                 borderRadius: radii.full,
-                backgroundColor: isActive ? colors.cta : 'transparent',
+                backgroundColor: isActive ? colors.coral : 'transparent',
                 alignItems: 'center',
               }}
             >
@@ -1400,53 +1280,54 @@ export default function VendorProfileScreen({ route, navigation }: Props) {
         <View>
           <View
             style={{
-              marginBottom: spacing.lg,
-              padding: spacing.lg,
+              marginBottom: spacing.md,
+              padding: spacing.md,
               borderRadius: radii.lg,
               backgroundColor: colors.surface,
               borderWidth: 1,
               borderColor: colors.borderSubtle,
+              flexDirection: 'row',
               alignItems: 'center',
+              gap: spacing.md,
             }}
           >
-            <Text style={{ ...typography.titleMedium, color: colors.textPrimary, marginBottom: spacing.sm }}>
-              Overall Rating
-            </Text>
-            <Text style={{ ...typography.displayLarge, color: colors.textPrimary }}>{ratingSummaryValue}</Text>
-            <View style={{ flexDirection: 'row', marginVertical: spacing.xs }}>
-              {Array.from({ length: 5 }).map((_, index) => (
-                <MaterialIcons
-                  key={index}
-                  name={averageRating && averageRating >= index + 1 ? 'star' : 'star-border'}
-                  size={20}
-                  color="#F59E0B"
-                />
-              ))}
+            <View style={{ alignItems: 'center' }}>
+              <Text style={{ ...typography.titleLarge, color: colors.textPrimary }}>{ratingSummaryValue}</Text>
+              <View style={{ flexDirection: 'row', marginVertical: 2 }}>
+                {Array.from({ length: 5 }).map((_, index) => (
+                  <MaterialIcons
+                    key={index}
+                    name={averageRating && averageRating >= index + 1 ? 'star' : 'star-border'}
+                    size={14}
+                    color="#F59E0B"
+                  />
+                ))}
+              </View>
+              <Text style={{ ...typography.caption, color: colors.textMuted, fontSize: 11 }}>
+                {ratingSummaryCount} review{ratingSummaryCount === 1 ? '' : 's'}
+              </Text>
             </View>
-            <Text style={{ ...typography.caption, color: colors.textMuted }}>
-              Based on {ratingSummaryCount} review{ratingSummaryCount === 1 ? '' : 's'}
-            </Text>
-            <View style={{ marginTop: spacing.md, width: '100%' }}>
+            <View style={{ flex: 1 }}>
               {[5, 4, 3, 2, 1].map((rating) => {
                 const count = ratingBreakdown[rating as 1 | 2 | 3 | 4 | 5] ?? 0;
                 const progress = reviewCount ? count / reviewCount : 0;
                 return (
-                  <View key={rating} style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
-                    <Text style={{ ...typography.caption, color: colors.textMuted, width: 16 }}>{rating}</Text>
-                    <MaterialIcons name="star" size={14} color="#F59E0B" />
+                  <View key={rating} style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 3 }}>
+                    <Text style={{ ...typography.caption, color: colors.textMuted, width: 12, fontSize: 11 }}>{rating}</Text>
+                    <MaterialIcons name="star" size={10} color="#F59E0B" />
                     <View
                       style={{
                         flex: 1,
-                        height: 6,
+                        height: 5,
                         backgroundColor: colors.surfaceMuted,
                         borderRadius: 999,
-                        marginHorizontal: spacing.sm,
+                        marginHorizontal: spacing.xs,
                         overflow: 'hidden',
                       }}
                     >
-                      <View style={{ width: `${progress * 100}%`, height: '100%', backgroundColor: colors.cta }} />
+                      <View style={{ width: `${progress * 100}%`, height: '100%', backgroundColor: colors.coral }} />
                     </View>
-                    <Text style={{ ...typography.caption, color: colors.textMuted, width: 20, textAlign: 'right' }}>
+                    <Text style={{ ...typography.caption, color: colors.textMuted, width: 16, textAlign: 'right', fontSize: 11 }}>
                       {count}
                     </Text>
                   </View>
@@ -1457,34 +1338,34 @@ export default function VendorProfileScreen({ route, navigation }: Props) {
 
           <View
             style={{
-              marginBottom: spacing.lg,
-              padding: spacing.lg,
+              marginBottom: spacing.md,
+              padding: spacing.md,
               borderRadius: radii.lg,
               backgroundColor: colors.surface,
               borderWidth: 1,
               borderColor: colors.borderSubtle,
             }}
           >
-            <Text style={{ ...typography.titleMedium, color: colors.textPrimary, marginBottom: spacing.md }}>
+            <Text style={{ ...typography.bodySemiBold, color: colors.textPrimary, marginBottom: spacing.sm }}>
               Rating Breakdown
             </Text>
-            <Text style={{ ...typography.caption, color: colors.textMuted, marginBottom: spacing.md }}>
+            <Text style={{ ...typography.caption, color: colors.textMuted, marginBottom: spacing.sm, fontSize: 11 }}>
               Average ratings by category
             </Text>
             {ratingCategories.map((category) => (
-              <View key={category.label} style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.sm }}>
-                <Text style={{ ...typography.caption, color: colors.textPrimary, flex: 1 }}>{category.label}</Text>
-                <View style={{ flexDirection: 'row', marginRight: spacing.sm }}>
+              <View key={category.label} style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
+                <Text style={{ ...typography.caption, color: colors.textPrimary, flex: 1, fontSize: 12 }}>{category.label}</Text>
+                <View style={{ flexDirection: 'row', marginRight: spacing.xs }}>
                   {Array.from({ length: 5 }).map((_, index) => (
                     <MaterialIcons
                       key={index}
                       name={category.value >= index + 1 ? 'star' : 'star-border'}
-                      size={14}
+                      size={12}
                       color="#F59E0B"
                     />
                   ))}
                 </View>
-                <Text style={{ ...typography.caption, color: colors.textMuted }}>{category.value.toFixed(1)}</Text>
+                <Text style={{ ...typography.caption, color: colors.textMuted, fontSize: 11 }}>{category.value.toFixed(1)}</Text>
               </View>
             ))}
           </View>
@@ -1830,7 +1711,7 @@ const renderSidebar = () => (
               <MaterialIcons
                 name={favouriteIds.vendorIds.includes(vendor.id) ? 'favorite' : 'favorite-border'}
                 size={20}
-                color={favouriteIds.vendorIds.includes(vendor.id) ? colors.primaryTeal : colors.outline}
+                color={favouriteIds.vendorIds.includes(vendor.id) ? colors.coral : colors.outline}
               />
             </TouchableOpacity>
             <TouchableOpacity
@@ -1899,9 +1780,6 @@ const renderSidebar = () => (
             )}
             <View style={{ flex: 1 }}>
               <Text style={{ ...typography.bodySemiBold, color: colors.textPrimary }}>{name}</Text>
-              {vendor.subscription_tier && vendor.subscription_tier !== 'free' ? (
-                <Text style={{ ...typography.caption, color: colors.onSurfaceVariant, textTransform: 'capitalize' }}>{vendor.subscription_tier} Vendor</Text>
-              ) : null}
             </View>
           </View>
 

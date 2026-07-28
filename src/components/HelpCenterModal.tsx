@@ -122,7 +122,8 @@ export function HelpCenterModal({ visible, onClose, onNavigateToHelp, onDeleteAc
                 </TouchableOpacity>
               </View>
 
-              {/* Account Management */}
+              {/* Account Management — attendees only (listers use admin request flow) */}
+              {userRole !== 'vendor' && (
               <View style={[styles.card, styles.desktopCard]}>
                 <View style={styles.cardHeader}>
                   <View style={styles.iconCircleRed}>
@@ -138,6 +139,7 @@ export function HelpCenterModal({ visible, onClose, onNavigateToHelp, onDeleteAc
                   <Text style={styles.dangerBtnText}>Delete Account</Text>
                 </TouchableOpacity>
               </View>
+              )}
             </View>
           </ScrollView>
         </View>
@@ -217,6 +219,7 @@ export function HelpCenterModal({ visible, onClose, onNavigateToHelp, onDeleteAc
               </TouchableOpacity>
             </View>
 
+            {userRole !== 'vendor' && (
             <View style={styles.card}>
               <View style={styles.cardHeader}>
                 <View style={styles.iconCircleRed}>
@@ -232,6 +235,7 @@ export function HelpCenterModal({ visible, onClose, onNavigateToHelp, onDeleteAc
                 <Text style={styles.dangerBtnText}>Delete Account</Text>
               </TouchableOpacity>
             </View>
+            )}
           </ScrollView>
         </View>
       </View>

@@ -173,13 +173,6 @@ export default function AppHeader() {
       <View style={styles.navBar as any}>
         <TouchableOpacity
           style={styles.navButton}
-          onPress={() => navigation.navigate('Main', { screen: 'Home', params: { screen: 'VendorList' } })}
-        >
-          <MaterialIcons name="home" size={18} color={colors.primary} />
-          <Text style={styles.navButtonText}>Home</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={styles.navButton}
           onPress={() => openDiscover({ category: 'venues', searchTitle: 'Discover Venues' })}
         >
           <MaterialIcons name="location-city" size={18} color={colors.primary} />

@@ -22,10 +22,33 @@ export default function CreateReviewScreen({ route, navigation }: Props) {
   const isDesktop = useIsDesktop();
 
   const [rating, setRating] = useState<number>(0);
+  const [categoryRatings, setCategoryRatings] = useState<Record<string, number>>({});
   const [title, setTitle] = useState('');
   const [reviewText, setReviewText] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [alertState, setAlertState] = useState<{visible: boolean; title: string; message: string} | null>(null);
+
+  const vendorCategories = [
+    'Efficiency',
+    'Professionalism',
+    'Condition of Goods',
+    'Staff Competency',
+    'Cleanliness',
+    'Attention to Detail',
+    'Communication',
+  ];
+
+  const venueCategories = [
+    'Venue Condition',
+    'Cleanliness',
+    'Ambiance & Atmosphere',
+    'Staff Professionalism',
+    'Value for Money',
+    'Location & Accessibility',
+    'Overall Experience',
+  ];
+
+  const categories = type === 'vendor' ? vendorCategories : type === 'venue' ? venueCategories : [];
 
   const isFormValid = useMemo(() => rating >= 1 && rating <= 5, [rating]);
 
@@ -170,6 +193,36 @@ export default function CreateReviewScreen({ route, navigation }: Props) {
               );
             })}
           </View>
+
+          {categories.length > 0 && (
+            <View style={{ marginBottom: spacing.md }}>
+              <Text style={{ ...typography.labelMd, color: colors.textPrimary, marginBottom: spacing.xs }}>Rate by category (optional)</Text>
+              {categories.map((cat) => {
+                const currentVal = categoryRatings[cat] ?? 0;
+                return (
+                  <View key={cat} style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing.xs }}>
+                    <Text style={{ ...typography.caption, color: colors.textSecondary, flex: 1, marginRight: spacing.sm }}>{cat}</Text>
+                    <View style={{ flexDirection: 'row' }}>
+                      {Array.from({ length: 5 }).map((_, idx) => {
+                        const value = idx + 1;
+                        const filled = currentVal >= value;
+                        return (
+                          <TouchableOpacity
+                            key={value}
+                            onPress={() => setCategoryRatings((prev) => ({ ...prev, [cat]: prev[cat] === value ? 0 : value }))}
+                            style={{ padding: 2 }}
+                            accessibilityRole="button"
+                          >
+                            <MaterialIcons name={filled ? 'star' : 'star-border'} size={isDesktop ? 20 : 16} color={filled ? colors.coral : colors.textMuted} />
+                          </TouchableOpacity>
+                        );
+                      })}
+                    </View>
+                  </View>
+                );
+              })}
+            </View>
+          )}
 
           <Text style={{ ...typography.labelMd, color: colors.textPrimary, marginBottom: spacing.xs }}>Title (optional)</Text>
           <ThemedInput value={title} onChangeText={setTitle} placeholder="e.g. Great experience" />

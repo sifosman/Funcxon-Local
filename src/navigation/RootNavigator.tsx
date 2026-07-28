@@ -75,7 +75,7 @@ export function RootNavigator() {
           let iconName: keyof typeof MaterialIcons.glyphMap = 'home';
 
           if (route.name === 'Home') {
-            iconName = 'search';
+            iconName = 'home';
           } else if (route.name === 'Favourites') {
             iconName = 'favorite';
           } else if (route.name === 'Quotes') {
@@ -111,7 +111,7 @@ export function RootNavigator() {
       <Tab.Screen
         name="Home"
         component={AttendeeNavigator}
-        options={{ headerShown: false, tabBarLabel: 'Search' }}
+        options={{ headerShown: false, tabBarLabel: 'Home' }}
       />
       <Tab.Screen
         name="Favourites"

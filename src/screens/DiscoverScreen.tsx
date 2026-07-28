@@ -1,6 +1,6 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, useCallback } from 'react';
 import { ActivityIndicator, Animated, Dimensions, KeyboardAvoidingView, Modal, Platform, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
-import { useNavigation, useRoute } from '@react-navigation/native';
+import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RouteProp } from '@react-navigation/native';
 import { MaterialIcons } from '@expo/vector-icons';
@@ -20,6 +20,7 @@ import { provinces } from '../config/locations';
 import MapRadiusSelector from '../components/MapRadiusSelector';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useIsDesktop } from '../hooks/useIsDesktop';
+import { getSharedFilterState, setSharedFilterState, type FilterState } from '../lib/sharedFilterState';
 
 type CategoryFilter = 'all' | 'venues' | 'vendors' | 'services';
 type SortBy = 'best-match' | 'rating-desc' | 'reviews-desc' | 'price-asc' | 'alphabetical';
@@ -279,7 +280,7 @@ export default function DiscoverScreen() {
     queryFn: async () => {
       const { data: vendors, error: vendorError } = await supabase
         .from('vendors')
-        .select('id, name, price_range, rating, review_count, image_url, location, description, category_id, service_options, vendor_tags, featured_listing, address_line_1, city, province')
+        .select('id, name, rating, review_count, image_url, location, description, category_id, service_options, vendor_tags, featured_listing, address_line_1, city, province')
         .limit(60);
 
       if (vendorError) throw vendorError;
@@ -345,6 +346,29 @@ export default function DiscoverScreen() {
     setShowFilters(route.params.showFilters ?? false);
     setSelectedLocationProvince(route.params.presetFilter === 'location' ? '' : '');
   }, [route.params]);
+
+  // Apply shared filter state when returning from FiltersScreen
+  useFocusEffect(
+    useCallback(() => {
+      const shared = getSharedFilterState();
+      if (shared) {
+        setCategory(shared.category);
+        setMinRating(shared.minRating);
+        setOnlyWithPrice(shared.onlyWithPrice);
+        setFeaturedOnly(shared.featuredOnly);
+        setSelectedVenueTypes(shared.selectedVenueTypes);
+        setSelectedVenueAmenities(shared.selectedVenueAmenities);
+        setSelectedCapacity(shared.selectedCapacity);
+        setSelectedProvinces(shared.selectedProvinces);
+        setSelectedCities(shared.selectedCities);
+        setSelectedVendorCategories(shared.selectedVendorCategories);
+        setSelectedVendorSubcategories(shared.selectedVendorSubcategories);
+        setSelectedVendorProvinces(shared.selectedVendorProvinces);
+        setSelectedVendorCities(shared.selectedVendorCities);
+        setSelectedLocationProvince(shared.selectedLocationProvince);
+      }
+    }, [])
+  );
 
   // Clear legacy text filters when switching to venues, vendors, or services (dropdowns take over)
   useEffect(() => {
@@ -509,7 +533,11 @@ export default function DiscoverScreen() {
 
       const matchesRating = minRating == null || (typeof item.rating === 'number' && item.rating >= minRating);
       const matchesPrice = !onlyWithPrice || !!item.price_range;
-      const matchesCategory = category === 'all' || itemCategory === category || (category === 'vendors' && item.type === 'vendor');
+      const matchesCategory =
+        category === 'all' ||
+        (category === 'venues' && item.type === 'venue') ||
+        (category === 'vendors' && item.type === 'vendor') ||
+        (category === 'services' && item.type === 'vendor' && classifyCategory(item) === 'services');
       const matchesFeatured = !featuredOnly || item.featured_listing === true;
 
       return (
@@ -830,11 +858,6 @@ export default function DiscoverScreen() {
                 )}
               </View>
             </View>
-            {item.price_range ? (
-              <View style={{ backgroundColor: colors.accent, paddingHorizontal: spacing.sm, paddingVertical: 6, borderRadius: radii.full }}>
-                <Text style={{ ...typography.caption, color: colors.textPrimary }}>{item.price_range}</Text>
-              </View>
-            ) : null}
           </View>
 
           <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.xs }}>
@@ -861,6 +884,13 @@ export default function DiscoverScreen() {
       </View>
     </TouchableOpacity>
   );
+
+  const handleSearchChange = (text: string) => {
+    setSearch(text);
+    if (text.trim().length > 0 && featuredOnly) {
+      setFeaturedOnly(false);
+    }
+  };
 
   const clearFilters = () => {
     setSearch('');
@@ -951,7 +981,7 @@ export default function DiscoverScreen() {
                 <MaterialIcons name="search" size={18} color={colors.outline} />
                 <TextInput
                   value={search}
-                  onChangeText={setSearch}
+                  onChangeText={handleSearchChange}
                   placeholder={getSearchPlaceholder()}
                   placeholderTextColor={colors.outline}
                   style={{ flex: 1, marginLeft: 8, fontSize: 14, fontFamily: 'Montserrat_400Regular', color: colors.onSurface } as any}
@@ -1123,35 +1153,34 @@ export default function DiscoverScreen() {
         </Text>
 
         {isLocationMode ? (
-          <View style={{ marginBottom: spacing.md }}>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-              {['All', ...provinces.map((p) => p.name)].map((province) => {
-                const selected = province === 'All'
-                  ? selectedLocationProvince === ''
-                  : selectedLocationProvince === province;
-                return (
-                  <TouchableOpacity
-                    key={province}
-                    onPress={() => {
-                      setSelectedLocationProvince(province === 'All' ? '' : province);
-                    }}
-                    style={{
-                      paddingHorizontal: spacing.md,
-                      paddingVertical: spacing.sm,
-                      borderRadius: radii.full,
-                      borderWidth: 1.5,
-                      borderColor: selected ? colors.primary : colors.borderSubtle,
-                      backgroundColor: selected ? colors.primary : colors.surface,
-                      marginRight: spacing.sm,
-                    }}
-                  >
-                    <Text style={{ ...typography.caption, color: selected ? colors.primaryForeground : colors.textPrimary, fontWeight: selected ? '600' : '400' }}>
-                      {province}
-                    </Text>
-                  </TouchableOpacity>
-                );
-              })}
-            </ScrollView>
+          <View style={{ marginBottom: spacing.md, flexDirection: 'row', flexWrap: 'wrap', columnGap: spacing.sm, rowGap: spacing.sm }}>
+            {['All', ...provinces.map((p) => p.name)].map((province) => {
+              const selected = province === 'All'
+                ? selectedLocationProvince === ''
+                : selectedLocationProvince === province;
+              return (
+                <TouchableOpacity
+                  key={province}
+                  onPress={() => {
+                    setSelectedLocationProvince(province === 'All' ? '' : province);
+                  }}
+                  style={{
+                    width: '31.5%',
+                    paddingHorizontal: spacing.sm,
+                    paddingVertical: spacing.sm,
+                    borderRadius: radii.full,
+                    borderWidth: 1.5,
+                    borderColor: selected ? colors.coral : colors.borderSubtle,
+                    backgroundColor: selected ? colors.coral : colors.surface,
+                    alignItems: 'center',
+                  }}
+                >
+                  <Text style={{ ...typography.caption, color: selected ? '#FFFFFF' : colors.textPrimary, fontWeight: selected ? '600' : '400' }} numberOfLines={1}>
+                    {province}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
           </View>
         ) : null}
 
@@ -1170,7 +1199,7 @@ export default function DiscoverScreen() {
           <MaterialIcons name="search" size={20} color={colors.textSecondary} style={{ marginRight: spacing.sm }} />
           <TextInput
             value={search}
-            onChangeText={setSearch}
+            onChangeText={handleSearchChange}
             placeholder={getSearchPlaceholder()}
             placeholderTextColor={colors.textMuted}
             style={{ flex: 1, paddingVertical: spacing.md, color: colors.textPrimary, fontFamily: typography.body.fontFamily }}
@@ -1193,14 +1222,32 @@ export default function DiscoverScreen() {
 
         <View style={{ flexDirection: 'row', columnGap: spacing.md, alignItems: 'center', justifyContent: 'center' }}>
           <AnimatedTouchableOpacity
-            onPress={() => setShowFilters((prev) => !prev)}
+            onPress={() => {
+              setSharedFilterState({
+                category,
+                minRating,
+                onlyWithPrice,
+                featuredOnly,
+                selectedVenueTypes,
+                selectedVenueAmenities,
+                selectedCapacity,
+                selectedProvinces,
+                selectedCities,
+                selectedVendorCategories,
+                selectedVendorSubcategories,
+                selectedVendorProvinces,
+                selectedVendorCities,
+                selectedLocationProvince,
+              });
+              navigation.navigate('Filters');
+            }}
             style={{
               flexDirection: 'row',
               alignItems: 'center',
               columnGap: spacing.xs,
               paddingVertical: spacing.sm,
               paddingHorizontal: spacing.lg,
-              backgroundColor: showFilters ? colors.primaryTeal : colors.primary,
+              backgroundColor: colors.primary,
               borderColor: colors.primary,
               borderWidth: 2,
               borderRadius: radii.full,
@@ -1290,6 +1337,7 @@ export default function DiscoverScreen() {
       </>
       )}
 
+      {isDesktop && (
       <Modal visible={showFilters} transparent animationType="fade" onRequestClose={() => setShowFilters(false)}>
         <KeyboardAvoidingView
           behavior="padding"
@@ -1743,6 +1791,7 @@ export default function DiscoverScreen() {
           </View>
         </KeyboardAvoidingView>
       </Modal>
+      )}
 
       <Modal visible={showSortOptions} transparent animationType="fade" onRequestClose={() => setShowSortOptions(false)}>
         <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.28)', justifyContent: 'center', alignItems: 'center', padding: 24 }}>

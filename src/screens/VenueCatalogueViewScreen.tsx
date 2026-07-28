@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, Image, KeyboardAvoidingView, Linking, Platform, ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Image, KeyboardAvoidingView, Linking, Platform, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import ThemedAlert from '../components/ThemedAlert';
 import NetworkImage from '../components/NetworkImage';
 import { MaterialIcons} from '@expo/vector-icons';
@@ -115,11 +115,12 @@ export default function VenueCatalogueViewScreen({ route, navigation }: Props) {
     });
   };
 
+  const setQuantityDirect = (id: number, value: string) => {
+    const parsed = parseInt(value, 10);
+    setQuantities((prev) => ({ ...prev, [id]: isNaN(parsed) || parsed < 1 ? 1 : parsed }));
+  };
+
   const handleRequestQuote = () => {
-    if (selectedItems.length === 0) {
-      setAlertState({ visible: true, title: 'No items selected', message: 'Please select at least one catalogue item.' });
-      return;
-    }
     if (!session) {
       (navigation as any).getParent()?.getParent()?.navigate('Auth', { screen: 'SignIn' });
       return;
@@ -149,99 +150,97 @@ export default function VenueCatalogueViewScreen({ route, navigation }: Props) {
 
   const renderCatalogueItem = (item: CatalogueItem) => {
     const isSelected = selectedIds.has(item.id);
+    const qty = quantities[item.id] || 1;
+    if (isDesktop) {
+      return (
+        <TouchableOpacity
+          key={item.id}
+          activeOpacity={0.9}
+          onPress={() => toggleItem(item.id)}
+          style={{
+            width: 'calc(33.3333% - 16px)',
+            borderRadius: radii.lg,
+            backgroundColor: colors.surfaceContainerLowest,
+            borderWidth: 2,
+            borderColor: isSelected ? colors.cta : colors.outlineVariant,
+            overflow: 'hidden',
+          } as any}
+        >
+          <View>
+            {item.image_url ? (
+              <NetworkImage uri={item.image_url} style={{ width: '100%', height: 160 }} resizeMode="cover" />
+            ) : (
+              <View style={{ width: '100%', height: 160, backgroundColor: colors.surfaceMuted, alignItems: 'center', justifyContent: 'center' }}>
+                <MaterialIcons name="image" size={40} color={colors.textMuted} />
+              </View>
+            )}
+            <View style={{ position: 'absolute', top: spacing.sm, right: spacing.sm }}>
+              <MaterialIcons name={isSelected ? 'check-circle' : 'radio-button-unchecked'} size={28} color={isSelected ? colors.textPrimary : colors.outlineVariant} />
+            </View>
+          </View>
+          <View style={{ flex: 1, padding: spacing.md, justifyContent: 'center' }}>
+            <Text style={{ ...typography.titleMedium, color: colors.textPrimary }}>{item.title}</Text>
+            {item.description ? (
+              <Text style={{ ...typography.bodyMd, color: colors.textMuted, marginTop: 2 }} numberOfLines={3}>{item.description}</Text>
+            ) : null}
+            <Text style={{ ...typography.bodyMd, color: colors.textPrimary, marginTop: spacing.sm }}>R{Number(item.price ?? 0).toLocaleString()}</Text>
+          </View>
+        </TouchableOpacity>
+      );
+    }
     return (
       <TouchableOpacity
         key={item.id}
         activeOpacity={0.9}
         onPress={() => toggleItem(item.id)}
-        style={isDesktop ? ({
-          width: 'calc(33.3333% - 16px)',
-          borderRadius: radii.lg,
-          backgroundColor: colors.surfaceContainerLowest,
-          borderWidth: 2,
-          borderColor: isSelected ? colors.cta : colors.outlineVariant,
-          overflow: 'hidden',
-        } as any) : {
-          flexDirection: 'row',
+        style={{
           borderRadius: radii.lg,
           backgroundColor: colors.surface,
           borderWidth: 2,
-          borderColor: isSelected ? colors.cta : colors.borderSubtle,
+          borderColor: isSelected ? colors.cta : colors.textPrimary,
           overflow: 'hidden',
         }}
       >
-        {isDesktop ? (
-          <View>
-            {item.image_url ? (
-              <NetworkImage
-                uri={item.image_url}
-                style={{ width: '100%', height: 160 }}
-                resizeMode="cover"
-              />
-            ) : (
-              <View
-                style={{
-                  width: '100%',
-                  height: 160,
-                  backgroundColor: colors.surfaceMuted,
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                }}
-              >
-                <MaterialIcons name="image" size={40} color={colors.textMuted} />
-              </View>
-            )}
-            <View style={{ position: 'absolute', top: spacing.sm, right: spacing.sm }}>
-              <MaterialIcons
-                name={isSelected ? 'check-circle' : 'radio-button-unchecked'}
-                size={28}
-                color={isSelected ? colors.textPrimary : colors.outlineVariant}
-              />
+        <View style={{ flexDirection: 'row' }}>
+          {item.image_url ? (
+            <NetworkImage uri={item.image_url} style={{ width: 100, height: 100 }} resizeMode="cover" />
+          ) : (
+            <View style={{ width: 100, height: 100, backgroundColor: colors.surfaceMuted, alignItems: 'center', justifyContent: 'center' }}>
+              <MaterialIcons name="image" size={32} color={colors.textMuted} />
             </View>
+          )}
+          <View style={{ flex: 1, padding: spacing.md, justifyContent: 'center' }}>
+            <Text style={{ ...typography.bodySemiBold, color: colors.textPrimary }}>{item.title}</Text>
+            {item.description ? (
+              <Text style={{ ...typography.caption, color: colors.textMuted, marginTop: 2 }} numberOfLines={2}>{item.description}</Text>
+            ) : null}
+            <Text style={{ ...typography.bodyBold, color: colors.textPrimary, marginTop: spacing.sm }}>R{Number(item.price ?? 0).toLocaleString()}</Text>
           </View>
-        ) : (
-          <>
-            {item.image_url ? (
-              <NetworkImage
-                uri={item.image_url}
-                style={{ width: 100, height: 100 }}
-                resizeMode="cover"
-              />
-            ) : (
-              <View
-                style={{
-                  width: 100,
-                  height: 100,
-                  backgroundColor: colors.surfaceMuted,
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                }}
-              >
-                <MaterialIcons name="image" size={32} color={colors.textMuted} />
-              </View>
-            )}
-          </>
-        )}
-        <View style={{ flex: 1, padding: spacing.md, justifyContent: 'center' }}>
-          <Text style={{ ...(isDesktop ? typography.titleMedium : typography.bodySemiBold), color: colors.textPrimary }}>
-            {item.title}
-          </Text>
-          {item.description ? (
-            <Text style={{ ...(isDesktop ? typography.bodyMd : typography.caption), color: colors.textMuted, marginTop: 2 }} numberOfLines={isDesktop ? 3 : 2}>
-              {item.description}
-            </Text>
-          ) : null}
-          <Text style={{ ...(isDesktop ? typography.bodyMd : typography.bodyBold), color: colors.textPrimary, marginTop: spacing.sm }}>
-            R{Number(item.price ?? 0).toLocaleString()}
-          </Text>
-        </View>
-        {!isDesktop && (
           <View style={{ justifyContent: 'center', paddingRight: spacing.md }}>
-            <MaterialIcons
-              name={isSelected ? 'check-circle' : 'radio-button-unchecked'}
-              size={28}
-              color={isSelected ? colors.textPrimary : colors.borderSubtle}
+            <MaterialIcons name={isSelected ? 'check-circle' : 'radio-button-unchecked'} size={28} color={colors.textPrimary} />
+          </View>
+        </View>
+        {isSelected && (
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', gap: spacing.sm, paddingHorizontal: spacing.md, paddingBottom: spacing.md }}>
+            <TouchableOpacity
+              onPress={() => updateQuantity(item.id, -1)}
+              style={{ width: 28, height: 28, borderRadius: 14, backgroundColor: colors.surfaceMuted, alignItems: 'center', justifyContent: 'center' }}
+            >
+              <MaterialIcons name="remove" size={16} color={colors.textPrimary} />
+            </TouchableOpacity>
+            <TextInput
+              value={String(qty)}
+              onChangeText={(text) => setQuantityDirect(item.id, text)}
+              keyboardType="numeric"
+              selectTextOnFocus
+              style={{ width: 44, textAlign: 'center', borderWidth: 1, borderColor: colors.borderSubtle, borderRadius: radii.sm, paddingVertical: 2, paddingHorizontal: spacing.xs, ...typography.body, color: colors.textPrimary }}
             />
+            <TouchableOpacity
+              onPress={() => updateQuantity(item.id, 1)}
+              style={{ width: 28, height: 28, borderRadius: 14, backgroundColor: colors.surfaceMuted, alignItems: 'center', justifyContent: 'center' }}
+            >
+              <MaterialIcons name="add" size={16} color={colors.textPrimary} />
+            </TouchableOpacity>
           </View>
         )}
       </TouchableOpacity>
@@ -366,37 +365,7 @@ export default function VenueCatalogueViewScreen({ route, navigation }: Props) {
                         R{Number(item.price ?? 0).toLocaleString()} each
                       </Text>
                     </View>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
-                      <TouchableOpacity
-                        onPress={() => updateQuantity(item.id, -1)}
-                        style={{
-                          width: 28,
-                          height: 28,
-                          borderRadius: 14,
-                          backgroundColor: colors.surfaceMuted,
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                        }}
-                      >
-                        <MaterialIcons name="remove" size={16} color={colors.textPrimary} />
-                      </TouchableOpacity>
-                      <Text style={{ ...(isDesktop ? typography.bodyMd : typography.body), color: colors.textPrimary, minWidth: 24, textAlign: 'center' }}>
-                        {quantities[item.id] || 1}
-                      </Text>
-                      <TouchableOpacity
-                        onPress={() => updateQuantity(item.id, 1)}
-                        style={{
-                          width: 28,
-                          height: 28,
-                          borderRadius: 14,
-                          backgroundColor: colors.surfaceMuted,
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                        }}
-                      >
-                        <MaterialIcons name="add" size={16} color={colors.textPrimary} />
-                      </TouchableOpacity>
-                    </View>
+                    <Text style={{ ...(isDesktop ? typography.bodyMd : typography.body), color: colors.textPrimary }}>×{quantities[item.id] || 1}</Text>
                   </View>
                 ))}
                 <View
@@ -415,30 +384,30 @@ export default function VenueCatalogueViewScreen({ route, navigation }: Props) {
               </View>
             )}
 
-            <TouchableOpacity
-              onPress={handleRequestQuote}
-              disabled={selectedItems.length === 0}
-              style={{
-                flexDirection: 'row',
-                alignItems: 'center',
-                justifyContent: 'center',
-                paddingVertical: spacing.md,
-                borderRadius: radii.lg,
-                backgroundColor: selectedItems.length > 0 ? colors.cta : colors.surfaceMuted,
-                gap: spacing.sm,
-                ...(isDesktop ? { maxWidth: 800, width: '100%', alignSelf: 'center' } : {}),
-              }}
-            >
-              <MaterialIcons name="request-quote" size={20} color="#FFFFFF" />
-              <Text style={{ ...typography.bodyBold, color: '#FFFFFF' }}>Request Quote</Text>
-            </TouchableOpacity>
-
-            {selectedItems.length > 0 && (
-              <Text style={{ ...(isDesktop ? typography.bodyMd : typography.caption), color: colors.textMuted, textAlign: 'center' }}>
-                Selected items will be pre-filled on the quote request screen.
-              </Text>
-            )}
           </View>
+        )}
+
+        <TouchableOpacity
+          onPress={handleRequestQuote}
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'center',
+            paddingVertical: spacing.md,
+            borderRadius: radii.lg,
+            backgroundColor: colors.cta,
+            gap: spacing.sm,
+            ...(isDesktop ? { maxWidth: 800, width: '100%', alignSelf: 'center' } : {}),
+          }}
+        >
+          <MaterialIcons name="request-quote" size={20} color="#FFFFFF" />
+          <Text style={{ ...typography.bodyBold, color: '#FFFFFF' }}>Request Quote</Text>
+        </TouchableOpacity>
+
+        {selectedItems.length > 0 && (
+          <Text style={{ ...(isDesktop ? typography.bodyMd : typography.caption), color: colors.textMuted, textAlign: 'center', marginTop: spacing.sm }}>
+            Selected items will be pre-filled on the quote request screen.
+          </Text>
         )}
       </ScrollView>
 

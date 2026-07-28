@@ -312,7 +312,7 @@ export default function AttendeeHomeScreen() {
 
   // Responsive card width - aim for ~2.2 cards visible on mobile, 4 columns on desktop
   const [screenWidth, setScreenWidth] = useState(Dimensions.get('window').width);
-  const cardWidth = isDesktop ? (Math.min(screenWidth, 1200) - 48 * 2 - 24 * 3) / 4 : screenWidth / 2.2;
+  const cardWidth = isDesktop ? (Math.min(screenWidth, 1200) - 48 * 2 - 24 * 3) / 4 : Math.round(screenWidth * 0.66);
   // Wider cards for the 3-card Get Listed section (falls back to cardWidth on mobile)
   const getListedCardWidth = isDesktop ? (Math.min(screenWidth, 1200) - 48 * 2 - 24 * 2) / 3 : cardWidth;
 
@@ -385,6 +385,18 @@ export default function AttendeeHomeScreen() {
       subtitle: 'Explore service professionals',
       image: { uri: 'https://images.unsplash.com/photo-1511578314322-379afb476865?w=800&q=80' },
     },
+    {
+      key: 'venues' as const,
+      title: 'Venues',
+      subtitle: 'Browse all venues',
+      image: require('../../assets/slider_1.jpg'),
+    },
+    {
+      key: 'vendors' as const,
+      title: 'Vendors & Services',
+      subtitle: 'Browse all vendors and services',
+      image: require('../../assets/slide_2.jpeg'),
+    },
   ];
 
   const openDiscoverPreset = (preset: typeof exploreOptions[number]['key']) => {
@@ -392,7 +404,6 @@ export default function AttendeeHomeScreen() {
       navigation.navigate('Discover', {
         presetFilter: 'location',
         searchTitle: 'Search by Location',
-        showFilters: true,
         category: 'all',
       });
       return;
@@ -402,7 +413,6 @@ export default function AttendeeHomeScreen() {
       navigation.navigate('Discover', {
         presetFilter: 'categories',
         searchTitle: 'Search by Categories',
-        showFilters: true,
         category: 'all',
       });
       return;
@@ -412,8 +422,23 @@ export default function AttendeeHomeScreen() {
       navigation.navigate('Discover', {
         presetFilter: 'amenities',
         searchTitle: 'Search by Venue Amenities',
-        showFilters: true,
         category: 'venues',
+      });
+      return;
+    }
+
+    if (preset === 'venues') {
+      navigation.navigate('Discover', {
+        category: 'venues',
+        searchTitle: 'All Venues',
+      });
+      return;
+    }
+
+    if (preset === 'vendors') {
+      navigation.navigate('Discover', {
+        category: 'vendors',
+        searchTitle: 'All Vendors & Services',
       });
       return;
     }
@@ -421,7 +446,6 @@ export default function AttendeeHomeScreen() {
     navigation.navigate('Discover', {
       presetFilter: 'services',
       searchTitle: 'Search by Services',
-      showFilters: true,
       category: 'services',
     });
   };
@@ -447,29 +471,29 @@ export default function AttendeeHomeScreen() {
     return (
       <TouchableOpacity
         key={item.id}
-        activeOpacity={0.92}
+        activeOpacity={0.7}
         onPress={onPress}
         style={{ width: cardWidth, marginRight: isDesktop ? 0 : spacing.md, marginBottom: isDesktop ? 24 : 0 }}
       >
         <View
           style={{
-            borderRadius: radii.xl,
+            borderRadius: radii.lg,
             backgroundColor: colors.surface,
-            borderWidth: 1,
-            borderColor: colors.borderSubtle,
+            borderWidth: isDesktop ? 1 : 0,
+            borderColor: isDesktop ? colors.outlineVariant : undefined,
             overflow: 'hidden',
-            shadowColor: '#000',
-            shadowOpacity: 0.08,
-            shadowRadius: 10,
-            shadowOffset: { width: 0, height: 3 },
-            elevation: 2,
+            shadowColor: isDesktop ? undefined : '#000',
+            shadowOpacity: isDesktop ? undefined : 0.1,
+            shadowRadius: isDesktop ? undefined : 4,
+            shadowOffset: isDesktop ? undefined : { width: 0, height: 2 },
+            elevation: isDesktop ? undefined : 3,
           }}
         >
           {/* Image + favourite button */}
           <View>
             <NetworkImage
               uri={item.image_url}
-              style={{ width: '100%', height: 150 }}
+              style={{ width: '100%', height: isDesktop ? 220 : 180 }}
               resizeMode="cover"
             />
             <TouchableOpacity
@@ -491,30 +515,45 @@ export default function AttendeeHomeScreen() {
               <MaterialIcons
                 name={isFav ? 'favorite' : 'favorite-border'}
                 size={18}
-                color={isFav ? colors.primaryTeal : colors.textMuted}
+                color={isFav ? colors.coral : colors.textMuted}
               />
             </TouchableOpacity>
           </View>
 
-          {/* Card body */}
-          <View style={{ padding: spacing.md }}>
-            <Text style={{ ...typography.titleMedium, color: colors.textPrimary }} numberOfLines={1}>
-              {item.name ?? 'Untitled'}
-            </Text>
-            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 2 }}>
-              <Text style={{ ...typography.caption, color: colors.textPrimary }}>
+          {/* Card body — blog card template */}
+          <View style={{ padding: isDesktop ? spacing.xl : spacing.lg }}>
+            <View
+              style={{
+                backgroundColor: colors.accent,
+                paddingHorizontal: spacing.sm,
+                paddingVertical: spacing.xs,
+                borderRadius: radii.sm,
+                alignSelf: 'flex-start',
+                marginBottom: spacing.sm,
+              }}
+            >
+              <Text
+                style={{
+                  color: colors.primary,
+                  fontSize: 12,
+                  fontWeight: '600',
+                  fontFamily: 'Montserrat_600SemiBold',
+                }}
+              >
                 {item.type === 'venue' ? 'Venue' : 'Vendor'}
               </Text>
-              {item.featured_listing && (
-                <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#FFD700', paddingHorizontal: 6, paddingVertical: 2, borderRadius: radii.sm }}>
-                  <MaterialIcons name="star" size={10} color="#000000" />
-                  <Text style={{ ...typography.captionBold, color: '#000000', fontSize: 9, marginLeft: 2 }}>FEATURED</Text>
-                </View>
-              )}
             </View>
-
-            <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: spacing.xs }}>
-              <MaterialIcons name="star" size={16} color={colors.textPrimary} />
+            <Text
+              style={{
+                ...typography.titleMedium,
+                color: colors.textPrimary,
+                marginBottom: spacing.xs,
+              }}
+            >
+              {item.name ?? 'Untitled'}
+            </Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.xs }}>
+              <MaterialIcons name="star" size={14} color={colors.textPrimary} />
               <Text style={{ ...typography.caption, color: colors.textSecondary, marginLeft: spacing.xs }}>
                 {typeof item.rating === 'number' ? item.rating.toFixed(1) : 'No rating yet'}
                 {typeof item.review_count === 'number' && item.review_count > 0
@@ -522,16 +561,21 @@ export default function AttendeeHomeScreen() {
                   : ''}
               </Text>
             </View>
-
-            <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: spacing.xs }}>
-              <MaterialIcons name="place" size={16} color={colors.textSecondary} />
-              <Text style={{ ...typography.caption, color: colors.textSecondary, marginLeft: spacing.xs, flex: 1 }} numberOfLines={2}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.sm }}>
+              <MaterialIcons name="place" size={14} color={colors.textSecondary} />
+              <Text style={{ ...typography.caption, color: colors.textSecondary, marginLeft: spacing.xs, flex: 1 }} numberOfLines={1}>
                 {formatCardAddress(item)}
               </Text>
             </View>
-
             {!!item.description && (
-              <Text style={{ ...typography.body, color: colors.textSecondary, marginTop: spacing.xs }} numberOfLines={2}>
+              <Text
+                style={{
+                  ...typography.caption,
+                  color: colors.textSecondary,
+                  lineHeight: 20,
+                }}
+                numberOfLines={2}
+              >
                 {item.description}
               </Text>
             )}
@@ -1499,36 +1543,19 @@ export default function AttendeeHomeScreen() {
           </View>
         </View>
       ) : (
-        <View style={{ paddingHorizontal: spacing.lg, paddingTop: spacing.lg }}>
-          <View style={{ position: 'relative' }}>
-            <Image
-              source={require('../../assets/slider_1.jpg')}
-              style={{ width: '100%', height: 180, borderRadius: radii.lg }}
-              resizeMode="cover"
-            />
-            <View
-              style={{
-                position: 'absolute',
-                left: 0,
-                top: 0,
-                bottom: 0,
-                justifyContent: 'center',
-                paddingLeft: spacing.md,
-                paddingRight: spacing.xl,
-                backgroundColor: 'transparent',
-              }}
-            >
-              <Text style={{ ...typography.displayLarge, color: '#FFFFFF', fontWeight: '700', textShadowColor: 'rgba(0,0,0,0.5)', textShadowOffset: { width: 2, height: 2 }, textShadowRadius: 4, fontSize: screenWidth < 375 ? 22 : screenWidth < 400 ? 25 : 28, textAlign: 'left' }}>
-                Connect
-              </Text>
-              <Text style={{ ...typography.displayLarge, color: '#FFFFFF', fontWeight: '700', textShadowColor: 'rgba(0,0,0,0.5)', textShadowOffset: { width: 2, height: 2 }, textShadowRadius: 4, fontSize: screenWidth < 375 ? 22 : screenWidth < 400 ? 25 : 28, textAlign: 'left' }}>
-                Collaborate
-              </Text>
-              <Text style={{ ...typography.displayLarge, color: '#FFFFFF', fontWeight: '700', textShadowColor: 'rgba(0,0,0,0.5)', textShadowOffset: { width: 2, height: 2 }, textShadowRadius: 4, fontSize: screenWidth < 375 ? 22 : screenWidth < 400 ? 25 : 28, textAlign: 'left' }}>
-                Celebrate
-              </Text>
-            </View>
-          </View>
+        <View style={{ paddingHorizontal: spacing.lg, paddingTop: spacing.md, paddingBottom: spacing.xs, alignItems: 'center' }}>
+          <Text
+            style={{
+              ...typography.captionSemiBold,
+              color: colors.primary,
+              textAlign: 'center',
+              letterSpacing: 1.5,
+              textTransform: 'uppercase',
+              fontSize: 13,
+            }}
+          >
+            Connect · Collaborate · Celebrate
+          </Text>
         </View>
       )}
 
@@ -1562,10 +1589,10 @@ export default function AttendeeHomeScreen() {
       <View style={{ marginTop: spacing.xl }}>
         <View style={[{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.md }, isDesktop ? { paddingHorizontal: 48, maxWidth: 1200, width: '100%', alignSelf: 'center' } : { paddingHorizontal: spacing.lg }]}>
           <View>
-            <Text style={{ ...typography.titleLarge, color: colors.textPrimary, fontSize: isDesktop ? 32 : undefined }}>Featured Venues</Text>
+            <Text style={{ ...typography.headlineSm, color: colors.textPrimary, fontSize: isDesktop ? 32 : 22, fontFamily: 'Montserrat_600SemiBold' }}>Featured Venues</Text>
             {isDesktop && <Text style={{ ...typography.body, color: colors.onSurfaceVariant, marginTop: 4 }}>Exclusive spaces for unforgettable moments.</Text>}
           </View>
-          <TouchableOpacity onPress={() => navigation.navigate('Discover', { category: 'venues', searchTitle: 'Featured Venues' })}>
+          <TouchableOpacity onPress={() => navigation.navigate('Discover', { category: 'venues', presetFilter: 'featured', searchTitle: 'Featured Venues' })}>
             <Text style={{ ...typography.bodySemiBold, color: colors.secondaryBlue }}>View All →</Text>
           </TouchableOpacity>
         </View>
@@ -1615,10 +1642,10 @@ export default function AttendeeHomeScreen() {
       <View style={{ marginTop: isDesktop ? 80 : spacing.xl }}>
         <View style={[{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.md }, isDesktop ? { paddingHorizontal: 48, maxWidth: 1200, width: '100%', alignSelf: 'center' } : { paddingHorizontal: spacing.lg }]}>
           <View>
-            <Text style={{ ...typography.titleLarge, color: colors.textPrimary, fontSize: isDesktop ? 32 : undefined }}>Featured Vendors & Services</Text>
+            <Text style={{ ...typography.headlineSm, color: colors.textPrimary, fontSize: isDesktop ? 32 : 22, fontFamily: 'Montserrat_600SemiBold' }}>Featured Vendors & Services</Text>
             {isDesktop && <Text style={{ ...typography.body, color: colors.onSurfaceVariant, marginTop: 4 }}>Masters of their craft, ready to elevate your event.</Text>}
           </View>
-          <TouchableOpacity onPress={() => navigation.navigate('Discover', { category: 'vendors', searchTitle: 'Featured Vendors & Services' })}>
+          <TouchableOpacity onPress={() => navigation.navigate('Discover', { category: 'vendors', presetFilter: 'featured', searchTitle: 'Featured Vendors & Services' })}>
             <Text style={{ ...typography.bodySemiBold, color: colors.secondaryBlue }}>View All →</Text>
           </TouchableOpacity>
         </View>
@@ -1754,7 +1781,7 @@ export default function AttendeeHomeScreen() {
           {exploreOptions.map((option) => (
             <TouchableOpacity
               key={option.key}
-              activeOpacity={0.9}
+              activeOpacity={0.7}
               style={{ width: cardWidth, marginRight: spacing.md }}
               onPress={() => openDiscoverPreset(option.key)}
             >
@@ -1763,40 +1790,39 @@ export default function AttendeeHomeScreen() {
                   backgroundColor: colors.surface,
                   borderRadius: radii.lg,
                   overflow: 'hidden',
-                  borderWidth: 1,
-                  borderColor: colors.borderSubtle,
-                  height: cardWidth * 1.25,
+                  shadowColor: '#000',
+                  shadowOpacity: 0.1,
+                  shadowRadius: 4,
+                  shadowOffset: { width: 0, height: 2 },
+                  elevation: 3,
                 }}
               >
                 <Image
                   source={option.image}
-                  style={{ width: '100%', height: cardWidth * 0.6 }}
+                  style={{ width: '100%', height: 180 }}
                   resizeMode="cover"
                 />
-                <View style={{ flex: 1, padding: spacing.sm, justifyContent: 'space-between' }}>
-                  <View>
-                    <Text
-                      style={{
-                        ...typography.titleMedium,
-                        color: colors.textPrimary,
-                        marginBottom: spacing.xs,
-                        fontSize: 12,
-                      }}
-                      numberOfLines={2}
-                    >
-                      {option.title}
-                    </Text>
-                    <Text
-                      style={{
-                        ...typography.caption,
-                        color: colors.textSecondary,
-                        fontSize: 10,
-                      }}
-                      numberOfLines={2}
-                    >
-                      {option.subtitle}
-                    </Text>
-                  </View>
+                <View style={{ padding: spacing.lg }}>
+                  <Text
+                    style={{
+                      ...typography.titleMedium,
+                      color: colors.textPrimary,
+                      marginBottom: spacing.xs,
+                    }}
+                    numberOfLines={2}
+                  >
+                    {option.title}
+                  </Text>
+                  <Text
+                    style={{
+                      ...typography.caption,
+                      color: colors.textSecondary,
+                      lineHeight: 20,
+                    }}
+                    numberOfLines={2}
+                  >
+                    {option.subtitle}
+                  </Text>
                 </View>
               </View>
             </TouchableOpacity>

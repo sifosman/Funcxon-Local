@@ -9,7 +9,7 @@ import { supabase } from '../../lib/supabaseClient';
 import { uploadFileToStorage } from '../../lib/applicationService';
 import { useAuth } from '../../auth/AuthContext';
 import { getMyVenueEntitlement, isVenueFeatureEnabled } from '../../lib/venueSubscription';
-import { createGalleryMediaRecord } from '../../lib/mediaUpload';
+import { createGalleryMediaRecord, deactivateGalleryMediaRecord } from '../../lib/mediaUpload';
 import { normalizePhoneNumber } from '../../utils/phoneNormalization';
 import ThemedAlert from '../../components/ThemedAlert';
 import { useIsDesktop } from '../../hooks/useIsDesktop';
@@ -160,6 +160,7 @@ export default function UpdateVenuePortfolioScreen() {
           .from('gallery_media')
           .select('media_url, media_type')
           .eq('venue_id', data.id)
+          .eq('is_active', true)
           .order('created_at', { ascending: false });
         const videoUrls = (gallery || [])
           .filter((g: any) => g.media_type === 'video')
@@ -389,7 +390,11 @@ export default function UpdateVenuePortfolioScreen() {
   };
 
   const handleRemoveVideo = (index: number) => {
+    const removedUrl = videos[index];
     setVideos((prev) => prev.filter((_, i) => i !== index));
+    if (removedUrl && listing?.id) {
+      deactivateGalleryMediaRecord(removedUrl, { venueId: listing.id });
+    }
   };
 
   const handleSave = async () => {

@@ -74,6 +74,7 @@ export const colors = {
   outlineVariant: '#c2c7ce',
   dustyRose: '#aa7478',
   secondaryBlue: '#306382',
+  coral: '#F26B4F', // coral accent for favourites, active tabs, selected chips
 };
 
 export const spacing = {

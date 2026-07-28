@@ -16,6 +16,7 @@ import VenueCatalogueViewScreen from '../screens/VenueCatalogueViewScreen';
 import TermsAndPoliciesScreen from '../screens/TermsAndPoliciesScreen';
 import LegalDocumentScreen from '../screens/LegalDocumentScreen';
 import PortfolioAssistanceScreen from '../screens/PortfolioAssistanceScreen';
+import FiltersScreen from '../screens/FiltersScreen';
 import MyToursScreen from '../screens/MyToursScreen';
 import BookingDetailScreen from '../screens/BookingDetailScreen';
 
@@ -54,6 +55,7 @@ export type AttendeeStackParamList = {
   TermsAndPolicies: undefined;
   LegalDocument: { documentId: string };
   PortfolioAssistance: { openFaqs?: boolean } | undefined;
+  Filters: undefined;
 };
 
 const Stack = createNativeStackNavigator<AttendeeStackParamList>();
@@ -158,6 +160,11 @@ export function AttendeeNavigator() {
       <Stack.Screen
         name="PortfolioAssistance"
         component={PortfolioAssistanceScreen}
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name="Filters"
+        component={FiltersScreen}
         options={{ headerShown: false }}
       />
     </Stack.Navigator>

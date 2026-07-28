@@ -177,3 +177,36 @@ export async function createGalleryMediaRecord(
     return { success: false, error: message };
   }
 }
+
+export async function deactivateGalleryMediaRecord(
+  mediaUrl: string,
+  owner: { vendorId?: number | null; venueId?: number | null }
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    let query = supabase
+      .from('gallery_media')
+      .update({ is_active: false })
+      .eq('media_url', mediaUrl)
+      .eq('is_active', true);
+
+    if (owner.vendorId) {
+      query = query.eq('vendor_id', owner.vendorId);
+    } else if (owner.venueId) {
+      query = query.eq('venue_id', owner.venueId);
+    } else {
+      throw new Error('Either vendorId or venueId must be provided');
+    }
+
+    const { error } = await query;
+
+    if (error) {
+      throw new Error(`Failed to deactivate gallery media record: ${error.message}`);
+    }
+
+    return { success: true };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Failed to deactivate gallery media record';
+    console.error('[deactivateGalleryMediaRecord] failed:', message);
+    return { success: false, error: message };
+  }
+}

@@ -24,6 +24,8 @@ export default function ApplicationStep2Screen() {
   const { state, updateStep2 } = useApplicationForm();
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [alertState, setAlertState] = useState<{visible: boolean; title: string; message: string; buttons?: any[]} | null>(null);
+  const [customAmenityInput, setCustomAmenityInput] = useState('');
+  const [customFeatureInput, setCustomFeatureInput] = useState('');
   const isDesktop = useIsDesktop();
   const isVenues = state.portfolioType === 'venues';
   const isVendors = state.portfolioType === 'vendors';
@@ -144,6 +146,31 @@ export default function ApplicationStep2Screen() {
       : [...currentArray, value];
     updateStep2({ [field]: newArray });
   };
+
+  const addCustomAmenity = () => {
+    const trimmed = customAmenityInput.trim();
+    if (!trimmed) return;
+    if (state.step2.amenities.includes(trimmed)) {
+      setCustomAmenityInput('');
+      return;
+    }
+    updateStep2({ amenities: [...state.step2.amenities, trimmed] });
+    setCustomAmenityInput('');
+  };
+
+  const addCustomFeature = () => {
+    const trimmed = customFeatureInput.trim();
+    if (!trimmed) return;
+    if (state.step2.specialFeatures.includes(trimmed)) {
+      setCustomFeatureInput('');
+      return;
+    }
+    updateStep2({ specialFeatures: [...state.step2.specialFeatures, trimmed] });
+    setCustomFeatureInput('');
+  };
+
+  const customAmenities = state.step2.amenities.filter((a) => !amenitiesList.includes(a));
+  const customFeatures = state.step2.specialFeatures.filter((f) => !specialServiceFeatures.includes(f));
 
   const toggleProvince = (provinceName: string) => {
     const currentProvinces = state.step2.provinces;
@@ -365,6 +392,69 @@ export default function ApplicationStep2Screen() {
                     onPress: () => toggleArrayItem('amenities', amenity),
                   }),
                 )}
+
+                {customAmenities.length > 0 && (
+                  <View style={{ marginTop: spacing.sm, marginBottom: spacing.md }}>
+                    <Text style={{ ...typography.caption, color: colors.textMuted, marginBottom: spacing.xs }}>
+                      Your custom amenities:
+                    </Text>
+                    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm }}>
+                      {customAmenities.map((item) => (
+                        <TouchableOpacity
+                          key={item}
+                          onPress={() => toggleArrayItem('amenities', item)}
+                          style={{
+                            flexDirection: 'row',
+                            alignItems: 'center',
+                            paddingHorizontal: spacing.md,
+                            paddingVertical: spacing.sm,
+                            borderRadius: radii.full,
+                            backgroundColor: colors.cta,
+                          }}
+                        >
+                          <Text style={{ ...typography.body, color: '#FFFFFF', fontSize: 13, marginRight: spacing.xs }}>
+                            {item}
+                          </Text>
+                          <MaterialIcons name="close" size={16} color="#FFFFFF" />
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                  </View>
+                )}
+
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginTop: spacing.sm }}>
+                  <TextInput
+                    placeholder="Add your own amenity..."
+                    value={customAmenityInput}
+                    onChangeText={setCustomAmenityInput}
+                    onSubmitEditing={addCustomAmenity}
+                    returnKeyType="done"
+                    style={{
+                      flex: 1,
+                      borderWidth: 1,
+                      borderColor: cardBorder,
+                      borderRadius: radii.md,
+                      paddingHorizontal: spacing.md,
+                      paddingVertical: spacing.sm,
+                      backgroundColor: cardSurface,
+                      fontSize: 14,
+                      color: colors.textPrimary,
+                      fontFamily: typography.body.fontFamily,
+                    }}
+                  />
+                  <TouchableOpacity
+                    onPress={addCustomAmenity}
+                    disabled={!customAmenityInput.trim()}
+                    style={{
+                      paddingHorizontal: spacing.md,
+                      paddingVertical: spacing.sm,
+                      borderRadius: radii.md,
+                      backgroundColor: customAmenityInput.trim() ? colors.cta : colors.textMuted,
+                    }}
+                  >
+                    <Text style={{ ...typography.bodySemiBold, color: '#FFFFFF' }}>Add</Text>
+                  </TouchableOpacity>
+                </View>
               </View>
 
               {/* Event Types */}
@@ -743,6 +833,69 @@ export default function ApplicationStep2Screen() {
                       </TouchableOpacity>
                     );
                   })}
+                </View>
+
+                {customFeatures.length > 0 && (
+                  <View style={{ marginTop: spacing.md, marginBottom: spacing.md }}>
+                    <Text style={{ ...typography.caption, color: colors.textMuted, marginBottom: spacing.xs }}>
+                      Your custom features:
+                    </Text>
+                    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm }}>
+                      {customFeatures.map((item) => (
+                        <TouchableOpacity
+                          key={item}
+                          onPress={() => toggleArrayItem('specialFeatures', item)}
+                          style={{
+                            flexDirection: 'row',
+                            alignItems: 'center',
+                            paddingHorizontal: spacing.md,
+                            paddingVertical: spacing.sm,
+                            borderRadius: radii.full,
+                            backgroundColor: colors.cta,
+                          }}
+                        >
+                          <Text style={{ ...typography.body, color: '#FFFFFF', fontSize: 13, marginRight: spacing.xs }}>
+                            {item}
+                          </Text>
+                          <MaterialIcons name="close" size={16} color="#FFFFFF" />
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                  </View>
+                )}
+
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginTop: spacing.sm }}>
+                  <TextInput
+                    placeholder="Add your own feature..."
+                    value={customFeatureInput}
+                    onChangeText={setCustomFeatureInput}
+                    onSubmitEditing={addCustomFeature}
+                    returnKeyType="done"
+                    style={{
+                      flex: 1,
+                      borderWidth: 1,
+                      borderColor: cardBorder,
+                      borderRadius: radii.md,
+                      paddingHorizontal: spacing.md,
+                      paddingVertical: spacing.sm,
+                      backgroundColor: cardSurface,
+                      fontSize: 14,
+                      color: colors.textPrimary,
+                      fontFamily: typography.body.fontFamily,
+                    }}
+                  />
+                  <TouchableOpacity
+                    onPress={addCustomFeature}
+                    disabled={!customFeatureInput.trim()}
+                    style={{
+                      paddingHorizontal: spacing.md,
+                      paddingVertical: spacing.sm,
+                      borderRadius: radii.md,
+                      backgroundColor: customFeatureInput.trim() ? colors.cta : colors.textMuted,
+                    }}
+                  >
+                    <Text style={{ ...typography.bodySemiBold, color: '#FFFFFF' }}>Add</Text>
+                  </TouchableOpacity>
                 </View>
               </View>
             </>

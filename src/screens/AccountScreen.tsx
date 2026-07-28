@@ -30,7 +30,6 @@ export default function AccountScreen() {
     const isDesktop = useIsDesktop();
     const [expandedMenus, setExpandedMenus] = useState<Set<string>>(new Set());
     const [helpVisible, setHelpVisible] = useState(false);
-    const [deleteAlertVisible, setDeleteAlertVisible] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
     const [logoutAlert, setLogoutAlert] = useState<{visible: boolean; title: string; message: string} | null>(null);
     const [currentPlan, setCurrentPlan] = useState<string | null>(null);
@@ -205,16 +204,11 @@ export default function AccountScreen() {
         setHelpVisible(true);
     };
 
-    const handleDeleteAccount = async () => {
-        setDeleteAlertVisible(true);
-    };
-
     const [errorAlert, setErrorAlert] = useState<{visible: boolean; title: string; message: string} | null>(null);
 
     const executeDeleteAccount = async () => {
         setHelpVisible(false);
         setIsDeleting(true);
-        setDeleteAlertVisible(false);
         try {
             const { data, error } = await supabase.functions.invoke('delete-user-account', {});
             if (error || !data?.success) {
@@ -254,20 +248,12 @@ export default function AccountScreen() {
                 { id: 'notification', label: 'Notification', icon: 'notifications', route: 'MarketingPermissions' },
             ],
         },
-        {
+        ...(userRole !== 'vendor' ? [{
             id: 'my-tours',
             label: 'My Bookings',
-            icon: 'calendar-month',
-            route: 'MyTours',
-        },
-        {
-            id: 'account-management',
-            label: 'Account Management',
-            icon: 'settings',
-            submenu: [
-                { id: 'delete-account', label: 'Delete Account', icon: 'delete-forever', color: colors.destructive, action: handleDeleteAccount },
-            ],
-        },
+            icon: 'calendar-month' as keyof typeof MaterialIcons.glyphMap,
+            route: 'MyTours' as keyof ProfileStackParamList,
+        }] : []),
         {
             id: 'terms-policies',
             label: 'Funxon Terms and Policies',
@@ -296,7 +282,8 @@ export default function AccountScreen() {
             || item.id === 'marketing-permissions'
             || item.id === 'terms-policies'
             || item.id === 'help-centre'
-            || item.id === 'delete-account';
+            || item.id === 'delete-account'
+            || item.id === 'account-management';
 
         const handlePress = () => {
             if (item.action) {
@@ -557,16 +544,6 @@ export default function AccountScreen() {
                 }}
                 onDeleteAccount={executeDeleteAccount}
                 userRole={userRole}
-            />
-            <ThemedAlert
-                visible={deleteAlertVisible}
-                title="Delete Account"
-                message="This will permanently delete your account and all associated data. Are you absolutely sure?"
-                buttons={[
-                    { text: 'Cancel', style: 'cancel', onPress: () => setDeleteAlertVisible(false) },
-                    { text: 'Delete Forever', style: 'destructive', onPress: executeDeleteAccount }
-                ]}
-                onDismiss={() => setDeleteAlertVisible(false)}
             />
             {logoutAlert && (
                 <ThemedAlert

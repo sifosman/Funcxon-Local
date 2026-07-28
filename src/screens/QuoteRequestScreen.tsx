@@ -130,6 +130,11 @@ export default function QuoteRequestScreen({ route, navigation }: Props) {
     });
   };
 
+  const setQuantityDirect = (id: number, value: string) => {
+    const parsed = parseInt(value, 10);
+    setQuantities((prev) => ({ ...prev, [id]: isNaN(parsed) || parsed < 1 ? 1 : parsed }));
+  };
+
   const loadUserDetails = useCallback(async () => {
     if (!user?.id) return;
     setLoadingUser(true);
@@ -561,9 +566,9 @@ export default function QuoteRequestScreen({ route, navigation }: Props) {
     </View>
   );
 
-  const renderYourDetails = () => (
+  const renderContactDetails = () => (
     <>
-      <Text style={isDesktop ? { ...typography.headlineSm, color: colors.textPrimary, marginBottom: spacing.md } : { ...typography.titleMedium, color: colors.textPrimary, marginBottom: spacing.md }}>
+      <Text style={isDesktop ? { ...typography.headlineSm, color: colors.textPrimary, marginBottom: spacing.md } : { ...typography.titleMedium, color: colors.textPrimary, marginBottom: spacing.sm }}>
         Your details
       </Text>
 
@@ -576,7 +581,7 @@ export default function QuoteRequestScreen({ route, navigation }: Props) {
         editable={!loadingUser}
       />
 
-      <Text style={isDesktop ? { ...typography.labelMd, color: colors.dustyRose, marginBottom: spacing.xs, marginTop: spacing.md, textTransform: 'uppercase' } : { ...typography.body, color: colors.textSecondary, marginBottom: spacing.xs, marginTop: spacing.md }}>
+      <Text style={isDesktop ? { ...typography.labelMd, color: colors.dustyRose, marginBottom: spacing.xs, marginTop: spacing.md, textTransform: 'uppercase' } : { ...typography.body, color: colors.textSecondary, marginBottom: spacing.xs, marginTop: spacing.sm }}>
         Email address
       </Text>
       <ThemedInput
@@ -588,7 +593,7 @@ export default function QuoteRequestScreen({ route, navigation }: Props) {
         editable={!loadingUser}
       />
 
-      <Text style={isDesktop ? { ...typography.labelMd, color: colors.dustyRose, marginBottom: spacing.xs, marginTop: spacing.md, textTransform: 'uppercase' } : { ...typography.body, color: colors.textSecondary, marginBottom: spacing.xs, marginTop: spacing.md }}>
+      <Text style={isDesktop ? { ...typography.labelMd, color: colors.dustyRose, marginBottom: spacing.xs, marginTop: spacing.md, textTransform: 'uppercase' } : { ...typography.body, color: colors.textSecondary, marginBottom: spacing.xs, marginTop: spacing.sm }}>
         Contact number
       </Text>
       <ThemedInput
@@ -599,83 +604,9 @@ export default function QuoteRequestScreen({ route, navigation }: Props) {
         autoCapitalize="none"
       />
 
-      <Text style={isDesktop ? { ...typography.labelMd, color: colors.dustyRose, marginBottom: spacing.xs, marginTop: spacing.md, textTransform: 'uppercase' } : { ...typography.body, color: colors.textSecondary, marginBottom: spacing.xs, marginTop: spacing.md }}>
-        Event date
-      </Text>
-      <TouchableOpacity
-        onPress={() => setShowDatePicker('event')}
-        style={{
-          borderWidth: 1,
-          borderColor: isDesktop ? colors.outlineVariant : colors.borderSubtle,
-          borderRadius: radii.md,
-          paddingHorizontal: spacing.md,
-          paddingVertical: spacing.sm,
-          backgroundColor: isDesktop ? colors.surfaceContainerLowest : colors.surfaceMuted,
-          flexDirection: 'row',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-        }}
-      >
-        <Text style={isDesktop ? { ...typography.bodyMd, color: eventDate ? colors.textPrimary : colors.textMuted } : { ...typography.body, color: eventDate ? colors.textPrimary : colors.textMuted }}>
-          {eventDate ? eventDate.toLocaleDateString('en-ZA', { day: 'numeric', month: 'long', year: 'numeric' }) : 'Select a date'}
-        </Text>
-        <MaterialIcons name="calendar-today" size={20} color={colors.textMuted} />
-      </TouchableOpacity>
-
-      <TouchableOpacity
-        onPress={() => setIsMultiDay((prev) => !prev)}
-        style={{ flexDirection: 'row', alignItems: 'center', marginTop: spacing.md, marginBottom: isMultiDay ? spacing.sm : 0 }}
-      >
-        <MaterialIcons
-          name={isMultiDay ? 'check-box' : 'check-box-outline-blank'}
-          size={22}
-          color={isMultiDay ? colors.primary : colors.textMuted}
-        />
-        <Text style={isDesktop ? { ...typography.bodyMd, color: colors.textPrimary, marginLeft: spacing.sm } : { ...typography.body, color: colors.textPrimary, marginLeft: spacing.sm }}>
-          Multi-day event
-        </Text>
-      </TouchableOpacity>
-
-      {isMultiDay && (
-        <>
-          <Text style={isDesktop ? { ...typography.labelMd, color: colors.dustyRose, marginBottom: spacing.xs, marginTop: spacing.md, textTransform: 'uppercase' } : { ...typography.body, color: colors.textSecondary, marginBottom: spacing.xs, marginTop: spacing.md }}>
-            End date
-          </Text>
-          <TouchableOpacity
-            onPress={() => setShowDatePicker('end')}
-            style={{
-              borderWidth: 1,
-              borderColor: isDesktop ? colors.outlineVariant : colors.borderSubtle,
-              borderRadius: radii.md,
-              paddingHorizontal: spacing.md,
-              paddingVertical: spacing.sm,
-              backgroundColor: isDesktop ? colors.surfaceContainerLowest : colors.surfaceMuted,
-              flexDirection: 'row',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-            }}
-          >
-            <Text style={isDesktop ? { ...typography.bodyMd, color: endDate ? colors.textPrimary : colors.textMuted } : { ...typography.body, color: endDate ? colors.textPrimary : colors.textMuted }}>
-              {endDate ? endDate.toLocaleDateString('en-ZA', { day: 'numeric', month: 'long', year: 'numeric' }) : 'Select end date'}
-            </Text>
-            <MaterialIcons name="calendar-today" size={20} color={colors.textMuted} />
-          </TouchableOpacity>
-        </>
-      )}
-
-      {showDatePicker && (
-        <DateTimePicker
-          value={showDatePicker === 'event' ? (eventDate ?? new Date()) : (endDate ?? new Date())}
-          mode="date"
-          display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-          minimumDate={new Date()}
-          onChange={(event, date) => onDateChange(showDatePicker, event, date)}
-        />
-      )}
-
       {type === 'venue' && halls.length > 0 && (
         <>
-          <Text style={isDesktop ? { ...typography.labelMd, color: colors.dustyRose, marginBottom: spacing.xs, marginTop: spacing.md, textTransform: 'uppercase' } : { ...typography.body, color: colors.textSecondary, marginBottom: spacing.xs, marginTop: spacing.md }}>
+          <Text style={isDesktop ? { ...typography.labelMd, color: colors.dustyRose, marginBottom: spacing.xs, marginTop: spacing.md, textTransform: 'uppercase' } : { ...typography.body, color: colors.textSecondary, marginBottom: spacing.xs, marginTop: spacing.sm }}>
             Hall
           </Text>
           <View style={{ gap: spacing.xs }}>
@@ -710,7 +641,7 @@ export default function QuoteRequestScreen({ route, navigation }: Props) {
         </>
       )}
 
-      <Text style={isDesktop ? { ...typography.labelMd, color: colors.dustyRose, marginBottom: spacing.xs, marginTop: spacing.md, textTransform: 'uppercase' } : { ...typography.body, color: colors.textSecondary, marginBottom: spacing.xs, marginTop: spacing.md }}>
+      <Text style={isDesktop ? { ...typography.labelMd, color: colors.dustyRose, marginBottom: spacing.xs, marginTop: spacing.md, textTransform: 'uppercase' } : { ...typography.body, color: colors.textSecondary, marginBottom: spacing.xs, marginTop: spacing.sm }}>
         Additional comments/requests/enquiries (optional)
       </Text>
       <ThemedInput
@@ -721,6 +652,84 @@ export default function QuoteRequestScreen({ route, navigation }: Props) {
         numberOfLines={4}
         style={{ minHeight: 80, textAlignVertical: 'top' }}
       />
+    </>
+  );
+
+  const renderEventDate = () => (
+    <>
+      <Text style={isDesktop ? { ...typography.headlineSm, color: colors.textPrimary, marginBottom: spacing.md } : { ...typography.titleMedium, color: colors.textPrimary, marginBottom: spacing.sm }}>
+        Event date
+      </Text>
+      <TouchableOpacity
+        onPress={() => setShowDatePicker('event')}
+        style={{
+          borderWidth: 1,
+          borderColor: isDesktop ? colors.outlineVariant : colors.borderSubtle,
+          borderRadius: radii.md,
+          paddingHorizontal: spacing.md,
+          paddingVertical: spacing.sm,
+          backgroundColor: isDesktop ? colors.surfaceContainerLowest : colors.surfaceMuted,
+          flexDirection: 'row',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+        }}
+      >
+        <Text style={isDesktop ? { ...typography.bodyMd, color: eventDate ? colors.textPrimary : colors.textMuted } : { ...typography.body, color: eventDate ? colors.textPrimary : colors.textMuted }}>
+          {eventDate ? eventDate.toLocaleDateString('en-ZA', { day: 'numeric', month: 'long', year: 'numeric' }) : 'Select a date'}
+        </Text>
+        <MaterialIcons name="calendar-today" size={20} color={colors.textMuted} />
+      </TouchableOpacity>
+
+      <TouchableOpacity
+        onPress={() => setIsMultiDay((prev) => !prev)}
+        style={{ flexDirection: 'row', alignItems: 'center', marginTop: spacing.sm, marginBottom: isMultiDay ? spacing.sm : 0 }}
+      >
+        <MaterialIcons
+          name={isMultiDay ? 'check-box' : 'check-box-outline-blank'}
+          size={22}
+          color={isMultiDay ? colors.primary : colors.textMuted}
+        />
+        <Text style={isDesktop ? { ...typography.bodyMd, color: colors.textPrimary, marginLeft: spacing.sm } : { ...typography.body, color: colors.textPrimary, marginLeft: spacing.sm }}>
+          Multi-day event
+        </Text>
+      </TouchableOpacity>
+
+      {isMultiDay && (
+        <>
+          <Text style={isDesktop ? { ...typography.labelMd, color: colors.dustyRose, marginBottom: spacing.xs, marginTop: spacing.md, textTransform: 'uppercase' } : { ...typography.body, color: colors.textSecondary, marginBottom: spacing.xs, marginTop: spacing.sm }}>
+            End date
+          </Text>
+          <TouchableOpacity
+            onPress={() => setShowDatePicker('end')}
+            style={{
+              borderWidth: 1,
+              borderColor: isDesktop ? colors.outlineVariant : colors.borderSubtle,
+              borderRadius: radii.md,
+              paddingHorizontal: spacing.md,
+              paddingVertical: spacing.sm,
+              backgroundColor: isDesktop ? colors.surfaceContainerLowest : colors.surfaceMuted,
+              flexDirection: 'row',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+            }}
+          >
+            <Text style={isDesktop ? { ...typography.bodyMd, color: endDate ? colors.textPrimary : colors.textMuted } : { ...typography.body, color: endDate ? colors.textPrimary : colors.textMuted }}>
+              {endDate ? endDate.toLocaleDateString('en-ZA', { day: 'numeric', month: 'long', year: 'numeric' }) : 'Select end date'}
+            </Text>
+            <MaterialIcons name="calendar-today" size={20} color={colors.textMuted} />
+          </TouchableOpacity>
+        </>
+      )}
+
+      {showDatePicker && (
+        <DateTimePicker
+          value={showDatePicker === 'event' ? (eventDate ?? new Date()) : (endDate ?? new Date())}
+          mode="date"
+          display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+          minimumDate={new Date()}
+          onChange={(event, date) => onDateChange(showDatePicker, event, date)}
+        />
+      )}
     </>
   );
 
@@ -754,7 +763,7 @@ export default function QuoteRequestScreen({ route, navigation }: Props) {
                 borderRadius: radii.md,
                 backgroundColor: isDesktop ? colors.surfaceContainerLow : colors.surfaceMuted,
                 borderWidth: 2,
-                borderColor: isSelected ? colors.primary : isDesktop ? colors.outlineVariant : colors.borderSubtle,
+                borderColor: isSelected ? colors.primary : isDesktop ? colors.outlineVariant : colors.textPrimary,
                 overflow: 'hidden',
               }}
             >
@@ -782,7 +791,7 @@ export default function QuoteRequestScreen({ route, navigation }: Props) {
                 <MaterialIcons
                   name={isSelected ? 'check-circle' : 'radio-button-unchecked'}
                   size={28}
-                  color={isSelected ? colors.primary : colors.textMuted}
+                  color={isSelected ? colors.primary : colors.textPrimary}
                 />
               </View>
             </TouchableOpacity>
@@ -901,10 +910,11 @@ export default function QuoteRequestScreen({ route, navigation }: Props) {
             <View style={{ flexDirection: 'row', gap: spacing.gutter } as any}>
               <View style={{ flex: 2, gap: 0 } as any}>
                 <View style={cardStyle}>
-                  {renderYourDetails()}
+                  {renderCatalogueItems()}
                 </View>
                 <View style={cardStyle}>
-                  {renderCatalogueItems()}
+                  {renderContactDetails()}
+                  {renderEventDate()}
                 </View>
                 {renderSubmitButton()}
               </View>
@@ -935,8 +945,13 @@ export default function QuoteRequestScreen({ route, navigation }: Props) {
               <Text style={{ ...typography.caption, color: colors.textMuted, marginBottom: spacing.md }}>Loading...</Text>
             )}
             <View style={cardStyle}>
-              {renderYourDetails()}
               {renderCatalogueItems()}
+            </View>
+            <View style={cardStyle}>
+              {renderEventDate()}
+            </View>
+            <View style={cardStyle}>
+              {renderContactDetails()}
               {renderSelectionSummary()}
               {renderSubmitButton()}
             </View>
