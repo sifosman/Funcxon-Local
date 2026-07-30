@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { DefaultTheme, NavigationContainer, useNavigation } from '@react-navigation/native';
 import * as Linking from 'expo-linking';
+import { linking } from './src/navigation/linking';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Platform, View } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
@@ -39,54 +40,6 @@ const navTheme = {
     card: colors.surface,
     text: colors.textPrimary,
     border: colors.borderSubtle,
-  },
-};
-
-const linking: any = {
-  prefixes: [
-    'funxon://',
-    ...(Platform.OS === 'web' && typeof window !== 'undefined' ? [window.location.origin] : []),
-  ],
-  config: {
-    screens: {
-      Main: {
-        screens: {
-          Home: {
-            path: '',
-            screens: {
-              VendorList: '',
-            },
-          },
-          Favourites: 'favourites',
-          Quotes: {
-            path: 'quotes',
-            screens: {
-              QuotesList: '',
-              QuoteDetail: 'detail/:quoteId',
-              QuoteResponse: 'response/:revisionId',
-              QuoteHistory: 'history/:quoteRequestId',
-            },
-          },
-          Planner: 'planner',
-          Account: {
-            path: 'account',
-            screens: {
-              AccountMain: '',
-              ApplicationStatus: 'application-status',
-              VenueQuoteRequests: 'vendor/quotes',
-              VendorQuoteCreate: 'vendor/quote/:quoteRequestId',
-              VendorCatalogue: 'vendor-catalogue',
-              VenueCatalogue: 'venue-catalogue',
-              Billing: {
-                path: 'payment/success',
-                alias: ['payment/cancel'],
-              },
-            },
-          },
-        },
-      },
-      Auth: 'auth',
-    },
   },
 };
 

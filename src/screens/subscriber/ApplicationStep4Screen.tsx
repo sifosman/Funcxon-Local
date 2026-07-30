@@ -228,6 +228,7 @@ export default function ApplicationStep4Screen() {
       const result = await submitApplication(submission);
 
       if (result.success) {
+        let createdListingId: string | number | null = null;
         if (state.portfolioType === 'venues') {
           const parseCapacityNumber = (value: string): number | null => {
             const numbers = (value ?? '').match(/\d[\d,]*/g);
@@ -305,6 +306,7 @@ export default function ApplicationStep4Screen() {
             }
 
             const venueId = upsertedListing?.id;
+            createdListingId = venueId ?? null;
             if (venueId) {
               for (const imageUrl of uploadedImages) {
                 await createGalleryMediaRecord(imageUrl, 'image', { venueId });
@@ -318,9 +320,6 @@ export default function ApplicationStep4Screen() {
             setAlertState({ visible: true, title: 'Portfolio Setup Issue', message: 'Your application was submitted, but we could not fully set up your venue listing. You can update it manually from your account.', buttons: [{ text: 'OK', style: 'default', onPress: () => setAlertState(null) }] });
           }
         }
-
-        // Send application submission confirmation email
-        await sendApplicationConfirmationEmail(submission);
 
         // Create vendor/venue record directly (for both free and paid plans)
         let portfolioCreated = false;
@@ -390,6 +389,7 @@ export default function ApplicationStep4Screen() {
               .maybeSingle();
 
             let vendorId: number | null = existingVendor?.id ?? null;
+            createdListingId = vendorId;
 
             if (vendorId) {
               const { error: updateError } = await supabase
@@ -431,6 +431,9 @@ export default function ApplicationStep4Screen() {
           }
         }
 
+        // Send application submission confirmation email (after portfolio creation so we can include listing ID)
+        await sendApplicationConfirmationEmail(submission, createdListingId);
+
         // Reset form and navigate to the application status screen to show the success confirmation
         resetForm();
         navigation.reset({
@@ -448,7 +451,7 @@ export default function ApplicationStep4Screen() {
     }
   };
 
-  const sendApplicationConfirmationEmail = async (submission: any) => {
+  const sendApplicationConfirmationEmail = async (submission: any, listingId?: string | number | null) => {
     try {
       const { data: { user }, error: userError } = await supabase.auth.getUser();
       if (userError || !user) {
@@ -479,7 +482,7 @@ export default function ApplicationStep4Screen() {
 
       // Call the Supabase Edge Function to send confirmation email
       const isVenue = state.portfolioType === 'venues';
-      const catalogueUrl = isVenue ? 'funxon://venue-catalogue' : 'funxon://vendor-catalogue';
+      const catalogueUrl = isVenue ? 'https://funxon.co.za/venue-catalogue' : 'https://funxon.co.za/vendor-catalogue';
 
       const { data, error } = await supabase.functions.invoke('send-application-status-email', {
         body: {
@@ -487,7 +490,7 @@ export default function ApplicationStep4Screen() {
           fullName: fullName,
           businessName: businessName || undefined,
           tierName: submission.subscription_tier || (isVenue ? 'Venue' : 'Vendor'),
-          applicationUrl: 'funxon://application-status',
+          applicationUrl: 'https://funxon.co.za/account/application-status',
           status: 'approved',
           catalogueUrl,
         },
@@ -501,13 +504,13 @@ export default function ApplicationStep4Screen() {
       console.log('Application confirmation email sent successfully:', data);
       
       // Send admin notification about new application
-      await sendAdminNotification(submission, fullName, businessName, user.email);
+      await sendAdminNotification(submission, fullName, businessName, user.email, listingId);
     } catch (err) {
       console.error('Failed to send application confirmation email:', err);
     }
   };
 
-  const sendAdminNotification = async (submission: any, fullName: string, businessName: string, vendorEmail: string | undefined) => {
+  const sendAdminNotification = async (submission: any, fullName: string, businessName: string, vendorEmail: string | undefined, listingId?: string | number | null) => {
     try {
       const { data, error } = await supabase.functions.invoke('send-admin-notification', {
         body: {
@@ -518,6 +521,8 @@ export default function ApplicationStep4Screen() {
           tierName: submission.subscription_tier,
           serviceCategories: submission.service_categories?.categories || [],
           provinces: submission.coverage_provinces || [],
+          portfolioType: state.portfolioType === 'venues' ? 'venue' : 'vendor',
+          listingId: listingId ?? undefined,
         },
       });
 

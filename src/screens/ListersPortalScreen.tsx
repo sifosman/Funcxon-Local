@@ -181,6 +181,47 @@ export default function ListersPortalScreen() {
           </Text>
         </TouchableOpacity>
       )}
+
+      <TouchableOpacity
+        onPress={handleRegisterVendor}
+        style={{
+          marginTop: spacing.md,
+          paddingVertical: spacing.md,
+          paddingHorizontal: spacing.xl,
+          borderRadius: radii.lg,
+          borderWidth: 2,
+          borderColor: colors.primary,
+          alignItems: 'center',
+        }}
+        activeOpacity={0.9}
+      >
+        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+          <MaterialIcons name="workspace-premium" size={18} color={colors.primary} />
+          <Text style={{ ...typography.bodySemiBold, color: colors.primary, marginLeft: spacing.xs, fontSize: 16 }}>
+            Upgrade
+          </Text>
+        </View>
+      </TouchableOpacity>
+
+      <TouchableOpacity
+        onPress={handleRegisterVendor}
+        style={{
+          marginTop: spacing.sm,
+          paddingVertical: spacing.md,
+          paddingHorizontal: spacing.xl,
+          borderRadius: radii.lg,
+          backgroundColor: colors.cta,
+          alignItems: 'center',
+        }}
+        activeOpacity={0.9}
+      >
+        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+          <MaterialIcons name="star" size={18} color={colors.surface} />
+          <Text style={{ ...typography.bodySemiBold, color: colors.surface, marginLeft: spacing.xs, fontSize: 16 }}>
+            Get Featured
+          </Text>
+        </View>
+      </TouchableOpacity>
     </View>
   );
 
@@ -524,9 +565,48 @@ export default function ListersPortalScreen() {
                 Your account is not a lister account. Register below to become one.
               </Text>
             )}
-          </View>
 
-          {/* Welcome Section */}
+            <TouchableOpacity
+              onPress={handleRegisterVendor}
+              style={{
+                marginTop: spacing.md,
+                paddingVertical: spacing.md,
+                paddingHorizontal: spacing.xl,
+                borderRadius: radii.lg,
+                borderWidth: 2,
+                borderColor: colors.primary,
+                alignItems: 'center',
+              }}
+              activeOpacity={0.9}
+            >
+              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                <MaterialIcons name="workspace-premium" size={18} color={colors.primary} />
+                <Text style={{ ...typography.bodySemiBold, color: colors.primary, marginLeft: spacing.xs, fontSize: 16 }}>
+                  Upgrade
+                </Text>
+              </View>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              onPress={handleRegisterVendor}
+              style={{
+                marginTop: spacing.sm,
+                paddingVertical: spacing.md,
+                paddingHorizontal: spacing.xl,
+                borderRadius: radii.lg,
+                backgroundColor: colors.cta,
+                alignItems: 'center',
+              }}
+              activeOpacity={0.9}
+            >
+              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                <MaterialIcons name="star" size={18} color={colors.surface} />
+                <Text style={{ ...typography.bodySemiBold, color: colors.surface, marginLeft: spacing.xs, fontSize: 16 }}>
+                  Get Featured
+                </Text>
+              </View>
+            </TouchableOpacity>
+          </View>
           <View style={styles.section}>
             <Text style={styles.welcomeTitle}>Welcome to Funxon</Text>
             <Text style={styles.welcomeSubtitle}>

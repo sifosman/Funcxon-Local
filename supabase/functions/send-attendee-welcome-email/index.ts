@@ -36,7 +36,8 @@ Deno.serve(async (req: Request) => {
       throw new Error('BREVO_API_KEY environment variable is not set');
     }
 
-    const { email, fullName, signUpMethod }: EmailRequest = await req.json();
+    const { email, fullName: clientFullName, signUpMethod }: EmailRequest = await req.json();
+    let fullName = clientFullName;
 
     if (!email || !fullName) {
       return new Response(
@@ -52,10 +53,10 @@ Deno.serve(async (req: Request) => {
     if (supabaseUrl && serviceRoleKey) {
       const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey);
 
-      // Check if welcome email was already sent
+      // Check if welcome email was already sent; also resolve the authoritative full_name
       const { data: userRow, error: userError } = await supabaseAdmin
         .from('users')
-        .select('welcome_email_sent')
+        .select('welcome_email_sent, full_name')
         .eq('email', email)
         .maybeSingle();
 
@@ -72,6 +73,11 @@ Deno.serve(async (req: Request) => {
           .from('users')
           .update({ welcome_email_sent: true })
           .eq('email', email);
+      }
+
+      // Prefer the DB full_name over the client-provided value
+      if (!userError && userRow?.full_name?.trim()) {
+        fullName = userRow.full_name.trim();
       }
     }
 

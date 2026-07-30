@@ -9,10 +9,14 @@ import { supabase } from '../../lib/supabaseClient';
 import { uploadFileToStorage } from '../../lib/applicationService';
 import { useAuth } from '../../auth/AuthContext';
 import { getMyVenueEntitlement, isVenueFeatureEnabled } from '../../lib/venueSubscription';
-import { createGalleryMediaRecord, deactivateGalleryMediaRecord } from '../../lib/mediaUpload';
+import { createGalleryMediaRecord, deactivateGalleryMediaRecord, MAX_VIDEO_SIZE } from '../../lib/mediaUpload';
 import { normalizePhoneNumber } from '../../utils/phoneNormalization';
 import ThemedAlert from '../../components/ThemedAlert';
+import DropdownPicker from '../../components/DropdownPicker';
 import { useIsDesktop } from '../../hooks/useIsDesktop';
+import { venueTypes, amenitiesList, venueCapacityOptions } from '../../config/venueTypes';
+import { getProvinceNames } from '../../config/locations';
+import { priceRangeOptions, countryOptions } from '../../config/portfolioOptions';
 
 function buildLegacyLocation(parts: Array<string | null | undefined>) {
   return parts.map((part) => part?.trim() ?? '').filter(Boolean).join(', ') || null;
@@ -60,6 +64,8 @@ type VenueListing = {
   linkedin_url: string | null;
   venue_type: string | null;
   venue_capacity: string | null;
+  price_range: string | null;
+  amenities: string[] | null;
   image_url: string | null;
   additional_photos: string[] | null;
 };
@@ -108,6 +114,8 @@ export default function UpdateVenuePortfolioScreen() {
     linkedin_url: '',
     venue_type: '',
     venue_capacity: '',
+    price_range: '',
+    amenities: '',
   });
 
   const derivedLocationPreview = useMemo(
@@ -142,7 +150,7 @@ export default function UpdateVenuePortfolioScreen() {
       const { data, error } = await supabase
         .from('venue_listings')
         .select(
-          'id, user_id, name, description, location, address_line_1, address_line_2, suburb, city, province, postal_code, country, latitude, longitude, contact_email, whatsapp_number, website_url, instagram_url, facebook_url, tiktok_url, linkedin_url, venue_type, venue_capacity, image_url, additional_photos',
+          'id, user_id, name, description, location, address_line_1, address_line_2, suburb, city, province, postal_code, country, latitude, longitude, contact_email, whatsapp_number, website_url, instagram_url, facebook_url, tiktok_url, linkedin_url, venue_type, venue_capacity, price_range, amenities, image_url, additional_photos',
         )
         .eq('user_id', user.id)
         .maybeSingle();
@@ -189,6 +197,8 @@ export default function UpdateVenuePortfolioScreen() {
           linkedin_url: data.linkedin_url || '',
           venue_type: data.venue_type || '',
           venue_capacity: data.venue_capacity || '',
+          price_range: (data as VenueListing).price_range || '',
+          amenities: Array.isArray((data as VenueListing).amenities) ? (data as VenueListing).amenities!.join(', ') : '',
         });
       } else {
         // Fallback: check legacy venues table for existing data
@@ -229,6 +239,8 @@ export default function UpdateVenuePortfolioScreen() {
             linkedin_url: '',
             venue_type: '',
             venue_capacity: '',
+            price_range: '',
+            amenities: '',
           });
         } else {
           setImageUrl(null);
@@ -368,8 +380,21 @@ export default function UpdateVenuePortfolioScreen() {
         selectionLimit: Math.max(1, Math.min(5, remainingVideoSlots)),
       });
       if (result.canceled || !result.assets?.length || !user?.id || !listing?.id) return;
+      const oversized: string[] = [];
+      const validAssets = result.assets.filter((asset) => {
+        const size = asset.fileSize || 0;
+        if (size > MAX_VIDEO_SIZE) {
+          oversized.push(asset.fileName || 'Video');
+          return false;
+        }
+        return true;
+      });
+      if (oversized.length > 0) {
+        setAlertState({ visible: true, title: 'Video too large', message: `${oversized.join(', ')} exceeds the 50MB limit and was skipped.`, buttons: [{ text: 'OK', style: 'default', onPress: () => setAlertState(null) }] });
+      }
+      if (!validAssets.length) return;
       const newUrls: string[] = [];
-      for (const asset of result.assets.slice(0, remainingVideoSlots)) {
+      for (const asset of validAssets.slice(0, remainingVideoSlots)) {
         const file = {
           uri: asset.uri,
           name: asset.fileName || `video_${Date.now()}.mp4`,
@@ -444,6 +469,8 @@ export default function UpdateVenuePortfolioScreen() {
         linkedin_url: form.linkedin_url.trim() || null,
         venue_type: form.venue_type.trim() || null,
         venue_capacity: form.venue_capacity.trim() || null,
+        price_range: form.price_range.trim() || null,
+        amenities: form.amenities.trim() ? form.amenities.split(',').map((v) => v.trim()).filter(Boolean) : null,
         image_url: imageUrl,
         additional_photos: additionalPhotos.length > 0 ? additionalPhotos : null,
       };
@@ -452,7 +479,7 @@ export default function UpdateVenuePortfolioScreen() {
         .from('venue_listings')
         .upsert(payload, { onConflict: 'user_id' })
         .select(
-          'id, user_id, name, description, location, address_line_1, address_line_2, suburb, city, province, postal_code, country, latitude, longitude, contact_email, whatsapp_number, website_url, instagram_url, facebook_url, tiktok_url, linkedin_url, venue_type, venue_capacity, image_url, additional_photos',
+          'id, user_id, name, description, location, address_line_1, address_line_2, suburb, city, province, postal_code, country, latitude, longitude, contact_email, whatsapp_number, website_url, instagram_url, facebook_url, tiktok_url, linkedin_url, venue_type, venue_capacity, price_range, amenities, image_url, additional_photos',
         )
         .single();
 
@@ -572,9 +599,21 @@ export default function UpdateVenuePortfolioScreen() {
             {renderField('Address Line 2', 'address_line_2', { placeholder: 'Building, unit, suite (optional)' })}
             {renderField('Suburb', 'suburb', { placeholder: 'e.g. Stellenbosch Central' })}
             {renderField('City', 'city', { placeholder: 'e.g. Stellenbosch' })}
-            {renderField('Province', 'province', { placeholder: 'e.g. Western Cape' })}
+            <DropdownPicker
+              label="Province"
+              selectedValues={form.province ? [form.province] : []}
+              onConfirm={(vals) => setForm((prev) => ({ ...prev, province: vals[0] || '' }))}
+              options={getProvinceNames()}
+              placeholder="Select province"
+            />
             {renderField('Postal Code', 'postal_code', { placeholder: 'e.g. 7600', keyboardType: 'number-pad' })}
-            {renderField('Country', 'country', { placeholder: 'e.g. South Africa' })}
+            <DropdownPicker
+              label="Country"
+              selectedValues={form.country ? [form.country] : []}
+              onConfirm={(vals) => setForm((prev) => ({ ...prev, country: vals[0] || '' }))}
+              options={countryOptions}
+              placeholder="Select country"
+            />
             {renderField('Latitude', 'latitude', { placeholder: 'e.g. -33.9321', keyboardType: 'numeric' })}
             {renderField('Longitude', 'longitude', { placeholder: 'e.g. 18.8602', keyboardType: 'numeric' })}
             <View style={{ marginBottom: spacing.md }}>
@@ -594,8 +633,37 @@ export default function UpdateVenuePortfolioScreen() {
                 </Text>
               </View>
             </View>
-            {renderField('Venue Type', 'venue_type', { placeholder: 'e.g. Wedding venue' })}
-            {renderField('Venue Capacity', 'venue_capacity', { placeholder: 'e.g. 50 - 100' })}
+            <DropdownPicker
+              label="Venue Type"
+              selectedValues={form.venue_type ? [form.venue_type] : []}
+              onConfirm={(vals) => setForm((prev) => ({ ...prev, venue_type: vals[0] || '' }))}
+              options={venueTypes}
+              placeholder="Select venue type"
+            />
+            <DropdownPicker
+              label="Venue Capacity"
+              selectedValues={form.venue_capacity ? [form.venue_capacity] : []}
+              onConfirm={(vals) => setForm((prev) => ({ ...prev, venue_capacity: vals[0] || '' }))}
+              options={venueCapacityOptions}
+              searchable={false}
+              placeholder="Select venue capacity"
+            />
+            <DropdownPicker
+              label="Amenities"
+              selectedValues={form.amenities ? form.amenities.split(',').map((v) => v.trim()).filter(Boolean) : []}
+              onConfirm={(vals) => setForm((prev) => ({ ...prev, amenities: vals.join(', ') }))}
+              options={amenitiesList}
+              multi
+              searchable
+              placeholder="Select amenities"
+            />
+            <DropdownPicker
+              label="Price Range"
+              selectedValues={form.price_range ? [form.price_range] : []}
+              onConfirm={(vals) => setForm((prev) => ({ ...prev, price_range: vals[0] || '' }))}
+              options={priceRangeOptions}
+              placeholder="Select price range"
+            />
           </View>
 
           {/* Portfolio Photos - always visible */}
@@ -658,6 +726,37 @@ export default function UpdateVenuePortfolioScreen() {
                   >
                     <MaterialIcons name="delete" size={18} color="#FFFFFF" />
                   </TouchableOpacity>
+                  <View style={{ flexDirection: 'row', gap: spacing.sm, marginTop: spacing.xs }}>
+                    <TouchableOpacity
+                      onPress={handlePickMainImage}
+                      disabled={uploadingImage}
+                      style={{
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        paddingHorizontal: spacing.md,
+                        paddingVertical: spacing.xs,
+                        borderRadius: radii.md,
+                        backgroundColor: colors.primary,
+                      }}
+                    >
+                      <MaterialIcons name="edit" size={16} color="#FFFFFF" />
+                      <Text style={{ ...typography.captionSemiBold, color: '#FFFFFF', marginLeft: spacing.xs }}>Edit image</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      onPress={handleRemoveMainImage}
+                      style={{
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        paddingHorizontal: spacing.md,
+                        paddingVertical: spacing.xs,
+                        borderRadius: radii.md,
+                        backgroundColor: '#EF4444',
+                      }}
+                    >
+                      <MaterialIcons name="delete" size={16} color="#FFFFFF" />
+                      <Text style={{ ...typography.captionSemiBold, color: '#FFFFFF', marginLeft: spacing.xs }}>Delete image</Text>
+                    </TouchableOpacity>
+                  </View>
                 </View>
               ) : (
                 <TouchableOpacity
@@ -705,6 +804,12 @@ export default function UpdateVenuePortfolioScreen() {
                     >
                       <MaterialIcons name="delete" size={16} color="#FFFFFF" />
                     </TouchableOpacity>
+                    <TouchableOpacity
+                      onPress={() => handleRemoveAdditionalPhoto(idx)}
+                      style={{ marginTop: 2, alignItems: 'center' }}
+                    >
+                      <Text style={{ ...typography.captionSemiBold, color: '#EF4444', fontSize: 10 }}>Delete</Text>
+                    </TouchableOpacity>
                   </View>
                 ))}
                 {remainingPhotoSlots > 0 && (
@@ -724,9 +829,31 @@ export default function UpdateVenuePortfolioScreen() {
                     }}
                   >
                     <MaterialIcons name="add" size={28} color={colors.textMuted} />
+                    <Text style={{ ...typography.caption, color: colors.textMuted, fontSize: 10, marginTop: 2 }}>Add Image</Text>
                   </TouchableOpacity>
                 )}
               </View>
+              {remainingPhotoSlots > 0 && (
+                <TouchableOpacity
+                  onPress={handlePickAdditionalPhotos}
+                  disabled={uploadingImage}
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    marginTop: spacing.sm,
+                    paddingHorizontal: spacing.md,
+                    paddingVertical: spacing.sm,
+                    borderRadius: radii.md,
+                    backgroundColor: colors.primary,
+                    gap: spacing.xs,
+                    alignSelf: 'flex-start',
+                  }}
+                >
+                  <MaterialIcons name="add-a-photo" size={16} color="#FFFFFF" />
+                  <Text style={{ ...typography.captionSemiBold, color: '#FFFFFF' }}>Add Photos</Text>
+                </TouchableOpacity>
+              )}
             </View>
 
             {uploadingImage && (

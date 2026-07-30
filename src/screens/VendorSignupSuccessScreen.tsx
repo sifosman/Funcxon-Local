@@ -15,6 +15,7 @@ type RouteParams = {
   fullName: string;
   tierName: string;
   productType?: 'vendor' | 'venue';
+  businessName?: string;
 };
 
 export default function VendorSignupSuccessScreen() {
@@ -24,7 +25,7 @@ export default function VendorSignupSuccessScreen() {
   const { user } = useAuth();
   const { setPortfolioType } = useApplicationForm();
 
-  const { email, fullName, tierName, productType } = (route.params ?? {}) as RouteParams;
+  const { email, fullName, tierName, productType, businessName } = (route.params ?? {}) as RouteParams;
 
   useEffect(() => {
     // Send welcome email and admin notification when screen loads
@@ -42,7 +43,7 @@ export default function VendorSignupSuccessScreen() {
       const isVenue = productType === 'venue';
       const functionName = isVenue ? 'send-venue-welcome-email' : 'send-vendor-welcome-email';
       const applicationUrl = isVenue ? 'https://funxon.co.za/venue-application' : 'https://funxon.co.za/vendor-application';
-      const catalogueUrl = isVenue ? 'funxon://venue-catalogue' : 'funxon://vendor-catalogue';
+      const catalogueUrl = isVenue ? 'https://funxon.co.za/venue-catalogue' : 'https://funxon.co.za/vendor-catalogue';
 
       const { data, error } = await supabase.functions.invoke(functionName, {
         body: {
@@ -77,7 +78,9 @@ export default function VendorSignupSuccessScreen() {
           type: 'vendor-free-signup',
           vendorName: fullName,
           vendorEmail: email,
+          businessName: businessName || undefined,
           tierName: tierName,
+          portfolioType: productType || 'vendor',
         },
       });
 

@@ -8,11 +8,15 @@ import { colors, spacing, radii, typography } from '../../theme';
 import { supabase } from '../../lib/supabaseClient';
 import { uploadFileToStorage } from '../../lib/applicationService';
 import { getVendorPhotoLimit, getVendorVideoLimit } from '../../lib/subscription';
-import { createGalleryMediaRecord, deactivateGalleryMediaRecord } from '../../lib/mediaUpload';
+import { createGalleryMediaRecord, deactivateGalleryMediaRecord, MAX_VIDEO_SIZE } from '../../lib/mediaUpload';
 import { normalizePhoneNumber } from '../../utils/phoneNormalization';
 import { useAuth } from '../../auth/AuthContext';
 import ThemedAlert from '../../components/ThemedAlert';
 import { useIsDesktop } from '../../hooks/useIsDesktop';
+import DropdownPicker from '../../components/DropdownPicker';
+import { getProvinceNames } from '../../config/locations';
+import { priceRangeOptions, countryOptions } from '../../config/portfolioOptions';
+import { serviceCategories, specialServiceFeatures } from '../../config/serviceProfessionals';
 
 function buildLegacyLocation(parts: Array<string | null | undefined>) {
     return parts.map((part) => part?.trim() ?? '').filter(Boolean).join(', ') || null;
@@ -137,6 +141,16 @@ export default function UpdateVendorPortfolioScreen() {
             ]) ?? form.location.trim() ?? null,
         [form.address_line_1, form.address_line_2, form.city, form.country, form.location, form.postal_code, form.province, form.suburb],
     );
+
+    const subcategoryOptions = useMemo(() => {
+        const selectedCats = stringToArray(form.service_categories);
+        if (selectedCats.length === 0) {
+            return serviceCategories.flatMap(c => c.types);
+        }
+        return serviceCategories
+            .filter(c => selectedCats.includes(c.name))
+            .flatMap(c => c.types);
+    }, [form.service_categories]);
 
     const loadVendor = useCallback(async () => {
         if (!user?.id) return;
@@ -335,8 +349,21 @@ export default function UpdateVendorPortfolioScreen() {
                 selectionLimit: Math.max(1, Math.min(5, remainingVideoSlots)),
             });
             if (result.canceled || !result.assets?.length || !user?.id || !vendor?.id) return;
+            const oversized: string[] = [];
+            const validAssets = result.assets.filter((asset) => {
+                const size = asset.fileSize || 0;
+                if (size > MAX_VIDEO_SIZE) {
+                    oversized.push(asset.fileName || 'Video');
+                    return false;
+                }
+                return true;
+            });
+            if (oversized.length > 0) {
+                setAlertState({ visible: true, title: 'Video too large', message: `${oversized.join(', ')} exceeds the 50MB limit and was skipped.`, buttons: [{ text: 'OK', style: 'default', onPress: () => setAlertState(null) }] });
+            }
+            if (!validAssets.length) return;
             const newUrls: string[] = [];
-            for (const asset of result.assets.slice(0, remainingVideoSlots)) {
+            for (const asset of validAssets.slice(0, remainingVideoSlots)) {
                 const file = {
                     uri: asset.uri,
                     name: asset.fileName || `video_${Date.now()}.mp4`,
@@ -682,6 +709,37 @@ export default function UpdateVendorPortfolioScreen() {
                                         >
                                             <MaterialIcons name="delete" size={18} color="#FFFFFF" />
                                         </TouchableOpacity>
+                                        <View style={{ flexDirection: 'row', gap: spacing.sm, marginTop: spacing.xs }}>
+                                            <TouchableOpacity
+                                                onPress={handlePickMainImage}
+                                                disabled={uploadingImage}
+                                                style={{
+                                                    flexDirection: 'row',
+                                                    alignItems: 'center',
+                                                    paddingHorizontal: spacing.md,
+                                                    paddingVertical: spacing.xs,
+                                                    borderRadius: radii.md,
+                                                    backgroundColor: colors.primary,
+                                                }}
+                                            >
+                                                <MaterialIcons name="edit" size={16} color="#FFFFFF" />
+                                                <Text style={{ ...typography.captionSemiBold, color: '#FFFFFF', marginLeft: spacing.xs }}>Edit image</Text>
+                                            </TouchableOpacity>
+                                            <TouchableOpacity
+                                                onPress={handleRemoveMainImage}
+                                                style={{
+                                                    flexDirection: 'row',
+                                                    alignItems: 'center',
+                                                    paddingHorizontal: spacing.md,
+                                                    paddingVertical: spacing.xs,
+                                                    borderRadius: radii.md,
+                                                    backgroundColor: '#EF4444',
+                                                }}
+                                            >
+                                                <MaterialIcons name="delete" size={16} color="#FFFFFF" />
+                                                <Text style={{ ...typography.captionSemiBold, color: '#FFFFFF', marginLeft: spacing.xs }}>Delete image</Text>
+                                            </TouchableOpacity>
+                                        </View>
                                     </View>
                                 ) : (
                                     <TouchableOpacity
@@ -729,6 +787,12 @@ export default function UpdateVendorPortfolioScreen() {
                                             >
                                                 <MaterialIcons name="delete" size={16} color="#FFFFFF" />
                                             </TouchableOpacity>
+                                            <TouchableOpacity
+                                                onPress={() => handleRemoveAdditionalPhoto(idx)}
+                                                style={{ marginTop: 2, alignItems: 'center' }}
+                                            >
+                                                <Text style={{ ...typography.captionSemiBold, color: '#EF4444', fontSize: 10 }}>Delete</Text>
+                                            </TouchableOpacity>
                                         </View>
                                     ))}
                                     {remainingPhotoSlots > 0 && (
@@ -748,9 +812,31 @@ export default function UpdateVendorPortfolioScreen() {
                                             }}
                                         >
                                             <MaterialIcons name="add" size={28} color={colors.textMuted} />
+                                            <Text style={{ ...typography.caption, color: colors.textMuted, fontSize: 10, marginTop: 2 }}>Add Image</Text>
                                         </TouchableOpacity>
                                     )}
                                 </View>
+                                {remainingPhotoSlots > 0 && (
+                                    <TouchableOpacity
+                                        onPress={handlePickAdditionalPhotos}
+                                        disabled={uploadingImage}
+                                        style={{
+                                            flexDirection: 'row',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            marginTop: spacing.sm,
+                                            paddingHorizontal: spacing.md,
+                                            paddingVertical: spacing.sm,
+                                            borderRadius: radii.md,
+                                            backgroundColor: colors.primary,
+                                            gap: spacing.xs,
+                                            alignSelf: 'flex-start',
+                                        }}
+                                    >
+                                        <MaterialIcons name="add-a-photo" size={16} color="#FFFFFF" />
+                                        <Text style={{ ...typography.captionSemiBold, color: '#FFFFFF' }}>Add Photos</Text>
+                                    </TouchableOpacity>
+                                )}
                             </View>
 
                             {uploadingImage && (
@@ -933,9 +1019,22 @@ export default function UpdateVendorPortfolioScreen() {
                             {renderField('Address Line 2', 'address_line_2', { placeholder: 'Building, unit, suite (optional)' })}
                             {renderField('Suburb', 'suburb', { placeholder: 'e.g. Gardens' })}
                             {renderField('Coverage City / Cities', 'city', { placeholder: 'e.g. Cape Town, Johannesburg' })}
-                            {renderField('Coverage Province / Provinces', 'province', { placeholder: 'e.g. Western Cape, Gauteng' })}
+                            <DropdownPicker
+                                label="Coverage Province / Provinces"
+                                selectedValues={stringToArray(form.province)}
+                                onConfirm={(vals) => setForm((prev) => ({ ...prev, province: vals.join(', ') }))}
+                                options={getProvinceNames()}
+                                multi
+                                placeholder="Select provinces"
+                            />
                             {renderField('Postal Code', 'postal_code', { placeholder: 'e.g. 8001', keyboardType: 'number-pad' })}
-                            {renderField('Country', 'country', { placeholder: 'e.g. South Africa' })}
+                            <DropdownPicker
+                                label="Country"
+                                selectedValues={form.country ? [form.country] : []}
+                                onConfirm={(vals) => setForm((prev) => ({ ...prev, country: vals[0] || '' }))}
+                                options={countryOptions}
+                                placeholder="Select country"
+                            />
                             {renderField('Latitude', 'latitude', { placeholder: 'e.g. -33.9249', keyboardType: 'numeric' })}
                             {renderField('Longitude', 'longitude', { placeholder: 'e.g. 18.4241', keyboardType: 'numeric' })}
                             <View style={{ marginBottom: spacing.md }}>
@@ -955,7 +1054,13 @@ export default function UpdateVendorPortfolioScreen() {
                                     </Text>
                                 </View>
                             </View>
-                            {renderField('Price Range', 'price_range', { placeholder: 'e.g. R500 - R5,000' })}
+                            <DropdownPicker
+                                label="Price Range"
+                                selectedValues={form.price_range ? [form.price_range] : []}
+                                onConfirm={(vals) => setForm((prev) => ({ ...prev, price_range: vals[0] || '' }))}
+                                options={priceRangeOptions}
+                                placeholder="Select price range"
+                            />
                         </View>
 
                         <View
@@ -994,9 +1099,32 @@ export default function UpdateVendorPortfolioScreen() {
                             <Text style={{ ...typography.titleMedium, color: colors.textPrimary, marginBottom: spacing.md }}>
                                 Services, Coverage & Payment Methods
                             </Text>
-                            {renderField('Service Categories', 'service_categories', { placeholder: 'e.g. Catering, Photography, Decor (comma separated)' })}
-                            {renderField('Service Subcategories', 'service_subcategories', { placeholder: 'e.g. Wedding cakes, Event photography (comma separated)' })}
-                            {renderField('Amenities', 'amenities', { placeholder: 'e.g. Wi-Fi, Parking, Catering (comma separated)' })}
+                            <DropdownPicker
+                                label="Service Categories"
+                                selectedValues={stringToArray(form.service_categories)}
+                                onConfirm={(vals) => setForm((prev) => ({ ...prev, service_categories: arrayToString(vals) }))}
+                                options={serviceCategories.map((c) => c.name)}
+                                multi
+                                placeholder="Select service categories"
+                            />
+                            <DropdownPicker
+                                label="Service Subcategories"
+                                selectedValues={stringToArray(form.service_subcategories)}
+                                onConfirm={(vals) => setForm((prev) => ({ ...prev, service_subcategories: arrayToString(vals) }))}
+                                options={subcategoryOptions}
+                                multi
+                                searchable
+                                placeholder="Select service subcategories"
+                            />
+                            <DropdownPicker
+                                label="Features"
+                                selectedValues={stringToArray(form.amenities)}
+                                onConfirm={(vals) => setForm((prev) => ({ ...prev, amenities: arrayToString(vals) }))}
+                                options={specialServiceFeatures}
+                                multi
+                                searchable
+                                placeholder="Select amenities"
+                            />
                             {renderField('Accepted Payment Methods', 'accepted_payment_methods', { placeholder: 'e.g. EFT, Cash, PayFast (comma separated)' })}
                         </View>
 

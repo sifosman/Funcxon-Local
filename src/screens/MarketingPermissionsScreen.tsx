@@ -12,7 +12,7 @@ import { useIsDesktop } from '../hooks/useIsDesktop';
 export default function MarketingPermissionsScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<ProfileStackParamList>>();
   const isDesktop = useIsDesktop();
-  const [marketingOptIn, setMarketingOptIn] = useState(false);
+  const [marketingOptIn, setMarketingOptIn] = useState(true);
   const [marketingOptWhatsapp, setMarketingOptWhatsapp] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -32,7 +32,7 @@ export default function MarketingPermissionsScreen() {
       .maybeSingle();
 
     if (!error && data) {
-      setMarketingOptIn(!!data.marketing_opt_in);
+      setMarketingOptIn(data.marketing_opt_in === null ? true : !!data.marketing_opt_in);
       setMarketingOptWhatsapp(!!data.marketing_opt_whatsapp);
     }
 

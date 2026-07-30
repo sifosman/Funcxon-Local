@@ -394,8 +394,8 @@ export default function QuotesScreen() {
             description: latestRevision.description || undefined,
           });
         } else {
-          // Fallback if no revision found
-          setAlertState({ visible: true, title: 'Quote Ready', message: 'A quote has been prepared for you. View details to see more.' });
+          // Fallback if no revision found — navigate to QuoteDetail which has Accept/Amend/Reject
+          navigation.navigate('QuoteDetail', { quoteId: quote.id, from: 'Quotes' });
         }
       } catch (err) {
         console.error('Error fetching revision:', err);
@@ -540,7 +540,7 @@ export default function QuotesScreen() {
       : item.status === 'finalised' || item.status === 'accepted'
         ? 'Rate and Review'
         : item.status === 'quoted' || (typeof item.quote_amount === 'number' && item.quote_amount > 0)
-          ? 'Review & Accept'
+          ? 'Make changes'
           : item.status === 'amended'
             ? 'Amend'
             : item.status === 'pending'

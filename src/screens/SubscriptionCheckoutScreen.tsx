@@ -678,6 +678,7 @@ export default function SubscriptionCheckoutScreen() {
       navigation.navigate('VendorSignupSuccess', {
         email: email.trim(),
         fullName: fullName.trim(),
+        businessName: businessName.trim() || undefined,
         tierName: tierName,
         productType: productType || 'vendor',
       });
@@ -798,7 +799,7 @@ export default function SubscriptionCheckoutScreen() {
     try {
       const isVenue = productType === 'venue';
       const functionName = isVenue ? 'send-venue-welcome-email' : 'send-vendor-welcome-email';
-      const catalogueUrl = isVenue ? 'funxon://venue-catalogue' : 'funxon://vendor-catalogue';
+      const catalogueUrl = isVenue ? 'https://funxon.co.za/venue-catalogue' : 'https://funxon.co.za/vendor-catalogue';
       const { data, error } = await supabase.functions.invoke(functionName, {
         body: {
           email: email.trim(),
@@ -836,6 +837,7 @@ export default function SubscriptionCheckoutScreen() {
           businessName: businessName.trim() || undefined,
           tierName: tierName,
           amount: priceNum,
+          portfolioType: productType || 'vendor',
         },
       });
 

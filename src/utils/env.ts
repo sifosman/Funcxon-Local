@@ -18,6 +18,7 @@ function getEnv(key: string, fallback: string): string {
 
 export const SUPPORT_EMAIL = getEnv('EXPO_PUBLIC_SUPPORT_EMAIL', 'support@funxon.co.za');
 export const SUPPORT_WHATSAPP = getEnv('EXPO_PUBLIC_SUPPORT_WHATSAPP', '+27837093579');
+export const SUPPORT_PHONE = getEnv('EXPO_PUBLIC_SUPPORT_PHONE', '+27837093579');
 export const PAYFAST_SANDBOX = getEnv('EXPO_PUBLIC_PAYFAST_SANDBOX', 'true') === 'true';
 export const PAYFAST_MERCHANT_ID = getEnv('EXPO_PUBLIC_PAYFAST_MERCHANT_ID', '');
 export const PAYFAST_MERCHANT_KEY = getEnv('EXPO_PUBLIC_PAYFAST_MERCHANT_KEY', '');

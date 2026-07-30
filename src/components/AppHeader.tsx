@@ -102,7 +102,7 @@ export default function AppHeader() {
             {session ? (
               <TouchableOpacity
                 style={styles.userContainer}
-                onPress={() => navigation.navigate('Account')}
+                onPress={() => navigation.navigate('Main', { screen: 'Account', params: { screen: 'AccountMain' } })}
               >
                 <MaterialIcons name="person" size={20} color={colors.primary} />
                 {username && (
@@ -151,7 +151,7 @@ export default function AppHeader() {
           {session ? (
             <TouchableOpacity
               style={styles.userContainer}
-              onPress={() => navigation.navigate('Account')}
+              onPress={() => navigation.navigate('Main', { screen: 'Account', params: { screen: 'AccountMain' } })}
             >
               <MaterialIcons name="person" size={20} color={colors.primary} />
               {username && (

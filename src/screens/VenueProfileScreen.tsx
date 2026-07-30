@@ -61,6 +61,7 @@ type VenueRecord = {
   subscription_status: string | null;
   subscription_plan: string | null;
   features: Record<string, any> | null;
+  price_range: string | null;
 };
 
  type VenueReview = {
@@ -89,9 +90,28 @@ type GalleryMedia = {
   sort_order: number;
 };
 
+type CatalogueItem = {
+  id: number;
+  listing_id: number;
+  title: string;
+  description: string | null;
+  price: number | null;
+  currency: string;
+  sort_order: number;
+  is_active: boolean;
+  image_url: string | null;
+};
+
+type VenueDocument = {
+  id: number;
+  document_url: string;
+  file_name: string | null;
+  created_at: string;
+};
+
 export default function VenueProfileScreen({ route, navigation }: Props) {
   const { venueId } = route.params;
-  const [activeTab, setActiveTab] = useState<'about' | 'amenities' | 'reviews' | 'calendar'>('about');
+  const [activeTab, setActiveTab] = useState<'about' | 'amenities' | 'reviews' | 'catalogue'>('about');
   const [mapImageFailed, setMapImageFailed] = useState(false);
   const [galleryIndex, setGalleryIndex] = useState(0);
   const carouselRef = useRef<ICarouselInstance>(null);
@@ -272,6 +292,52 @@ export default function VenueProfileScreen({ route, navigation }: Props) {
     },
   });
 
+  const {
+    data: catalogueItems,
+    isLoading: catalogueLoading,
+  } = useQuery<CatalogueItem[]>({
+    queryKey: ['venue-catalogue-items', venueId],
+    enabled: typeof venueId === 'number',
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('venue_catalogue_items')
+        .select('id, listing_id, title, description, price, currency, sort_order, is_active, image_url')
+        .eq('listing_id', venueId)
+        .eq('is_active', true)
+        .order('sort_order', { ascending: true })
+        .order('created_at', { ascending: true });
+
+      if (error) {
+        console.warn('venue_catalogue_items query failed:', error);
+        return [];
+      }
+
+      return (data as CatalogueItem[]) ?? [];
+    },
+  });
+
+  const {
+    data: cataloguePdfs,
+  } = useQuery<VenueDocument[]>({
+    queryKey: ['venue-catalogue-pdfs', venueId],
+    enabled: typeof venueId === 'number',
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('venue_documents')
+        .select('id, document_url, file_name, created_at')
+        .eq('venue_id', venueId)
+        .eq('document_type', 'catalogue_pdf')
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.warn('venue_documents query failed:', error);
+        return [];
+      }
+
+      return (data as VenueDocument[]) ?? [];
+    },
+  });
+
   const mapQuery = useMemo(() => {
     if (venue?.location?.trim()) {
       return venue.location.trim();
@@ -443,10 +509,17 @@ export default function VenueProfileScreen({ route, navigation }: Props) {
 
   // Feature checks
   const canBookTours = useMemo(() => {
-    if (!venue?.features) return false;
-    // Check for explicit flag or fallback to plan check if needed (though features column should be populated)
-    return venue.features['instant_tour_bookings'] === true || 
-           venue.features['tour_bookings'] === true; 
+    if (!venue) return false;
+    // Explicit feature flags take priority
+    if (venue.features) {
+      if (venue.features['instant_tour_bookings'] === true || venue.features['tour_bookings'] === true) {
+        return true;
+      }
+    }
+    // Fallback: paid plan with active/trial status
+    const paidPlan = venue.subscription_plan && venue.subscription_plan !== 'get_started';
+    const activeStatus = venue.subscription_status === 'active' || venue.subscription_status === 'trial';
+    return Boolean(paidPlan && activeStatus);
   }, [venue]);
 
   const canShowLinks = useMemo(() => {
@@ -736,6 +809,15 @@ export default function VenueProfileScreen({ route, navigation }: Props) {
             </Text>
           </View>
         )}
+
+        {venue.price_range && (
+          <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: spacing.xs }}>
+            <MaterialIcons name="payments" size={16} color={colors.textMuted} />
+            <Text style={{ ...typography.body, color: colors.textSecondary, marginLeft: 6 }}>
+              Price range: {venue.price_range}
+            </Text>
+          </View>
+        )}
       </View>
 
       {/* Gallery */}
@@ -919,7 +1001,7 @@ export default function VenueProfileScreen({ route, navigation }: Props) {
           { key: 'about', label: 'About' },
           { key: 'amenities', label: 'Amenities' },
           { key: 'reviews', label: 'Reviews' },
-          { key: 'calendar', label: 'Calendar' },
+          { key: 'catalogue', label: 'Catalogue' },
         ] as const).map((tab) => {
           const isActive = activeTab === tab.key;
           return (
@@ -1749,7 +1831,7 @@ export default function VenueProfileScreen({ route, navigation }: Props) {
         </View>
       )}
 
-      {activeTab === 'calendar' && (
+      {activeTab === 'catalogue' && (
         <View
           style={{
             marginBottom: spacing.lg,
@@ -1761,93 +1843,136 @@ export default function VenueProfileScreen({ route, navigation }: Props) {
           }}
         >
           <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.md }}>
-            <MaterialIcons name="calendar-today" size={18} color={colors.textPrimary} />
+            <MaterialIcons name="inventory-2" size={18} color={colors.textPrimary} />
             <Text style={{ ...headerTitleMedium, color: colors.textPrimary, marginLeft: spacing.sm }}>
-              Availability Calendar
+              Catalogue
             </Text>
           </View>
-          {availabilityLoading ? (
+
+          {catalogueLoading ? (
             <View style={{ alignItems: 'center', paddingVertical: spacing.lg }}>
               <ActivityIndicator color={colors.textPrimary} />
             </View>
-          ) : availability && availability.length > 0 ? (
-            <View style={{ gap: spacing.sm }}>
-              {availability.map((entry) => {
-                const isAvailable = entry.is_available;
-                return (
-                  <View
-                    key={entry.id}
-                    style={{
-                      borderRadius: radii.md,
-                      padding: spacing.md,
-                      borderWidth: 1,
-                      borderColor: isAvailable ? '#BBF7D0' : '#FECACA',
-                      backgroundColor: isAvailable ? '#DCFCE7' : '#FEE2E2',
-                    }}
-                  >
-                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: spacing.md }}>
-                      <Text style={{ ...typography.bodySemiBold, color: colors.textPrimary, flex: 1 }}>
-                        {formatAvailabilityDate(entry.date)}
-                      </Text>
-                      <Text style={{ ...typography.captionBold, color: isAvailable ? '#166534' : '#991B1B' }}>
-                        {isAvailable ? 'Available' : 'Unavailable'}
-                      </Text>
+          ) : (catalogueItems && catalogueItems.length > 0) || (cataloguePdfs && cataloguePdfs.length > 0) ? (
+            <>
+              {catalogueItems && catalogueItems.length > 0 && (
+                <View style={{ gap: spacing.sm, marginBottom: cataloguePdfs && cataloguePdfs.length > 0 ? spacing.lg : 0 }}>
+                  {catalogueItems.map((item) => (
+                    <View
+                      key={item.id}
+                      style={{
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        padding: spacing.md,
+                        borderRadius: radii.md,
+                        backgroundColor: colors.surfaceMuted,
+                        borderWidth: 1,
+                        borderColor: colors.borderSubtle,
+                        gap: spacing.md,
+                      }}
+                    >
+                      {item.image_url ? (
+                        <NetworkImage uri={item.image_url} style={{ width: 56, height: 56, borderRadius: radii.sm }} resizeMode="cover" />
+                      ) : (
+                        <View style={{ width: 56, height: 56, borderRadius: radii.sm, backgroundColor: colors.surface, alignItems: 'center', justifyContent: 'center' }}>
+                          <MaterialIcons name="image" size={24} color={colors.textMuted} />
+                        </View>
+                      )}
+                      <View style={{ flex: 1 }}>
+                        <Text style={{ ...typography.bodySemiBold, color: colors.textPrimary }}>{item.title}</Text>
+                        {item.description ? (
+                          <Text style={{ ...typography.caption, color: colors.textMuted, marginTop: 2 }} numberOfLines={2}>{item.description}</Text>
+                        ) : null}
+                        {item.price != null && (
+                          <Text style={{ ...typography.bodyBold, color: colors.textPrimary, marginTop: spacing.xs }}>
+                            R{Number(item.price).toLocaleString()}
+                          </Text>
+                        )}
+                      </View>
                     </View>
-                    {entry.availability_type ? (
-                      <Text style={{ ...typography.caption, color: colors.textSecondary, marginTop: spacing.xs }}>
-                        {entry.availability_type}
+                  ))}
+                </View>
+              )}
+
+              {cataloguePdfs && cataloguePdfs.length > 0 && (
+                <View style={{ gap: spacing.sm, marginBottom: spacing.lg }}>
+                  <Text style={{ ...typography.bodySemiBold, color: colors.textPrimary, marginBottom: spacing.xs }}>
+                    PDF Catalogue
+                  </Text>
+                  {cataloguePdfs.map((doc) => (
+                    <TouchableOpacity
+                      key={doc.id}
+                      onPress={() => {
+                        if (doc.document_url) {
+                          Linking.openURL(doc.document_url).catch(() => null);
+                        }
+                      }}
+                      style={{
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        padding: spacing.md,
+                        borderRadius: radii.md,
+                        backgroundColor: colors.surfaceMuted,
+                        borderWidth: 1,
+                        borderColor: colors.borderSubtle,
+                        gap: spacing.sm,
+                      }}
+                    >
+                      <MaterialIcons name="picture-as-pdf" size={24} color={colors.destructive} />
+                      <Text style={{ ...typography.body, color: colors.textPrimary, flex: 1 }} numberOfLines={1}>
+                        {doc.file_name || 'Catalogue PDF'}
                       </Text>
-                    ) : null}
-                    {Array.isArray(entry.time_slots) && entry.time_slots.length > 0 ? (
-                      <Text style={{ ...typography.caption, color: colors.textSecondary, marginTop: spacing.xs }}>
-                        {entry.time_slots.join(', ')}
-                      </Text>
-                    ) : null}
-                    {entry.notes ? (
-                      <Text style={{ ...typography.caption, color: colors.textSecondary, marginTop: spacing.xs }}>
-                        {entry.notes}
-                      </Text>
-                    ) : null}
-                  </View>
-                );
-              })}
-            </View>
+                      <MaterialIcons name="open-in-new" size={16} color={colors.textPrimary} />
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              )}
+
+              <TouchableOpacity
+                onPress={() =>
+                  navigation.navigate('VenueCatalogueView', { venueId: venue.id, venueName: venue.name })
+                }
+                style={{
+                  backgroundColor: colors.cta,
+                  paddingVertical: spacing.md,
+                  borderRadius: radii.md,
+                  alignItems: 'center',
+                  flexDirection: 'row',
+                  justifyContent: 'center',
+                  gap: spacing.sm,
+                }}
+              >
+                <MaterialIcons name="request-quote" size={18} color="#FFFFFF" />
+                <Text style={{ ...typography.bodyBold, color: '#FFFFFF' }}>View Full Catalogue & Request Quote</Text>
+              </TouchableOpacity>
+            </>
           ) : (
             <View style={{ alignItems: 'center', paddingVertical: spacing.lg }}>
-              <MaterialIcons name="event-busy" size={48} color={colors.textMuted} />
+              <MaterialIcons name="inventory-2" size={48} color={colors.textMuted} />
               <Text style={{ ...typography.bodySemiBold, color: colors.textPrimary, marginTop: spacing.md }}>
-                Availability will be updated soon
+                No catalogue items available
               </Text>
               <Text style={{ ...typography.caption, color: colors.textMuted, textAlign: 'center', marginTop: spacing.xs }}>
-                Contact {venue.name} directly while calendar slots are being updated.
+                {venue.name} hasn't added catalogue items yet. Request a quote for custom pricing.
               </Text>
+              <TouchableOpacity
+                onPress={handleRequestQuote}
+                style={{
+                  marginTop: spacing.md,
+                  backgroundColor: colors.primary,
+                  paddingVertical: spacing.md,
+                  borderRadius: radii.md,
+                  alignItems: 'center',
+                  flexDirection: 'row',
+                  justifyContent: 'center',
+                  gap: spacing.sm,
+                }}
+              >
+                <MaterialIcons name="request-quote" size={18} color="#FFFFFF" />
+                <Text style={{ ...typography.bodyBold, color: '#FFFFFF' }}>Request a Quote</Text>
+              </TouchableOpacity>
             </View>
           )}
-          <TouchableOpacity
-            onPress={() => {
-              if (whatsappUrl) {
-                handleOpenUrl(whatsappUrl);
-              } else if (emailUrl) {
-                handleOpenUrl(emailUrl);
-              } else {
-                handleRequestQuote();
-              }
-            }}
-            style={{
-              marginTop: spacing.md,
-              backgroundColor: colors.cta,
-              paddingVertical: spacing.md,
-              borderRadius: radii.md,
-              alignItems: 'center',
-              flexDirection: 'row',
-              justifyContent: 'center',
-            }}
-          >
-            <MaterialIcons name="calendar-today" size={16} color="#FFFFFF" />
-            <Text style={{ ...typography.bodySemiBold, color: '#FFFFFF', marginLeft: spacing.sm }}>
-              Contact for Availability
-            </Text>
-          </TouchableOpacity>
         </View>
       )}
 

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { View, Text, TouchableOpacity, ScrollView, TextInput, Linking } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useNavigation, useRoute } from '@react-navigation/native';
@@ -152,6 +152,19 @@ export default function PortfolioAssistanceScreen() {
   const route = useRoute<AssistanceRouteProp>();
   const isHelpCenter = route.params?.openFaqs ?? false;
   const [showFaqSection, setShowFaqSection] = useState(isHelpCenter);
+  const scrollViewRef = useRef<ScrollView>(null);
+  const faqYRef = useRef(0);
+
+  useEffect(() => {
+    if (showFaqSection) {
+      const timer = setTimeout(() => {
+        if (!isDesktop) {
+          scrollViewRef.current?.scrollTo({ y: faqYRef.current, animated: true });
+        }
+      }, 150);
+      return () => clearTimeout(timer);
+    }
+  }, [showFaqSection, isDesktop]);
 
   const handleLiveChat = () => {
     const clean = SUPPORT_WHATSAPP.replace(/\D/g, '');
@@ -395,7 +408,9 @@ export default function PortfolioAssistanceScreen() {
   );
 
   const renderFaqSection = () => (
-    <View style={{ paddingHorizontal: isDesktop ? 0 : spacing.lg, marginBottom: spacing.lg, flex: isDesktop ? 1 : undefined }}>
+    <View
+      onLayout={(e) => { faqYRef.current = e.nativeEvent.layout.y; }}
+      style={{ paddingHorizontal: isDesktop ? 0 : spacing.lg, marginBottom: spacing.lg, flex: isDesktop ? 1 : undefined }}>
       <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.md }}>
         <Text style={{ ...typography.titleMedium, color: colors.textPrimary, fontSize: isDesktop ? 24 : undefined }}>Frequently Asked Questions</Text>
         <TouchableOpacity onPress={() => setShowFaqSection(false)}>
@@ -428,7 +443,7 @@ export default function PortfolioAssistanceScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: isDesktop ? colors.surfaceBg : colors.background }}>
-      <ScrollView contentContainerStyle={isDesktop ? { paddingHorizontal: 48, paddingTop: spacing.xl, paddingBottom: spacing.xl, maxWidth: 1200, width: '100%', alignSelf: 'center' } : { paddingBottom: spacing.xl }}>
+      <ScrollView ref={scrollViewRef} contentContainerStyle={isDesktop ? { paddingHorizontal: 48, paddingTop: spacing.xl, paddingBottom: spacing.xl, maxWidth: 1200, width: '100%', alignSelf: 'center' } : { paddingBottom: spacing.xl }}>
         {isDesktop ? (
           <>
             {renderHeader()}

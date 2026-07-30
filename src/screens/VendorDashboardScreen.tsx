@@ -356,7 +356,7 @@ export default function VendorDashboardScreen() {
                   {item.details}
                 </Text>
               )}
-              <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: spacing.xs }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: spacing.xs }}>
                 <Text
                   style={{
                     ...typography.caption,
@@ -366,16 +366,19 @@ export default function VendorDashboardScreen() {
                 >
                   Status: {item.status ?? 'pending'}
                 </Text>
-                {item.status === 'pending' && (
-                  <Text
-                    style={{
-                      ...typography.caption,
-                      color: colors.primary,
-                      marginLeft: spacing.sm,
-                    }}
-                  >
-                    Tap to create quote →
-                  </Text>
+                {(item.status === 'pending' || item.status === 'amended') && (
+                  <View style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    paddingHorizontal: spacing.sm,
+                    paddingVertical: spacing.xs,
+                    borderRadius: radii.md,
+                    backgroundColor: colors.primary,
+                    gap: spacing.xs,
+                  }}>
+                    <MaterialIcons name="reply" size={14} color="#FFFFFF" />
+                    <Text style={{ ...typography.captionSemiBold, color: '#FFFFFF' }}>Respond</Text>
+                  </View>
                 )}
               </View>
             </TouchableOpacity>

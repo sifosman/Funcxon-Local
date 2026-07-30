@@ -20,6 +20,9 @@ export interface MediaUploadResult {
 export const IMAGE_MIME_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/jpg'];
 export const VIDEO_MIME_TYPES = ['video/mp4', 'video/quicktime', 'video/webm'];
 
+export const MAX_IMAGE_SIZE = 10 * 1024 * 1024; // 10MB
+export const MAX_VIDEO_SIZE = 50 * 1024 * 1024; // 50MB
+
 export function isImage(fileType: string): boolean {
   return IMAGE_MIME_TYPES.includes(fileType.toLowerCase())
     || fileType.toLowerCase().startsWith('image/');

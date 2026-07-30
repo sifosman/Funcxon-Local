@@ -168,7 +168,7 @@ export default function SubscriberSuiteScreen() {
                                     borderColor: colors.outlineVariant,
                                 }}>
                                     <Text style={{ ...typography.headlineSm, color: colors.primary, marginBottom: spacing.sm }}>
-                                        Need help?
+                                        Help Desk
                                     </Text>
                                     <Text style={{ ...typography.bodyMd, color: colors.onSurfaceVariant }}>
                                         Access portfolio assistance, legal terms, and subscriber support from your desktop hub.

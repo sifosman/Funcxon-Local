@@ -283,6 +283,56 @@ export default function ListerPortfolioScreen() {
         }
       },
     },
+    {
+      id: 'view-quotes',
+      label: 'View Quotes',
+      icon: 'request-quote',
+      action: () => {
+        if (vendorListing && venueListing) {
+          setAlertState({
+            visible: true,
+            title: 'View Quotes',
+            message: 'Which portfolio quotes would you like to view?',
+            buttons: [
+              { text: 'Vendor', style: 'default', onPress: () => { setAlertState(null); navigation.navigate('VendorDashboard'); } },
+              { text: 'Venue', style: 'default', onPress: () => { setAlertState(null); navigation.navigate('VenueQuoteRequests'); } },
+              { text: 'Cancel', style: 'cancel', onPress: () => setAlertState(null) },
+            ],
+          });
+        } else if (vendorListing) {
+          navigation.navigate('VendorDashboard');
+        } else if (venueListing) {
+          navigation.navigate('VenueQuoteRequests');
+        } else {
+          setAlertState({ visible: true, title: 'No portfolio found', message: 'You do not have an active portfolio yet. Create one first.' });
+        }
+      },
+    },
+    {
+      id: 'view-bookings',
+      label: 'View Bookings',
+      icon: 'event-available',
+      action: () => {
+        if (vendorListing && venueListing) {
+          setAlertState({
+            visible: true,
+            title: 'View Bookings',
+            message: 'Which portfolio bookings would you like to view?',
+            buttons: [
+              { text: 'Vendor', style: 'default', onPress: () => { setAlertState(null); navigation.navigate('VendorBookings'); } },
+              { text: 'Venue', style: 'default', onPress: () => { setAlertState(null); navigation.navigate('VenueTourBookings'); } },
+              { text: 'Cancel', style: 'cancel', onPress: () => setAlertState(null) },
+            ],
+          });
+        } else if (vendorListing) {
+          navigation.navigate('VendorBookings');
+        } else if (venueListing) {
+          navigation.navigate('VenueTourBookings');
+        } else {
+          setAlertState({ visible: true, title: 'No portfolio found', message: 'You do not have an active portfolio yet. Create one first.' });
+        }
+      },
+    },
   ];
 
   const settingsActions: ActionItem[] = [
@@ -318,7 +368,7 @@ export default function ListerPortfolioScreen() {
     },
     {
       id: 'delete-account',
-      label: 'Delete Account',
+      label: 'Request Account Deletion',
       icon: 'delete-forever',
       action: () => {
         setAlertState({

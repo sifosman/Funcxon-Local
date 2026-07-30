@@ -1272,6 +1272,29 @@ export default function VendorProfileScreen({ route, navigation }: Props) {
             >
               <Text style={{ ...typography.bodySemiBold, color: '#FFFFFF' }}>Request Quote</Text>
             </TouchableOpacity>
+            <TouchableOpacity
+              onPress={() => {
+                if (whatsappUrl) {
+                  handleOpenUrl(whatsappUrl);
+                } else if (emailUrl) {
+                  handleOpenUrl(emailUrl);
+                } else {
+                  setAlertState({ visible: true, title: 'Contact', message: 'No contact details available for this vendor.' });
+                }
+              }}
+              style={{
+                paddingVertical: spacing.md,
+                borderRadius: radii.md,
+                borderWidth: 2,
+                borderColor: colors.cta,
+                alignItems: 'center',
+                flexDirection: 'row',
+                justifyContent: 'center',
+              }}
+            >
+              <MaterialIcons name="calendar-today" size={16} color={colors.cta} />
+              <Text style={{ ...typography.bodySemiBold, color: colors.cta, marginLeft: spacing.sm }}>Contact for Availability</Text>
+            </TouchableOpacity>
           </View>
         </View>
       )}
@@ -1904,6 +1927,30 @@ const renderSidebar = () => (
               title="Request a quote"
               onPress={goToQuoteRequest}
             />
+            <TouchableOpacity
+              onPress={() => {
+                if (whatsappUrl) {
+                  handleOpenUrl(whatsappUrl);
+                } else if (emailUrl) {
+                  handleOpenUrl(emailUrl);
+                } else {
+                  setAlertState({ visible: true, title: 'Contact', message: 'No contact details available for this vendor.' });
+                }
+              }}
+              style={{
+                marginTop: spacing.sm,
+                paddingVertical: spacing.md,
+                borderRadius: radii.md,
+                borderWidth: 2,
+                borderColor: colors.cta,
+                alignItems: 'center',
+                flexDirection: 'row',
+                justifyContent: 'center',
+              }}
+            >
+              <MaterialIcons name="calendar-today" size={16} color={colors.cta} />
+              <Text style={{ ...typography.bodySemiBold, color: colors.cta, marginLeft: spacing.sm }}>Contact for Availability</Text>
+            </TouchableOpacity>
           </View>
         </>
       )}

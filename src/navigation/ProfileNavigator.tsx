@@ -39,6 +39,8 @@ import MarketingPermissionsScreen from '../screens/MarketingPermissionsScreen';
 import DebugUserScreen from '../screens/DebugUserScreen';
 import MyToursScreen from '../screens/MyToursScreen';
 import BookingDetailScreen from '../screens/BookingDetailScreen';
+import VendorDashboardScreen from '../screens/VendorDashboardScreen';
+import VendorBookingsScreen from '../screens/subscriber/VendorBookingsScreen';
 
 export type ProfileStackParamList = {
     AccountMain: undefined;
@@ -62,7 +64,7 @@ export type ProfileStackParamList = {
         productType?: 'vendor' | 'venue';
         planKey?: string;
     };
-    VendorSignupSuccess: { email: string; fullName: string; tierName: string; productType?: 'vendor' | 'venue' };
+    VendorSignupSuccess: { email: string; fullName: string; tierName: string; productType?: 'vendor' | 'venue'; businessName?: string };
     PortfolioAssistance: { openFaqs?: boolean } | undefined;
     UpdatePortfolio: undefined;
     UpdateVendorPortfolio: undefined;
@@ -82,6 +84,8 @@ export type ProfileStackParamList = {
         eventDetails?: string;
     };
     VendorQuoteHistory: { quoteRequestId: number };
+    VendorDashboard: undefined;
+    VendorBookings: undefined;
     ListerPortfolio: undefined;
     CreateReview: { type: 'vendor' | 'venue' | 'app'; targetId?: number; targetName?: string };
     ActionItems: undefined;
@@ -222,6 +226,16 @@ export function ProfileNavigator() {
             <Stack.Screen
                 name="VendorQuoteHistory"
                 component={VendorQuoteHistoryScreen}
+                options={{ headerShown: false }}
+            />
+            <Stack.Screen
+                name="VendorDashboard"
+                component={VendorDashboardScreen}
+                options={{ headerShown: false }}
+            />
+            <Stack.Screen
+                name="VendorBookings"
+                component={VendorBookingsScreen}
                 options={{ headerShown: false }}
             />
             <Stack.Screen

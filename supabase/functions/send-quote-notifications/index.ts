@@ -166,7 +166,7 @@ function generateEmailContent(payload: NotificationPayload): { subject: string; 
 function generateQuoteRequestedToVendorEmail(payload: NotificationPayload) {
   const { vendorBusinessName, lineItems, eventDate } = payload;
   const subject = 'New Quote Request';
-  const deepLink = 'funxon://vendor/quotes';
+  const deepLink = 'https://funxon.co.za/account/vendor/quotes';
 
   const itemsHtml = lineItems && lineItems.length > 0
     ? `
@@ -206,9 +206,9 @@ function generateQuoteRequestedToVendorEmail(payload: NotificationPayload) {
   const htmlContent = genericEmailHtml({
     title: 'New Quote Request',
     greeting: `Hi ${vendorBusinessName || 'there'},`,
-    message: `You have received a new quote request.${eventDate ? ` Event date: ${eventDate}.` : ''} Open the Funxon app to view the details and respond.`,
+    message: `You have received a new quote request.${eventDate ? ` Event date: ${eventDate}.` : ''} View the details and respond in Funxon.`,
     deepLink,
-    cta: 'Open the Funxon App',
+    cta: 'View in Funxon',
     accentColor: '#2B9EB3',
     extraContent: itemsHtml,
   });
@@ -216,7 +216,7 @@ function generateQuoteRequestedToVendorEmail(payload: NotificationPayload) {
   const textContent = genericEmailText({
     title: 'New Quote Request',
     greeting: `Hi ${vendorBusinessName || 'there'},`,
-    message: `You have received a new quote request.${eventDate ? ` Event date: ${eventDate}.` : ''} Open the Funxon app to view the details and respond.`,
+    message: `You have received a new quote request.${eventDate ? ` Event date: ${eventDate}.` : ''} View the details and respond in Funxon.`,
     deepLink,
     extraContent: eventDateText + itemsText,
   });
@@ -227,21 +227,21 @@ function generateQuoteRequestedToVendorEmail(payload: NotificationPayload) {
 function generateQuoteCreatedToClientEmail(payload: NotificationPayload) {
   const { clientName } = payload;
   const subject = 'Quote Received';
-  const deepLink = 'funxon://quotes';
+  const deepLink = 'https://funxon.co.za/quotes';
 
   const htmlContent = genericEmailHtml({
     title: 'Quote Received',
     greeting: `Hi ${clientName || 'there'},`,
-    message: 'You have received a new quote. Open the Funxon app to review and respond.',
+    message: 'You have received a new quote. Review and respond in Funxon.',
     deepLink,
-    cta: 'Open the Funxon App',
+    cta: 'View in Funxon',
     accentColor: '#2B9EB3',
   });
 
   const textContent = genericEmailText({
     title: 'Quote Received',
     greeting: `Hi ${clientName || 'there'},`,
-    message: 'You have received a new quote. Open the Funxon app to review and respond.',
+    message: 'You have received a new quote. Review and respond in Funxon.',
     deepLink,
   });
 
@@ -251,21 +251,21 @@ function generateQuoteCreatedToClientEmail(payload: NotificationPayload) {
 function generateQuoteAcceptedToVendorEmail(payload: NotificationPayload) {
   const { vendorBusinessName } = payload;
   const subject = 'Quote Accepted';
-  const deepLink = 'funxon://vendor/quotes';
+  const deepLink = 'https://funxon.co.za/account/vendor/quotes';
 
   const htmlContent = genericEmailHtml({
     title: 'Quote Accepted',
     greeting: `Great news, ${vendorBusinessName || 'there'}!`,
-    message: 'A client has accepted your quote. Open the Funxon app to view the details and next steps.',
+    message: 'A client has accepted your quote. View the details and next steps in Funxon.',
     deepLink,
-    cta: 'Open the Funxon App',
+    cta: 'View in Funxon',
     accentColor: '#16A34A',
   });
 
   const textContent = genericEmailText({
     title: 'Quote Accepted',
     greeting: `Great news, ${vendorBusinessName || 'there'}!`,
-    message: 'A client has accepted your quote. Open the Funxon app to view the details and next steps.',
+    message: 'A client has accepted your quote. View the details and next steps in Funxon.',
     deepLink,
   });
 
@@ -275,21 +275,21 @@ function generateQuoteAcceptedToVendorEmail(payload: NotificationPayload) {
 function generateQuoteRejectedToVendorEmail(payload: NotificationPayload) {
   const { vendorBusinessName } = payload;
   const subject = 'Quote Not Accepted';
-  const deepLink = 'funxon://vendor/quotes';
+  const deepLink = 'https://funxon.co.za/account/vendor/quotes';
 
   const htmlContent = genericEmailHtml({
     title: 'Quote Not Accepted',
     greeting: `Hi ${vendorBusinessName || 'there'},`,
-    message: 'A client has decided not to proceed with your quote at this time. Open the Funxon app to view their feedback and submit a revised quote if you wish.',
+    message: 'A client has decided not to proceed with your quote at this time. View their feedback and submit a revised quote if you wish.',
     deepLink,
-    cta: 'Open the Funxon App',
+    cta: 'View in Funxon',
     accentColor: '#DC2626',
   });
 
   const textContent = genericEmailText({
     title: 'Quote Not Accepted',
     greeting: `Hi ${vendorBusinessName || 'there'},`,
-    message: 'A client has decided not to proceed with your quote at this time. Open the Funxon app to view their feedback and submit a revised quote if you wish.',
+    message: 'A client has decided not to proceed with your quote at this time. View their feedback and submit a revised quote if you wish.',
     deepLink,
   });
 
@@ -299,21 +299,21 @@ function generateQuoteRejectedToVendorEmail(payload: NotificationPayload) {
 function generateQuoteRevisedToClientEmail(payload: NotificationPayload) {
   const { clientName } = payload;
   const subject = 'Revised Quote Available';
-  const deepLink = 'funxon://quotes';
+  const deepLink = 'https://funxon.co.za/quotes';
 
   const htmlContent = genericEmailHtml({
     title: 'Revised Quote Available',
     greeting: `Hi ${clientName || 'there'},`,
-    message: 'A revised quote is now available for your review. Open the Funxon app to see the updated details and respond.',
+    message: 'A revised quote is now available for your review. See the updated details and respond in Funxon.',
     deepLink,
-    cta: 'Open the Funxon App',
+    cta: 'View in Funxon',
     accentColor: '#D97706',
   });
 
   const textContent = genericEmailText({
     title: 'Revised Quote Available',
     greeting: `Hi ${clientName || 'there'},`,
-    message: 'A revised quote is now available for your review. Open the Funxon app to see the updated details and respond.',
+    message: 'A revised quote is now available for your review. See the updated details and respond in Funxon.',
     deepLink,
   });
 
@@ -340,7 +340,7 @@ interface GenericEmailOptions {
 }
 
 function genericEmailHtml(options: GenericEmailOptions): string {
-  const { title, greeting, message, deepLink, cta = 'Open the Funxon App', accentColor = '#2B9EB3', extraContent = '' } = options;
+  const { title, greeting, message, deepLink, cta = 'View in Funxon', accentColor = '#2B9EB3', extraContent = '' } = options;
   return `
     <!DOCTYPE html>
     <html>
@@ -364,7 +364,7 @@ function genericEmailHtml(options: GenericEmailOptions): string {
           </a>
         </div>
         <p style="font-size: 14px; color: #5A7A85; margin-top: 20px;">
-          Tap the button above to open the Funxon app and view the full details.
+          Tap the button above to view the full details in Funxon.
         </p>
       </div>
     </body>
@@ -381,7 +381,7 @@ ${greeting}
 
 ${message}
 ${extraContent}
-Open the Funxon app to view the details:
+View the details in Funxon:
 ${deepLink}
 
 - Funxon Team
@@ -403,7 +403,7 @@ function generateGenericEmail(payload: NotificationPayload) {
         <h2 style="color: #2B9EB3;">Quote Update</h2>
         <p style="color: #2B3840;">There has been an update to your quote request.</p>
         <div style="text-align: center; margin: 30px 0;">
-          <a href="funxon://quotes" 
+          <a href="https://funxon.co.za/quotes" 
              style="background: #2B9EB3; color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; font-weight: bold; display: inline-block;">
             View Quote
           </a>
@@ -418,7 +418,7 @@ Quote Update
 
 There has been an update to your quote request.
 
-View quote: funxon://quotes
+View quote: https://funxon.co.za/quotes
 
 - Funxon Team
   `;

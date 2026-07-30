@@ -10,6 +10,7 @@ import type { DocKey } from '../../context/ApplicationFormContext';
 import { validateStep3 } from '../../utils/formValidation';
 import { colors, spacing, radii, typography } from '../../theme';
 import { convertBlobToBase64 } from '../../lib/applicationService';
+import { MAX_IMAGE_SIZE, MAX_VIDEO_SIZE } from '../../lib/mediaUpload';
 import { ApplicationProgress } from '../../components/ApplicationProgress';
 import { PhotoUploadCounter } from '../../components/PhotoUploadCounter';
 import { canUploadMorePhotos, incrementVendorPhotoCount, decrementVendorPhotoCount } from '../../lib/subscription';
@@ -25,8 +26,6 @@ type ProfileStackParamList = {
   ApplicationStep4: undefined;
 };
 
-const MAX_IMAGE_SIZE = 10 * 1024 * 1024; // 10MB
-const MAX_VIDEO_SIZE = 50 * 1024 * 1024; // 50MB
 const MAX_DOC_SIZE = 10 * 1024 * 1024; // 10MB
 
 const BUSINESS_DOCS: Array<{ key: DocKey; label: string; required: boolean; acceptLabel?: string }> = [

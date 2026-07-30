@@ -10,6 +10,7 @@ const BREVO_API_URL = 'https://api.brevo.com/v3';
 type NotificationType = 
   | 'vendor-subscription-purchased'
   | 'vendor-application-submitted'
+  | 'venue-application-submitted'
   | 'vendor-free-signup'
   | 'quote-requested'
   | 'portfolio-callback-requested'
@@ -35,6 +36,8 @@ interface NotificationPayload {
   quoteDetails?: string;
   adminEmail?: string;
   adminName?: string;
+  portfolioType?: 'vendor' | 'venue';
+  listingId?: string | number;
 }
 
 interface BrevoEmailPayload {
@@ -142,6 +145,24 @@ Deno.serve(async (req: Request) => {
   }
 });
 
+function buildPortfolioLinks(payload: NotificationPayload): { adminLink: string; publicLink: string } {
+  const { portfolioType, listingId } = payload;
+  const isVenue = portfolioType === 'venue';
+  const basePath = isVenue ? 'venues' : 'vendors';
+  const publicBase = isVenue ? 'venue' : 'vendor';
+
+  if (listingId) {
+    return {
+      adminLink: `https://funcxonsadmin.vercel.app/dashboard/${basePath}/${listingId}`,
+      publicLink: `https://funxon.co.za/${publicBase}/${listingId}`,
+    };
+  }
+  return {
+    adminLink: `https://funcxonsadmin.vercel.app/dashboard/${basePath}`,
+    publicLink: `https://funxon.co.za/${publicBase}s`,
+  };
+}
+
 function generateEmailContent(payload: NotificationPayload): { subject: string; htmlContent: string; textContent: string } {
   const { type } = payload;
 
@@ -149,6 +170,7 @@ function generateEmailContent(payload: NotificationPayload): { subject: string; 
     case 'vendor-subscription-purchased':
       return generateSubscriptionPurchasedEmail(payload);
     case 'vendor-application-submitted':
+    case 'venue-application-submitted':
       return generateApplicationSubmittedEmail(payload);
     case 'vendor-free-signup':
       return generateFreeSignupEmail(payload);
@@ -167,6 +189,7 @@ function generateEmailContent(payload: NotificationPayload): { subject: string; 
 
 function generateSubscriptionPurchasedEmail(payload: NotificationPayload) {
   const { vendorName, vendorEmail, businessName, tierName, amount } = payload;
+  const { adminLink, publicLink } = buildPortfolioLinks(payload);
   const subject = `New Subscription: ${businessName || vendorName} - ${tierName}`;
 
   const htmlContent = `
@@ -195,9 +218,13 @@ function generateSubscriptionPurchasedEmail(payload: NotificationPayload) {
         </div>
         
         <div style="text-align: center; margin: 30px 0;">
-          <a href="https://funxon.co.za/admin/vendors" 
+          <a href="${adminLink}" 
              style="background: #2B9EB3; color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; font-weight: bold; display: inline-block;">
             View in Admin Panel
+          </a>
+          <a href="${publicLink}" 
+             style="background: #fff; color: #2B9EB3; border: 2px solid #2B9EB3; padding: 13px 28px; text-decoration: none; border-radius: 5px; font-weight: bold; display: inline-block; margin-left: 10px;">
+            View Public Profile
           </a>
         </div>
       </div>
@@ -215,15 +242,18 @@ Vendor Details:
 - Plan: ${tierName || 'N/A'}
 - Amount: R${amount || '0'}
 
-View in admin panel: https://funxon.co.za/admin/vendors
+View in admin panel: ${adminLink}
+View public profile: ${publicLink}
   `;
 
   return { subject, htmlContent, textContent };
 }
 
 function generateApplicationSubmittedEmail(payload: NotificationPayload) {
-  const { vendorName, vendorEmail, businessName, tierName, serviceCategories, provinces } = payload;
-  const subject = `New Vendor Application: ${businessName || vendorName}`;
+  const { vendorName, vendorEmail, businessName, tierName, serviceCategories, provinces, portfolioType } = payload;
+  const { adminLink, publicLink } = buildPortfolioLinks(payload);
+  const isVenue = portfolioType === 'venue';
+  const subject = `New ${isVenue ? 'Venue' : 'Vendor'} Application: ${businessName || vendorName}`;
 
   const htmlContent = `
     <!DOCTYPE html>
@@ -252,9 +282,13 @@ function generateApplicationSubmittedEmail(payload: NotificationPayload) {
         </div>
         
         <div style="text-align: center; margin: 30px 0;">
-          <a href="https://funcxonsadmin.vercel.app/dashboard/applications" 
+          <a href="${adminLink}" 
              style="background: #2B9EB3; color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; font-weight: bold; display: inline-block;">
-            View Application
+            View in Admin Panel
+          </a>
+          <a href="${publicLink}" 
+             style="background: #fff; color: #2B9EB3; border: 2px solid #2B9EB3; padding: 13px 28px; text-decoration: none; border-radius: 5px; font-weight: bold; display: inline-block; margin-left: 10px;">
+            View Public Profile
           </a>
         </div>
         
@@ -265,7 +299,7 @@ function generateApplicationSubmittedEmail(payload: NotificationPayload) {
   `;
 
   const textContent = `
-New Vendor Application Submitted
+New ${isVenue ? 'Venue' : 'Vendor'} Application Submitted
 
 Application Details:
 - Name: ${vendorName || 'N/A'}
@@ -275,7 +309,8 @@ Application Details:
 - Categories: ${serviceCategories?.join(', ') || 'N/A'}
 - Coverage: ${provinces?.join(', ') || 'N/A'}
 
-View in admin panel: https://funcxonsadmin.vercel.app/dashboard/applications
+View in admin panel: ${adminLink}
+View public profile: ${publicLink}
   `;
 
   return { subject, htmlContent, textContent };
@@ -283,6 +318,7 @@ View in admin panel: https://funcxonsadmin.vercel.app/dashboard/applications
 
 function generateFreeSignupEmail(payload: NotificationPayload) {
   const { vendorName, vendorEmail, businessName, tierName } = payload;
+  const { adminLink, publicLink } = buildPortfolioLinks(payload);
   const subject = `New Free Plan Signup: ${businessName || vendorName}`;
 
   const htmlContent = `
@@ -310,9 +346,13 @@ function generateFreeSignupEmail(payload: NotificationPayload) {
         </div>
         
         <div style="text-align: center; margin: 30px 0;">
-          <a href="https://funxon.co.za/admin/vendors" 
+          <a href="${adminLink}" 
              style="background: #2B9EB3; color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; font-weight: bold; display: inline-block;">
             View in Admin Panel
+          </a>
+          <a href="${publicLink}" 
+             style="background: #fff; color: #2B9EB3; border: 2px solid #2B9EB3; padding: 13px 28px; text-decoration: none; border-radius: 5px; font-weight: bold; display: inline-block; margin-left: 10px;">
+            View Public Profile
           </a>
         </div>
       </div>
@@ -329,7 +369,8 @@ Vendor Details:
 - Business: ${businessName || 'N/A'}
 - Plan: ${tierName || 'FREE'}
 
-View in admin panel: https://funxon.co.za/admin/vendors
+View in admin panel: ${adminLink}
+View public profile: ${publicLink}
   `;
 
   return { subject, htmlContent, textContent };
