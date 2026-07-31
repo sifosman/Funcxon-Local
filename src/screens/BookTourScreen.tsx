@@ -170,15 +170,13 @@ export default function BookTourScreen({ route, navigation }: Props) {
         contentContainerStyle={isDesktop ? { paddingHorizontal: 48, paddingTop: spacing.xl, paddingBottom: 120, maxWidth: 1200, width: '100%', alignSelf: 'center' } : { paddingHorizontal: spacing.lg, paddingTop: spacing.sm, paddingBottom: 120 }}
         keyboardShouldPersistTaps="handled"
       >
-        {isDesktop ? null : (
-          <TouchableOpacity
+        <TouchableOpacity
             onPress={() => navigation.goBack()}
             style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.sm }}
           >
             <MaterialIcons name="arrow-back" size={20} color={colors.textPrimary} />
             <Text style={{ ...typography.body, color: colors.textPrimary, marginLeft: spacing.xs }}>Back</Text>
           </TouchableOpacity>
-        )}
 
         {isDesktop ? (
           <>

@@ -81,7 +81,12 @@ export default function VenueListingPlansScreen() {
   const [selectedPlan, setSelectedPlan] = useState<PlanKey>('monthly');
   const [activeIndex, setActiveIndex] = useState(1);
   const [existingVenueId, setExistingVenueId] = useState<number | null>(null);
-  const [alertState, setAlertState] = useState<{visible: boolean; title: string; message: string} | null>(null);
+  const [alertState, setAlertState] = useState<{
+    visible: boolean;
+    title: string;
+    message: string;
+    buttons?: { text: string; style?: 'default' | 'cancel' | 'destructive'; onPress?: () => void }[];
+  } | null>(null);
   const carouselRef = useRef<ICarouselInstance>(null);
 
   useEffect(() => {
@@ -258,7 +263,7 @@ export default function VenueListingPlansScreen() {
         onPress={() => {
           setSelectedPlan(plan.key);
           setActiveIndex(plans.findIndex((p) => p.key === plan.key));
-          handleSelectPlan();
+          handleSelectPlan(plan.key);
         }}
         style={{ flex: 1 }}
       >
@@ -361,7 +366,7 @@ export default function VenueListingPlansScreen() {
             onPress={() => {
               setSelectedPlan(plan.key);
               setActiveIndex(plans.findIndex((p) => p.key === plan.key));
-              handleSelectPlan();
+              handleSelectPlan(plan.key);
             }}
             activeOpacity={0.85}
             style={{
@@ -413,24 +418,26 @@ export default function VenueListingPlansScreen() {
     [SCREEN_WIDTH, SNAP_INTERVAL],
   );
 
-  const handleSelectPlan = async () => {
-    const isFree = selectedPlan === 'get_started';
+  const handleSelectPlan = async (planKeyOverride?: PlanKey) => {
+    const planKey = planKeyOverride ?? selectedPlan;
+    const plan = plans.find((p) => p.key === planKey) ?? plans[0];
+    const isFree = planKey === 'get_started';
 
     const priceLabel = isFree
       ? 'Free'
-      : `R${Number((selected.priceNow || '0').replace(/[^0-9.]/g, '')).toLocaleString()}`;
+      : `R${Number((plan.priceNow || '0').replace(/[^0-9.]/g, '')).toLocaleString()}`;
 
-    const billingPeriod = selectedPlan === 'get_started' ? 'monthly' : selectedPlan;
+    const billingPeriod = planKey === 'get_started' ? 'monthly' : planKey;
     await setPortfolioType('venues');
-    updateStep4({ subscriptionPlan: selectedPlan, billingPeriod });
+    updateStep4({ subscriptionPlan: planKey, billingPeriod });
 
     const checkoutParams: ProfileStackParamList['SubscriptionCheckout'] = {
-      tierName: selected.title,
+      tierName: plan.title,
       billing: billingPeriod,
       priceLabel,
       isFree,
       productType: 'venue',
-      planKey: selectedPlan,
+      planKey,
     };
 
     if (!user) {
@@ -458,7 +465,16 @@ export default function VenueListingPlansScreen() {
       latestVenueApplication.data &&
       isBlockingApplicationStatus(latestVenueApplication.data.status)
     ) {
-      navigation.navigate('ApplicationStatus');
+      const statusLabel = String(latestVenueApplication.data.status ?? '').replace(/_/g, ' ');
+      setAlertState({
+        visible: true,
+        title: 'Existing application found',
+        message: `You already have a venue application (status: ${statusLabel}). You cannot start a new registration until it has been processed. You can view its current status instead.`,
+        buttons: [
+          { text: 'View status', style: 'default', onPress: () => navigation.navigate('ApplicationStatus') },
+          { text: 'Cancel', style: 'cancel', onPress: () => setAlertState(null) },
+        ],
+      });
       return;
     }
 
@@ -471,15 +487,13 @@ export default function VenueListingPlansScreen() {
         <View style={isDesktop ? { maxWidth: 1200, width: '100%', alignSelf: 'center', paddingHorizontal: 48, paddingTop: spacing.xl, paddingBottom: spacing.xl } : undefined}>
         {/* Header */}
         <View style={{ paddingHorizontal: isDesktop ? 0 : spacing.lg, paddingTop: spacing.sm }}>
-          {isDesktop ? null : (
-            <TouchableOpacity
-              onPress={() => navigation.goBack()}
-              style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.sm }}
-            >
-              <MaterialIcons name="arrow-back" size={20} color={colors.textPrimary} />
-              <Text style={{ ...typography.body, color: colors.textPrimary, marginLeft: spacing.sm }}>Back</Text>
-            </TouchableOpacity>
-          )}
+          <TouchableOpacity
+            onPress={() => navigation.goBack()}
+            style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.sm }}
+          >
+            <MaterialIcons name="arrow-back" size={20} color={colors.textPrimary} />
+            <Text style={{ ...typography.body, color: colors.textPrimary, marginLeft: spacing.sm }}>Back</Text>
+          </TouchableOpacity>
 
           <Text style={{ ...typography.titleLarge, color: colors.textPrimary, marginBottom: spacing.xs, fontSize: isDesktop ? 32 : undefined, fontWeight: isDesktop ? '600' : undefined }}>
             Venue Listing Plans
@@ -536,7 +550,7 @@ export default function VenueListingPlansScreen() {
                   activeOpacity={0.9}
                   onPress={() => {
                     if (isActive) {
-                      handleSelectPlan();
+                      handleSelectPlan(plan.key);
                     } else {
                       scrollToIndex(planIndex);
                     }
@@ -699,7 +713,7 @@ export default function VenueListingPlansScreen() {
                     <TouchableOpacity
                       onPress={() => {
                         scrollToIndex(planIndex);
-                        setTimeout(handleSelectPlan, 300);
+                        setTimeout(() => handleSelectPlan(plan.key), 300);
                       }}
                       activeOpacity={0.85}
                       style={{
@@ -902,7 +916,7 @@ export default function VenueListingPlansScreen() {
         {/* Bottom CTA */}
         <View style={{ paddingHorizontal: isDesktop ? 0 : spacing.lg, marginTop: spacing.lg, maxWidth: isDesktop ? 720 : undefined, width: '100%', alignSelf: isDesktop ? 'center' : undefined }}>
           <TouchableOpacity
-            onPress={handleSelectPlan}
+            onPress={() => handleSelectPlan()}
             activeOpacity={0.9}
             style={{
               backgroundColor: colors.primary,
@@ -942,7 +956,7 @@ export default function VenueListingPlansScreen() {
           visible={alertState.visible}
           title={alertState.title}
           message={alertState.message}
-          buttons={[{ text: 'OK', style: 'default', onPress: () => setAlertState(null) }]}
+          buttons={alertState.buttons ?? [{ text: 'OK', style: 'default', onPress: () => setAlertState(null) }]}
           onDismiss={() => setAlertState(null)}
         />
       )}

@@ -18,6 +18,8 @@ import { colors, spacing, radii, typography } from '../theme';
 import { VENDOR_CATEGORIES } from './AttendeeHomeScreen';
 import { venueTypes, amenitiesList, venueCapacityOptions } from '../config/venueTypes';
 import { provinces } from '../config/locations';
+import MapRadiusSelector from '../components/MapRadiusSelector';
+import * as ExpoLocation from 'expo-location';
 import {
   type CategoryFilter,
   type FilterState,
@@ -51,6 +53,8 @@ export default function FiltersScreen() {
 
   const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
   const [dropdownSearch, setDropdownSearch] = useState('');
+  const [showMapRadiusSelector, setShowMapRadiusSelector] = useState(false);
+  const [mapRadius, setMapRadius] = useState(20);
 
   const availableCities = useMemo(() => {
     if (selectedProvinces.length === 0) {
@@ -315,6 +319,28 @@ export default function FiltersScreen() {
               </Text>
               <MaterialIcons name="keyboard-arrow-down" size={20} color={colors.textSecondary} />
             </TouchableOpacity>
+
+                       {/* Map Radius */}
+            <TouchableOpacity
+              onPress={() => setShowMapRadiusSelector(true)}
+              style={{
+                borderRadius: radii.md,
+                borderWidth: 1,
+                borderColor: colors.primary,
+                backgroundColor: colors.surface,
+                paddingHorizontal: spacing.md,
+                paddingVertical: spacing.sm,
+                marginBottom: spacing.md,
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <MaterialIcons name="map" size={18} color={colors.primary} style={{ marginRight: spacing.xs }} />
+              <Text style={{ ...typography.bodySemiBold, color: colors.primary }}>
+                Select search area by map radius
+              </Text>
+            </TouchableOpacity>
           </>
         )}
 
@@ -411,6 +437,28 @@ export default function FiltersScreen() {
                 {selectedVendorCities.length > 0 ? selectedVendorCities.join(', ') : 'Any'}
               </Text>
               <MaterialIcons name="keyboard-arrow-down" size={20} color={colors.textSecondary} />
+            </TouchableOpacity>
+
+            {/* Map Radius */}
+            <TouchableOpacity
+              onPress={() => setShowMapRadiusSelector(true)}
+              style={{
+                borderRadius: radii.md,
+                borderWidth: 1,
+                borderColor: colors.primary,
+                backgroundColor: colors.surface,
+                paddingHorizontal: spacing.md,
+                paddingVertical: spacing.sm,
+                marginBottom: spacing.md,
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <MaterialIcons name="map" size={18} color={colors.primary} style={{ marginRight: spacing.xs }} />
+              <Text style={{ ...typography.bodySemiBold, color: colors.primary }}>
+                Select search area by map radius
+              </Text>
             </TouchableOpacity>
           </>
         )}
@@ -590,9 +638,9 @@ export default function FiltersScreen() {
                   else if (activeDropdown === 'vendor_province') allOptions = provinces.map((p) => p.name);
                   else if (activeDropdown === 'vendor_city') allOptions = availableVendorCities;
 
-                  const filteredOptions = allOptions.filter((opt) =>
-                    opt.toLowerCase().includes(dropdownSearch.trim().toLowerCase())
-                  );
+                  const filteredOptions = allOptions
+                    .filter((opt) => opt.toLowerCase().includes(dropdownSearch.trim().toLowerCase()))
+                    .sort((a, b) => a.localeCompare(b));
 
                   const anySelected =
                     activeDropdown === 'venue_type'
@@ -770,6 +818,50 @@ export default function FiltersScreen() {
           </View>
         </KeyboardAvoidingView>
       </Modal>
+
+      {/* Map Radius Selector */}
+      <MapRadiusSelector
+        visible={showMapRadiusSelector}
+        onClose={() => setShowMapRadiusSelector(false)}
+        onLocationSelected={async (location, radius) => {
+          setMapRadius(radius);
+          setShowMapRadiusSelector(false);
+          try {
+            const places = await ExpoLocation.reverseGeocodeAsync(location);
+            const region = (places[0]?.region ?? '').trim();
+            if (region) {
+              const searchText = region.toLowerCase();
+              const matchingProvince = provinces.find((p) => {
+                const name = p.name.toLowerCase();
+                return name.includes(searchText) || searchText.includes(name);
+              });
+              if (matchingProvince) {
+                if (category === 'venues') {
+                  setSelectedProvinces([matchingProvince.name]);
+                  const provCities = matchingProvince.cities;
+                  setSelectedCities((prev) => prev.filter((c) => provCities.includes(c)));
+                } else if (category === 'vendors' || category === 'services') {
+                  setSelectedVendorProvinces([matchingProvince.name]);
+                  const provCities = matchingProvince.cities;
+                  setSelectedVendorCities((prev) => prev.filter((c) => provCities.includes(c)));
+                } else {
+                  setSelectedProvinces([matchingProvince.name]);
+                  setSelectedVendorProvinces([matchingProvince.name]);
+                  const provCities = matchingProvince.cities;
+                  setSelectedCities((prev) => prev.filter((c) => provCities.includes(c)));
+                  setSelectedVendorCities((prev) => prev.filter((c) => provCities.includes(c)));
+                }
+              }
+            }
+          } catch {
+            // Silently ignore geocoding errors
+          }
+        }}
+        onClearSelection={() => {
+          setMapRadius(20);
+        }}
+        initialRadius={mapRadius}
+      />
     </View>
   );
 }

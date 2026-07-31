@@ -347,15 +347,13 @@ export default function BillingScreen() {
                 <View style={isDesktop ? { maxWidth: 1200, width: '100%', alignSelf: 'center', paddingHorizontal: 48, paddingTop: spacing.xl, paddingBottom: spacing.xl } : undefined}>
                     {/* Header */}
                     <View style={{ paddingHorizontal: isDesktop ? 0 : spacing.lg, paddingTop: spacing.sm, paddingBottom: spacing.md }}>
-                        {isDesktop ? null : (
-                            <TouchableOpacity
+                        <TouchableOpacity
                                 onPress={() => navigation.goBack()}
                                 style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.sm }}
                             >
                                 <MaterialIcons name="arrow-back" size={20} color={colors.textPrimary} />
                                 <Text style={{ ...typography.body, color: colors.textPrimary, marginLeft: spacing.sm }}>Back</Text>
                             </TouchableOpacity>
-                        )}
 
                         <Text style={{ ...typography.displayMedium, color: colors.textPrimary, marginBottom: spacing.xs, fontSize: isDesktop ? 32 : undefined, fontWeight: isDesktop ? '600' : undefined }}>
                             Billing & Subscription

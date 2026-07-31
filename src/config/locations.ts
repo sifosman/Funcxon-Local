@@ -3,7 +3,8 @@ export interface Province {
   cities: string[];
 }
 
-export const provinces: Province[] = [
+export const provinces: Province[] = ([
+
   {
     name: "Gauteng",
     cities: [
@@ -107,7 +108,7 @@ export const provinces: Province[] = [
       "Williston"
     ]
   }
-];
+]).sort((a, b) => a.name.localeCompare(b.name));
 
 export const getCitiesByProvince = (provinceName: string): string[] => {
   const province = provinces.find(p => p.name === provinceName);

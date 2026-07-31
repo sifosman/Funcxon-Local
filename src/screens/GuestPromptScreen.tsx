@@ -93,8 +93,7 @@ export default function GuestPromptScreen(props: Props) {
           </TouchableOpacity>
         </View>
 
-        {!isDesktop && (
-          <TouchableOpacity
+        <TouchableOpacity
             onPress={() => navigation.goBack()}
             style={{ marginTop: spacing.lg, padding: spacing.sm }}
           >
@@ -102,7 +101,6 @@ export default function GuestPromptScreen(props: Props) {
               Continue browsing
             </Text>
           </TouchableOpacity>
-        )}
       </View>
     </View>
   );

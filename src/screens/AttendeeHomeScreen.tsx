@@ -89,171 +89,20 @@ type CategoryOption = {
 };
 
 export const VENDOR_CATEGORIES: CategoryOption[] = [
-  {
-    id: 1,
-    label: 'Audio & Visual',
-    subcategories: [
-      'Indoor/Outdoor Sound',
-      'Indoor & Stage Lighting',
-      'Outdoor Lighting',
-      ' AV Technician',
-      ' Screens & Projectors',
-      ' Special Effects',
-      ' Live Feeds',
-      ' Fireworks / Drone Pyrotechnics',
-    ],
-  },
-  {
-    id: 2,
-    label: 'Catering - Edibles & Drinkables',
-    subcategories: [
-      'Cocktails / Mocktails',
-      ' Hot Beverages',
-      ' Food Chefs / Cooks',
-      ' Desserts / Patisserie',
-      ' Bakers',
-      ' Savoury / Finger Foods',
-      'Fruit Carvers',
-      'Ice Sculptors',
-    ],
-  },
-  {
-    id: 3,
-    label: 'Catering - Table Wear',
-    subcategories: ['Cutlery', ' Crockery', ' Centre Pieces', ' Food Warmers', ' Urns', 'Table Cloths', 'Chair Covers'],
-  },
-  { id: 4, label: 'Waste Management', subcategories: ['Waste Removal', 'Recycling'] },
-  {
-    id: 5,
-    label: 'Decor & Venue Styling ',
-    subcategories: [
-      'Interior Decorators',
-      'Linen & Draping',
-      'Florists',
-      'Stage Stylists',
-      'Carpets',
-      'Backdrops',
-      'Food Station Stylists',
-    ],
-  },
-  {
-    id: 6,
-    label: 'Entertainment - Live Performers & Acts',
-    subcategories: [
-      'Celebrity Hosts',
-      'Clowns',
-      'Comedians',
-      'Content Creators & Influencers',
-      'Dancers',
-      'Impersinators',
-      'Instrumentalist (Violinist, Pianist)',
-      "MC's",
-      'Singers & Bands',
-      'SPECIALITY ACTS: Acrobats, Fire Eaters, Jugglers, peupperteers, ventroliquists',
-    ],
-  },
-  {
-    id: 7,
-    label: 'Entertainment Rentals - Rides & Games',
-    subcategories: [
-      'Craft stations',
-      'Putt Putt',
-      'Fun Fair Rides',
-      'Petting Zoos',
-      'Arcade Gaming',
-      'VR Experiences',
-      'Inflatables',
-      'Mechanical Rides & Simulators',
-      'Carnival & Interactive Games',
-      'Face Painting',
-    ],
-  },
-  {
-    id: 8,
-    label: 'Equipment Hire',
-    subcategories: [
-      'Braai stands',
-      ' Stoves',
-      ' Heaters/Heating',
-      'Cooling/Air Conditioning',
-      ' Refrigerators & Freezers',
-      ' Spotlights',
-      ' Electricity / Electrical',
-    ],
-  },
-  { id: 9, label: 'Planners', subcategories: ['Event Planners', 'Concept Development', 'Promoters'] },
-  {
-    id: 10,
-    label: 'Furniture Hire',
-    subcategories: [
-      'Lounge',
-      ' Ottomans & poufs',
-      ' Cocktail tables',
-      ' Benches & stools',
-      ' Bar units',
-      ' Shelving displays',
-      ' Tables',
-      ' Chairs',
-      ' Stage',
-      ' Podiums',
-      ' Dance Floor',
-      ' Food Carts',
-    ],
-  },
-  {
-    id: 11,
-    label: 'Personal Services',
-    subcategories: [
-      'Hair & Makeup',
-      ' Nail Tech',
-      ' Henna Artists',
-      ' Seamstress',
-      ' Styling Assistance',
-      ' Outfit steaming & fitting',
-    ],
-  },
-  { id: 12, label: 'Photography & Videography', subcategories: ['Photographer', ' Videographer', ' Drone Operator', ' Live Streaming', ' Social Media '] },
-  {
-    id: 13,
-    label: 'Power & Load-Shedding Solutions',
-    subcategories: ['Generators', ' Backup Power Solutions', ' Extension & Distribution Equipment'],
-  },
-  { id: 14, label: 'Props Hire', subcategories: ['Photo Booths', ' Themed décor', ' Backdrop Frames'] },
-  {
-    id: 15,
-    label: 'Signage & Printing',
-    subcategories: ['Welcome & Directional Signage', ' Seating Charts & Table Numbers', ' Branding & Banners', 'Invitations', 'Embossing'],
-  },
-  { id: 16, label: 'Stages & Rigging', subcategories: ['Stage Builds', ' Trussing & Rigging', ' Podiums & Platforms', 'Stage Balustrade'] },
-  {
-    id: 17,
-    label: 'Staffing Professional & General',
-    subcategories: [
-      ' Security & Body Guards',
-      ' Valet',
-      ' Waiterers',
-      ' General Workers',
-      ' Cleaning Crews',
-      ' Bartenders',
-      ' Ushers / Hostesses',
-      ' Ticketing Staff',
-      ' Setup & Breakdown Crew',
-      ' Technicians',
-    ],
-  },
-  { id: 18, label: 'Tents & Marquees', subcategories: ['Frame Tents', ' Peg & Pole Marquees', ' Clear Roof / Stretch Tents', ' Gazebos'] },
-  {
-    id: 19,
-    label: 'Transport & Logistics',
-    subcategories: ['Shuttle/Passenger Services', ' Equipment Transport', " Vehicle Hire (Luxury/Sports/SUV's)"],
-  },
-  { id: 20, label: 'Sanitation Facilities', subcategories: ['Portable Toilets', ' Luxury Restrooms'] },
-  {
-    id: 21,
-    label: 'Parcelling & Gifting',
-    subcategories: ['Party Packs', ' Bride/Groom gift parcels', ' Thank you bags', ' Promotional Goodie bags'],
-  },
-  { id: 22, label: 'Ticketing & Access Control', subcategories: ['Onsight Ticketing', ' Access Management'] },
+  { id: 12, label: 'Photography & Videography', subcategories: [
+      'Drone Operator',
+      'Live Streaming',
+      'Photographer',
+      'Social Media',
+      'Videographer',
+    ] },
+  { id: 9, label: 'Planners', subcategories: ['Concept Development', 'Event Planners', 'Promoters'] },
+  { id: 14, label: 'Props Hire', subcategories: ['Backdrop Frames', 'Photo Booths', 'Themed décor'] },
+  { id: 20, label: 'Sanitation Facilities', subcategories: ['Luxury Restrooms', 'Portable Toilets'] },
+  { id: 16, label: 'Stages & Rigging', subcategories: ['Podiums & Platforms', 'Stage Balustrade', 'Stage Builds', 'Trussing & Rigging'] },
+  { id: 18, label: 'Tents & Marquees', subcategories: ['Clear Roof / Stretch Tents', 'Frame Tents', 'Gazebos', 'Peg & Pole Marquees'] },
+  { id: 22, label: 'Ticketing & Access Control', subcategories: ['Access Management', 'Onsight Ticketing'] },
+  { id: 4, label: 'Waste Management', subcategories: ['Recycling', 'Waste Removal'] }
 ];
 
 const VENUE_TYPES: string[] = [
@@ -277,7 +126,7 @@ const VENUE_TYPES: string[] = [
   'Sports Courts & Arenas',
   'Theatres',
   'Wine estates',
-];
+].sort((a, b) => a.localeCompare(b));
 
 type CategoryPickerOption = {
   key: string;
@@ -759,7 +608,7 @@ export default function AttendeeHomeScreen() {
       const { data: vendors, error: vendorError } = await supabase
         .from('vendors')
         .select('id, name, price_range, rating, review_count, image_url, location, description, category_id, service_options, vendor_tags, address_line_1, city, province')
-        .limit(50);
+        .limit(200);
 
       if (vendorError) throw vendorError;
 
@@ -767,7 +616,7 @@ export default function AttendeeHomeScreen() {
       const { data: venues, error: venueError } = await supabase
         .from('venue_listings')
         .select('id, name, rating, review_count, image_url, location, description, venue_type, venue_capacity, amenities, features, address_line_1, city, province')
-        .limit(50);
+        .limit(200);
 
       if (venueError) throw venueError;
 
@@ -1101,6 +950,11 @@ export default function AttendeeHomeScreen() {
       const city = (item.city ?? '').toLowerCase();
       const province = (item.province ?? '').toLowerCase();
       const location = (item.location ?? '').toLowerCase();
+      const categoryLabel = item.type === 'vendor' && typeof item.category_id === 'number'
+        ? (VENDOR_CATEGORIES.find((c) => c.id === item.category_id)?.label ?? '').toLowerCase()
+        : '';
+      const serviceOptions = Array.isArray(item.service_options) ? item.service_options.map((v) => String(v ?? '').toLowerCase()) : [];
+      const vendorTags = Array.isArray(item.vendor_tags) ? item.vendor_tags.map((v) => String(v ?? '').toLowerCase()) : [];
 
       const matchesSearch =
         !query ||
@@ -1108,7 +962,10 @@ export default function AttendeeHomeScreen() {
         description.includes(query) ||
         city.includes(query) ||
         province.includes(query) ||
-        location.includes(query);
+        location.includes(query) ||
+        categoryLabel.includes(query) ||
+        serviceOptions.some((v) => v.includes(query)) ||
+        vendorTags.some((v) => v.includes(query));
 
       let matchesType = true;
       if (serviceType === 'Venues') {

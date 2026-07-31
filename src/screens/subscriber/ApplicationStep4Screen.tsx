@@ -557,8 +557,7 @@ export default function ApplicationStep4Screen() {
         contentContainerStyle={isDesktop ? { ...desktopContainerStyle } as any : { paddingBottom: spacing.xxl * 6 }}
       >
         <View style={{ paddingHorizontal: isDesktop ? 0 : spacing.lg, paddingTop: spacing.sm }}>
-          {!isDesktop && (
-            <TouchableOpacity
+          <TouchableOpacity
               onPress={() => navigation.goBack()}
               style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.sm }}
             >
@@ -567,7 +566,6 @@ export default function ApplicationStep4Screen() {
                 Back
               </Text>
             </TouchableOpacity>
-          )}
 
           <View style={{ marginBottom: spacing.lg, maxWidth: isDesktop ? 800 : undefined, width: isDesktop ? '100%' : undefined, alignSelf: isDesktop ? 'center' as const : undefined }}>
             <View style={{ marginBottom: spacing.md, alignSelf: 'flex-start' }}>

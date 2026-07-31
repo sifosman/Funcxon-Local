@@ -109,8 +109,7 @@ export default function LegalDocumentScreen() {
       <ScrollView contentContainerStyle={{ paddingBottom: spacing.xxl }}>
         <View style={isDesktop ? { maxWidth: 800, width: '100%', alignSelf: 'center', paddingHorizontal: 48, paddingTop: spacing.sm } : { paddingHorizontal: spacing.lg, paddingTop: spacing.sm }}>
           {/* Header */}
-          {isDesktop ? null : (
-            <TouchableOpacity
+          <TouchableOpacity
               onPress={() => navigation.goBack()}
               style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.sm }}
             >
@@ -119,7 +118,6 @@ export default function LegalDocumentScreen() {
                 Back
               </Text>
             </TouchableOpacity>
-          )}
 
           {/* Title Card */}
           <View

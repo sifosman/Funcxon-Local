@@ -88,7 +88,12 @@ export default function SubscriptionPlansScreen() {
   const [selectedPlan, setSelectedPlan] = useState<PlanKey>('premium');
   const [activeIndex, setActiveIndex] = useState(1);
   const [existingVendorId, setExistingVendorId] = useState<number | null>(null);
-  const [alertState, setAlertState] = useState<{visible: boolean; title: string; message: string} | null>(null);
+  const [alertState, setAlertState] = useState<{
+    visible: boolean;
+    title: string;
+    message: string;
+    buttons?: { text: string; style?: 'default' | 'cancel' | 'destructive'; onPress?: () => void }[];
+  } | null>(null);
   const carouselRef = useRef<ICarouselInstance>(null);
 
   useEffect(() => {
@@ -227,23 +232,26 @@ export default function SubscriptionPlansScreen() {
     [SCREEN_WIDTH, SNAP_INTERVAL],
   );
 
-  const handleSelectPlan = async () => {
-    const isFree = selectedPlan === 'get_started';
+  const handleSelectPlan = async (planKeyOverride?: PlanKey) => {
+    const planKey = planKeyOverride ?? selectedPlan;
+    const plan = plans.find((p) => p.key === planKey) ?? plans[0];
+    const isFree = planKey === 'get_started';
 
+    const planPrice = selectedBilling === 'monthly' ? plan.priceMonthly : plan.priceYearly;
     const priceLabel = isFree
       ? 'Free'
-      : `${currentPrice}/${selectedBilling === 'monthly' ? 'month' : 'year'}`;
+      : `${planPrice}/${selectedBilling === 'monthly' ? 'month' : 'year'}`;
 
     await setPortfolioType('vendors');
-    updateStep4({ subscriptionPlan: selectedPlan, billingPeriod: selectedBilling });
+    updateStep4({ subscriptionPlan: planKey, billingPeriod: selectedBilling });
 
     const checkoutParams: ProfileStackParamList['SubscriptionCheckout'] = {
-      tierName: selected.title,
+      tierName: plan.title,
       billing: selectedBilling,
       priceLabel,
       isFree,
       productType: 'vendor',
-      planKey: selectedPlan,
+      planKey,
     };
 
     if (!user) {
@@ -267,7 +275,16 @@ export default function SubscriptionPlansScreen() {
     // New applicant — check for blocking application status before starting application form
     const latestVendorApplication = await getLatestUserApplicationByType('vendor');
     if (latestVendorApplication.success && latestVendorApplication.data && isBlockingApplicationStatus(latestVendorApplication.data.status)) {
-      navigation.navigate('ApplicationStatus');
+      const statusLabel = String(latestVendorApplication.data.status ?? '').replace(/_/g, ' ');
+      setAlertState({
+        visible: true,
+        title: 'Existing application found',
+        message: `You already have a vendor application (status: ${statusLabel}). You cannot start a new registration until it has been processed. You can view its current status instead.`,
+        buttons: [
+          { text: 'View status', style: 'default', onPress: () => navigation.navigate('ApplicationStatus') },
+          { text: 'Cancel', style: 'cancel', onPress: () => setAlertState(null) },
+        ],
+      });
       return;
     }
 
@@ -283,7 +300,7 @@ export default function SubscriptionPlansScreen() {
         onPress={() => {
           setSelectedPlan(plan.key);
           setActiveIndex(plans.findIndex((p) => p.key === plan.key));
-          handleSelectPlan();
+          handleSelectPlan(plan.key);
         }}
         style={{ flex: 1 }}
       >
@@ -401,7 +418,7 @@ export default function SubscriptionPlansScreen() {
             onPress={() => {
               setSelectedPlan(plan.key);
               setActiveIndex(plans.findIndex((p) => p.key === plan.key));
-              handleSelectPlan();
+              handleSelectPlan(plan.key);
             }}
             activeOpacity={0.85}
             style={{
@@ -434,15 +451,13 @@ export default function SubscriptionPlansScreen() {
         <View style={isDesktop ? { maxWidth: 1200, width: '100%', alignSelf: 'center', paddingHorizontal: 48, paddingTop: spacing.xl, paddingBottom: spacing.xl } : undefined}>
           {/* Header */}
           <View style={{ paddingHorizontal: isDesktop ? 0 : spacing.lg, paddingTop: spacing.sm }}>
-            {isDesktop ? null : (
-              <TouchableOpacity
-                onPress={() => navigation.goBack()}
-                style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.sm }}
-              >
-                <MaterialIcons name="arrow-back" size={20} color={colors.textPrimary} />
-                <Text style={{ ...typography.body, color: colors.textPrimary, marginLeft: spacing.sm }}>Back</Text>
-              </TouchableOpacity>
-            )}
+            <TouchableOpacity
+              onPress={() => navigation.goBack()}
+              style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.sm }}
+            >
+              <MaterialIcons name="arrow-back" size={20} color={colors.textPrimary} />
+              <Text style={{ ...typography.body, color: colors.textPrimary, marginLeft: spacing.sm }}>Back</Text>
+            </TouchableOpacity>
 
             <Text style={{ ...typography.titleLarge, color: colors.textPrimary, marginBottom: spacing.xs, fontSize: isDesktop ? 32 : undefined, fontWeight: isDesktop ? '600' : undefined }}>
               Vendor & Service Plans
@@ -557,7 +572,7 @@ export default function SubscriptionPlansScreen() {
                   activeOpacity={0.9}
                   onPress={() => {
                     if (isActive) {
-                      handleSelectPlan();
+                      handleSelectPlan(plan.key);
                     } else {
                       scrollToIndex(planIndex);
                     }
@@ -740,7 +755,7 @@ export default function SubscriptionPlansScreen() {
                     <TouchableOpacity
                       onPress={() => {
                         scrollToIndex(planIndex);
-                        setTimeout(handleSelectPlan, 300);
+                        setTimeout(() => handleSelectPlan(plan.key), 300);
                       }}
                       activeOpacity={0.85}
                       style={{
@@ -944,7 +959,7 @@ export default function SubscriptionPlansScreen() {
         {/* Bottom CTA */}
         <View style={{ paddingHorizontal: isDesktop ? 0 : spacing.lg, marginTop: spacing.lg, maxWidth: isDesktop ? 720 : undefined, width: '100%', alignSelf: isDesktop ? 'center' : undefined }}>
           <TouchableOpacity
-            onPress={handleSelectPlan}
+            onPress={() => handleSelectPlan()}
             activeOpacity={0.9}
             style={{
               backgroundColor: colors.primary,
@@ -984,7 +999,7 @@ export default function SubscriptionPlansScreen() {
           visible={alertState.visible}
           title={alertState.title}
           message={alertState.message}
-          buttons={[{ text: 'OK', style: 'default', onPress: () => setAlertState(null) }]}
+          buttons={alertState.buttons ?? [{ text: 'OK', style: 'default', onPress: () => setAlertState(null) }]}
           onDismiss={() => setAlertState(null)}
         />
       )}

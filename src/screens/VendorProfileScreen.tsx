@@ -3,6 +3,7 @@ import { ActivityIndicator, BackHandler, Dimensions, Image, Linking, Platform, S
 import Carousel from 'react-native-reanimated-carousel';
 import type { ICarouselInstance } from 'react-native-reanimated-carousel';
 import ThemedAlert from '../components/ThemedAlert';
+import { openExternalUrl } from '../utils/openUrl';
 import NetworkImage from '../components/NetworkImage';
 import ImageZoomModal, { type GalleryItem } from '../components/ImageZoomModal';
 import VideoThumbnail from '../components/VideoThumbnail';
@@ -535,15 +536,15 @@ export default function VendorProfileScreen({ route, navigation }: Props) {
   };
 
   const handleOpenUrl = (url?: string | null) => {
-    if (!url) return;
-    Linking.openURL(url).catch(() => null);
+    openExternalUrl(url);
   };
 
   const whatsappUrl = vendor?.whatsapp_number
     ? `https://wa.me/${String(vendor.whatsapp_number).replace(/[^0-9]/g, '')}`
     : null;
   const contactNumber = vendor?.whatsapp_number?.trim() || null;
-  const emailUrl = vendor?.email ? `mailto:${vendor.email}` : null;
+  const contactEmail = vendor?.email?.trim() || (vendor as any)?.billing_email?.trim() || null;
+  const emailUrl = contactEmail ? `mailto:${contactEmail}` : null;
   const webMapEmbedUrl = mapCoordinates
     ? `https://www.google.com/maps?q=${mapCoordinates.latitude},${mapCoordinates.longitude}&z=16&output=embed`
     : mapSearchTarget
@@ -1830,14 +1831,14 @@ const renderSidebar = () => (
               </TouchableOpacity>
             ) : null}
 
-            {vendor.email ? (
+            {contactEmail ? (
               <TouchableOpacity
                 onPress={() => handleOpenUrl(emailUrl)}
                 style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}
               >
                 <MaterialIcons name="email" size={16} color={colors.primary} />
                 <Text style={{ ...typography.caption, color: colors.primary }}>
-                  {vendor.email}
+                  {contactEmail}
                 </Text>
               </TouchableOpacity>
             ) : null}
@@ -1880,8 +1881,7 @@ const renderSidebar = () => (
       style={{ flex: 1, backgroundColor: isDesktop ? colors.surfaceBg : colors.background }}
       contentContainerStyle={isDesktop ? { paddingHorizontal: 48, paddingBottom: spacing.lg, paddingTop: spacing.xl, maxWidth: 1200, width: '100%', alignSelf: 'center' } : { paddingHorizontal: spacing.lg, paddingBottom: spacing.lg, paddingTop: spacing.sm }}
     >
-      {isDesktop ? null : (
-        <TouchableOpacity
+      <TouchableOpacity
           onPress={handleBackNavigation}
           style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.md }}
         >
@@ -1890,7 +1890,6 @@ const renderSidebar = () => (
             Back
           </Text>
         </TouchableOpacity>
-      )}
 
       {isDesktop ? (
         <View style={{ flexDirection: 'row', gap: 24 } as any}>

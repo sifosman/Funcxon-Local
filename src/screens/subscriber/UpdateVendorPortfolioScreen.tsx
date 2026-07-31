@@ -99,7 +99,7 @@ export default function UpdateVendorPortfolioScreen() {
     const [videoLimit, setVideoLimit] = useState<number>(0);
     const [uploadingImage, setUploadingImage] = useState(false);
     const [uploadingVideo, setUploadingVideo] = useState(false);
-    const [alertState, setAlertState] = useState<{visible: boolean; title: string; message: string; buttons?: any[]} | null>(null);
+    const [alertState, setAlertState] = useState<{visible: boolean; title: string; message: string; buttons?: any[]; navigateOnDismiss?: boolean} | null>(null);
     const [form, setForm] = useState({
         name: '',
         description: '',
@@ -458,6 +458,7 @@ export default function UpdateVendorPortfolioScreen() {
                     visible: true,
                     title: 'Saved',
                     message: 'Your portfolio has been updated.',
+                    navigateOnDismiss: true,
                     buttons: [{ text: 'OK', style: 'default', onPress: () => { setAlertState(null); navigation.navigate('ListerPortfolio'); } }],
                 });
             } else {
@@ -506,6 +507,7 @@ export default function UpdateVendorPortfolioScreen() {
                     visible: true,
                     title: 'Created',
                     message: 'Your vendor portfolio has been created.',
+                    navigateOnDismiss: true,
                     buttons: [{ text: 'OK', style: 'default', onPress: () => { setAlertState(null); navigation.navigate('ListerPortfolio'); } }],
                 });
             }
@@ -577,15 +579,13 @@ export default function UpdateVendorPortfolioScreen() {
             <ScrollView contentContainerStyle={desktopContainerStyle as any}>
                 {/* Header */}
                 <View style={{ paddingHorizontal: isDesktop ? 0 : spacing.lg, paddingTop: spacing.sm, paddingBottom: spacing.md, maxWidth: isDesktop ? 800 : undefined, width: isDesktop ? '100%' : undefined, alignSelf: isDesktop ? 'center' as const : undefined }}>
-                    {!isDesktop && (
-                        <TouchableOpacity
+                    <TouchableOpacity
                             onPress={() => navigation.goBack()}
                             style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.sm }}
                         >
                             <MaterialIcons name="arrow-back" size={20} color={colors.textPrimary} />
                             <Text style={{ ...typography.body, color: colors.textPrimary, marginLeft: spacing.sm }}>Back</Text>
                         </TouchableOpacity>
-                    )}
 
                     <Text style={isDesktop ? { ...typography.headlineMd, color: colors.primary, marginBottom: spacing.xs } as any : { ...typography.displayMedium, color: colors.textPrimary, marginBottom: spacing.xs }}>
                         {vendor ? 'Update Vendor Portfolio' : 'Create Vendor Portfolio'}
@@ -1125,7 +1125,15 @@ export default function UpdateVendorPortfolioScreen() {
                                 searchable
                                 placeholder="Select amenities"
                             />
-                            {renderField('Accepted Payment Methods', 'accepted_payment_methods', { placeholder: 'e.g. EFT, Cash, PayFast (comma separated)' })}
+                            <DropdownPicker
+                                label="Accepted Payment Methods"
+                                selectedValues={stringToArray(form.accepted_payment_methods)}
+                                onConfirm={(vals) => setForm((prev) => ({ ...prev, accepted_payment_methods: arrayToString(vals) }))}
+                                options={['Cash', 'EFT', 'Credit Card', 'Debit Card', 'PayFast', 'PayPal', 'Stripe', 'SnapScan', 'Zapper', 'Yoco', 'Ozow']}
+                                multi
+                                searchable
+                                placeholder="Select payment methods"
+                            />
                         </View>
 
                         {/* Tags display */}
@@ -1219,7 +1227,7 @@ export default function UpdateVendorPortfolioScreen() {
                     title={alertState.title}
                     message={alertState.message}
                     buttons={alertState.buttons ?? [{ text: 'OK', style: 'default', onPress: () => setAlertState(null) }]}
-                    onDismiss={() => setAlertState(null)}
+                    onDismiss={() => { const shouldNav = alertState?.navigateOnDismiss; setAlertState(null); if (shouldNav) navigation.navigate('ListerPortfolio'); }}
                 />
             )}
         </KeyboardAvoidingView>

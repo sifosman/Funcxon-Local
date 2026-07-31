@@ -424,15 +424,13 @@ export default function VendorCatalogueScreen() {
       <View style={{ flex: 1, backgroundColor: isDesktop ? colors.surfaceBg : colors.background }}>
         <ScrollView contentContainerStyle={isDesktop ? { ...desktopContainerStyle, paddingBottom: spacing.xxl } as any : { paddingBottom: spacing.xl }}>
           <View style={{ paddingHorizontal: isDesktop ? 0 : spacing.lg, paddingTop: spacing.sm, paddingBottom: spacing.md }}>
-            {!isDesktop && (
-              <TouchableOpacity
+            <TouchableOpacity
                 onPress={() => navigation.goBack()}
                 style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.sm }}
               >
                 <MaterialIcons name="arrow-back" size={20} color={colors.textPrimary} />
                 <Text style={{ ...typography.body, color: colors.textPrimary, marginLeft: spacing.sm }}>Back</Text>
               </TouchableOpacity>
-            )}
 
             {renderHeader(isDesktop)}
           </View>

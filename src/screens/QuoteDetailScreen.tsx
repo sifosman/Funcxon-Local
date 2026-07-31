@@ -958,8 +958,7 @@ export default function QuoteDetailScreen() {
         }}
         keyboardShouldPersistTaps="handled"
       >
-        {isDesktop ? null : (
-          <TouchableOpacity
+        <TouchableOpacity
             onPress={handleGoBack}
             style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.sm }}
           >
@@ -968,7 +967,6 @@ export default function QuoteDetailScreen() {
               Back
             </Text>
           </TouchableOpacity>
-        )}
 
         {isDesktop ? (
           <>

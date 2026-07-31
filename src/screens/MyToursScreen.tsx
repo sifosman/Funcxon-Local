@@ -283,15 +283,13 @@ export default function MyToursScreen({ navigation }: Props) {
     <View style={{ flex: 1, backgroundColor: isDesktop ? colors.surfaceBg : colors.background }}>
       <ScrollView contentContainerStyle={isDesktop ? { paddingBottom: spacing.xl, paddingHorizontal: 48, maxWidth: 1200, width: '100%', alignSelf: 'center' } : { paddingBottom: spacing.xl }}>
         <View style={isDesktop ? { paddingTop: spacing.sm, paddingBottom: spacing.md } : { paddingHorizontal: spacing.lg, paddingTop: spacing.sm, paddingBottom: spacing.md }}>
-          {isDesktop ? null : (
-            <TouchableOpacity
+          <TouchableOpacity
               onPress={() => navigation.goBack()}
               style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.sm }}
             >
               <MaterialIcons name="arrow-back" size={20} color={colors.textPrimary} />
               <Text style={{ ...typography.body, color: colors.textPrimary, marginLeft: spacing.sm }}>Back</Text>
             </TouchableOpacity>
-          )}
 
           {isDesktop ? (
             <View style={{ marginBottom: spacing.lg, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end' }}>

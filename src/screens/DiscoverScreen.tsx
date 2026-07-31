@@ -204,19 +204,18 @@ export default function DiscoverScreen() {
   };
 
   const getDisplayTitle = () => {
-    if (route.params?.searchTitle) {
-      return route.params.searchTitle;
-    }
-
     if (search.trim()) {
-      return `Results for “${search.trim()}”`;
+      return `Results for "${search.trim()}"`;
     }
 
     if (route.params?.presetFilter) {
       return presetTitles[route.params.presetFilter];
     }
 
-    return 'Discover';
+    if (category === 'venues') return 'Discover Venues';
+    if (category === 'vendors') return 'Discover Vendors';
+    if (category === 'services') return 'Discover Services';
+    return 'Discover Vendors';
   };
 
   const getActiveSearchModeLabel = () => {
@@ -281,14 +280,14 @@ export default function DiscoverScreen() {
       const { data: vendors, error: vendorError } = await supabase
         .from('vendors')
         .select('id, name, rating, review_count, image_url, location, description, category_id, service_options, vendor_tags, featured_listing, address_line_1, city, province')
-        .limit(60);
+        .limit(200);
 
       if (vendorError) throw vendorError;
 
       const { data: venues, error: venueError } = await supabase
         .from('venue_listings')
         .select('id, name, rating, review_count, image_url, location, description, venue_type, venue_capacity, amenities, features, address_line_1, city, province')
-        .limit(60);
+        .limit(200);
 
       if (venueError) throw venueError;
 
@@ -332,7 +331,7 @@ export default function DiscoverScreen() {
 
   useLayoutEffect(() => {
     navigation.setOptions({ title: getDisplayTitle() });
-  }, [navigation, route.params?.searchTitle, route.params?.presetFilter, search]);
+  }, [navigation, route.params?.presetFilter, search, category]);
 
   useEffect(() => {
     if (!route.params) {
@@ -442,9 +441,12 @@ export default function DiscoverScreen() {
     return safeData.filter((item) => {
       const itemCategory = classifyCategory(item);
 
-      // Search: broad match across name, location, city, province, type, amenities, tags
+      // Search: broad match across name, location, city, province, type, amenities, tags, category label
       let matchesSearch = true;
       if (queryTokens.length > 0) {
+        const categoryLabel = item.type === 'vendor' && typeof item.category_id === 'number'
+          ? VENDOR_CATEGORIES.find((c) => c.id === item.category_id)?.label ?? ''
+          : '';
         const fields = [
           item.name ?? '',
           item.description ?? '',
@@ -452,6 +454,7 @@ export default function DiscoverScreen() {
           item.city ?? '',
           item.province ?? '',
           item.venue_type ?? '',
+          categoryLabel,
           ...(Array.isArray(item.amenities) ? item.amenities : []),
           ...(Array.isArray(item.service_options) ? item.service_options : []),
           ...(Array.isArray(item.vendor_tags) ? item.vendor_tags : []),
@@ -1973,9 +1976,9 @@ export default function DiscoverScreen() {
                   else if (activeDropdown === 'vendor_province') allOptions = provinces.map((p) => p.name);
                   else if (activeDropdown === 'vendor_city') allOptions = availableVendorCities;
 
-                  const filteredOptions = allOptions.filter((opt) =>
-                    opt.toLowerCase().includes(dropdownSearch.trim().toLowerCase())
-                  );
+                  const filteredOptions = allOptions
+                    .filter((opt) => opt.toLowerCase().includes(dropdownSearch.trim().toLowerCase()))
+                    .sort((a, b) => a.localeCompare(b));
 
                   // Any option
                   const anySelected =

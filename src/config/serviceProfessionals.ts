@@ -7,6 +7,20 @@ export interface ServiceCategory {
 
 export const serviceCategories: ServiceCategory[] = [
   {
+    id: "creative-services",
+    name: "Creative Services",
+    description: "Designers, Stylists, Florists, Models",
+    types: [
+      "Designers",
+      "Fashion Stylists / Dressers",
+      "Florists / Floral Designers",
+      "Hair Stylists / Makeup Artists",
+      "Models / Brand Hosts",
+      "Stage Designers / Stage Managers",
+      "Wardrobe Consultants / Costume Designers",
+    ]
+  },
+  {
     id: "entertainment",
     name: "Entertainment",
     description: "Performers, DJs, Musicians, Dancers",
@@ -19,71 +33,7 @@ export const serviceCategories: ServiceCategory[] = [
       "DJ / Music Specialists",
       "Fire Dancers / Specialty Acts",
       "Magicians / Illusionists",
-      "Musicians / Bands / Singers"
-    ]
-  },
-  {
-    id: "food-drinks",
-    name: "Food & Drinks",
-    description: "Chefs, Caterers, Bartenders, Baristas",
-    types: [
-      "Bakers / Pastry Chefs",
-      "Baristas (Coffee Specialists)",
-      "Bartenders / Mixologists",
-      "Caterers",
-      "Chefs / Cooks"
-    ]
-  },
-  {
-    id: "support-staff",
-    name: "Support Staff",
-    description: "Ushers, Servers, Setup & Cleanup Crews",
-    types: [
-      "Cleaning Crews",
-      "Event Setup Crews",
-      "Hospitality Staff",
-      "Parking Attendants / Valet Services",
-      "Registration / Front Desk Staff",
-      "Ushers"
-    ]
-  },
-  {
-    id: "creative-services",
-    name: "Creative Services",
-    description: "Designers, Stylists, Florists, Models",
-    types: [
-      "Designers",
-      "Fashion Stylists / Dressers",
-      "Florists / Floral Designers",
-      "Hair Stylists / Makeup Artists",
-      "Models / Brand Hosts",
-      "Stage Designers / Stage Managers",
-      "Wardrobe Consultants / Costume Designers"
-    ]
-  },
-  {
-    id: "technical-services",
-    name: "Technical Services",
-    description: "Sound, Lighting, IT, Electricians",
-    types: [
-      "Carpenters / Set Builders",
-      "Electricians",
-      "IT & Technical Support Staff",
-      "Lighting Technicians",
-      "Production Crew",
-      "Sound Engineers / Technicians"
-    ]
-  },
-  {
-    id: "media-content",
-    name: "Media & Content",
-    description: "Photographers, Videographers, Social Media",
-    types: [
-      "Photographers",
-      "Pilots / Drone Operators",
-      "Social Media Managers",
-      "Videographers / Editors",
-      "Voice-over Artists / Announcers"
+      "Musicians / Bands / Singers",
     ]
   },
   {
@@ -96,7 +46,31 @@ export const serviceCategories: ServiceCategory[] = [
       "Emcees / Hosts / Compères",
       "Event Coordinators / Planners / Managers",
       "Project Managers",
-      "Translators / Interpreters"
+      "Translators / Interpreters",
+    ]
+  },
+  {
+    id: "food-drinks",
+    name: "Food & Drinks",
+    description: "Chefs, Caterers, Bartenders, Baristas",
+    types: [
+      "Bakers / Pastry Chefs",
+      "Baristas (Coffee Specialists)",
+      "Bartenders / Mixologists",
+      "Caterers",
+      "Chefs / Cooks",
+    ]
+  },
+  {
+    id: "media-content",
+    name: "Media & Content",
+    description: "Photographers, Videographers, Social Media",
+    types: [
+      "Photographers",
+      "Pilots / Drone Operators",
+      "Social Media Managers",
+      "Videographers / Editors",
+      "Voice-over Artists / Announcers",
     ]
   },
   {
@@ -111,16 +85,35 @@ export const serviceCategories: ServiceCategory[] = [
       "Officiants",
       "Pyrotechnic Specialists / Fireworks Experts",
       "Security Personnel",
-      "Transport & Shuttle Operators"
+      "Transport & Shuttle Operators",
+    ]
+  },
+  {
+    id: "support-staff",
+    name: "Support Staff",
+    description: "Ushers, Servers, Setup & Cleanup Crews",
+    types: [
+      "Cleaning Crews",
+      "Event Setup Crews",
+      "Hospitality Staff",
+      "Parking Attendants / Valet Services",
+      "Registration / Front Desk Staff",
+      "Ushers",
+    ]
+  },
+  {
+    id: "technical-services",
+    name: "Technical Services",
+    description: "Sound, Lighting, IT, Electricians",
+    types: [
+      "Carpenters / Set Builders",
+      "Electricians",
+      "IT & Technical Support Staff",
+      "Lighting Technicians",
+      "Production Crew",
+      "Sound Engineers / Technicians",
     ]
   }
 ];
 
-export const specialServiceFeatures = [
-  "Halaal",
-  "Vegan",
-  "Customisable Packages",
-  "International Experience",
-  "Travels National",
-  "Local within Radius"
-];
+export const specialServiceFeatures = ["Customisable Packages", "Halaal", "International Experience", "Local within Radius", "Travels National", "Vegan"];

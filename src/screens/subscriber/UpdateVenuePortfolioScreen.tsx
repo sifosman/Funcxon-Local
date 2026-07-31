@@ -90,7 +90,7 @@ export default function UpdateVenuePortfolioScreen() {
   const [videoLimit, setVideoLimit] = useState<number>(1);
   const [uploadingImage, setUploadingImage] = useState(false);
   const [uploadingVideo, setUploadingVideo] = useState(false);
-  const [alertState, setAlertState] = useState<{visible: boolean; title: string; message: string; buttons?: any[]} | null>(null);
+  const [alertState, setAlertState] = useState<{visible: boolean; title: string; message: string; buttons?: any[]; navigateOnDismiss?: boolean} | null>(null);
 
   const [form, setForm] = useState({
     name: '',
@@ -490,6 +490,7 @@ export default function UpdateVenuePortfolioScreen() {
         visible: true,
         title: 'Saved',
         message: 'Your venue listing has been updated.',
+        navigateOnDismiss: true,
         buttons: [{ text: 'OK', style: 'default', onPress: () => { setAlertState(null); navigation.navigate('ListerPortfolio'); } }],
       });
     } catch (err: any) {
@@ -559,15 +560,13 @@ export default function UpdateVenuePortfolioScreen() {
     >
       <ScrollView contentContainerStyle={desktopContainerStyle as any}>
         <View style={{ paddingHorizontal: isDesktop ? 0 : spacing.lg, paddingTop: spacing.sm, paddingBottom: spacing.md, maxWidth: isDesktop ? 800 : undefined, width: isDesktop ? '100%' : undefined, alignSelf: isDesktop ? 'center' as const : undefined }}>
-          {!isDesktop && (
-            <TouchableOpacity
+          <TouchableOpacity
               onPress={() => navigation.goBack()}
               style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.sm }}
             >
               <MaterialIcons name="arrow-back" size={20} color={colors.textPrimary} />
               <Text style={{ ...typography.body, color: colors.textPrimary, marginLeft: spacing.sm }}>Back</Text>
             </TouchableOpacity>
-          )}
 
           <Text style={isDesktop ? { ...typography.headlineMd, color: colors.primary, marginBottom: spacing.xs } as any : { ...typography.displayMedium, color: colors.textPrimary, marginBottom: spacing.xs }}>
             Update Venue Portfolio
@@ -1277,7 +1276,7 @@ export default function UpdateVenuePortfolioScreen() {
           title={alertState.title}
           message={alertState.message}
           buttons={alertState.buttons ?? [{ text: 'OK', style: 'default', onPress: () => setAlertState(null) }]}
-          onDismiss={() => setAlertState(null)}
+          onDismiss={() => { const shouldNav = alertState?.navigateOnDismiss; setAlertState(null); if (shouldNav) navigation.navigate('ListerPortfolio'); }}
         />
       )}
     </KeyboardAvoidingView>

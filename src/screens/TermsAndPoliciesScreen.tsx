@@ -16,8 +16,7 @@ export default function TermsAndPoliciesScreen() {
       <ScrollView contentContainerStyle={isDesktop ? { paddingBottom: spacing.xl, maxWidth: 800, width: '100%', alignSelf: 'center', paddingHorizontal: 48 } : { paddingBottom: spacing.xl }}>
         {/* Header */}
         <View style={{ paddingHorizontal: isDesktop ? 0 : spacing.lg, paddingTop: spacing.sm, paddingBottom: spacing.md }}>
-          {isDesktop ? null : (
-            <TouchableOpacity
+          <TouchableOpacity
               onPress={() => navigation.goBack()}
               style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.sm }}
             >
@@ -26,7 +25,6 @@ export default function TermsAndPoliciesScreen() {
                 Back to My Account
               </Text>
             </TouchableOpacity>
-          )}
 
           <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.xs }}>
             <MaterialIcons name="shield" size={isDesktop ? 36 : 28} color={colors.textPrimary} style={{ marginRight: spacing.sm }} />

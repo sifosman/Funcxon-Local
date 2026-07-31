@@ -103,23 +103,23 @@ export const venueCapacityOptions = [
 
 export const eventTypes = [
   "Anniversary",
-  "Graduation/Awards",
   "Baby Shower",
   "Birthday - Adult",
   "Birthday - Kiddies",
   "Bridal Shower",
   "Community Fair",
-  "Live Show/Concert",
   "Conference / Seminar",
   "Corporate Party",
   "Cultural Celebration",
   "Expo",
   "Festival",
   "Fundraiser",
-  "Product Launch",
+  "Graduation/Awards",
+  "Live Show/Concert",
   "Market",
+  "Product Launch",
+  "Reunion",
   "Sports Tournament",
   "Teambuilding",
-  "Wedding",
-  "Reunion"
-];
+  "Wedding"
+].sort((a, b) => a.localeCompare(b));

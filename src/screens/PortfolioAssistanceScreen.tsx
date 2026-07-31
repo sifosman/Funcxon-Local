@@ -284,8 +284,7 @@ export default function PortfolioAssistanceScreen() {
 
   const renderHeader = () => (
     <View style={{ alignItems: isDesktop ? 'flex-start' : 'center', marginBottom: isDesktop ? spacing.lg : spacing.lg, paddingHorizontal: isDesktop ? 0 : spacing.lg, paddingTop: isDesktop ? 0 : spacing.sm }}>
-      {isDesktop ? null : (
-        <TouchableOpacity
+      <TouchableOpacity
           onPress={() => navigation.goBack()}
           style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.sm, alignSelf: 'flex-start' }}
         >
@@ -294,7 +293,6 @@ export default function PortfolioAssistanceScreen() {
             {isHelpCenter ? 'Back' : 'Back to Subscriber Suite'}
           </Text>
         </TouchableOpacity>
-      )}
       <View style={{
         width: isDesktop ? 64 : 80,
         height: isDesktop ? 64 : 80,
