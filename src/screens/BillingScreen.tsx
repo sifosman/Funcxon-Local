@@ -66,6 +66,7 @@ export default function BillingScreen() {
     const [venueBilling, setVenueBilling] = useState<VenueBillingInfo | null>(null);
     const [invoices, setInvoices] = useState<Invoice[]>([]);
     const [payingNow, setPayingNow] = useState(false);
+    const [cancelling, setCancelling] = useState(false);
     const [alertState, setAlertState] = useState<{visible: boolean; title: string; message: string; buttons?: any[]} | null>(null);
 
     const loadBillingData = useCallback(async () => {
@@ -232,6 +233,57 @@ export default function BillingScreen() {
             setAlertState({ visible: true, title: 'Payment Error', message: 'Could not open PayFast checkout. Please try again.' });
         } finally {
             setPayingNow(false);
+        }
+    };
+
+    const handleCancelSubscription = async () => {
+        if (!user?.id) return;
+        setCancelling(true);
+        try {
+            if (billing && billing.subscription_status === 'active' && billing.subscription_tier !== 'get_started') {
+                const { error: vendorErr } = await supabase
+                    .from('vendors')
+                    .update({
+                        subscription_status: 'cancelled',
+                        subscription_tier: 'get_started',
+                        featured_listing: false,
+                        subscription_expires_at: new Date().toISOString(),
+                        next_payment_due: null,
+                    })
+                    .eq('id', billing.vendor_id);
+
+                if (vendorErr) throw vendorErr;
+            }
+
+            if (venueBilling && venueBilling.subscription_status === 'active' && venueBilling.subscription_plan_key !== 'get_started') {
+                const { error: venueErr } = await supabase
+                    .from('venues')
+                    .update({
+                        subscription_status: 'cancelled',
+                        subscription_plan_key: 'get_started',
+                        subscription_expires_at: new Date().toISOString(),
+                        next_payment_due: null,
+                    })
+                    .eq('user_id', user.id);
+
+                if (venueErr) throw venueErr;
+            }
+
+            setAlertState({
+                visible: true,
+                title: 'Subscription Cancelled',
+                message: 'Your subscription has been cancelled and your account has been downgraded to the free plan. You will retain access to free-tier features.',
+                buttons: [{ text: 'OK', style: 'default', onPress: () => { setAlertState(null); loadBillingData(); } }],
+            });
+        } catch (err) {
+            setAlertState({
+                visible: true,
+                title: 'Cancellation Failed',
+                message: 'We could not cancel your subscription right now. Please try again or contact support.',
+                buttons: [{ text: 'OK', style: 'default', onPress: () => setAlertState(null) }],
+            });
+        } finally {
+            setCancelling(false);
         }
     };
 
@@ -606,6 +658,41 @@ export default function BillingScreen() {
                         <Text style={{ ...typography.caption, color: colors.textMuted, textAlign: 'center', marginTop: spacing.xs }}>
                             Secure payment via PayFast
                         </Text>
+                    </View>
+                )}
+
+                {/* Cancel Subscription Button */}
+                {billing && !isFree && billing.subscription_status === 'active' && (
+                    <View style={{ paddingHorizontal: isDesktop ? 0 : spacing.lg, marginBottom: spacing.md }}>
+                        <TouchableOpacity
+                            onPress={() => {
+                                setAlertState({
+                                    visible: true,
+                                    title: 'Cancel Subscription',
+                                    message: 'Are you sure you want to cancel your subscription? Your plan will be downgraded to the free tier immediately and premium features will be removed.',
+                                    buttons: [
+                                        { text: 'Keep Plan', style: 'cancel', onPress: () => setAlertState(null) },
+                                        { text: 'Cancel Subscription', style: 'destructive', onPress: () => { setAlertState(null); handleCancelSubscription(); } },
+                                    ],
+                                });
+                            }}
+                            disabled={cancelling}
+                            style={{
+                                backgroundColor: 'transparent',
+                                borderRadius: radii.lg,
+                                paddingVertical: spacing.md,
+                                flexDirection: 'row',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                borderWidth: 1,
+                                borderColor: '#DC2626',
+                            }}
+                        >
+                            <MaterialIcons name="cancel" size={20} color="#DC2626" style={{ marginRight: spacing.sm }} />
+                            <Text style={{ ...typography.bodyBold, color: '#DC2626' }}>
+                                {cancelling ? 'Cancelling...' : 'Cancel Subscription'}
+                            </Text>
+                        </TouchableOpacity>
                     </View>
                 )}
 

@@ -810,15 +810,6 @@ export default function VenueProfileScreen({ route, navigation }: Props) {
             </Text>
           </View>
         )}
-
-        {venue.price_range && (
-          <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: spacing.xs }}>
-            <MaterialIcons name="payments" size={16} color={colors.textMuted} />
-            <Text style={{ ...typography.body, color: colors.textSecondary, marginLeft: 6 }}>
-              Price range: {venue.price_range}
-            </Text>
-          </View>
-        )}
       </View>
 
       {/* Gallery */}

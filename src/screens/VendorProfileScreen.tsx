@@ -746,11 +746,6 @@ export default function VendorProfileScreen({ route, navigation }: Props) {
             </Text>
           </View>
         )}
-        {vendor.price_range && (
-          <Text style={{ marginTop: spacing.xs, ...typography.body, color: colors.textSecondary }}>
-            Price range: {vendor.price_range}
-          </Text>
-        )}
       </View>
 
       {/* Gallery */}
@@ -1703,15 +1698,9 @@ const renderSidebar = () => (
         <View style={{ marginBottom: spacing.lg }}>
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
             <View style={{ flex: 1, paddingRight: spacing.md }}>
-              {vendor.price_range ? (
-                <Text style={{ ...typography.headlineMd, color: colors.primary }}>
-                  {vendor.price_range}
-                </Text>
-              ) : (
-                <Text style={{ ...typography.headlineMd, color: colors.primary }}>
-                  Request a quote
-                </Text>
-              )}
+              <Text style={{ ...typography.headlineMd, color: colors.primary }}>
+                Request a quote
+              </Text>
               <Text style={{ ...typography.body, color: colors.onSurfaceVariant }}>
                 Pricing details
               </Text>
