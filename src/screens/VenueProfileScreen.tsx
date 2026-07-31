@@ -992,8 +992,8 @@ export default function VenueProfileScreen({ route, navigation }: Props) {
         {([
           { key: 'about', label: 'About' },
           { key: 'amenities', label: 'Amenities' },
-          { key: 'reviews', label: 'Reviews' },
           { key: 'catalogue', label: 'Catalogue' },
+          { key: 'reviews', label: 'Reviews' },
         ] as const).map((tab) => {
           const isActive = activeTab === tab.key;
           return (
@@ -1004,14 +1004,16 @@ export default function VenueProfileScreen({ route, navigation }: Props) {
                 flex: 1,
                 paddingVertical: spacing.sm,
                 borderRadius: radii.full,
-                backgroundColor: isActive ? colors.coral : 'transparent',
+                backgroundColor: 'transparent',
                 alignItems: 'center',
+                borderBottomWidth: isActive ? 2 : 0,
+                borderBottomColor: colors.coral,
               }}
             >
               <Text
                 style={{
                   ...typography.caption,
-                  color: isActive ? '#FFFFFF' : colors.textMuted,
+                  color: isActive ? colors.coral : colors.textMuted,
                   fontWeight: isActive ? '600' : '400',
                 }}
               >
@@ -1159,24 +1161,6 @@ export default function VenueProfileScreen({ route, navigation }: Props) {
 
           {/* Action Buttons */}
           <View style={{ marginBottom: spacing.lg, gap: spacing.sm }}>
-            <TouchableOpacity
-              onPress={() =>
-                navigation.navigate('VenueCatalogueView', { venueId: venue.id, venueName: venue.name })
-              }
-              style={{
-                flexDirection: 'row',
-                alignItems: 'center',
-                justifyContent: 'center',
-                paddingVertical: spacing.md,
-                borderRadius: radii.lg,
-                backgroundColor: colors.cta,
-                gap: spacing.sm,
-              }}
-            >
-              <MaterialIcons name="inventory-2" size={20} color="#FFFFFF" />
-              <Text style={{ ...typography.bodyBold, color: '#FFFFFF' }}>View Catalogue</Text>
-            </TouchableOpacity>
-
             <TouchableOpacity
               onPress={handleRequestQuote}
               style={{

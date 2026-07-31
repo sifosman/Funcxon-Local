@@ -22,7 +22,6 @@ import {
   PlayfairDisplay_600SemiBold,
   PlayfairDisplay_700Bold,
 } from '@expo-google-fonts/playfair-display';
-import FloatingHelpButton from './src/components/FloatingHelpButton';
 import { HelpCenterModal } from './src/components/HelpCenterModal';
 import DataConsentModal, { hasAcceptedDataConsent } from './src/components/DataConsentModal';
 import { useVendorStatus } from './src/hooks/useVendorStatus';
@@ -124,7 +123,6 @@ function AppContent({ helpVisible, setHelpVisible }: { helpVisible: boolean; set
     <View style={{ flex: 1 }}>
       <AppHeader />
       <AppNavigator />
-      {isVendor && <FloatingHelpButton onPress={() => setHelpVisible(true)} />}
       {isVendor && (
         <HelpCenterModal
           visible={helpVisible}

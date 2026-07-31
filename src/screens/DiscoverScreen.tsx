@@ -1156,11 +1156,12 @@ export default function DiscoverScreen() {
         </Text>
 
         {isLocationMode ? (
-          <View style={{ marginBottom: spacing.md, flexDirection: 'row', flexWrap: 'wrap', columnGap: spacing.sm, rowGap: spacing.sm }}>
-            {['All', ...provinces.map((p) => p.name)].map((province) => {
+          <View style={{ marginBottom: spacing.md, flexDirection: 'row', flexWrap: 'wrap' }}>
+            {['All', ...provinces.map((p) => p.name)].map((province, idx) => {
               const selected = province === 'All'
                 ? selectedLocationProvince === ''
                 : selectedLocationProvince === province;
+              const isThirdInRow = (idx + 1) % 3 === 0;
               return (
                 <TouchableOpacity
                   key={province}
@@ -1168,8 +1169,10 @@ export default function DiscoverScreen() {
                     setSelectedLocationProvince(province === 'All' ? '' : province);
                   }}
                   style={{
-                    width: '31.5%',
-                    paddingHorizontal: spacing.sm,
+                    width: '32%',
+                    marginRight: isThirdInRow ? 0 : '2%',
+                    marginBottom: spacing.sm,
+                    paddingHorizontal: spacing.xs,
                     paddingVertical: spacing.sm,
                     borderRadius: radii.full,
                     borderWidth: 1.5,
