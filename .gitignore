@@ -44,8 +44,11 @@ playwright-report/
 test-results/
 test-screenshots/
 tests/e2e/.auth/
+tests/playwright/.temp/
+tests/playwright/storage-state-*.json
 diagnostic-*.png
 search-test-*.png
+opencode.json
 
 # generated native folders
 /ios

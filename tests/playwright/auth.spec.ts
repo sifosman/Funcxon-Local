@@ -3,6 +3,7 @@ import {
   acceptPopiaConsent,
   clickBottomTab,
   getGlobalTestUser,
+  getTestAccounts,
   openAccountMenuItem,
 } from './helpers';
 
@@ -10,11 +11,15 @@ test.describe.configure({ mode: 'serial' });
 
 test.use({ viewport: { width: 390, height: 844 } });
 
-test.describe('Phase 1 — Authentication & Onboarding', () => {
+test.describe('Phase 1 — Authentication & Onboarding (UI Login)', () => {
+  // Support both new two-account format and legacy single-user format
+  const accounts = getTestAccounts();
   const globalUser = getGlobalTestUser();
-  const adminCreated = globalUser?.adminCreated ?? false;
-  const mainUser = globalUser?.adminCreated
-    ? { email: globalUser.email, password: globalUser.password, fullName: globalUser.fullName }
+  const adminCreated = accounts?.adminCreated ?? globalUser?.adminCreated ?? false;
+  const mainUser = adminCreated
+    ? accounts
+      ? { email: accounts.attendee.email, password: accounts.attendee.password, fullName: accounts.attendee.fullName }
+      : { email: globalUser!.email, password: globalUser!.password, fullName: globalUser!.fullName }
     : {
         email: process.env.PW_E2E_USERNAME || 'mohamed@owdsolutions.co.za',
         password: process.env.PW_E2E_PASSWORD || 'Thierry14247!',
@@ -100,7 +105,7 @@ test.describe('Phase 1 — Authentication & Onboarding', () => {
     ).toBeVisible({ timeout: 15000 });
   });
 
-  test('Sign in with the Phase 0 test user and land on the home screen', async () => {
+  test('Sign in with the test user and land on the home screen', async () => {
     await page.goto('/auth', { waitUntil: 'domcontentloaded' });
     await page.getByText('Log in', { exact: true }).first().click();
     await expect(page.getByText('Welcome Back', { exact: true }).first()).toBeVisible({ timeout: 10000 });

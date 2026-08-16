@@ -594,10 +594,57 @@ export function getSupabaseCreds() {
 
 export const TEST_USER_CREDENTIALS_FILE = path.join(__dirname, '.temp', 'test-user-credentials.json');
 
+/**
+ * Returns the global test user credentials.
+ * Supports both the new two-account format (attendee/lister) and the legacy
+ * single-user format for backward compatibility.
+ *
+ * For the new format, returns the attendee account by default.
+ * Use getTestAccounts() to get both accounts.
+ */
 export function getGlobalTestUser(): (TestUserCredentials & { adminCreated?: boolean; userId?: string }) | null {
   try {
     const raw = fs.readFileSync(TEST_USER_CREDENTIALS_FILE, 'utf8');
-    return JSON.parse(raw);
+    const parsed = JSON.parse(raw);
+
+    // New two-account format
+    if (parsed.attendee) {
+      return {
+        email: parsed.attendee.email,
+        password: parsed.attendee.password,
+        fullName: parsed.attendee.fullName,
+        userId: parsed.attendee.userId,
+        adminCreated: parsed.adminCreated ?? false,
+      };
+    }
+
+    // Legacy single-user format
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Returns both test accounts (attendee + lister) from the new format.
+ * Returns null if the credentials file doesn't exist or uses the old format.
+ */
+export function getTestAccounts(): {
+  attendee: TestUserCredentials & { userId: string };
+  lister: TestUserCredentials & { userId: string; vendorId?: number; venueId?: number };
+  adminCreated: boolean;
+} | null {
+  try {
+    const raw = fs.readFileSync(TEST_USER_CREDENTIALS_FILE, 'utf8');
+    const parsed = JSON.parse(raw);
+    if (parsed.attendee && parsed.lister) {
+      return {
+        attendee: parsed.attendee,
+        lister: parsed.lister,
+        adminCreated: parsed.adminCreated ?? false,
+      };
+    }
+    return null;
   } catch {
     return null;
   }
