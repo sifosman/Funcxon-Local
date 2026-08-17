@@ -452,8 +452,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const checkEmailExists: AuthContextValue['checkEmailExists'] = async (email) => {
     try {
+      const normalizedEmail = (email || '').trim().toLowerCase();
       const { data, error } = await supabase.rpc('check_email_exists', {
-        p_email: email,
+        p_email: normalizedEmail,
       });
 
       if (error) {

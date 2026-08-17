@@ -39,7 +39,8 @@ export default function SignUpScreen({ navigation }: Props) {
       return;
     }
 
-    const trimmedEmail = email.trim();
+    const trimmedEmail = email.trim().toLowerCase();
+    const trimmedName = name.trim();
     const emailRegex = /[^@]+@[^.]+\..+/;
     if (!emailRegex.test(trimmedEmail)) {
       setAlertState({ visible: true, title: 'Invalid email', message: 'Please enter a valid email address.' });
@@ -85,7 +86,7 @@ export default function SignUpScreen({ navigation }: Props) {
     const { error, session } = await signUp({
       email: trimmedEmail,
       password,
-      data: { name, role },
+      data: { name: trimmedName, full_name: trimmedName, role },
       emailRedirectTo,
     });
     setLoading(false);
@@ -103,7 +104,7 @@ export default function SignUpScreen({ navigation }: Props) {
     // Send welcome email with app features write-up
     try {
       await supabase.functions.invoke('send-attendee-welcome-email', {
-        body: { email: trimmedEmail, fullName: name, signUpMethod: 'email' },
+        body: { email: trimmedEmail, fullName: trimmedName, signUpMethod: 'email' },
       });
     } catch (e) {
       console.warn('SignUp: Failed to send welcome email:', e);

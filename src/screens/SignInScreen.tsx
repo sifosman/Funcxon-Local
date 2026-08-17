@@ -50,7 +50,7 @@ export default function SignInScreen({ navigation }: Props) {
       return;
     }
 
-    const trimmedEmail = email.trim();
+    const trimmedEmail = email.trim().toLowerCase();
     const emailRegex = /[^@]+@[^.]+\..+/;
     if (!emailRegex.test(trimmedEmail)) {
       setAlertState({ visible: true, title: 'Invalid email', message: 'Please enter a valid email address.' });
