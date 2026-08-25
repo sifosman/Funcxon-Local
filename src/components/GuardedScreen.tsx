@@ -17,13 +17,18 @@ export default function GuardedScreen({ component: Component, label }: GuardedSc
   const route = useRoute<any>();
   const [allowedScreen, setAllowedScreen] = useState(false);
 
+  // Serialize route.params to a stable string for dependency comparison.
+  // route.params is a new object on every render, which would cause an
+  // infinite re-render loop if used directly as a useEffect dependency.
+  // Use individual scalar fields instead of the params object itself.
+  const paramsScreen = (route.params as any)?.screen as string | undefined;
+
   // Check if the target screen is in the allowed list for guests
   // This allows guests to view subscription plans before signing up
   useEffect(() => {
     const checkAllowedScreen = () => {
       // Check route params for nested screen navigation
-      const params = route.params as any;
-      if (params?.screen && GUEST_ALLOWED_SCREENS.includes(params.screen)) {
+      if (paramsScreen && GUEST_ALLOWED_SCREENS.includes(paramsScreen)) {
         setAllowedScreen(true);
         return;
       }
@@ -47,7 +52,8 @@ export default function GuardedScreen({ component: Component, label }: GuardedSc
     };
     
     checkAllowedScreen();
-  }, [route.params, navigation]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [paramsScreen, session]);
 
   if (!session && !allowedScreen) {
     return <GuestPromptScreen label={label} />;

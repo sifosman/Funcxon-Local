@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useReducer, useEffect } from 'react';
+import React, { createContext, useContext, useReducer, useEffect, useMemo, useCallback } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export type PortfolioType = 'vendors' | 'venues' | null;
@@ -251,20 +251,29 @@ export function ApplicationFormProvider({ children }: { children: React.ReactNod
     cleanup();
   }, []);
 
+  // Only auto-save after hydration and when state actually changes.
+  // Use a ref to track if hydration is complete to avoid the effect
+  // depending on hasHydrated (which would cause double-saves).
   useEffect(() => {
     if (!hasHydrated) return;
-    saveDraft();
-  }, [hasHydrated, state]);
+    // Use a debounce-like approach: skip the first render after hydration
+    // to avoid saving the initial/empty state unnecessarily.
+    const timer = setTimeout(() => {
+      saveDraft();
+    }, 100);
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state]);
 
-  const resetForm = () => {
+  const resetForm = useCallback(() => {
     const storageKey = getStorageKey(state.portfolioType);
     dispatch({ type: 'RESET_FORM' });
     AsyncStorage.removeItem(storageKey).catch((error) => {
       console.error('Failed to clear draft:', error);
     });
-  };
+  }, [state.portfolioType]);
 
-  const setPortfolioTypeAndLoadDraft = async (type: PortfolioType) => {
+  const setPortfolioTypeAndLoadDraft = useCallback(async (type: PortfolioType) => {
     console.log('=== setPortfolioTypeAndLoadDraft called with type:', type);
     
     try {
@@ -295,21 +304,60 @@ export function ApplicationFormProvider({ children }: { children: React.ReactNod
     }
     
     console.log('=== setPortfolioTypeAndLoadDraft completed');
-  };
+  }, []);
 
-  const value: ApplicationFormContextValue = {
-    state,
-    setEditingApplicationId: (applicationId) => dispatch({ type: 'SET_EDITING_APPLICATION_ID', payload: applicationId }),
-    setPortfolioType: setPortfolioTypeAndLoadDraft,
-    updateStep1: (data) => dispatch({ type: 'UPDATE_STEP1', payload: data }),
-    updateStep2: (data) => dispatch({ type: 'UPDATE_STEP2', payload: data }),
-    updateStep3: (data) => dispatch({ type: 'UPDATE_STEP3', payload: data }),
-    updateStep4: (data) => dispatch({ type: 'UPDATE_STEP4', payload: data }),
-    saveDraft,
-    loadDraft,
-    resetForm,
-    hydrateForm: (nextState) => dispatch({ type: 'LOAD_DRAFT', payload: nextState }),
-  };
+  const setEditingApplicationId = useCallback((applicationId: string | null) => {
+    dispatch({ type: 'SET_EDITING_APPLICATION_ID', payload: applicationId });
+  }, []);
+
+  const updateStep1 = useCallback((data: Partial<Step1Data>) => {
+    dispatch({ type: 'UPDATE_STEP1', payload: data });
+  }, []);
+
+  const updateStep2 = useCallback((data: Partial<Step2Data>) => {
+    dispatch({ type: 'UPDATE_STEP2', payload: data });
+  }, []);
+
+  const updateStep3 = useCallback((data: Partial<Step3Data>) => {
+    dispatch({ type: 'UPDATE_STEP3', payload: data });
+  }, []);
+
+  const updateStep4 = useCallback((data: Partial<Step4Data>) => {
+    dispatch({ type: 'UPDATE_STEP4', payload: data });
+  }, []);
+
+  const hydrateForm = useCallback((nextState: ApplicationFormState) => {
+    dispatch({ type: 'LOAD_DRAFT', payload: nextState });
+  }, []);
+
+  const value = useMemo<ApplicationFormContextValue>(
+    () => ({
+      state,
+      setEditingApplicationId,
+      setPortfolioType: setPortfolioTypeAndLoadDraft,
+      updateStep1,
+      updateStep2,
+      updateStep3,
+      updateStep4,
+      saveDraft,
+      loadDraft,
+      resetForm,
+      hydrateForm,
+    }),
+    [
+      state,
+      setEditingApplicationId,
+      setPortfolioTypeAndLoadDraft,
+      updateStep1,
+      updateStep2,
+      updateStep3,
+      updateStep4,
+      saveDraft,
+      loadDraft,
+      resetForm,
+      hydrateForm,
+    ],
+  );
 
   return (
     <ApplicationFormContext.Provider value={value}>

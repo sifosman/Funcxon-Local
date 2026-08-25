@@ -331,7 +331,17 @@ export default function DiscoverScreen() {
 
   useLayoutEffect(() => {
     navigation.setOptions({ title: getDisplayTitle() });
-  }, [navigation, route.params?.presetFilter, search, category]);
+  }, [navigation, routeParamsKey, search, category]);
+
+  // Serialize route.params to a stable key to avoid infinite re-renders.
+  // route.params is a new object on every render, so using it directly as a
+  // useEffect dependency would trigger an infinite loop.
+  const routeParamsKey = useMemo(() => {
+    const p = route.params;
+    if (!p) return '';
+    const { category, initialSearch, presetFilter, showFilters } = p;
+    return `${category ?? ''}|${initialSearch ?? ''}|${presetFilter ?? ''}|${showFilters ?? false}`;
+  }, [route.params?.category, route.params?.initialSearch, route.params?.presetFilter, route.params?.showFilters]);
 
   useEffect(() => {
     if (!route.params) {
@@ -344,7 +354,8 @@ export default function DiscoverScreen() {
     setLocationSearch(route.params.presetFilter === 'location' ? route.params.initialSearch ?? '' : '');
     setShowFilters(route.params.showFilters ?? false);
     setSelectedLocationProvince(route.params.presetFilter === 'location' ? '' : '');
-  }, [route.params]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [routeParamsKey]);
 
   // Apply shared filter state when returning from FiltersScreen
   useFocusEffect(

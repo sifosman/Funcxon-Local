@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, useRef, ReactNode } from 'react';
+import { createContext, useContext, useEffect, useState, useRef, useMemo, useCallback, ReactNode } from 'react';
 import { Platform } from 'react-native';
 import ThemedAlert from '../components/ThemedAlert';
 import type { Session } from '@supabase/supabase-js';
@@ -419,12 +419,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
-  const signIn: AuthContextValue['signIn'] = async ({ email, password }) => {
+  const signIn: AuthContextValue['signIn'] = useCallback(async ({ email, password }) => {
     const { error } = await supabase.auth.signInWithPassword({ email, password });
     return { error: error ?? undefined };
-  };
+  }, []);
 
-  const signUp: AuthContextValue['signUp'] = async ({ email, password, data, emailRedirectTo }) => {
+  const signUp: AuthContextValue['signUp'] = useCallback(async ({ email, password, data, emailRedirectTo }) => {
     const { data: signUpData, error } = await supabase.auth.signUp({
       email,
       password,
@@ -434,23 +434,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       },
     });
     return { error: error ?? undefined, session: signUpData?.session ?? undefined };
-  };
+  }, []);
 
-  const signOut: AuthContextValue['signOut'] = async () => {
+  const signOut: AuthContextValue['signOut'] = useCallback(async () => {
     const { error } = await supabase.auth.signOut();
     return { error: error ?? undefined };
-  };
+  }, []);
 
-  const resendConfirmationEmail: AuthContextValue['resendConfirmationEmail'] = async (email, emailRedirectTo) => {
+  const resendConfirmationEmail: AuthContextValue['resendConfirmationEmail'] = useCallback(async (email, emailRedirectTo) => {
     const { error } = await supabase.auth.resend({
       type: 'signup',
       email,
       options: emailRedirectTo ? { emailRedirectTo } : undefined,
     });
     return { error: error ?? undefined };
-  };
+  }, []);
 
-  const checkEmailExists: AuthContextValue['checkEmailExists'] = async (email) => {
+  const checkEmailExists: AuthContextValue['checkEmailExists'] = useCallback(async (email) => {
     try {
       const normalizedEmail = (email || '').trim().toLowerCase();
       const { data, error } = await supabase.rpc('check_email_exists', {
@@ -467,9 +467,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       console.error('checkEmailExists unexpected error:', err);
       return { error: err instanceof Error ? err : new Error(String(err)) };
     }
-  };
+  }, []);
 
-  const signInWithProvider: AuthContextValue['signInWithProvider'] = async (provider) => {
+  const signInWithProvider: AuthContextValue['signInWithProvider'] = useCallback(async (provider) => {
     const scopes = provider === 'facebook' ? 'email public_profile' : undefined;
 
 
@@ -696,23 +696,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // On success, Supabase will update the session via onAuthStateChange
     // if the OAuth flow completed successfully.
     return { error: undefined };
-  };
+  }, []); // useCallback for signInWithProvider
+
+  const contextValue = useMemo<AuthContextValue>(
+    () => ({
+      session,
+      user: session?.user,
+      userRole,
+      isLoading,
+      signIn,
+      signUp,
+      signOut,
+      signInWithProvider,
+      resendConfirmationEmail,
+      checkEmailExists,
+    }),
+    [session, userRole, isLoading, signIn, signUp, signOut, signInWithProvider, resendConfirmationEmail, checkEmailExists],
+  );
 
   return (
-    <AuthContext.Provider
-      value={{
-        session,
-        user: session?.user,
-        userRole,
-        isLoading,
-        signIn,
-        signUp,
-        signOut,
-        signInWithProvider,
-        resendConfirmationEmail,
-        checkEmailExists,
-      }}
-    >
+    <AuthContext.Provider value={contextValue}>
       {children}
       {alertState && (
         <ThemedAlert
