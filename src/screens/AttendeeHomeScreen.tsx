@@ -32,6 +32,7 @@ import { amenitiesList } from '../config/venueTypes';
 import MapRadiusSelector from '../components/MapRadiusSelector';
 import { AppFooter } from '../components/AppFooter';
 import { HelpCenterModal } from '../components/HelpCenterModal';
+import { AppStoreBadges } from '../components/AppStoreBadges';
 import NetworkImage from '../components/NetworkImage';
 import { usePendingSearch } from '../context/PendingSearchContext';
 import { formatCardAddress } from '../utils/location';
@@ -1290,6 +1291,8 @@ export default function AttendeeHomeScreen() {
               Discover the most exquisite venues and top-tier vendors across South Africa for your next celebration.
             </Text>
 
+            <AppStoreBadges style={{ marginTop: 16 }} />
+
             {/* Desktop Hero Search Bar */}
             {isDesktop && isFocused && (
             <View
@@ -1413,6 +1416,7 @@ export default function AttendeeHomeScreen() {
           >
             Connect · Collaborate · Celebrate
           </Text>
+          <AppStoreBadges style={{ marginTop: spacing.sm }} />
         </View>
       )}
 

@@ -9,7 +9,7 @@ import GuestPromptScreen from '../screens/GuestPromptScreen';
 export type AuthStackParamList = {
   Welcome: undefined;
   SignIn: undefined;
-  SignUp: undefined;
+  SignUp: { role?: 'attendee' | 'vendor' | 'venue' } | undefined;
   EmailConfirmation: { email?: string; role?: 'attendee' | 'vendor' | 'venue'; existingAccount?: boolean };
   LegalDocument: { documentId: string };
   GuestPrompt: { label: string };

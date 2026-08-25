@@ -31,7 +31,9 @@ export default function AppHeader() {
   const getUsername = () => {
     if (!user) return null;
     // Try to get display name from user metadata
-    const displayName = user.user_metadata?.display_name || user.user_metadata?.full_name || user.user_metadata?.name;
+    // Username is explicitly set by the user in Account Settings and takes
+    // priority over full_name/name for the greeting display.
+    const displayName = user.user_metadata?.display_name || user.user_metadata?.username || user.user_metadata?.full_name || user.user_metadata?.name;
     if (displayName) return displayName;
     // Fallback to email prefix
     if (user.email) {

@@ -327,7 +327,7 @@ export default function VenueListingPlansScreen() {
           <View style={{ height: 1, backgroundColor: plan.theme.borderColor, marginBottom: spacing.sm }} />
 
           <View style={{ flex: 1, marginBottom: spacing.sm }}>
-            {features.slice(0, 8).map((feature) => {
+            {features.map((feature) => {
               const value = feature[plan.key];
               return (
                 <View
@@ -670,7 +670,7 @@ export default function VenueListingPlansScreen() {
 
                     {/* Features */}
                     <View style={{ flex: 1, marginBottom: spacing.sm }}>
-                      {features.slice(0, 5).map((feature) => {
+                      {features.map((feature) => {
                         const value = feature[plan.key];
                         return (
                           <View

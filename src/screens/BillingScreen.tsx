@@ -68,9 +68,12 @@ export default function BillingScreen() {
     const [payingNow, setPayingNow] = useState(false);
     const [cancelling, setCancelling] = useState(false);
     const [alertState, setAlertState] = useState<{visible: boolean; title: string; message: string; buttons?: any[]} | null>(null);
+    const [selectedTab, setSelectedTab] = useState<'vendor' | 'venue'>('vendor');
 
     const loadBillingData = useCallback(async () => {
         if (!user?.id) return;
+        let hasVendor = false;
+        let hasVenue = false;
         try {
             // Get vendor data with subscription info
             const { data: vendorData, error: vendorError } = await supabase
@@ -111,6 +114,7 @@ export default function BillingScreen() {
                     price_monthly: tierData?.price_monthly ? Number(tierData.price_monthly) : null,
                     price_yearly: tierData?.price_yearly ? Number(tierData.price_yearly) : null,
                 });
+                hasVendor = true;
 
                 // Load invoices
                 const { data: invoiceData } = await supabase
@@ -147,10 +151,20 @@ export default function BillingScreen() {
                     next_payment_due: venueData.next_payment_due,
                     last_payment_at: venueData.last_payment_at,
                 });
+                hasVenue = true;
             }
         } catch (err) {
             console.error('Failed to load billing data:', err);
         } finally {
+            // Auto-select the available subscription tab.
+            // If only a venue subscription exists, default to 'venue'.
+            // If only a vendor subscription exists, default to 'vendor'.
+            // If both exist, keep the user's current selection (defaults to 'vendor').
+            if (!hasVendor && hasVenue) {
+                setSelectedTab('venue');
+            } else if (hasVendor && !hasVenue) {
+                setSelectedTab('vendor');
+            }
             setLoading(false);
             setRefreshing(false);
         }
@@ -415,8 +429,35 @@ export default function BillingScreen() {
                         </Text>
                     </View>
 
+                    {/* Subscription type selector — only shown when user has both vendor and venue subscriptions */}
+                    {billing && venueBilling && (
+                        <View style={{ paddingHorizontal: isDesktop ? 0 : spacing.lg, marginBottom: spacing.md, flexDirection: 'row', backgroundColor: isDesktop ? colors.surfaceContainerLow : colors.surface, borderRadius: radii.lg, padding: 4, borderWidth: 1, borderColor: isDesktop ? colors.outlineVariant : colors.borderSubtle }}>
+                            {(['vendor', 'venue'] as const).map((tab) => (
+                                <TouchableOpacity
+                                    key={tab}
+                                    onPress={() => setSelectedTab(tab)}
+                                    style={{
+                                        flex: 1,
+                                        paddingVertical: spacing.sm,
+                                        borderRadius: radii.md,
+                                        alignItems: 'center',
+                                        backgroundColor: selectedTab === tab ? colors.primary : 'transparent',
+                                    }}
+                                >
+                                    <Text style={{
+                                        ...typography.bodySemiBold,
+                                        color: selectedTab === tab ? colors.surface : colors.textMuted,
+                                        textTransform: 'capitalize',
+                                    }}>
+                                        {tab}
+                                    </Text>
+                                </TouchableOpacity>
+                            ))}
+                        </View>
+                    )}
+
                 {/* Current Plan Card */}
-                {billing && (
+                {billing && selectedTab === 'vendor' && (
                 <View style={{ paddingHorizontal: isDesktop ? 0 : spacing.lg, marginBottom: spacing.md }}>
                     <View style={{
                         backgroundColor: isDesktop ? colors.surfaceContainerLowest : colors.surface,
@@ -485,7 +526,7 @@ export default function BillingScreen() {
                 )}
 
                 {/* Venue Subscription Card */}
-                {venueBilling && (
+                {venueBilling && selectedTab === 'venue' && (
                     <View style={{ paddingHorizontal: isDesktop ? 0 : spacing.lg, marginBottom: spacing.md }}>
                         <View
                             style={{
@@ -569,8 +610,43 @@ export default function BillingScreen() {
                     </View>
                 )}
 
+                {/* Cancel Venue Subscription Button */}
+                {venueBilling && venueBilling.subscription_status === 'active' && venueBilling.subscription_plan_key !== 'get_started' && selectedTab === 'venue' && (
+                    <View style={{ paddingHorizontal: isDesktop ? 0 : spacing.lg, marginBottom: spacing.md }}>
+                        <TouchableOpacity
+                            onPress={() => {
+                                setAlertState({
+                                    visible: true,
+                                    title: 'Cancel Venue Subscription',
+                                    message: 'Are you sure you want to cancel your venue subscription? Your plan will be downgraded to the free tier immediately.',
+                                    buttons: [
+                                        { text: 'Keep Plan', style: 'cancel', onPress: () => setAlertState(null) },
+                                        { text: 'Cancel Subscription', style: 'destructive', onPress: () => { setAlertState(null); handleCancelSubscription(); } },
+                                    ],
+                                });
+                            }}
+                            disabled={cancelling}
+                            style={{
+                                backgroundColor: 'transparent',
+                                borderRadius: radii.lg,
+                                paddingVertical: spacing.md,
+                                flexDirection: 'row',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                borderWidth: 1,
+                                borderColor: '#DC2626',
+                            }}
+                        >
+                            <MaterialIcons name="cancel" size={20} color="#DC2626" style={{ marginRight: spacing.sm }} />
+                            <Text style={{ ...typography.bodyBold, color: '#DC2626' }}>
+                                {cancelling ? 'Cancelling...' : 'Cancel Venue Subscription'}
+                            </Text>
+                        </TouchableOpacity>
+                    </View>
+                )}
+
                 {/* Expiry & Next Payment */}
-                {billing && !isFree && (
+                {billing && !isFree && selectedTab === 'vendor' && (
                     <View style={{ paddingHorizontal: isDesktop ? 0 : spacing.lg, marginBottom: spacing.md }}>
                         <View style={{
                             backgroundColor: isDesktop ? colors.surfaceContainerLowest : colors.surface,
@@ -636,7 +712,7 @@ export default function BillingScreen() {
                 )}
 
                 {/* Pay Now Button */}
-                {billing && !isFree && (
+                {billing && !isFree && selectedTab === 'vendor' && (
                     <View style={{ paddingHorizontal: isDesktop ? 0 : spacing.lg, marginBottom: spacing.md }}>
                         <TouchableOpacity
                             onPress={handlePayNow}
@@ -662,7 +738,7 @@ export default function BillingScreen() {
                 )}
 
                 {/* Cancel Subscription Button */}
-                {billing && !isFree && billing.subscription_status === 'active' && (
+                {billing && !isFree && billing.subscription_status === 'active' && selectedTab === 'vendor' && (
                     <View style={{ paddingHorizontal: isDesktop ? 0 : spacing.lg, marginBottom: spacing.md }}>
                         <TouchableOpacity
                             onPress={() => {
@@ -697,7 +773,7 @@ export default function BillingScreen() {
                 )}
 
                 {/* Invoice History */}
-                {billing && (
+                {billing && selectedTab === 'vendor' && (
                 <View style={{ paddingHorizontal: isDesktop ? 0 : spacing.lg }}>
                     <Text style={{ ...typography.titleMedium, color: colors.textPrimary, marginBottom: spacing.md, fontSize: isDesktop ? 24 : undefined }}>
                         Payment History

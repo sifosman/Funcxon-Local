@@ -138,7 +138,7 @@ const initialState: ApplicationFormState = {
     billingPeriod: '',
     termsAccepted: false,
     privacyAccepted: false,
-    marketingConsent: false,
+    marketingConsent: true,
   },
 };
 

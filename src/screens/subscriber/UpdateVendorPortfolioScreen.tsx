@@ -4,6 +4,7 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import * as ImagePicker from 'expo-image-picker';
+import * as DocumentPicker from 'expo-document-picker';
 import { colors, spacing, radii, typography } from '../../theme';
 import { supabase } from '../../lib/supabaseClient';
 import { uploadFileToStorage } from '../../lib/applicationService';
@@ -12,11 +13,22 @@ import { createGalleryMediaRecord, deactivateGalleryMediaRecord, MAX_VIDEO_SIZE 
 import { normalizePhoneNumber } from '../../utils/phoneNormalization';
 import { useAuth } from '../../auth/AuthContext';
 import ThemedAlert from '../../components/ThemedAlert';
+import VideoThumbnail from '../../components/VideoThumbnail';
 import { useIsDesktop } from '../../hooks/useIsDesktop';
 import DropdownPicker from '../../components/DropdownPicker';
 import { getProvinceNames } from '../../config/locations';
 import { priceRangeOptions, countryOptions } from '../../config/portfolioOptions';
 import { serviceCategories, specialServiceFeatures } from '../../config/serviceProfessionals';
+
+type DocKey = 'id_copy' | 'cipro' | 'company_logo';
+
+const BUSINESS_DOCS: Array<{ key: DocKey; label: string; required: boolean; acceptLabel?: string }> = [
+  { key: 'id_copy', label: 'ID Copy', required: true },
+  { key: 'cipro', label: 'CIPRO / Company Registration', required: false, acceptLabel: 'If applicable' },
+  { key: 'company_logo', label: 'Company Logo', required: true },
+];
+
+const MAX_DOC_SIZE = 10 * 1024 * 1024; // 10MB
 
 function buildLegacyLocation(parts: Array<string | null | undefined>) {
     return parts.map((part) => part?.trim() ?? '').filter(Boolean).join(', ') || null;
@@ -81,6 +93,9 @@ type VendorListing = {
     image_url: string | null;
     additional_photos: string[] | null;
     photo_count: number | null;
+    awards: string | null;
+    logo_url: string | null;
+    business_documents: Array<{ docType: string; url: string; name: string }> | null;
 };
 
 export default function UpdateVendorPortfolioScreen() {
@@ -99,6 +114,10 @@ export default function UpdateVendorPortfolioScreen() {
     const [videoLimit, setVideoLimit] = useState<number>(0);
     const [uploadingImage, setUploadingImage] = useState(false);
     const [uploadingVideo, setUploadingVideo] = useState(false);
+    const [uploadingDoc, setUploadingDoc] = useState(false);
+    const [uploadingLogo, setUploadingLogo] = useState(false);
+    const [logoUrl, setLogoUrl] = useState<string | null>(null);
+    const [documents, setDocuments] = useState<Array<{ docType: string; url: string; name: string }>>([]);
     const [alertState, setAlertState] = useState<{visible: boolean; title: string; message: string; buttons?: any[]; navigateOnDismiss?: boolean} | null>(null);
     const [form, setForm] = useState({
         name: '',
@@ -126,6 +145,7 @@ export default function UpdateVendorPortfolioScreen() {
         service_subcategories: '',
         amenities: '',
         accepted_payment_methods: '',
+        awards: '',
     });
 
     const derivedLocationPreview = useMemo(
@@ -158,7 +178,7 @@ export default function UpdateVendorPortfolioScreen() {
         try {
             const { data: vendorData, error } = await supabase
                 .from('vendors')
-                .select('id, name, description, location, address_line_1, address_line_2, suburb, city, province, postal_code, country, latitude, longitude, price_range, email, whatsapp_number, website_url, instagram_url, facebook_url, tiktok_url, twitter_url, youtube_url, subscription_tier, subscription_status, service_options, amenities, vendor_tags, accepted_payment_methods, image_url, additional_photos, photo_count')
+                .select('id, name, description, location, address_line_1, address_line_2, suburb, city, province, postal_code, country, latitude, longitude, price_range, email, whatsapp_number, website_url, instagram_url, facebook_url, tiktok_url, twitter_url, youtube_url, subscription_tier, subscription_status, service_options, amenities, vendor_tags, accepted_payment_methods, image_url, additional_photos, photo_count, awards, logo_url, business_documents')
                 .eq('user_id', user.id)
                 .maybeSingle();
 
@@ -170,6 +190,8 @@ export default function UpdateVendorPortfolioScreen() {
             if (vendorData) {
                 setVendor(vendorData as VendorListing);
                 setImageUrl((vendorData as VendorListing).image_url || null);
+                setLogoUrl((vendorData as VendorListing).logo_url || null);
+                setDocuments((vendorData as VendorListing).business_documents || []);
                 setAdditionalPhotos((vendorData as VendorListing).additional_photos || []);
                 const limit = await getVendorPhotoLimit((vendorData as VendorListing).id);
                 setPhotoLimit(limit);
@@ -186,6 +208,21 @@ export default function UpdateVendorPortfolioScreen() {
                     .filter((g: any) => g.media_type === 'video')
                     .map((g: any) => g.media_url);
                 setVideos(videoUrls);
+
+                // Also load photos from gallery_media (where application-uploaded
+                // photos are stored) and merge with additional_photos from the
+                // vendors table. This ensures all uploaded photos are visible and
+                // deletable in the edit screen. Exclude the main image_url since
+                // it is displayed and managed separately.
+                const galleryPhotoUrls = (gallery || [])
+                    .filter((g: any) => g.media_type === 'image')
+                    .map((g: any) => g.media_url);
+                const mainImageUrl = (vendorData as VendorListing).image_url || null;
+                const mergedPhotos = Array.from(new Set([
+                    ...((vendorData as VendorListing).additional_photos || []),
+                    ...galleryPhotoUrls,
+                ])).filter((url: string) => url !== mainImageUrl);
+                setAdditionalPhotos(mergedPhotos);
 
                 setForm({
                     name: vendorData.name || '',
@@ -213,6 +250,7 @@ export default function UpdateVendorPortfolioScreen() {
                     service_subcategories: arrayToString((vendorData as VendorListing).vendor_tags),
                     amenities: arrayToString((vendorData as VendorListing).amenities),
                     accepted_payment_methods: arrayToString((vendorData as VendorListing).accepted_payment_methods),
+                    awards: (vendorData as VendorListing).awards || '',
                 });
             }
         } catch (err) {
@@ -391,6 +429,72 @@ export default function UpdateVendorPortfolioScreen() {
         }
     };
 
+    const handlePickLogo = async () => {
+        const permitted = await requestImagePermission();
+        if (!permitted) return;
+        try {
+            setUploadingLogo(true);
+            const result = await ImagePicker.launchImageLibraryAsync({
+                mediaTypes: ['images'],
+                allowsMultipleSelection: false,
+                allowsEditing: true,
+                quality: 0.8,
+            });
+            if (result.canceled || !result.assets?.[0]) return;
+            const url = await uploadPickedImage(result.assets[0]);
+            if (url) {
+                setLogoUrl(url);
+            }
+        } catch (err: any) {
+            setAlertState({ visible: true, title: 'Upload failed', message: err?.message || 'Could not upload logo.', buttons: [{ text: 'OK', style: 'default', onPress: () => setAlertState(null) }] });
+        } finally {
+            setUploadingLogo(false);
+        }
+    };
+
+    const handleRemoveLogo = () => {
+        setLogoUrl(null);
+    };
+
+    const handlePickDocument = async (docType: DocKey) => {
+        try {
+            setUploadingDoc(true);
+            const result = await DocumentPicker.getDocumentAsync({
+                type: ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'image/*'],
+                copyToCacheDirectory: true,
+            });
+            if (result.canceled || !result.assets || result.assets.length === 0) return;
+            const asset = result.assets[0];
+            const fileSize = asset.size || 0;
+            if (fileSize > MAX_DOC_SIZE) {
+                setAlertState({ visible: true, title: 'File Too Large', message: `${asset.name} exceeds 10MB limit.`, buttons: [{ text: 'OK', style: 'default', onPress: () => setAlertState(null) }] });
+                return;
+            }
+            if (!user?.id) return;
+            const file = {
+                uri: asset.uri,
+                name: asset.name,
+                type: asset.mimeType || 'application/octet-stream',
+            };
+            const uploadResult = await uploadFileToStorage('business-documents', file, user.id);
+            if (!uploadResult.success || !uploadResult.url) {
+                throw new Error(uploadResult.error || 'Upload failed');
+            }
+            // Remove any existing document of the same type (one per type)
+            const filtered = documents.filter((d) => d.docType !== docType);
+            setDocuments([...filtered, { docType, url: uploadResult.url!, name: asset.name }]);
+            setAlertState({ visible: true, title: 'Success', message: `${BUSINESS_DOCS.find((d) => d.key === docType)?.label} uploaded successfully.`, buttons: [{ text: 'OK', style: 'default', onPress: () => setAlertState(null) }] });
+        } catch (err: any) {
+            setAlertState({ visible: true, title: 'Error', message: err?.message || 'Failed to upload document.', buttons: [{ text: 'OK', style: 'default', onPress: () => setAlertState(null) }] });
+        } finally {
+            setUploadingDoc(false);
+        }
+    };
+
+    const handleRemoveDocument = (docType: DocKey) => {
+        setDocuments((prev) => prev.filter((d) => d.docType !== docType));
+    };
+
     useEffect(() => {
         loadVendor();
     }, [loadVendor]);
@@ -449,6 +553,9 @@ export default function UpdateVendorPortfolioScreen() {
                 image_url: imageUrl,
                 additional_photos: additionalPhotos.length > 0 ? additionalPhotos : null,
                 photo_count: currentPhotoCount,
+                awards: form.awards.trim() || null,
+                logo_url: logoUrl,
+                business_documents: documents.length > 0 ? documents : [],
             };
 
             if (vendor) {
@@ -501,6 +608,9 @@ export default function UpdateVendorPortfolioScreen() {
                         image_url: imageUrl,
                         additional_photos: additionalPhotos.length > 0 ? additionalPhotos : null,
                         photo_count: currentPhotoCount,
+                        awards: form.awards.trim() || null,
+                        logo_url: logoUrl,
+                        business_documents: documents.length > 0 ? documents : null,
                     });
                 }
                 setAlertState({
@@ -864,11 +974,14 @@ export default function UpdateVendorPortfolioScreen() {
                                                     height: 80,
                                                     borderRadius: radii.md,
                                                     backgroundColor: colors.background,
-                                                    alignItems: 'center',
-                                                    justifyContent: 'center',
+                                                    overflow: 'hidden',
                                                 }}
                                             >
-                                                <MaterialIcons name="videocam" size={28} color={colors.textPrimary} />
+                                                <VideoThumbnail
+                                                    uri={url}
+                                                    style={{ width: '100%', height: '100%' }}
+                                                    playIconSize={20}
+                                                />
                                             </View>
                                             <TouchableOpacity
                                                 onPress={() => handleRemoveVideo(idx)}
@@ -1134,6 +1247,210 @@ export default function UpdateVendorPortfolioScreen() {
                                 searchable
                                 placeholder="Select payment methods"
                             />
+                        </View>
+
+                        {/* Awards & Nominations */}
+                        <View
+                            style={{
+                                backgroundColor: cardSurface,
+                                borderRadius: radii.lg,
+                                padding: spacing.lg,
+                                borderWidth: 1,
+                                borderColor: cardBorder,
+                                marginTop: spacing.md,
+                            }}
+                        >
+                            <Text style={{ ...typography.titleMedium, color: colors.textPrimary, marginBottom: spacing.xs }}>
+                                Awards & Nominations
+                            </Text>
+                            <Text style={{ ...typography.caption, color: colors.textMuted, marginBottom: spacing.md }}>
+                                List any awards or nominations your business has received (optional)
+                            </Text>
+                            <TextInput
+                                placeholder="e.g., Best Wedding Photographer 2024, Top 10 Caterers..."
+                                value={form.awards}
+                                onChangeText={(v) => handleChange('awards', v)}
+                                multiline
+                                numberOfLines={4}
+                                style={{
+                                    borderWidth: 1,
+                                    borderColor: cardBorder,
+                                    borderRadius: radii.md,
+                                    paddingHorizontal: spacing.md,
+                                    paddingVertical: spacing.sm,
+                                    backgroundColor: colors.surfaceMuted,
+                                    fontSize: 14,
+                                    color: colors.textPrimary,
+                                    textAlignVertical: 'top',
+                                    minHeight: 110,
+                                    fontFamily: typography.body.fontFamily,
+                                }}
+                            />
+                        </View>
+
+                        {/* Company Logo */}
+                        <View
+                            style={{
+                                backgroundColor: cardSurface,
+                                borderRadius: radii.lg,
+                                padding: spacing.lg,
+                                borderWidth: 1,
+                                borderColor: cardBorder,
+                                marginTop: spacing.md,
+                            }}
+                        >
+                            <Text style={{ ...typography.titleMedium, color: colors.textPrimary, marginBottom: spacing.xs }}>
+                                Company Logo
+                            </Text>
+                            <Text style={{ ...typography.caption, color: colors.textMuted, marginBottom: spacing.md }}>
+                                Upload your company logo (separate from your main portfolio image)
+                            </Text>
+                            {logoUrl ? (
+                                <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md }}>
+                                    <Image
+                                        source={{ uri: logoUrl }}
+                                        style={{ width: 80, height: 80, borderRadius: radii.md, backgroundColor: colors.surfaceMuted }}
+                                        resizeMode="contain"
+                                    />
+                                    <View style={{ flexDirection: 'row', gap: spacing.sm }}>
+                                        <TouchableOpacity
+                                            onPress={handlePickLogo}
+                                            disabled={uploadingLogo}
+                                            style={{
+                                                flexDirection: 'row',
+                                                alignItems: 'center',
+                                                paddingHorizontal: spacing.md,
+                                                paddingVertical: spacing.xs,
+                                                borderRadius: radii.md,
+                                                backgroundColor: colors.primary,
+                                            }}
+                                        >
+                                            <MaterialIcons name="edit" size={16} color="#FFFFFF" />
+                                            <Text style={{ ...typography.captionSemiBold, color: '#FFFFFF', marginLeft: spacing.xs }}>Replace</Text>
+                                        </TouchableOpacity>
+                                        <TouchableOpacity
+                                            onPress={handleRemoveLogo}
+                                            style={{
+                                                flexDirection: 'row',
+                                                alignItems: 'center',
+                                                paddingHorizontal: spacing.md,
+                                                paddingVertical: spacing.xs,
+                                                borderRadius: radii.md,
+                                                backgroundColor: '#EF4444',
+                                            }}
+                                        >
+                                            <MaterialIcons name="delete" size={16} color="#FFFFFF" />
+                                            <Text style={{ ...typography.captionSemiBold, color: '#FFFFFF', marginLeft: spacing.xs }}>Remove</Text>
+                                        </TouchableOpacity>
+                                    </View>
+                                </View>
+                            ) : (
+                                <TouchableOpacity
+                                    onPress={handlePickLogo}
+                                    disabled={uploadingLogo}
+                                    style={{
+                                        width: 80,
+                                        height: 80,
+                                        borderRadius: radii.md,
+                                        borderWidth: 1,
+                                        borderColor: cardBorder,
+                                        borderStyle: 'dashed',
+                                        backgroundColor: colors.surfaceMuted,
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                    }}
+                                >
+                                    <MaterialIcons name="add-a-photo" size={28} color={colors.textMuted} />
+                                </TouchableOpacity>
+                            )}
+                            {uploadingLogo && (
+                                <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: spacing.sm, gap: spacing.sm }}>
+                                    <ActivityIndicator size="small" color={colors.primary} />
+                                    <Text style={{ ...typography.caption, color: colors.textMuted }}>Uploading logo...</Text>
+                                </View>
+                            )}
+                        </View>
+
+                        {/* Business Documents */}
+                        <View
+                            style={{
+                                backgroundColor: cardSurface,
+                                borderRadius: radii.lg,
+                                padding: spacing.lg,
+                                borderWidth: 1,
+                                borderColor: cardBorder,
+                                marginTop: spacing.md,
+                            }}
+                        >
+                            <Text style={{ ...typography.titleMedium, color: colors.textPrimary, marginBottom: spacing.xs }}>
+                                Business Documents
+                            </Text>
+                            <Text style={{ ...typography.caption, color: colors.textMuted, marginBottom: spacing.md }}>
+                                Upload your compliance documents (PDF, Word, or image files up to 10MB each)
+                            </Text>
+                            {BUSINESS_DOCS.map((doc) => {
+                                const existing = documents.find((d) => d.docType === doc.key);
+                                return (
+                                    <View key={doc.key} style={{ marginBottom: spacing.md }}>
+                                        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.xs }}>
+                                            <Text style={{ ...typography.bodyMedium, color: colors.textPrimary }}>
+                                                {doc.label}
+                                                {doc.required ? <Text style={{ color: '#EF4444' }}> *</Text> : null}
+                                            </Text>
+                                            {doc.acceptLabel && !existing && (
+                                                <Text style={{ ...typography.caption, color: colors.textMuted, fontStyle: 'italic' }}>{doc.acceptLabel}</Text>
+                                            )}
+                                        </View>
+                                        {existing ? (
+                                            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', borderWidth: 1, borderColor: cardBorder, borderRadius: radii.md, paddingHorizontal: spacing.md, paddingVertical: spacing.sm, backgroundColor: colors.surfaceMuted }}>
+                                                <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
+                                                    <MaterialIcons name="description" size={20} color={colors.textPrimary} style={{ marginRight: spacing.sm }} />
+                                                    <Text style={{ ...typography.body, color: colors.textPrimary, flex: 1 }} numberOfLines={1}>{existing.name}</Text>
+                                                </View>
+                                                <View style={{ flexDirection: 'row', gap: spacing.xs }}>
+                                                    <TouchableOpacity
+                                                        onPress={() => handlePickDocument(doc.key)}
+                                                        disabled={uploadingDoc}
+                                                    >
+                                                        <MaterialIcons name="edit" size={18} color={colors.primary} />
+                                                    </TouchableOpacity>
+                                                    <TouchableOpacity
+                                                        onPress={() => handleRemoveDocument(doc.key)}
+                                                    >
+                                                        <MaterialIcons name="close" size={18} color="#EF4444" />
+                                                    </TouchableOpacity>
+                                                </View>
+                                            </View>
+                                        ) : (
+                                            <TouchableOpacity
+                                                onPress={() => handlePickDocument(doc.key)}
+                                                disabled={uploadingDoc}
+                                                style={{
+                                                    borderWidth: 1,
+                                                    borderColor: cardBorder,
+                                                    borderStyle: 'dashed',
+                                                    borderRadius: radii.md,
+                                                    paddingVertical: spacing.md,
+                                                    paddingHorizontal: spacing.md,
+                                                    alignItems: 'center',
+                                                    flexDirection: 'row',
+                                                    justifyContent: 'center',
+                                                    gap: spacing.xs,
+                                                }}
+                                            >
+                                                <MaterialIcons name="cloud-upload" size={20} color={colors.textMuted} />
+                                                <Text style={{ ...typography.body, color: colors.textMuted }}>Upload {doc.label}</Text>
+                                            </TouchableOpacity>
+                                        )}
+                                    </View>
+                                );
+                            })}
+                            {uploadingDoc && (
+                                <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: spacing.xs, gap: spacing.sm }}>
+                                    <ActivityIndicator size="small" color={colors.primary} />
+                                    <Text style={{ ...typography.caption, color: colors.textMuted }}>Uploading document...</Text>
+                                </View>
+                            )}
                         </View>
 
                         {/* Tags display */}

@@ -57,11 +57,11 @@ export default function ListersPortalScreen() {
   const isDesktop = useIsDesktop();
   const { session, user, userRole } = useAuth();
   const [helpVisible, setHelpVisible] = useState(false);
-  const [alertState, setAlertState] = useState<{visible: boolean; title: string; message: string} | null>(null);
+  const [alertState, setAlertState] = useState<{visible: boolean; title: string; message: string; buttons?: Array<{ text: string; style?: 'default' | 'cancel' | 'destructive'; onPress?: () => void }>} | null>(null);
 
   const getUsername = () => {
     if (!user) return null;
-    const displayName = user.user_metadata?.display_name || user.user_metadata?.full_name || user.user_metadata?.name;
+    const displayName = user.user_metadata?.display_name || user.user_metadata?.username || user.user_metadata?.full_name || user.user_metadata?.name;
     if (displayName) return displayName;
     if (user.email) {
       return user.email.split('@')[0];
@@ -92,16 +92,42 @@ export default function ListersPortalScreen() {
 
   const handleEnterPortfolio = () => {
     // Logged-in listers go straight to portfolio management (no re-auth)
-    const parentNav = navigation.getParent()?.getParent() as any;
-    parentNav?.navigate?.('Account', { screen: 'ListerPortfolio' });
+    // Navigate to the Account tab (in the bottom Tab navigator) and then
+    // to the ListerPortfolio screen within the Profile stack.
+    // NOTE: getParent() returns the Tab navigator (RootNavigator) where
+    // 'Account' is a valid tab. Using getParent()?.getParent() would climb
+    // to the AppNavigator which only has 'Main' and 'Auth' screens.
+    const tabNav = navigation.getParent() as any;
+    tabNav?.navigate?.('Account', { screen: 'ListerPortfolio' });
   };
 
   const handleRegisterVenue = () => {
-    navigation.navigate('VenueListingPlans' as never);
+    // Route listers through the CREATE YOUR ACCOUNT page so they can accept
+    // the T&Cs and Privacy Policy before subscribing. The role is pre-set to
+    // 'venue' so the user does not have to pick it again on the SignUp screen.
+    (navigation as any).navigate('Auth', { screen: 'SignUp', params: { role: 'venue' } });
   };
 
   const handleRegisterVendor = () => {
-    navigation.navigate('SubscriptionPlans' as never);
+    // Route listers through the CREATE YOUR ACCOUNT page so they can accept
+    // the T&Cs and Privacy Policy before subscribing. The role is pre-set to
+    // 'vendor' so the user does not have to pick it again on the SignUp screen.
+    (navigation as any).navigate('Auth', { screen: 'SignUp', params: { role: 'vendor' } });
+  };
+
+  const handleUpgrade = () => {
+    // Ask the user whether they want to upgrade a Venue or Vendor listing
+    // before routing to the relevant plans screen.
+    setAlertState({
+      visible: true,
+      title: 'Upgrade your listing',
+      message: 'Which type of listing would you like to upgrade?',
+      buttons: [
+        { text: 'Venue', style: 'default', onPress: () => { setAlertState(null); handleRegisterVenue(); } },
+        { text: 'Vendor', style: 'default', onPress: () => { setAlertState(null); handleRegisterVendor(); } },
+        { text: 'Cancel', style: 'cancel', onPress: () => setAlertState(null) },
+      ],
+    });
   };
 
   // Fetch blog posts from HubSpot
@@ -183,7 +209,7 @@ export default function ListersPortalScreen() {
       )}
 
       <TouchableOpacity
-        onPress={handleRegisterVendor}
+        onPress={handleUpgrade}
         style={{
           marginTop: spacing.md,
           paddingVertical: spacing.md,
@@ -204,7 +230,7 @@ export default function ListersPortalScreen() {
       </TouchableOpacity>
 
       <TouchableOpacity
-        onPress={handleRegisterVendor}
+        onPress={handleUpgrade}
         style={{
           marginTop: spacing.sm,
           paddingVertical: spacing.md,
@@ -363,6 +389,91 @@ export default function ListersPortalScreen() {
     </View>
   );
 
+  // Item #23: Shared About section content used by both desktop and mobile
+  // layouts so the marketing copy stays in sync. Rendered inside the existing
+  // card/section container provided by each layout.
+  const renderAboutContent = () => (
+    <>
+      <Text style={{ ...typography.labelMd, color: colors.primary, marginBottom: spacing.sm, textTransform: 'uppercase', letterSpacing: 0.05 }}>
+        About Funxon
+      </Text>
+      <Text style={{ ...typography.headlineSm, color: colors.textPrimary, marginBottom: spacing.md } as any}>
+        Why spend thousands on marketing and advertising?
+      </Text>
+      <Text style={{ ...typography.bodyMd, color: colors.onSurfaceVariant, lineHeight: 28, marginBottom: spacing.lg }}>
+        Boosted posts, Meta advertising, SEO services, Google ads, Influencer marketing and traditional print advertising swallow chunks of your profits. FUNXON replaces all of these with one app — Available on web, Google Play and Apple App Store.
+      </Text>
+
+      {/* Show off your portfolio complete with: */}
+      <Text style={{ ...typography.titleMedium, color: colors.textPrimary, marginBottom: spacing.sm }}>
+        Show off your portfolio complete with:
+      </Text>
+      <View style={{ marginBottom: spacing.lg }}>
+        {[
+          'About Page including features, services and amenities',
+          'Albums – photos and videos',
+          'Catalogue',
+          'Pricelist',
+          'Quote cart',
+          'Instant quote requests',
+          'Seamless communication with clients',
+          'Track bookings',
+        ].map((item) => (
+          <View key={item} style={{ flexDirection: 'row', alignItems: 'flex-start', marginBottom: spacing.xs }}>
+            <MaterialIcons name="check-circle" size={18} color={colors.primary} style={{ marginRight: spacing.sm, marginTop: 2 }} />
+            <Text style={{ ...typography.bodyMd, color: colors.onSurfaceVariant, flex: 1, lineHeight: 22 }}>
+              {item}
+            </Text>
+          </View>
+        ))}
+      </View>
+
+      {/* Take advantage of: */}
+      <Text style={{ ...typography.titleMedium, color: colors.textPrimary, marginBottom: spacing.sm }}>
+        Take advantage of:
+      </Text>
+      <View style={{ marginBottom: spacing.lg }}>
+        {[
+          'Not having to fight for attention on platforms like Instagram and Google',
+          'No spend on Meta boosts and SEOs',
+          'No need to have a website and the expense of technical support',
+          'Connect upfront with prospects searching for exactly your type of venue, vendors and services',
+          'Deal directly with customers who have real needs and immediate booking intent',
+          'Expand your business reach across South Africa — Why limit your business to followers and word of mouth?',
+        ].map((item) => (
+          <View key={item} style={{ flexDirection: 'row', alignItems: 'flex-start', marginBottom: spacing.xs }}>
+            <MaterialIcons name="check-circle" size={18} color={colors.primary} style={{ marginRight: spacing.sm, marginTop: 2 }} />
+            <Text style={{ ...typography.bodyMd, color: colors.onSurfaceVariant, flex: 1, lineHeight: 22 }}>
+              {item}
+            </Text>
+          </View>
+        ))}
+      </View>
+
+      {/* Highlighted lines */}
+      <View style={{ backgroundColor: colors.primary, borderRadius: radii.md, paddingHorizontal: spacing.md, paddingVertical: spacing.sm, marginBottom: spacing.sm }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+          <MaterialIcons name="check" size={20} color="#FFFFFF" style={{ marginRight: spacing.sm }} />
+          <Text style={{ ...typography.bodySemiBold, color: '#FFFFFF', flex: 1 }}>
+            ZERO commissions — 100% of your bookings are yours for the taking.
+          </Text>
+        </View>
+      </View>
+      <View style={{ backgroundColor: colors.cta, borderRadius: radii.md, paddingHorizontal: spacing.md, paddingVertical: spacing.sm, marginBottom: spacing.lg }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+          <MaterialIcons name="check" size={20} color="#FFFFFF" style={{ marginRight: spacing.sm }} />
+          <Text style={{ ...typography.bodySemiBold, color: '#FFFFFF', flex: 1 }}>
+            GET STARTED FREE — NO CARD DETAILS REQUIRED!!!
+          </Text>
+        </View>
+      </View>
+
+      <Text style={{ ...typography.bodyMd, color: colors.onSurfaceVariant, lineHeight: 28, fontStyle: 'italic' } as any}>
+        Enjoy more space and unlock special features only when you're ready. No pressure, no obligation.
+      </Text>
+    </>
+  );
+
   const desktopContent = (
     <ScrollView style={{ flex: 1, backgroundColor: colors.surfaceBg }} contentContainerStyle={{ paddingBottom: spacing.xxl }}>
       {/* Hero Section */}
@@ -422,19 +533,12 @@ export default function ListersPortalScreen() {
         </View>
       </View>
 
-      {/* About Section */}
+      {/* About Section — Item #23: replaced generic placeholder with the
+          client-supplied marketing copy from "Listers home page.pdf". */}
       <View style={{ paddingHorizontal: 48, marginBottom: spacing.xxl }}>
         <View style={{ maxWidth: 1200, width: '100%', alignSelf: 'center' }}>
           <View style={{ backgroundColor: colors.surfaceContainerLowest, borderRadius: radii.lg, borderWidth: 1, borderColor: colors.outlineVariant, padding: spacing.xxl } as any}>
-            <Text style={{ ...typography.labelMd, color: colors.primary, marginBottom: spacing.sm, textTransform: 'uppercase', letterSpacing: 0.05 }}>
-              About Funxon
-            </Text>
-            <Text style={{ ...typography.bodyMd, color: colors.onSurfaceVariant, lineHeight: 28, marginBottom: spacing.md }}>
-              Funxon is South Africa's premier event planning platform, connecting hosts with the best venues, vendors, and services for every occasion. Whether you're planning a wedding, corporate event, birthday party, or any celebration, we make it easy to find, compare, and book the perfect professionals for your needs.
-            </Text>
-            <Text style={{ ...typography.bodyMd, color: colors.onSurfaceVariant, lineHeight: 28 }}>
-              Our mission is to simplify event planning by bringing together a curated network of trusted listers who are passionate about making your events unforgettable. From stunning venues to talented vendors, Funxon is your trusted partner in creating memorable experiences.
-            </Text>
+            {renderAboutContent()}
           </View>
         </View>
       </View>
@@ -535,7 +639,7 @@ export default function ListersPortalScreen() {
           visible={alertState.visible}
           title={alertState.title}
           message={alertState.message}
-          buttons={[{ text: 'OK', style: 'default', onPress: () => setAlertState(null) }]}
+          buttons={alertState.buttons ?? [{ text: 'OK', style: 'default', onPress: () => setAlertState(null) }]}
           onDismiss={() => setAlertState(null)}
         />
       )}
@@ -567,7 +671,7 @@ export default function ListersPortalScreen() {
             )}
 
             <TouchableOpacity
-              onPress={handleRegisterVendor}
+              onPress={handleUpgrade}
               style={{
                 marginTop: spacing.md,
                 paddingVertical: spacing.md,
@@ -588,7 +692,7 @@ export default function ListersPortalScreen() {
             </TouchableOpacity>
 
             <TouchableOpacity
-              onPress={handleRegisterVendor}
+              onPress={handleUpgrade}
               style={{
                 marginTop: spacing.sm,
                 paddingVertical: spacing.md,
@@ -614,15 +718,9 @@ export default function ListersPortalScreen() {
             </Text>
           </View>
 
-          {/* About Section */}
+          {/* About Section — Item #23: client-supplied marketing copy */}
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>ABOUT</Text>
-            <Text style={styles.bodyText}>
-              Funxon is South Africa's premier event planning platform, connecting hosts with the best venues, vendors, and services for every occasion. Whether you're planning a wedding, corporate event, birthday party, or any celebration, we make it easy to find, compare, and book the perfect professionals for your needs.
-            </Text>
-            <Text style={[styles.bodyText, styles.bodyTextSpacing]}>
-              Our mission is to simplify event planning by bringing together a curated network of trusted listers who are passionate about making your events unforgettable. From stunning venues to talented vendors, Funxon is your trusted partner in creating memorable experiences.
-            </Text>
+            {renderAboutContent()}
           </View>
 
           {/* Marketing Hook */}
@@ -758,7 +856,7 @@ export default function ListersPortalScreen() {
               visible={alertState.visible}
               title={alertState.title}
               message={alertState.message}
-              buttons={[{ text: 'OK', style: 'default', onPress: () => setAlertState(null) }]}
+              buttons={alertState.buttons ?? [{ text: 'OK', style: 'default', onPress: () => setAlertState(null) }]}
               onDismiss={() => setAlertState(null)}
             />
           )}

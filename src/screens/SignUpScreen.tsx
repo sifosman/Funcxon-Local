@@ -13,7 +13,7 @@ import { useIsDesktop } from '../hooks/useIsDesktop';
 
 type Props = NativeStackScreenProps<AuthStackParamList, 'SignUp'>;
 
-export default function SignUpScreen({ navigation }: Props) {
+export default function SignUpScreen({ navigation, route }: Props) {
   const isDesktop = useIsDesktop();
   const { signUp, signInWithProvider, checkEmailExists } = useAuth();
   const [email, setEmail] = useState('');
@@ -22,7 +22,7 @@ export default function SignUpScreen({ navigation }: Props) {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [name, setName] = useState('');
-  const [role, setRole] = useState<'attendee' | 'vendor' | 'venue'>('attendee');
+  const [role, setRole] = useState<'attendee' | 'vendor' | 'venue'>(route.params?.role ?? 'attendee');
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [privacyAccepted, setPrivacyAccepted] = useState(false);
   const [loading, setLoading] = useState(false);

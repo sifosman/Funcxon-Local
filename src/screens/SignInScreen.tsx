@@ -22,7 +22,8 @@ export default function SignInScreen({ navigation }: Props) {
   const [loading, setLoading] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [formSuccess, setFormSuccess] = useState<string | null>(null);
-  const [alertState, setAlertState] = useState<{visible: boolean; title: string; message: string} | null>(null);
+  const [alertState, setAlertState] = useState<{visible: boolean; title: string; message: string; buttons?: Array<{ text: string; style?: 'default' | 'cancel' | 'destructive'; onPress?: () => void }>} | null>(null);
+  const [resending, setResending] = useState(false);
 
   const redirectAfterSignIn = async () => {
     const pendingCheckout = await getPendingSubscriptionCheckout();
@@ -38,6 +39,25 @@ export default function SignInScreen({ navigation }: Props) {
     }
 
     navigation.getParent()?.navigate('Main');
+  };
+
+  const handleResendConfirmation = async (emailToResend: string) => {
+    setResending(true);
+    try {
+      const { error: resendError } = await supabase.auth.resend({
+        type: 'signup',
+        email: emailToResend,
+      });
+      if (resendError) {
+        setAlertState({ visible: true, title: 'Resend failed', message: resendError.message, buttons: [{ text: 'OK', style: 'default', onPress: () => setAlertState(null) }] });
+      } else {
+        setAlertState({ visible: true, title: 'Verification email sent', message: 'A new verification email has been sent to your inbox. Please check your email (including spam folder) and click the link to verify your email address.', buttons: [{ text: 'OK', style: 'default', onPress: () => setAlertState(null) }] });
+      }
+    } catch (err: any) {
+      setAlertState({ visible: true, title: 'Resend failed', message: err?.message || 'Could not resend the verification email. Please try again later.', buttons: [{ text: 'OK', style: 'default', onPress: () => setAlertState(null) }] });
+    } finally {
+      setResending(false);
+    }
   };
 
   const handleSignIn = async () => {
@@ -69,8 +89,28 @@ export default function SignInScreen({ navigation }: Props) {
     setLoading(false);
 
     if (error) {
-      setAlertState({ visible: true, title: 'Sign in failed', message: error.message });
-      setFormError(error.message);
+      // Detect "email not confirmed" errors and show a friendlier message
+      // with a resend option (covers both Supabase error variants).
+      const isEmailNotConfirmed =
+        error.message.toLowerCase().includes('email not confirmed') ||
+        (error as any).code === 'email_not_confirmed' ||
+        ((error as any).status === 400 && error.message.toLowerCase().includes('confirm'));
+
+      if (isEmailNotConfirmed) {
+        setAlertState({
+          visible: true,
+          title: 'Verify your email',
+          message: 'A verification email has been sent to you. Please check your inbox (and spam folder) and click the link to verify your email address.',
+          buttons: [
+            { text: 'Resend email', style: 'default', onPress: () => { setAlertState(null); handleResendConfirmation(trimmedEmail); } },
+            { text: 'OK', style: 'cancel', onPress: () => setAlertState(null) },
+          ],
+        });
+        setFormError('Email not confirmed. Check your inbox for the verification link.');
+      } else {
+        setAlertState({ visible: true, title: 'Sign in failed', message: error.message, buttons: [{ text: 'OK', style: 'default', onPress: () => setAlertState(null) }] });
+        setFormError(error.message);
+      }
       return;
     }
 
@@ -390,7 +430,7 @@ export default function SignInScreen({ navigation }: Props) {
           visible={alertState.visible}
           title={alertState.title}
           message={alertState.message}
-          buttons={[{ text: 'OK', style: 'default', onPress: () => setAlertState(null) }]}
+          buttons={alertState.buttons ?? [{ text: 'OK', style: 'default', onPress: () => setAlertState(null) }]}
           onDismiss={() => setAlertState(null)}
         />
       )}

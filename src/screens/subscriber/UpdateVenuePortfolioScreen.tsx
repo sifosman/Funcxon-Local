@@ -4,6 +4,7 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import * as ImagePicker from 'expo-image-picker';
+import * as DocumentPicker from 'expo-document-picker';
 import { colors, spacing, radii, typography } from '../../theme';
 import { supabase } from '../../lib/supabaseClient';
 import { uploadFileToStorage } from '../../lib/applicationService';
@@ -12,11 +13,22 @@ import { getMyVenueEntitlement, isVenueFeatureEnabled } from '../../lib/venueSub
 import { createGalleryMediaRecord, deactivateGalleryMediaRecord, MAX_VIDEO_SIZE } from '../../lib/mediaUpload';
 import { normalizePhoneNumber } from '../../utils/phoneNormalization';
 import ThemedAlert from '../../components/ThemedAlert';
+import VideoThumbnail from '../../components/VideoThumbnail';
 import DropdownPicker from '../../components/DropdownPicker';
 import { useIsDesktop } from '../../hooks/useIsDesktop';
-import { venueTypes, amenitiesList, venueCapacityOptions } from '../../config/venueTypes';
+import { venueTypes, amenitiesList, venueCapacityOptions, eventTypes } from '../../config/venueTypes';
 import { getProvinceNames } from '../../config/locations';
 import { priceRangeOptions, countryOptions } from '../../config/portfolioOptions';
+
+type DocKey = 'id_copy' | 'cipro' | 'company_logo';
+
+const BUSINESS_DOCS: Array<{ key: DocKey; label: string; required: boolean; acceptLabel?: string }> = [
+  { key: 'id_copy', label: 'ID Copy', required: true },
+  { key: 'cipro', label: 'CIPRO / Company Registration', required: false, acceptLabel: 'If applicable' },
+  { key: 'company_logo', label: 'Company Logo', required: true },
+];
+
+const MAX_DOC_SIZE = 10 * 1024 * 1024; // 10MB
 
 function buildLegacyLocation(parts: Array<string | null | undefined>) {
   return parts.map((part) => part?.trim() ?? '').filter(Boolean).join(', ') || null;
@@ -68,6 +80,12 @@ type VenueListing = {
   amenities: string[] | null;
   image_url: string | null;
   additional_photos: string[] | null;
+  awards: string | null;
+  payment_terms: string | null;
+  logo_url: string | null;
+  event_types: string[] | null;
+  features: Record<string, any> | null;
+  business_documents: Array<{ docType: string; url: string; name: string }> | null;
 };
 
 export default function UpdateVenuePortfolioScreen() {
@@ -90,6 +108,11 @@ export default function UpdateVenuePortfolioScreen() {
   const [videoLimit, setVideoLimit] = useState<number>(1);
   const [uploadingImage, setUploadingImage] = useState(false);
   const [uploadingVideo, setUploadingVideo] = useState(false);
+  const [uploadingDoc, setUploadingDoc] = useState(false);
+  const [uploadingLogo, setUploadingLogo] = useState(false);
+  const [logoUrl, setLogoUrl] = useState<string | null>(null);
+  const [documents, setDocuments] = useState<Array<{ docType: string; url: string; name: string }>>([]);
+  const [halls, setHalls] = useState<Array<{ name: string; capacity: string }>>(() => Array.from({ length: 5 }, () => ({ name: '', capacity: '' })));
   const [alertState, setAlertState] = useState<{visible: boolean; title: string; message: string; buttons?: any[]; navigateOnDismiss?: boolean} | null>(null);
 
   const [form, setForm] = useState({
@@ -116,6 +139,9 @@ export default function UpdateVenuePortfolioScreen() {
     venue_capacity: '',
     price_range: '',
     amenities: '',
+    event_types: '',
+    awards: '',
+    payment_terms: '',
   });
 
   const derivedLocationPreview = useMemo(
@@ -150,7 +176,7 @@ export default function UpdateVenuePortfolioScreen() {
       const { data, error } = await supabase
         .from('venue_listings')
         .select(
-          'id, user_id, name, description, location, address_line_1, address_line_2, suburb, city, province, postal_code, country, latitude, longitude, contact_email, whatsapp_number, website_url, instagram_url, facebook_url, tiktok_url, linkedin_url, venue_type, venue_capacity, price_range, amenities, image_url, additional_photos',
+          'id, user_id, name, description, location, address_line_1, address_line_2, suburb, city, province, postal_code, country, latitude, longitude, contact_email, whatsapp_number, website_url, instagram_url, facebook_url, tiktok_url, linkedin_url, venue_type, venue_capacity, price_range, amenities, image_url, additional_photos, awards, payment_terms, logo_url, event_types, features, business_documents',
         )
         .eq('user_id', user.id)
         .maybeSingle();
@@ -162,7 +188,13 @@ export default function UpdateVenuePortfolioScreen() {
       if (data) {
         setListing(data as VenueListing);
         setImageUrl((data as VenueListing).image_url || null);
+        setLogoUrl((data as VenueListing).logo_url || null);
+        setDocuments((data as VenueListing).business_documents || []);
         setAdditionalPhotos((data as VenueListing).additional_photos || []);
+        // Load halls from features JSON
+        const featuresData = (data as VenueListing).features || {};
+        const hallsData = Array.isArray(featuresData.halls) ? featuresData.halls : [];
+        setHalls(Array.from({ length: 5 }, (_, i) => hallsData[i] ?? { name: '', capacity: '' }));
 
         const { data: gallery } = await supabase
           .from('gallery_media')
@@ -174,6 +206,21 @@ export default function UpdateVenuePortfolioScreen() {
           .filter((g: any) => g.media_type === 'video')
           .map((g: any) => g.media_url);
         setVideos(videoUrls);
+
+        // Also load photos from gallery_media (where application-uploaded
+        // photos are stored) and merge with additional_photos from the
+        // venues table. This ensures all uploaded photos are visible and
+        // deletable in the edit screen. Exclude the main image_url since
+        // it is displayed and managed separately.
+        const galleryPhotoUrls = (gallery || [])
+          .filter((g: any) => g.media_type === 'image')
+          .map((g: any) => g.media_url);
+        const mainImageUrl = (data as VenueListing).image_url || null;
+        const mergedPhotos = Array.from(new Set([
+          ...((data as VenueListing).additional_photos || []),
+          ...galleryPhotoUrls,
+        ])).filter((url: string) => url !== mainImageUrl);
+        setAdditionalPhotos(mergedPhotos);
 
         setForm({
           name: data.name || '',
@@ -199,6 +246,9 @@ export default function UpdateVenuePortfolioScreen() {
           venue_capacity: data.venue_capacity || '',
           price_range: (data as VenueListing).price_range || '',
           amenities: Array.isArray((data as VenueListing).amenities) ? (data as VenueListing).amenities!.join(', ') : '',
+          event_types: Array.isArray((data as VenueListing).event_types) ? (data as VenueListing).event_types!.join(', ') : '',
+          awards: (data as VenueListing).awards || '',
+          payment_terms: (data as VenueListing).payment_terms || '',
         });
       } else {
         // Fallback: check legacy venues table for existing data
@@ -241,6 +291,9 @@ export default function UpdateVenuePortfolioScreen() {
             venue_capacity: '',
             price_range: '',
             amenities: '',
+            event_types: '',
+            awards: '',
+            payment_terms: '',
           });
         } else {
           setImageUrl(null);
@@ -354,10 +407,17 @@ export default function UpdateVenuePortfolioScreen() {
   };
 
   const handleRemoveAdditionalPhoto = (index: number) => {
+    const removedUrl = additionalPhotos[index];
     setAdditionalPhotos((prev) => prev.filter((_, i) => i !== index));
+    if (removedUrl && listing?.id) {
+      deactivateGalleryMediaRecord(removedUrl, { venueId: listing.id });
+    }
   };
 
   const handleRemoveMainImage = () => {
+    if (imageUrl && listing?.id) {
+      deactivateGalleryMediaRecord(imageUrl, { venueId: listing.id });
+    }
     setImageUrl(null);
   };
 
@@ -422,6 +482,75 @@ export default function UpdateVenuePortfolioScreen() {
     }
   };
 
+  const handlePickLogo = async () => {
+    const permitted = await requestImagePermission();
+    if (!permitted) return;
+    try {
+      setUploadingLogo(true);
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ['images'],
+        allowsMultipleSelection: false,
+        allowsEditing: true,
+        quality: 0.8,
+      });
+      if (result.canceled || !result.assets?.[0]) return;
+      const url = await uploadPickedImage(result.assets[0]);
+      if (url) {
+        setLogoUrl(url);
+      }
+    } catch (err: any) {
+      setAlertState({ visible: true, title: 'Upload failed', message: err?.message || 'Could not upload logo.', buttons: [{ text: 'OK', style: 'default', onPress: () => setAlertState(null) }] });
+    } finally {
+      setUploadingLogo(false);
+    }
+  };
+
+  const handleRemoveLogo = () => {
+    setLogoUrl(null);
+  };
+
+  const handlePickDocument = async (docType: DocKey) => {
+    try {
+      setUploadingDoc(true);
+      const result = await DocumentPicker.getDocumentAsync({
+        type: ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'image/*'],
+        copyToCacheDirectory: true,
+      });
+      if (result.canceled || !result.assets || result.assets.length === 0) return;
+      const asset = result.assets[0];
+      const fileSize = asset.size || 0;
+      if (fileSize > MAX_DOC_SIZE) {
+        setAlertState({ visible: true, title: 'File Too Large', message: `${asset.name} exceeds 10MB limit.`, buttons: [{ text: 'OK', style: 'default', onPress: () => setAlertState(null) }] });
+        return;
+      }
+      if (!user?.id) return;
+      const file = {
+        uri: asset.uri,
+        name: asset.name,
+        type: asset.mimeType || 'application/octet-stream',
+      };
+      const uploadResult = await uploadFileToStorage('business-documents', file, user.id);
+      if (!uploadResult.success || !uploadResult.url) {
+        throw new Error(uploadResult.error || 'Upload failed');
+      }
+      const filtered = documents.filter((d) => d.docType !== docType);
+      setDocuments([...filtered, { docType, url: uploadResult.url!, name: asset.name }]);
+      setAlertState({ visible: true, title: 'Success', message: `${BUSINESS_DOCS.find((d) => d.key === docType)?.label} uploaded successfully.`, buttons: [{ text: 'OK', style: 'default', onPress: () => setAlertState(null) }] });
+    } catch (err: any) {
+      setAlertState({ visible: true, title: 'Error', message: err?.message || 'Failed to upload document.', buttons: [{ text: 'OK', style: 'default', onPress: () => setAlertState(null) }] });
+    } finally {
+      setUploadingDoc(false);
+    }
+  };
+
+  const handleRemoveDocument = (docType: DocKey) => {
+    setDocuments((prev) => prev.filter((d) => d.docType !== docType));
+  };
+
+  const updateHall = (index: number, patch: { name?: string; capacity?: string }) => {
+    setHalls((prev) => prev.map((h, i) => (i === index ? { ...h, ...patch } : h)));
+  };
+
   const handleSave = async () => {
     if (!form.name.trim()) {
       setAlertState({ visible: true, title: 'Required', message: 'Venue name is required.', buttons: [{ text: 'OK', style: 'default', onPress: () => setAlertState(null) }] });
@@ -471,15 +600,24 @@ export default function UpdateVenuePortfolioScreen() {
         venue_capacity: form.venue_capacity.trim() || null,
         price_range: form.price_range.trim() || null,
         amenities: form.amenities.trim() ? form.amenities.split(',').map((v) => v.trim()).filter(Boolean) : null,
+        event_types: form.event_types.trim() ? form.event_types.split(',').map((v) => v.trim()).filter(Boolean) : null,
+        awards: form.awards.trim() || null,
+        payment_terms: form.payment_terms.trim() || null,
+        logo_url: logoUrl,
+        business_documents: documents.length > 0 ? documents : [],
         image_url: imageUrl,
         additional_photos: additionalPhotos.length > 0 ? additionalPhotos : null,
+        features: {
+          ...(listing?.features || {}),
+          halls: halls.filter((h) => h.name.trim() || h.capacity.trim()),
+        },
       };
 
       const { data, error } = await supabase
         .from('venue_listings')
         .upsert(payload, { onConflict: 'user_id' })
         .select(
-          'id, user_id, name, description, location, address_line_1, address_line_2, suburb, city, province, postal_code, country, latitude, longitude, contact_email, whatsapp_number, website_url, instagram_url, facebook_url, tiktok_url, linkedin_url, venue_type, venue_capacity, price_range, amenities, image_url, additional_photos',
+          'id, user_id, name, description, location, address_line_1, address_line_2, suburb, city, province, postal_code, country, latitude, longitude, contact_email, whatsapp_number, website_url, instagram_url, facebook_url, tiktok_url, linkedin_url, venue_type, venue_capacity, price_range, amenities, image_url, additional_photos, awards, payment_terms, logo_url, event_types, features, business_documents',
         )
         .single();
 
@@ -634,10 +772,12 @@ export default function UpdateVenuePortfolioScreen() {
             </View>
             <DropdownPicker
               label="Venue Type"
-              selectedValues={form.venue_type ? [form.venue_type] : []}
-              onConfirm={(vals) => setForm((prev) => ({ ...prev, venue_type: vals[0] || '' }))}
+              selectedValues={form.venue_type ? form.venue_type.split(',').map((v) => v.trim()).filter(Boolean) : []}
+              onConfirm={(vals) => setForm((prev) => ({ ...prev, venue_type: vals.join(', ') }))}
               options={venueTypes}
-              placeholder="Select venue type"
+              multi
+              searchable
+              placeholder="Select venue type(s)"
             />
             <DropdownPicker
               label="Venue Capacity"
@@ -657,12 +797,345 @@ export default function UpdateVenuePortfolioScreen() {
               placeholder="Select amenities"
             />
             <DropdownPicker
+              label="Event Types"
+              selectedValues={form.event_types ? form.event_types.split(',').map((v) => v.trim()).filter(Boolean) : []}
+              onConfirm={(vals) => setForm((prev) => ({ ...prev, event_types: vals.join(', ') }))}
+              options={eventTypes}
+              multi
+              searchable
+              placeholder="Select event types"
+            />
+            <DropdownPicker
               label="Price Range"
               selectedValues={form.price_range ? [form.price_range] : []}
               onConfirm={(vals) => setForm((prev) => ({ ...prev, price_range: vals[0] || '' }))}
               options={priceRangeOptions}
               placeholder="Select price range"
             />
+          </View>
+
+          {/* Awards & Nominations */}
+          <View
+            style={{
+              backgroundColor: cardSurface,
+              borderRadius: radii.lg,
+              padding: spacing.lg,
+              borderWidth: 1,
+              borderColor: cardBorder,
+              marginTop: spacing.md,
+            }}
+          >
+            <Text style={{ ...typography.titleMedium, color: colors.textPrimary, marginBottom: spacing.xs }}>
+              Awards & Nominations
+            </Text>
+            <Text style={{ ...typography.caption, color: colors.textMuted, marginBottom: spacing.md }}>
+              List any awards or nominations your venue has received (optional)
+            </Text>
+            <TextInput
+              placeholder="e.g., Best Wedding Venue 2024, Top 10 Event Spaces..."
+              value={form.awards}
+              onChangeText={(v) => handleChange('awards', v)}
+              multiline
+              numberOfLines={4}
+              style={{
+                borderWidth: 1,
+                borderColor: cardBorder,
+                borderRadius: radii.md,
+                paddingHorizontal: spacing.md,
+                paddingVertical: spacing.sm,
+                backgroundColor: cardSurface,
+                fontSize: 14,
+                color: colors.textPrimary,
+                textAlignVertical: 'top',
+                minHeight: 110,
+                fontFamily: typography.body.fontFamily,
+              }}
+            />
+          </View>
+
+          {/* Number of Halls */}
+          <View
+            style={{
+              backgroundColor: cardSurface,
+              borderRadius: radii.lg,
+              padding: spacing.lg,
+              borderWidth: 1,
+              borderColor: cardBorder,
+              marginTop: spacing.md,
+            }}
+          >
+            <Text style={{ ...typography.titleMedium, color: colors.textPrimary, marginBottom: spacing.xs }}>
+              Number of Halls on Property
+            </Text>
+            <Text style={{ ...typography.caption, color: colors.textMuted, marginBottom: spacing.md }}>
+              Add details for each hall/space at your venue (up to 5)
+            </Text>
+            {Array.from({ length: 5 }, (_, idx) => {
+              const hall = halls[idx] ?? { name: '', capacity: '' };
+              const hallNumber = idx + 1;
+              return (
+                <View
+                  key={`hall-${hallNumber}`}
+                  style={{
+                    borderWidth: 1,
+                    borderColor: cardBorder,
+                    borderRadius: radii.lg,
+                    padding: spacing.md,
+                    marginBottom: spacing.md,
+                    backgroundColor: cardSurface,
+                  }}
+                >
+                  <View style={{ flexDirection: 'row', gap: spacing.md }}>
+                    <View style={{ flex: 1 }}>
+                      <Text style={{ ...typography.bodySemiBold, color: colors.textPrimary, marginBottom: spacing.xs }}>
+                        Hall {hallNumber} Name
+                      </Text>
+                      <TextInput
+                        placeholder="e.g., Main Hall, Garden Pavilion..."
+                        value={hall.name}
+                        onChangeText={(value) => updateHall(idx, { name: value })}
+                        style={{
+                          borderWidth: 1,
+                          borderColor: cardBorder,
+                          borderRadius: radii.md,
+                          paddingHorizontal: spacing.md,
+                          paddingVertical: spacing.sm,
+                          backgroundColor: cardSurface,
+                          fontSize: 14,
+                          color: colors.textPrimary,
+                          fontFamily: typography.body.fontFamily,
+                        }}
+                      />
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={{ ...typography.bodySemiBold, color: colors.textPrimary, marginBottom: spacing.xs }}>
+                        Hall {hallNumber} Capacity
+                      </Text>
+                      <TextInput
+                        placeholder="e.g., 200 guests"
+                        value={hall.capacity}
+                        onChangeText={(value) => updateHall(idx, { capacity: value })}
+                        style={{
+                          borderWidth: 1,
+                          borderColor: cardBorder,
+                          borderRadius: radii.md,
+                          paddingHorizontal: spacing.md,
+                          paddingVertical: spacing.sm,
+                          backgroundColor: cardSurface,
+                          fontSize: 14,
+                          color: colors.textPrimary,
+                          fontFamily: typography.body.fontFamily,
+                        }}
+                      />
+                    </View>
+                  </View>
+                </View>
+              );
+            })}
+          </View>
+
+          {/* Payment Terms & Conditions */}
+          <View
+            style={{
+              backgroundColor: cardSurface,
+              borderRadius: radii.lg,
+              padding: spacing.lg,
+              borderWidth: 1,
+              borderColor: cardBorder,
+              marginTop: spacing.md,
+            }}
+          >
+            <Text style={{ ...typography.titleMedium, color: colors.textPrimary, marginBottom: spacing.xs }}>
+              Payment Terms & Conditions
+            </Text>
+            <Text style={{ ...typography.caption, color: colors.textMuted, marginBottom: spacing.md }}>
+              Describe your payment terms, deposit requirements, and conditions
+            </Text>
+            <TextInput
+              placeholder="e.g., 50% deposit required to secure booking, balance due 14 days before event..."
+              value={form.payment_terms}
+              onChangeText={(v) => handleChange('payment_terms', v)}
+              multiline
+              numberOfLines={4}
+              style={{
+                borderWidth: 1,
+                borderColor: cardBorder,
+                borderRadius: radii.md,
+                paddingHorizontal: spacing.md,
+                paddingVertical: spacing.sm,
+                backgroundColor: cardSurface,
+                fontSize: 14,
+                color: colors.textPrimary,
+                textAlignVertical: 'top',
+                minHeight: 110,
+                fontFamily: typography.body.fontFamily,
+              }}
+            />
+          </View>
+
+          {/* Company Logo */}
+          <View
+            style={{
+              backgroundColor: cardSurface,
+              borderRadius: radii.lg,
+              padding: spacing.lg,
+              borderWidth: 1,
+              borderColor: cardBorder,
+              marginTop: spacing.md,
+            }}
+          >
+            <Text style={{ ...typography.titleMedium, color: colors.textPrimary, marginBottom: spacing.xs }}>
+              Company Logo
+            </Text>
+            <Text style={{ ...typography.caption, color: colors.textMuted, marginBottom: spacing.md }}>
+              Upload your company logo (separate from your main portfolio image)
+            </Text>
+            {logoUrl ? (
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md }}>
+                <Image
+                  source={{ uri: logoUrl }}
+                  style={{ width: 80, height: 80, borderRadius: radii.md, backgroundColor: colors.surfaceMuted }}
+                  resizeMode="contain"
+                />
+                <View style={{ flexDirection: 'row', gap: spacing.sm }}>
+                  <TouchableOpacity
+                    onPress={handlePickLogo}
+                    disabled={uploadingLogo}
+                    style={{
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      paddingHorizontal: spacing.md,
+                      paddingVertical: spacing.xs,
+                      borderRadius: radii.md,
+                      backgroundColor: colors.primary,
+                    }}
+                  >
+                    <MaterialIcons name="edit" size={16} color="#FFFFFF" />
+                    <Text style={{ ...typography.captionSemiBold, color: '#FFFFFF', marginLeft: spacing.xs }}>Replace</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    onPress={handleRemoveLogo}
+                    style={{
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      paddingHorizontal: spacing.md,
+                      paddingVertical: spacing.xs,
+                      borderRadius: radii.md,
+                      backgroundColor: '#EF4444',
+                    }}
+                  >
+                    <MaterialIcons name="delete" size={16} color="#FFFFFF" />
+                    <Text style={{ ...typography.captionSemiBold, color: '#FFFFFF', marginLeft: spacing.xs }}>Remove</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            ) : (
+              <TouchableOpacity
+                onPress={handlePickLogo}
+                disabled={uploadingLogo}
+                style={{
+                  width: 80,
+                  height: 80,
+                  borderRadius: radii.md,
+                  borderWidth: 1,
+                  borderColor: cardBorder,
+                  borderStyle: 'dashed',
+                  backgroundColor: colors.surfaceMuted,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                <MaterialIcons name="add-a-photo" size={28} color={colors.textMuted} />
+              </TouchableOpacity>
+            )}
+            {uploadingLogo && (
+              <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: spacing.sm, gap: spacing.sm }}>
+                <ActivityIndicator size="small" color={colors.primary} />
+                <Text style={{ ...typography.caption, color: colors.textMuted }}>Uploading logo...</Text>
+              </View>
+            )}
+          </View>
+
+          {/* Business Documents */}
+          <View
+            style={{
+              backgroundColor: cardSurface,
+              borderRadius: radii.lg,
+              padding: spacing.lg,
+              borderWidth: 1,
+              borderColor: cardBorder,
+              marginTop: spacing.md,
+            }}
+          >
+            <Text style={{ ...typography.titleMedium, color: colors.textPrimary, marginBottom: spacing.xs }}>
+              Business Documents
+            </Text>
+            <Text style={{ ...typography.caption, color: colors.textMuted, marginBottom: spacing.md }}>
+              Upload your compliance documents (PDF, Word, or image files up to 10MB each)
+            </Text>
+            {BUSINESS_DOCS.map((doc) => {
+              const existing = documents.find((d) => d.docType === doc.key);
+              return (
+                <View key={doc.key} style={{ marginBottom: spacing.md }}>
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.xs }}>
+                    <Text style={{ ...typography.bodyMedium, color: colors.textPrimary }}>
+                      {doc.label}
+                      {doc.required ? <Text style={{ color: '#EF4444' }}> *</Text> : null}
+                    </Text>
+                    {doc.acceptLabel && !existing && (
+                      <Text style={{ ...typography.caption, color: colors.textMuted, fontStyle: 'italic' }}>{doc.acceptLabel}</Text>
+                    )}
+                  </View>
+                  {existing ? (
+                    <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', borderWidth: 1, borderColor: cardBorder, borderRadius: radii.md, paddingHorizontal: spacing.md, paddingVertical: spacing.sm, backgroundColor: colors.surfaceMuted }}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
+                        <MaterialIcons name="description" size={20} color={colors.textPrimary} style={{ marginRight: spacing.sm }} />
+                        <Text style={{ ...typography.body, color: colors.textPrimary, flex: 1 }} numberOfLines={1}>{existing.name}</Text>
+                      </View>
+                      <View style={{ flexDirection: 'row', gap: spacing.xs }}>
+                        <TouchableOpacity
+                          onPress={() => handlePickDocument(doc.key)}
+                          disabled={uploadingDoc}
+                        >
+                          <MaterialIcons name="edit" size={18} color={colors.primary} />
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                          onPress={() => handleRemoveDocument(doc.key)}
+                        >
+                          <MaterialIcons name="close" size={18} color="#EF4444" />
+                        </TouchableOpacity>
+                      </View>
+                    </View>
+                  ) : (
+                    <TouchableOpacity
+                      onPress={() => handlePickDocument(doc.key)}
+                      disabled={uploadingDoc}
+                      style={{
+                        borderWidth: 1,
+                        borderColor: cardBorder,
+                        borderStyle: 'dashed',
+                        borderRadius: radii.md,
+                        paddingVertical: spacing.md,
+                        paddingHorizontal: spacing.md,
+                        alignItems: 'center',
+                        flexDirection: 'row',
+                        justifyContent: 'center',
+                        gap: spacing.xs,
+                      }}
+                    >
+                      <MaterialIcons name="cloud-upload" size={20} color={colors.textMuted} />
+                      <Text style={{ ...typography.body, color: colors.textMuted }}>Upload {doc.label}</Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
+              );
+            })}
+            {uploadingDoc && (
+              <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: spacing.xs, gap: spacing.sm }}>
+                <ActivityIndicator size="small" color={colors.primary} />
+                <Text style={{ ...typography.caption, color: colors.textMuted }}>Uploading document...</Text>
+              </View>
+            )}
           </View>
 
           {/* Portfolio Photos - always visible */}
@@ -880,11 +1353,14 @@ export default function UpdateVenuePortfolioScreen() {
                         height: 80,
                         borderRadius: radii.md,
                         backgroundColor: colors.background,
-                        alignItems: 'center',
-                        justifyContent: 'center',
+                        overflow: 'hidden',
                       }}
                     >
-                      <MaterialIcons name="videocam" size={28} color={colors.textPrimary} />
+                      <VideoThumbnail
+                        uri={url}
+                        style={{ width: '100%', height: '100%' }}
+                        playIconSize={20}
+                      />
                     </View>
                     <TouchableOpacity
                       onPress={() => handleRemoveVideo(idx)}

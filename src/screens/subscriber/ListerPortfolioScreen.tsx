@@ -6,7 +6,6 @@ import {
   ScrollView,
   TouchableOpacity,
   Image,
-  Linking,
   ActivityIndicator,
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
@@ -21,7 +20,6 @@ import { AppFooter } from '../../components/AppFooter';
 import { HelpCenterModal } from '../../components/HelpCenterModal';
 import ThemedAlert from '../../components/ThemedAlert';
 import { useFocusEffect } from '@react-navigation/native';
-import { SUPPORT_WHATSAPP } from '../../utils/env';
 import type { ProfileStackParamList } from '../../navigation/ProfileNavigator';
 import { useIsDesktop } from '../../hooks/useIsDesktop';
 
@@ -65,7 +63,7 @@ export default function ListerPortfolioScreen() {
 
   const getUsername = () => {
     if (!user) return 'Lister';
-    const displayName = user.user_metadata?.display_name || user.user_metadata?.full_name || user.user_metadata?.name;
+    const displayName = user.user_metadata?.display_name || user.user_metadata?.username || user.user_metadata?.full_name || user.user_metadata?.name;
     if (displayName) return displayName;
     if (user.email) return user.email.split('@')[0];
     return 'Lister';
@@ -546,19 +544,6 @@ export default function ListerPortfolioScreen() {
             <Text style={styles.emptyBlogText}>No blog posts available yet.</Text>
           </View>
         )}
-      </View>
-
-      {/* Support Links */}
-      <View style={[styles.card, cardStyle]}>
-        <Text style={styles.cardTitle}>Support</Text>
-        {[
-          { id: 'faqs', label: "FAQ's", icon: 'help-outline' as keyof typeof MaterialIcons.glyphMap, action: () => setHelpVisible(true) },
-          { id: 'helpdesk', label: 'Need app assistance? Contact our helpdesk', icon: 'support-agent' as keyof typeof MaterialIcons.glyphMap, action: () => setHelpVisible(true) },
-          { id: 'report', label: 'Report a problem to Funxon', icon: 'report-problem' as keyof typeof MaterialIcons.glyphMap, action: () => Linking.openURL('mailto:support@funxon.co.za?subject=Problem%20Report%20-%20Funxon') },
-          { id: 'whatsapp', label: 'Chat with Funxon via WhatsApp', icon: 'chat' as keyof typeof MaterialIcons.glyphMap, action: () => Linking.openURL(`https://wa.me/${SUPPORT_WHATSAPP.replace(/[^0-9]/g, '')}`) },
-          { id: 'email', label: 'Chat with Funxon via email', icon: 'email' as keyof typeof MaterialIcons.glyphMap, action: () => Linking.openURL('mailto:support@funxon.co.za') },
-          { id: 'terms', label: 'Terms & Policies', icon: 'policy' as keyof typeof MaterialIcons.glyphMap, action: () => navigation.navigate('TermsAndPolicies') },
-        ].map((item, i, arr) => renderActionCard(item, i, arr.length))}
       </View>
 
       <View style={{ height: spacing.xl }} />

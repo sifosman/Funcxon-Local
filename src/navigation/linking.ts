@@ -14,6 +14,9 @@ export const linking = {
             path: '',
             screens: {
               VendorList: '',
+              SubscriptionPlans: 'subscription-plans',
+              VenueListingPlans: 'venue-listing-plans',
+              ListersPortal: 'listers-portal',
             },
           },
           Favourites: 'favourites',
