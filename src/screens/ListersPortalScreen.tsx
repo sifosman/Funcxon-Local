@@ -102,16 +102,30 @@ export default function ListersPortalScreen() {
   };
 
   const handleRegisterVenue = () => {
-    // Route listers through the CREATE YOUR ACCOUNT page so they can accept
-    // the T&Cs and Privacy Policy before subscribing. The role is pre-set to
-    // 'venue' so the user does not have to pick it again on the SignUp screen.
+    // If the user is already logged in (e.g. an attendee upgrading to a lister),
+    // skip the SignUp flow and go straight to the venue plans screen — they
+    // already have an account and have accepted the T&Cs.
+    if (session) {
+      navigation.navigate('VenueListingPlans');
+      return;
+    }
+    // Route logged-out listers through the CREATE YOUR ACCOUNT page so they can
+    // accept the T&Cs and Privacy Policy before subscribing. The role is
+    // pre-set to 'venue' so the user does not have to pick it again on SignUp.
     (navigation as any).navigate('Auth', { screen: 'SignUp', params: { role: 'venue' } });
   };
 
   const handleRegisterVendor = () => {
-    // Route listers through the CREATE YOUR ACCOUNT page so they can accept
-    // the T&Cs and Privacy Policy before subscribing. The role is pre-set to
-    // 'vendor' so the user does not have to pick it again on the SignUp screen.
+    // If the user is already logged in (e.g. an attendee upgrading to a lister),
+    // skip the SignUp flow and go straight to the vendor plans screen — they
+    // already have an account and have accepted the T&Cs.
+    if (session) {
+      navigation.navigate('SubscriptionPlans');
+      return;
+    }
+    // Route logged-out listers through the CREATE YOUR ACCOUNT page so they can
+    // accept the T&Cs and Privacy Policy before subscribing. The role is
+    // pre-set to 'vendor' so the user does not have to pick it again on SignUp.
     (navigation as any).navigate('Auth', { screen: 'SignUp', params: { role: 'vendor' } });
   };
 
@@ -205,6 +219,34 @@ export default function ListersPortalScreen() {
           <Text style={{ ...typography.bodyMd, color: colors.textPrimary }}>
             Already have an account? <Text style={{ fontWeight: '600' }}>Log in</Text>
           </Text>
+        </TouchableOpacity>
+      )}
+
+      {/* Logged-in users get a state-aware CTA that mirrors the mobile
+          login button: listers enter their portfolio dashboard, attendees
+          are prompted to upgrade to a lister account. */}
+      {session && (
+        <TouchableOpacity
+          onPress={isLister ? handleEnterPortfolio : handleUpgrade}
+          style={{
+            marginTop: spacing.lg,
+            backgroundColor: isLister ? colors.primary : colors.cta,
+            borderRadius: radii.lg,
+            paddingVertical: spacing.lg,
+            alignItems: 'center',
+          }}
+          activeOpacity={0.9}
+        >
+          <View style={{ flexDirection: 'row', alignItems: 'center' } as any}>
+            <MaterialIcons
+              name={isLister ? 'dashboard' : 'person-add'}
+              size={18}
+              color={colors.surface}
+            />
+            <Text style={{ ...typography.bodySemiBold, color: colors.surface, marginLeft: spacing.xs, fontSize: 16 }}>
+              {isLister ? 'ENTER PORTFOLIO DASHBOARD' : 'BECOME A LISTER'}
+            </Text>
+          </View>
         </TouchableOpacity>
       )}
 
@@ -656,12 +698,20 @@ export default function ListersPortalScreen() {
           <View style={styles.authSection}>
             <TouchableOpacity
               style={styles.loginButton}
-              onPress={isLister ? handleEnterPortfolio : handleLogin}
+              onPress={isLister ? handleEnterPortfolio : session ? handleUpgrade : handleLogin}
               activeOpacity={0.9}
             >
-              <MaterialIcons name={isLister ? 'dashboard' : 'login'} size={20} color={colors.surface} />
+              <MaterialIcons
+                name={isLister ? 'dashboard' : session ? 'person-add' : 'login'}
+                size={20}
+                color={colors.surface}
+              />
               <Text style={styles.loginButtonText}>
-                {isLister ? 'ENTER PORTFOLIO DASHBOARD' : 'LOG IN TO LISTERS PORTAL'}
+                {isLister
+                  ? 'ENTER PORTFOLIO DASHBOARD'
+                  : session
+                  ? 'BECOME A LISTER'
+                  : 'LOG IN TO LISTERS PORTAL'}
               </Text>
             </TouchableOpacity>
             {session && !isLister && (
