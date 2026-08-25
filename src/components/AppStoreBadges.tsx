@@ -1,4 +1,4 @@
-import { TouchableOpacity, View, Image, StyleSheet, ViewStyle } from 'react-native';
+import { TouchableOpacity, View, Image, StyleSheet, ViewStyle, Platform } from 'react-native';
 import { Linking } from 'react-native';
 import { spacing } from '../theme';
 
@@ -17,6 +17,12 @@ type Props = {
 };
 
 export function AppStoreBadges({ style }: Props) {
+  // Store badges are only relevant on web (mobile + desktop browsers).
+  // On native iOS/Android the user already has the app installed.
+  if (Platform.OS !== 'web') {
+    return null;
+  }
+
   const openGooglePlay = () => {
     Linking.openURL(GOOGLE_PLAY_URL).catch(() => {});
   };
