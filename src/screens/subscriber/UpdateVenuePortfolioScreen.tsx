@@ -7,7 +7,7 @@ import * as ImagePicker from 'expo-image-picker';
 import * as DocumentPicker from 'expo-document-picker';
 import { colors, spacing, radii, typography } from '../../theme';
 import { supabase } from '../../lib/supabaseClient';
-import { uploadFileToStorage } from '../../lib/applicationService';
+import { uploadFileToStorage, stabilizeDocumentPickerUri } from '../../lib/applicationService';
 import { useAuth } from '../../auth/AuthContext';
 import { getMyVenueEntitlement, isVenueFeatureEnabled } from '../../lib/venueSubscription';
 import { createGalleryMediaRecord, deactivateGalleryMediaRecord, MAX_VIDEO_SIZE } from '../../lib/mediaUpload';
@@ -104,8 +104,8 @@ export default function UpdateVenuePortfolioScreen() {
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [additionalPhotos, setAdditionalPhotos] = useState<string[]>([]);
   const [videos, setVideos] = useState<string[]>([]);
-  const [photoLimit, setPhotoLimit] = useState<number>(10);
-  const [videoLimit, setVideoLimit] = useState<number>(1);
+  const [photoLimit, setPhotoLimit] = useState<number>(5);
+  const [videoLimit, setVideoLimit] = useState<number>(0);
   const [uploadingImage, setUploadingImage] = useState(false);
   const [uploadingVideo, setUploadingVideo] = useState(false);
   const [uploadingDoc, setUploadingDoc] = useState(false);
@@ -518,6 +518,9 @@ export default function UpdateVenuePortfolioScreen() {
       });
       if (result.canceled || !result.assets || result.assets.length === 0) return;
       const asset = result.assets[0];
+      // Stabilize the DocumentPicker cache URI so it survives OS cleanup
+      const stableUri = await stabilizeDocumentPickerUri(asset.uri);
+
       const fileSize = asset.size || 0;
       if (fileSize > MAX_DOC_SIZE) {
         setAlertState({ visible: true, title: 'File Too Large', message: `${asset.name} exceeds 10MB limit.`, buttons: [{ text: 'OK', style: 'default', onPress: () => setAlertState(null) }] });
@@ -525,7 +528,7 @@ export default function UpdateVenuePortfolioScreen() {
       }
       if (!user?.id) return;
       const file = {
-        uri: asset.uri,
+        uri: stableUri,
         name: asset.name,
         type: asset.mimeType || 'application/octet-stream',
       };

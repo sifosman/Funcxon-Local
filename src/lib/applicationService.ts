@@ -32,7 +32,34 @@ function base64ToBlob(base64: string, mimeType: string): Blob {
   return new Blob([byteArray], { type: mimeType });
 }
 
-const BLOCKING_APPLICATION_STATUSES: readonly string[] = ['pending', 'approved', 'under_review', 'needs_changes'];
+/**
+ * Copies a file from expo-document-picker's transient cache into the app's own
+ * cache directory so it survives OS cleanup before upload begins.
+ * Returns the stable URI, or the original URI if copying is not needed/possible.
+ */
+export async function stabilizeDocumentPickerUri(uri: string): Promise<string> {
+  // Only copy when the URI points to the DocumentPicker cache on Android/iOS
+  if (!uri.includes('/cache/DocumentPicker/') && !uri.includes('DocumentPicker')) {
+    return uri;
+  }
+  try {
+    const destDir = `${FileSystem.cacheDirectory}stable_docs/`;
+    const info = await FileSystem.getInfoAsync(destDir);
+    if (!info.exists) {
+      await FileSystem.makeDirectoryAsync(destDir, { intermediates: true });
+    }
+    const fileName = uri.split('/').pop() || `doc_${Date.now()}`;
+    const destUri = `${destDir}${fileName}`;
+    await FileSystem.copyAsync({ from: uri, to: destUri });
+    console.log(`[stabilizeDocumentPickerUri] Copied ${uri} -> ${destUri}`);
+    return destUri;
+  } catch (err) {
+    console.warn('[stabilizeDocumentPickerUri] Copy failed, using original URI:', err);
+    return uri;
+  }
+}
+
+const BLOCKING_APPLICATION_STATUSES: readonly string[] = ['pending', 'under_review', 'needs_changes'];
 const EDITABLE_APPLICATION_STATUSES = ['needs_changes'] as const;
 
 export type ApplicationSubmission = {
@@ -191,9 +218,17 @@ export async function uploadFileToStorage(
         const base64 = await FileSystem.readAsStringAsync(file.uri, { encoding: 'base64' });
         fileBody = decode(base64);
         fileSize = fileBody.byteLength;
-      } catch (nativeFetchError) {
+      } catch (nativeFetchError: any) {
         console.error('Native file read failed for file URI:', file.uri, nativeFetchError);
-        throw new Error(`Failed to read native file: ${nativeFetchError instanceof Error ? nativeFetchError.message : String(nativeFetchError)}`);
+        const msg = nativeFetchError instanceof Error ? nativeFetchError.message : String(nativeFetchError);
+        // Detect ENOENT — the temp file was cleaned up by the OS before we could read it
+        if (msg.includes('ENOENT') || msg.includes('No such file')) {
+          throw new Error(
+            `The selected file "${file.name}" is no longer accessible. ` +
+            'It may have been removed from your device or its temporary cache expired. Please select it again.'
+          );
+        }
+        throw new Error(`Failed to read file "${file.name}": ${msg}`);
       }
     }
 

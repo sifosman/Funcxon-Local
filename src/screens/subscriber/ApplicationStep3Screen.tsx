@@ -9,11 +9,11 @@ import { useApplicationForm } from '../../context/ApplicationFormContext';
 import type { DocKey } from '../../context/ApplicationFormContext';
 import { validateStep3 } from '../../utils/formValidation';
 import { colors, spacing, radii, typography } from '../../theme';
-import { convertBlobToBase64 } from '../../lib/applicationService';
+import { convertBlobToBase64, stabilizeDocumentPickerUri } from '../../lib/applicationService';
 import { MAX_IMAGE_SIZE, MAX_VIDEO_SIZE } from '../../lib/mediaUpload';
 import { ApplicationProgress } from '../../components/ApplicationProgress';
 import { PhotoUploadCounter } from '../../components/PhotoUploadCounter';
-import { canUploadMorePhotos, incrementVendorPhotoCount, decrementVendorPhotoCount } from '../../lib/subscription';
+import { canUploadMorePhotos, incrementVendorPhotoCount, decrementVendorPhotoCount, getVendorTierLimits } from '../../lib/subscription';
 import { getMyVenueEntitlement } from '../../lib/venueSubscription';
 import { useAuth } from '../../auth/AuthContext';
 import { supabase } from '../../lib/supabaseClient';
@@ -42,6 +42,7 @@ export default function ApplicationStep3Screen() {
   const [vendorId, setVendorId] = useState<number | null>(null);
   const [alertState, setAlertState] = useState<{visible: boolean; title: string; message: string; buttons?: any[]} | null>(null);
   const [vendorVideoLimit, setVendorVideoLimit] = useState<number | null>(null);
+  const [vendorPhotoLimit, setVendorPhotoLimit] = useState<number | null>(null);
   const [venueLimits, setVenueLimits] = useState<{ photoLimit: number; videoLimit: number } | null>(null);
   const isDesktop = useIsDesktop();
   const cardSurface = isDesktop ? colors.surfaceContainerLowest : colors.surface;
@@ -58,11 +59,15 @@ export default function ApplicationStep3Screen() {
 
       if (data) {
         setVendorId(data.id);
-        const tier = String((data as any).subscription_tier ?? '').toLowerCase();
-        const limit = tier === 'premium_plus' ? 10 : tier === 'premium' ? 5 : 0;
-        setVendorVideoLimit(limit);
+        const tierKey = String((data as any).subscription_tier ?? 'get_started');
+        const limits = getVendorTierLimits(tierKey);
+        setVendorVideoLimit(limits.videos);
+        setVendorPhotoLimit(limits.photos);
       } else {
-        setVendorVideoLimit(null);
+        // New applicant with no vendor record yet: enforce free-tier limits
+        // (5 photos / 0 videos) until they select a plan on page 4.
+        setVendorVideoLimit(0);
+        setVendorPhotoLimit(5);
       }
     }
     loadVendorId();
@@ -87,22 +92,10 @@ export default function ApplicationStep3Screen() {
     try {
       // Venue upload limit enforcement
       if (state.portfolioType === 'venues') {
-        const limit = venueLimits?.photoLimit ?? 10;
+        const limit = venueLimits?.photoLimit ?? 5;
         const remaining = Math.max(0, limit - state.step3.images.length);
         if (remaining <= 0) {
           setAlertState({ visible: true, title: 'Photo Limit Reached', message: "You've reached your photo upload limit for your current venue plan.", buttons: [{ text: 'OK', style: 'default', onPress: () => setAlertState(null) }] });
-          return;
-        }
-      }
-
-      // Vendor upload limit enforcement (based on subscription tier)
-      if (state.portfolioType !== 'venues' && vendorVideoLimit !== null) {
-        const remaining = Math.max(0, vendorVideoLimit - state.step3.videos.length);
-        if (remaining <= 0) {
-          const message = vendorVideoLimit === 0
-            ? 'Video uploads are available on paid vendor plans. Please upgrade to upload videos.'
-            : "You've reached your video upload limit for your current vendor plan.";
-          setAlertState({ visible: true, title: 'Video Limit Reached', message, buttons: [{ text: 'OK', style: 'default', onPress: () => setAlertState(null) }] });
           return;
         }
       }
@@ -112,6 +105,15 @@ export default function ApplicationStep3Screen() {
         const canUpload = await canUploadMorePhotos(vendorId);
         if (!canUpload) {
           setAlertState({ visible: true, title: 'Photo Limit Reached', message: 'You\'ve reached your photo limit. Upgrade your subscription to add more photos.', buttons: [{ text: 'OK', style: 'default', onPress: () => setAlertState(null) }] });
+          return;
+        }
+      }
+
+      // Vendor plan-based photo limit enforcement (free tier = 5 photos)
+      if (state.portfolioType !== 'venues' && vendorPhotoLimit !== null) {
+        const remaining = Math.max(0, vendorPhotoLimit - state.step3.images.length);
+        if (remaining <= 0) {
+          setAlertState({ visible: true, title: 'Photo Limit Reached', message: "You've reached your photo limit for your current vendor plan. Upgrade to add more photos.", buttons: [{ text: 'OK', style: 'default', onPress: () => setAlertState(null) }] });
           return;
         }
       }
@@ -126,8 +128,10 @@ export default function ApplicationStep3Screen() {
       // Launch image picker
       const venueRemaining =
         state.portfolioType === 'venues'
-          ? Math.max(0, (venueLimits?.photoLimit ?? 10) - state.step3.images.length)
-          : 10;
+          ? Math.max(0, (venueLimits?.photoLimit ?? 5) - state.step3.images.length)
+          : vendorPhotoLimit !== null
+            ? Math.max(0, vendorPhotoLimit - state.step3.images.length)
+            : 5;
       const selectionLimit = Math.max(1, Math.min(10, venueRemaining));
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ['images'],
@@ -176,9 +180,16 @@ export default function ApplicationStep3Screen() {
         const updatedImages = [...state.step3.images, ...newImages];
 
         if (state.portfolioType === 'venues') {
-          const limit = venueLimits?.photoLimit ?? 10;
+          const limit = venueLimits?.photoLimit ?? 5;
           if (updatedImages.length > limit) {
             setAlertState({ visible: true, title: 'Photo Limit Reached', message: `Your venue plan allows up to ${limit} photo(s).`, buttons: [{ text: 'OK', style: 'default', onPress: () => setAlertState(null) }] });
+            updateStep3({ images: updatedImages.slice(0, limit) });
+            return;
+          }
+        } else if (vendorPhotoLimit !== null) {
+          const limit = vendorPhotoLimit;
+          if (updatedImages.length > limit) {
+            setAlertState({ visible: true, title: 'Photo Limit Reached', message: `Your vendor plan allows up to ${limit} photo(s). Upgrade to add more.`, buttons: [{ text: 'OK', style: 'default', onPress: () => setAlertState(null) }] });
             updateStep3({ images: updatedImages.slice(0, limit) });
             return;
           }
@@ -207,10 +218,22 @@ export default function ApplicationStep3Screen() {
     try {
       // Venue upload limit enforcement
       if (state.portfolioType === 'venues') {
-        const limit = venueLimits?.videoLimit ?? 1;
+        const limit = venueLimits?.videoLimit ?? 0;
         const remaining = Math.max(0, limit - state.step3.videos.length);
         if (remaining <= 0) {
           setAlertState({ visible: true, title: 'Video Limit Reached', message: "You've reached your video upload limit for your current venue plan.", buttons: [{ text: 'OK', style: 'default', onPress: () => setAlertState(null) }] });
+          return;
+        }
+      }
+
+      // Vendor upload limit enforcement (free tier = 0 videos)
+      if (state.portfolioType !== 'venues' && vendorVideoLimit !== null) {
+        const remaining = Math.max(0, vendorVideoLimit - state.step3.videos.length);
+        if (remaining <= 0) {
+          const message = vendorVideoLimit === 0
+            ? 'Video uploads are available on paid vendor plans. Please upgrade to upload videos.'
+            : "You've reached your video upload limit for your current vendor plan.";
+          setAlertState({ visible: true, title: 'Video Limit Reached', message, buttons: [{ text: 'OK', style: 'default', onPress: () => setAlertState(null) }] });
           return;
         }
       }
@@ -226,10 +249,10 @@ export default function ApplicationStep3Screen() {
       const vendorRemaining =
         state.portfolioType !== 'venues' && vendorVideoLimit !== null
           ? Math.max(0, vendorVideoLimit - state.step3.videos.length)
-          : 5;
+          : 0;
       const venueRemaining =
         state.portfolioType === 'venues'
-          ? Math.max(0, (venueLimits?.videoLimit ?? 1) - state.step3.videos.length)
+          ? Math.max(0, (venueLimits?.videoLimit ?? 0) - state.step3.videos.length)
           : vendorRemaining;
       const selectionLimit = Math.max(1, Math.min(5, venueRemaining));
       const result = await ImagePicker.launchImageLibraryAsync({
@@ -277,9 +300,16 @@ export default function ApplicationStep3Screen() {
         const updatedVideos = [...state.step3.videos, ...newVideos];
 
         if (state.portfolioType === 'venues') {
-          const limit = venueLimits?.videoLimit ?? 1;
+          const limit = venueLimits?.videoLimit ?? 0;
           if (updatedVideos.length > limit) {
             setAlertState({ visible: true, title: 'Video Limit Reached', message: `Your venue plan allows up to ${limit} video(s).`, buttons: [{ text: 'OK', style: 'default', onPress: () => setAlertState(null) }] });
+            updateStep3({ videos: updatedVideos.slice(0, limit) });
+            return;
+          }
+        } else if (vendorVideoLimit !== null) {
+          const limit = vendorVideoLimit;
+          if (updatedVideos.length > limit) {
+            setAlertState({ visible: true, title: 'Video Limit Reached', message: `Your vendor plan allows up to ${limit} video(s). Upgrade to add more.`, buttons: [{ text: 'OK', style: 'default', onPress: () => setAlertState(null) }] });
             updateStep3({ videos: updatedVideos.slice(0, limit) });
             return;
           }
@@ -327,6 +357,9 @@ export default function ApplicationStep3Screen() {
       if (result.canceled || !result.assets || result.assets.length === 0) return;
 
       const asset = result.assets[0];
+      // Stabilize the DocumentPicker cache URI so it survives OS cleanup
+      const stableUri = await stabilizeDocumentPickerUri(asset.uri);
+
       const fileSize = asset.size || 0;
       if (fileSize > MAX_DOC_SIZE) {
         setAlertState({ visible: true, title: 'File Too Large', message: `${asset.name} exceeds 10MB limit.`, buttons: [{ text: 'OK', style: 'default', onPress: () => setAlertState(null) }] });
@@ -336,7 +369,7 @@ export default function ApplicationStep3Screen() {
       // Remove any existing document of the same type (one per type)
       const filtered = state.step3.documents.filter((d) => d.docType !== docType);
       const newDoc = {
-        uri: asset.uri,
+        uri: stableUri,
         name: asset.name,
         type: asset.mimeType || 'application/octet-stream',
         docType,

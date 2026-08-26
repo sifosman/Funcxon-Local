@@ -14,7 +14,7 @@ import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import { supabase } from '../../lib/supabaseClient';
-import { uploadFileToStorage } from '../../lib/applicationService';
+import { uploadFileToStorage, stabilizeDocumentPickerUri } from '../../lib/applicationService';
 import { colors, spacing, radii, typography } from '../../theme';
 import { OutlineButton, PrimaryButton, ThemedInput } from '../../components/ui';
 import { useAuth } from '../../auth/AuthContext';
@@ -171,15 +171,18 @@ export default function VendorQuoteCreateScreen() {
       if (!result.assets?.[0]) return;
 
       const file = result.assets[0];
+      // Stabilize the DocumentPicker cache URI so it survives OS cleanup
+      const stableUri = await stabilizeDocumentPickerUri(file.uri);
+
       setAttachments((prev) => [
         ...prev,
-        { uri: file.uri, name: file.name || 'attachment.pdf', type: 'application/pdf', uploading: true },
+        { uri: stableUri, name: file.name || 'attachment.pdf', type: 'application/pdf', uploading: true },
       ]);
       setUploadingAttachment(true);
 
       const { url, error } = await uploadFileToStorage(
         'quote-attachments',
-        { uri: file.uri, name: file.name || 'attachment.pdf', type: 'application/pdf' },
+        { uri: stableUri, name: file.name || 'attachment.pdf', type: 'application/pdf' },
         user?.id || 'anonymous'
       );
 

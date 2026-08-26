@@ -7,7 +7,7 @@ import * as ImagePicker from 'expo-image-picker';
 import * as DocumentPicker from 'expo-document-picker';
 import { colors, spacing, radii, typography } from '../../theme';
 import { supabase } from '../../lib/supabaseClient';
-import { uploadFileToStorage } from '../../lib/applicationService';
+import { uploadFileToStorage, stabilizeDocumentPickerUri } from '../../lib/applicationService';
 import { getVendorPhotoLimit, getVendorVideoLimit } from '../../lib/subscription';
 import { createGalleryMediaRecord, deactivateGalleryMediaRecord, MAX_VIDEO_SIZE } from '../../lib/mediaUpload';
 import { normalizePhoneNumber } from '../../utils/phoneNormalization';
@@ -110,7 +110,7 @@ export default function UpdateVendorPortfolioScreen() {
     const [imageUrl, setImageUrl] = useState<string | null>(null);
     const [additionalPhotos, setAdditionalPhotos] = useState<string[]>([]);
     const [videos, setVideos] = useState<string[]>([]);
-    const [photoLimit, setPhotoLimit] = useState<number>(8);
+    const [photoLimit, setPhotoLimit] = useState<number>(5);
     const [videoLimit, setVideoLimit] = useState<number>(0);
     const [uploadingImage, setUploadingImage] = useState(false);
     const [uploadingVideo, setUploadingVideo] = useState(false);
@@ -266,7 +266,10 @@ export default function UpdateVendorPortfolioScreen() {
         setForm((prev) => ({ ...prev, [key]: normalizedValue }));
     };
 
-    const currentPhotoCount = (imageUrl ? 1 : 0) + additionalPhotos.length;
+    const currentPhotoCount = Math.min(
+        photoLimit,
+        (imageUrl ? 1 : 0) + additionalPhotos.length,
+    );
     const remainingPhotoSlots = Math.max(0, photoLimit - currentPhotoCount);
 
     const requestImagePermission = async () => {
@@ -465,6 +468,9 @@ export default function UpdateVendorPortfolioScreen() {
             });
             if (result.canceled || !result.assets || result.assets.length === 0) return;
             const asset = result.assets[0];
+            // Stabilize the DocumentPicker cache URI so it survives OS cleanup
+            const stableUri = await stabilizeDocumentPickerUri(asset.uri);
+
             const fileSize = asset.size || 0;
             if (fileSize > MAX_DOC_SIZE) {
                 setAlertState({ visible: true, title: 'File Too Large', message: `${asset.name} exceeds 10MB limit.`, buttons: [{ text: 'OK', style: 'default', onPress: () => setAlertState(null) }] });
@@ -472,7 +478,7 @@ export default function UpdateVendorPortfolioScreen() {
             }
             if (!user?.id) return;
             const file = {
-                uri: asset.uri,
+                uri: stableUri,
                 name: asset.name,
                 type: asset.mimeType || 'application/octet-stream',
             };
