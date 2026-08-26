@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export type PendingSearchSnapshot = {
@@ -73,29 +73,36 @@ export function PendingSearchProvider({ children }: { children: React.ReactNode 
     hydratePendingSearch();
   }, []);
 
+  // Stable callbacks so consumers don't trigger infinite re-renders
+  const savePendingSearch = useCallback((snapshot: PendingSearchSnapshot) => {
+    setPendingSearch(snapshot);
+    setShouldApplyPendingSearch(true);
+    AsyncStorage.multiSet([
+      [PENDING_SEARCH_STORAGE_KEY, JSON.stringify(snapshot)],
+      [PENDING_SEARCH_SHOULD_APPLY_KEY, 'true'],
+    ]).catch(() => undefined);
+  }, []);
+
+  const clearPendingSearch = useCallback(() => {
+    setPendingSearch(null);
+    setShouldApplyPendingSearch(false);
+    AsyncStorage.multiRemove([PENDING_SEARCH_STORAGE_KEY, PENDING_SEARCH_SHOULD_APPLY_KEY]).catch(() => undefined);
+  }, []);
+
+  const markPendingSearchConsumed = useCallback(() => {
+    setShouldApplyPendingSearch(false);
+    AsyncStorage.setItem(PENDING_SEARCH_SHOULD_APPLY_KEY, 'false').catch(() => undefined);
+  }, []);
+
   const value = useMemo<PendingSearchContextValue>(
     () => ({
       pendingSearch,
       shouldApplyPendingSearch,
-      savePendingSearch: (snapshot) => {
-        setPendingSearch(snapshot);
-        setShouldApplyPendingSearch(true);
-        AsyncStorage.multiSet([
-          [PENDING_SEARCH_STORAGE_KEY, JSON.stringify(snapshot)],
-          [PENDING_SEARCH_SHOULD_APPLY_KEY, 'true'],
-        ]).catch(() => undefined);
-      },
-      clearPendingSearch: () => {
-        setPendingSearch(null);
-        setShouldApplyPendingSearch(false);
-        AsyncStorage.multiRemove([PENDING_SEARCH_STORAGE_KEY, PENDING_SEARCH_SHOULD_APPLY_KEY]).catch(() => undefined);
-      },
-      markPendingSearchConsumed: () => {
-        setShouldApplyPendingSearch(false);
-        AsyncStorage.setItem(PENDING_SEARCH_SHOULD_APPLY_KEY, 'false').catch(() => undefined);
-      },
+      savePendingSearch,
+      clearPendingSearch,
+      markPendingSearchConsumed,
     }),
-    [pendingSearch, shouldApplyPendingSearch],
+    [pendingSearch, shouldApplyPendingSearch, savePendingSearch, clearPendingSearch, markPendingSearchConsumed],
   );
 
   return <PendingSearchContext.Provider value={value}>{children}</PendingSearchContext.Provider>;

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { DefaultTheme, NavigationContainer, useNavigation } from '@react-navigation/native';
 import * as Linking from 'expo-linking';
@@ -105,19 +105,21 @@ export default function App() {
 function AppContent({ helpVisible, setHelpVisible }: { helpVisible: boolean; setHelpVisible: (visible: boolean) => void }) {
   const { isVendor } = useVendorStatus();
   const navigation = useNavigation<any>();
+  const navRef = useRef(navigation);
+  navRef.current = navigation;
 
   useEffect(() => {
     const handlePaymentDeepLink = (url: string | null) => {
       if (!url || Platform.OS === 'web') return;
       if (url.startsWith('funxon://payment/success') || url.startsWith('funxon://payment/cancel')) {
-        navigation.navigate('Main', { screen: 'Account', params: { screen: 'Billing' } });
+        navRef.current.navigate('Main', { screen: 'Account', params: { screen: 'Billing' } });
       }
     };
 
     Linking.getInitialURL().then(handlePaymentDeepLink);
     const subscription = Linking.addEventListener('url', (event) => handlePaymentDeepLink(event.url));
     return () => subscription.remove();
-  }, [navigation]);
+  }, []);
 
   return (
     <View style={{ flex: 1 }}>

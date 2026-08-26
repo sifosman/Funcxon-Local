@@ -32,29 +32,37 @@ export default function AccountScreen() {
     const [helpVisible, setHelpVisible] = useState(false);
     const [logoutAlert, setLogoutAlert] = useState<{visible: boolean; title: string; message: string} | null>(null);
     const [currentPlan, setCurrentPlan] = useState<string | null>(null);
-    const hasSubscriberAccess = userRole === 'vendor';
+    const [hasSubscriberAccess, setHasSubscriberAccess] = useState(false);
 
     const fetchCurrentPlan = useCallback(async () => {
-        if (!user?.id) return;
+        if (!user?.id) {
+            setHasSubscriberAccess(false);
+            return;
+        }
         try {
             const { data: userData } = await supabase
                 .from('users')
                 .select('id, auth_user_id')
                 .eq('auth_user_id', user.id)
                 .maybeSingle();
-            if (!userData) return;
+            const listingUserId = userData?.auth_user_id ?? user.id;
 
-            const { data: vendorData } = await supabase
-                .from('vendors')
-                .select('subscription_tier')
-                .eq('user_id', userData.auth_user_id)
-                .maybeSingle();
+            // A user has Lister Portfolio access if they have any vendor,
+            // venue listing, legacy venue, or a submitted subscriber application.
+            const [{ data: vendorData }, { data: venueData }, { data: applicationsData }] = await Promise.all([
+                supabase.from('vendors').select('subscription_tier').eq('user_id', listingUserId).maybeSingle(),
+                supabase.from('venue_listings').select('id').eq('user_id', listingUserId).maybeSingle(),
+                supabase.from('subscriber_applications').select('id').eq('user_id', listingUserId).limit(1),
+            ]);
 
+            const hasPortfolio = !!vendorData || !!venueData || !!(applicationsData && applicationsData.length > 0);
+            setHasSubscriberAccess(hasPortfolio || userRole === 'vendor');
             setCurrentPlan(vendorData?.subscription_tier || null);
         } catch {
-            // Silently fail
+            // Silently fail; fall back to role-based access
+            setHasSubscriberAccess(userRole === 'vendor');
         }
-    }, [user?.id]);
+    }, [user?.id, userRole]);
 
     useFocusEffect(
         useCallback(() => {

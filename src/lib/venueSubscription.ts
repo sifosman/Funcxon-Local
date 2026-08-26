@@ -22,8 +22,8 @@ export type VenueFeatureKey =
 const FALLBACK: VenueSubscriptionEntitlement = {
   planKey: 'get_started',
   status: 'inactive',
-  photoUploadLimit: 10,
-  videoUploadLimit: 1,
+  photoUploadLimit: 5,
+  videoUploadLimit: 0,
   features: {},
 };
 

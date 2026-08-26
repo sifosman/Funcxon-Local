@@ -329,10 +329,6 @@ export default function DiscoverScreen() {
     },
   });
 
-  useLayoutEffect(() => {
-    navigation.setOptions({ title: getDisplayTitle() });
-  }, [navigation, routeParamsKey, search, category]);
-
   // Serialize route.params to a stable key to avoid infinite re-renders.
   // route.params is a new object on every render, so using it directly as a
   // useEffect dependency would trigger an infinite loop.
@@ -342,6 +338,10 @@ export default function DiscoverScreen() {
     const { category, initialSearch, presetFilter, showFilters } = p;
     return `${category ?? ''}|${initialSearch ?? ''}|${presetFilter ?? ''}|${showFilters ?? false}`;
   }, [route.params?.category, route.params?.initialSearch, route.params?.presetFilter, route.params?.showFilters]);
+
+  useLayoutEffect(() => {
+    navigation.setOptions({ title: getDisplayTitle() });
+  }, [navigation, routeParamsKey, search, category]);
 
   useEffect(() => {
     if (!route.params) {

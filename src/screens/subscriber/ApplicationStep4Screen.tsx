@@ -32,6 +32,7 @@ type ProfileStackParamList = {
   PortfolioProfile: undefined;
   UpdateVenuePortfolio: undefined;
   UpdateVendorPortfolio: undefined;
+  ListerPortfolio: undefined;
   LegalDocument: { documentId: string };
 };
 
@@ -71,6 +72,8 @@ export default function ApplicationStep4Screen() {
   }, [state.portfolioType]);
 
   const selectedTier = tiers.find((tier) => normalizeTierKey(tier.tier_name) === normalizeTierKey(state.step4.subscriptionPlan));
+  // Venue plans are monthly-period (6_month/12_month are multi-month lumps, still
+  // priced via price_monthly). Prefer price_monthly; fall back to yearly only if monthly missing.
   const selectedTierPrice = selectedTier?.price_monthly ?? selectedTier?.price_yearly ?? null;
   const selectedTierPriceLabel = selectedTierPrice ? `R${Number(selectedTierPrice).toLocaleString()}` : 'Free';
   const isSelectedTierFree = !selectedTierPrice || selectedTierPrice === 0;
@@ -91,7 +94,7 @@ export default function ApplicationStep4Screen() {
         let mapped = (data || []).map((p: any) => ({
           id: p.id,
           tier_name: p.plan_key as string,    // use plan_key so normalizeTierKey matches
-          photo_limit: p.photo_upload_limit ?? 10,
+          photo_limit: p.photo_upload_limit ?? 5,
           price_monthly: p.price_monthly ?? null,
           price_yearly: p.price_yearly ?? null,
           features: p.features ?? null,
@@ -100,7 +103,7 @@ export default function ApplicationStep4Screen() {
         // Fallback to hardcoded plans if DB table is empty or missing
         if (mapped.length === 0) {
           mapped = [
-            { id: 1, tier_name: 'get_started', photo_limit: 10, price_monthly: 0, price_yearly: null, features: { video_upload_limit: 1 }, is_active: true },
+            { id: 1, tier_name: 'get_started', photo_limit: 5, price_monthly: 0, price_yearly: 0, features: { video_upload_limit: 0 }, is_active: true },
             { id: 2, tier_name: 'monthly', photo_limit: 40, price_monthly: 1750, price_yearly: null, features: { video_upload_limit: 4 }, is_active: true },
             { id: 3, tier_name: '6_month', photo_limit: 40, price_monthly: 9750, price_yearly: null, features: { video_upload_limit: 4 }, is_active: true },
             { id: 4, tier_name: '12_month', photo_limit: 40, price_monthly: 18000, price_yearly: null, features: { video_upload_limit: 4 }, is_active: true },
@@ -114,6 +117,14 @@ export default function ApplicationStep4Screen() {
       }
     } catch (error) {
       console.error('Failed to load tiers:', error);
+      // Fall back to hardcoded vendor tiers so the user can always select a plan
+      if (state.portfolioType !== 'venues') {
+        setTiers([
+          { id: 1, tier_name: 'get_started', photo_limit: 5, price_monthly: 0, price_yearly: 0, features: { video_upload_limit: 0 }, is_active: true },
+          { id: 2, tier_name: 'premium', photo_limit: 25, price_monthly: 299, price_yearly: 3289, features: { video_upload_limit: 5 }, is_active: true },
+          { id: 3, tier_name: 'premium_plus', photo_limit: 50, price_monthly: 399, price_yearly: 4389, features: { video_upload_limit: 10 }, is_active: true },
+        ]);
+      }
     } finally {
       setLoading(false);
     }
@@ -434,11 +445,11 @@ export default function ApplicationStep4Screen() {
         // Send application submission confirmation email (after portfolio creation so we can include listing ID)
         await sendApplicationConfirmationEmail(submission, createdListingId);
 
-        // Reset form and navigate to the application status screen to show the success confirmation
+        // Reset form and navigate to the Lister Portfolio Dashboard on success.
         resetForm();
         navigation.reset({
           index: 0,
-          routes: [{ name: 'ApplicationStatus' }],
+          routes: [{ name: 'ListerPortfolio' }],
         });
       } else {
         setAlertState({ visible: true, title: 'Submission Failed', message: result.error || 'Failed to submit application. Please try again.' });

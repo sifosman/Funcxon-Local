@@ -17,6 +17,23 @@ export type VendorWithSubscription = {
   photo_count: number;
 };
 
+// Canonical per-tier photo/video limits for vendor subscriptions.
+// These match the agreed product spec (get_started: 5 photos / 0 videos,
+// premium: 25 / 5, premium_plus: 50 / 10) and are used as a single source of
+// truth when the database tier lookup is unavailable.
+export const VENDOR_TIER_LIMITS: Record<string, { photos: number; videos: number }> = {
+  get_started: { photos: 5, videos: 0 },
+  free: { photos: 5, videos: 0 },
+  basic: { photos: 10, videos: 1 },
+  premium: { photos: 25, videos: 5 },
+  premium_plus: { photos: 50, videos: 10 },
+};
+
+export function getVendorTierLimits(tierKey: string): { photos: number; videos: number } {
+  const normalized = String(tierKey ?? '').trim().toLowerCase().replace(/[\s-]+/g, '_');
+  return VENDOR_TIER_LIMITS[normalized] ?? VENDOR_TIER_LIMITS.get_started;
+}
+
 export async function getSubscriptionTiers(): Promise<SubscriptionTier[]> {
   const { data, error } = await supabase
     .from('subscription_tiers')
@@ -35,12 +52,13 @@ export async function getVendorPhotoLimit(vendorId: number): Promise<number> {
     .eq('id', vendorId)
     .single();
 
-  if (error) return 5; // fallback to free tier limit
-  
-  const { data: tier } = await supabase
-    .rpc('get_vendor_photo_limit', { vendor_tier: data.subscription_tier || 'get_started' });
+  if (error) return VENDOR_TIER_LIMITS.get_started.photos;
 
-  return tier || 5;
+  const tierKey = data.subscription_tier || 'get_started';
+  const { data: tier } = await supabase
+    .rpc('get_vendor_photo_limit', { vendor_tier: tierKey });
+
+  return tier ?? getVendorTierLimits(tierKey).photos;
 }
 
 export async function getVendorVideoLimit(vendorId: number): Promise<number> {
@@ -50,12 +68,13 @@ export async function getVendorVideoLimit(vendorId: number): Promise<number> {
     .eq('id', vendorId)
     .single();
 
-  if (error) return 0;
+  if (error) return VENDOR_TIER_LIMITS.get_started.videos;
 
+  const tierKey = data.subscription_tier || 'get_started';
   const { data: limit } = await supabase
-    .rpc('get_vendor_video_limit', { vendor_tier: data.subscription_tier || 'get_started' });
+    .rpc('get_vendor_video_limit', { vendor_tier: tierKey });
 
-  return limit || 0;
+  return limit ?? getVendorTierLimits(tierKey).videos;
 }
 
 export async function getVendorPhotoCount(vendorId: number): Promise<number> {

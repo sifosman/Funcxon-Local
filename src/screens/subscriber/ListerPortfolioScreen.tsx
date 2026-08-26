@@ -482,7 +482,18 @@ export default function ListerPortfolioScreen() {
           <Text style={styles.featuredLabel}>Want priority exposure?</Text>
           <TouchableOpacity
             style={styles.featuredButton}
-            onPress={() => navigation.navigate('SubscriptionPlans')}
+            onPress={() => {
+              setAlertState({
+                visible: true,
+                title: 'Get Featured',
+                message: 'Which portfolio would you like to feature?',
+                buttons: [
+                  { text: 'Vendor', style: 'default', onPress: () => { setAlertState(null); navigation.navigate('SubscriptionPlans'); } },
+                  { text: 'Venue', style: 'default', onPress: () => { setAlertState(null); navigation.navigate('VenueListingPlans'); } },
+                  { text: 'Cancel', style: 'cancel', onPress: () => setAlertState(null) },
+                ],
+              });
+            }}
           >
             <Text style={styles.featuredButtonText}>GET FEATURED</Text>
           </TouchableOpacity>
