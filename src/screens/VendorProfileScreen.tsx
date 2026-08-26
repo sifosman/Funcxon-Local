@@ -21,6 +21,11 @@ import { getFavourites, toggleFavourite } from '../lib/favourites';
 import { useAuth } from '../auth/AuthContext';
 import { useIsDesktop } from '../hooks/useIsDesktop';
 
+import VendorAboutTab from '../components/profile/VendorAboutTab';
+import VendorFeaturesTab from '../components/profile/VendorFeaturesTab';
+import VendorReviewsTab from '../components/profile/VendorReviewsTab';
+import VendorCalendarTab from '../components/profile/VendorCalendarTab';
+
 type Props = NativeStackScreenProps<AttendeeStackParamList, 'VendorProfile'>;
 
 const GOOGLE_MAPS_API_KEY = 'AIzaSyBjd1KYtTaAzxzdw5ayGwwMu5Sex-gKQLI';
@@ -958,718 +963,68 @@ export default function VendorProfileScreen({ route, navigation }: Props) {
         })}
       </View>
 
-      {activeTab === 'about' && (
-        <View>
-          {/* About */}
-          {description && (
-            <View
-              style={{
-                marginBottom: spacing.lg,
-                padding: spacing.lg,
-                borderRadius: radii.lg,
-                backgroundColor: colors.surface,
-                borderWidth: 1,
-                borderColor: colors.borderSubtle,
-              }}
-            >
-              <Text
-                style={{
-                  ...typography.titleMedium,
-                  color: colors.textPrimary,
-                  marginBottom: spacing.sm,
-                }}
-              >
-                About - {name}
-              </Text>
-              <Text style={{ ...typography.body, color: colors.textSecondary, lineHeight: 20 }}>{description}</Text>
-            </View>
-          )}
-
-          {/* Tags / highlights */}
-          {tags.length > 0 && (
-            <View
-              style={{
-                marginBottom: spacing.lg,
-                padding: spacing.lg,
-                borderRadius: radii.lg,
-                backgroundColor: colors.surface,
-                borderWidth: 1,
-                borderColor: colors.borderSubtle,
-              }}
-            >
-              <Text
-                style={{
-                  ...typography.titleMedium,
-                  color: colors.textPrimary,
-                  marginBottom: spacing.sm,
-                }}
-              >
-                Highlights
-              </Text>
-              <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
-                {tags?.map((tag) => (
-                  <View
-                    key={tag}
-                    style={{
-                      paddingHorizontal: spacing.md,
-                      paddingVertical: spacing.xs,
-                      borderRadius: radii.full,
-                      backgroundColor: colors.surfaceMuted,
-                      marginRight: spacing.sm,
-                      marginBottom: spacing.sm,
-                    }}
-                  >
-                    <Text style={{ ...typography.caption, color: colors.textPrimary }}>{tag}</Text>
-                  </View>
-                ))}
-              </View>
-            </View>
-          )}
-
-          {/* Contact */}
-          {(whatsappUrl || emailUrl || vendor.website_url || vendor.instagram_url) && (
-            <View
-              style={{
-                marginBottom: spacing.lg,
-                padding: spacing.lg,
-                borderRadius: radii.lg,
-                backgroundColor: colors.surface,
-                borderWidth: 1,
-                borderColor: colors.borderSubtle,
-              }}
-            >
-              <Text style={{ ...typography.titleMedium, color: colors.textPrimary, marginBottom: spacing.md }}>
-                Contact
-              </Text>
-              <View style={{ gap: spacing.sm }}>
-                {whatsappUrl && (
-                  <TouchableOpacity
-                    onPress={() => handleOpenUrl(whatsappUrl)}
-                    style={{
-                      backgroundColor: '#22C55E',
-                      paddingVertical: spacing.md,
-                      borderRadius: radii.md,
-                      flexDirection: 'row',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                    }}
-                  >
-                    <MaterialIcons name="chat" size={18} color="#FFFFFF" />
-                    <Text style={{ ...typography.bodySemiBold, color: '#FFFFFF', marginLeft: spacing.sm }}>Contact via WhatsApp</Text>
-                  </TouchableOpacity>
-                )}
-                {emailUrl && (
-                  <TouchableOpacity
-                    onPress={() => handleOpenUrl(emailUrl)}
-                    style={{
-                      backgroundColor: '#3B82F6',
-                      paddingVertical: spacing.md,
-                      borderRadius: radii.md,
-                      flexDirection: 'row',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                    }}
-                  >
-                    <MaterialIcons name="email" size={18} color="#FFFFFF" />
-                    <Text style={{ ...typography.bodySemiBold, color: '#FFFFFF', marginLeft: spacing.sm }}>Contact via Email</Text>
-                  </TouchableOpacity>
-                )}
-              </View>
-            </View>
-          )}
-
-          {/* Location & Map */}
-          {(mapQuery || physicalAddress) && (
-            <View
-              style={{
-                marginBottom: spacing.lg,
-                padding: spacing.lg,
-                borderRadius: radii.lg,
-                backgroundColor: colors.surface,
-                borderWidth: 1,
-                borderColor: colors.borderSubtle,
-              }}
-            >
-              <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.sm }}>
-                <MaterialIcons name="place" size={18} color={colors.textPrimary} />
-                <Text style={{ ...typography.titleMedium, color: colors.textPrimary, marginLeft: spacing.sm }}>
-                  Location
-                </Text>
-              </View>
-              {physicalAddress && (
-                <Text style={{ ...typography.body, color: colors.textSecondary, marginBottom: spacing.sm }}>
-                  {physicalAddress}
-                </Text>
-              )}
-              {contactNumber && (
-                <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.sm }}>
-                  <MaterialIcons name="phone" size={16} color={colors.textPrimary} />
-                  <Text style={{ ...typography.body, color: colors.textSecondary, marginLeft: spacing.sm }}>
-                    {contactNumber}
-                  </Text>
-                </View>
-              )}
-              <View
-                style={{
-                  height: 220,
-                  borderRadius: radii.md,
-                  overflow: 'hidden',
-                  borderWidth: 1,
-                  borderColor: colors.borderSubtle,
-                  backgroundColor: colors.surfaceMuted,
-                  marginBottom: spacing.md,
-                }}
-              >
-                {Platform.OS === 'web' ? (
-                  webMapEmbedUrl ? (
-                    <iframe
-                      title="Google Map"
-                      style={{ width: '100%', height: '100%', border: 'none' } as any}
-                      src={webMapEmbedUrl}
-                      allowFullScreen
-                    />
-                  ) : (
-                    <TouchableOpacity
-                      onPress={handleOpenMap}
-                      style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: spacing.md }}
-                    >
-                      <MaterialIcons name="place" size={32} color={colors.primary} />
-                      {physicalAddress ? (
-                        <Text style={{ ...typography.caption, color: colors.textSecondary, textAlign: 'center', marginTop: spacing.xs }}>
-                          {physicalAddress}
-                        </Text>
-                      ) : null}
-                      <Text style={{ ...typography.caption, color: colors.primary, marginTop: spacing.xs }}>
-                        Open in Google Maps
-                      </Text>
-                    </TouchableOpacity>
-                  )
-                ) : nativeMapHtml ? (
-                  !mapImageFailed && staticMapUrl ? (
-                    <Image
-                      source={{ uri: staticMapUrl }}
-                      style={{ width: '100%', height: '100%' }}
-                      resizeMode="cover"
-                      onError={() => setMapImageFailed(true)}
-                    />
-                  ) : (
-                    <WebView
-                      source={{ html: nativeMapHtml }}
-                      style={{ width: '100%', height: '100%' }}
-                      originWhitelist={['*']}
-                      javaScriptEnabled
-                      domStorageEnabled
-                      setSupportMultipleWindows={false}
-                      startInLoadingState
-                      scrollEnabled={false}
-                    />
-                  )
-                ) : (
-                  <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
-                    <Text style={{ ...typography.caption, color: colors.textMuted }}>Map unavailable</Text>
-                  </View>
-                )}
-              </View>
-              <TouchableOpacity
-                onPress={handleOpenMap}
-                style={{
-                  paddingVertical: spacing.sm,
-                  borderRadius: radii.md,
-                  borderWidth: 1,
-                  borderColor: colors.primary,
-                  alignItems: 'center',
-                  flexDirection: 'row',
-                  justifyContent: 'center',
-                }}
-              >
-                <MaterialIcons name="map" size={16} color={colors.textPrimary} />
-                <Text style={{ ...typography.bodySemiBold, color: colors.textPrimary, marginLeft: spacing.sm }}>
-                  Open in Google Maps
-                </Text>
-              </TouchableOpacity>
-            </View>
-          )}
-        </View>
+            {activeTab === 'about' && (
+        <VendorAboutTab
+          name={name}
+          description={description}
+          tags={tags}
+          physicalAddress={physicalAddress}
+          contactNumber={contactNumber}
+          mapQuery={mapQuery}
+          whatsappUrl={whatsappUrl}
+          emailUrl={emailUrl}
+          vendor={vendor}
+          contactEmail={contactEmail}
+          webMapEmbedUrl={webMapEmbedUrl}
+          mapCoordinates={mapCoordinates}
+          mapSearchTarget={mapSearchTarget ?? ''}
+          nativeMapHtml={nativeMapHtml}
+          staticMapUrl={staticMapUrl}
+          mapImageFailed={mapImageFailed}
+          handleOpenUrl={handleOpenUrl}
+          handleOpenMap={handleOpenMap}
+          setMapImageFailed={setMapImageFailed}
+        />
       )}
 
-      {activeTab === 'features' && (
-        <View>
-          {/* Service Options */}
-          {renderBulletSection('Service Options', vendor.service_options)}
-
-          {/* Vendor Tags / Specialties */}
-          {renderBulletSection('Specialties', vendor.vendor_tags)}
-
-          {/* Dietary Options */}
-          {renderBulletSection('Dietary Options', vendor.dietary_options)}
-
-          {/* Cuisine Types */}
-          {renderBulletSection('Cuisine Types', vendor.cuisine_types)}
-
-          {/* Amenities */}
-          {renderBulletSection('Amenities', vendor.amenities)}
-
-          {/* Coverage areas */}
-          {(vendor.province || vendor.city) && (
-            <View
-              style={{
-                marginBottom: spacing.lg,
-                padding: spacing.lg,
-                borderRadius: radii.lg,
-                backgroundColor: colors.surface,
-                borderWidth: 1,
-                borderColor: colors.borderSubtle,
-              }}
-            >
-              <Text style={{ ...typography.titleMedium, color: colors.textPrimary, marginBottom: spacing.md }}>
-                Coverage Area
-              </Text>
-              {vendor.province && (
-                <Text style={{ ...typography.body, color: colors.textPrimary, marginBottom: spacing.xs }}>
-                  Province: {vendor.province}
-                </Text>
-              )}
-              {vendor.city && (
-                <Text style={{ ...typography.body, color: colors.textPrimary, marginBottom: spacing.xs }}>
-                  City: {vendor.city}
-                </Text>
-              )}
-              {(vendor.city || vendor.province) && (
-                <Text style={{ ...typography.caption, color: colors.textMuted, marginTop: spacing.sm }}>
-                  Willing to travel to selected coverage areas.
-                </Text>
-              )}
-            </View>
-          )}
-
-          {/* Request Quote CTA */}
-          <View
-            style={{
-              marginBottom: spacing.lg,
-              padding: spacing.lg,
-              borderRadius: radii.lg,
-              backgroundColor: colors.surface,
-              borderWidth: 1,
-              borderColor: colors.borderSubtle,
-            }}
-          >
-            <Text style={{ ...typography.titleMedium, color: colors.textPrimary, marginBottom: spacing.md }}>
-              Quote Options
-            </Text>
-            <TouchableOpacity
-              onPress={goToQuoteRequest}
-              style={{
-                backgroundColor: colors.cta,
-                paddingVertical: spacing.md,
-                borderRadius: radii.md,
-                alignItems: 'center',
-                marginBottom: spacing.sm,
-              }}
-            >
-              <Text style={{ ...typography.bodySemiBold, color: '#FFFFFF' }}>Request Quote</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              onPress={() => {
-                if (whatsappUrl) {
-                  handleOpenUrl(whatsappUrl);
-                } else if (emailUrl) {
-                  handleOpenUrl(emailUrl);
-                } else {
-                  setAlertState({ visible: true, title: 'Contact', message: 'No contact details available for this vendor.' });
-                }
-              }}
-              style={{
-                paddingVertical: spacing.md,
-                borderRadius: radii.md,
-                borderWidth: 2,
-                borderColor: colors.cta,
-                alignItems: 'center',
-                flexDirection: 'row',
-                justifyContent: 'center',
-              }}
-            >
-              <MaterialIcons name="calendar-today" size={16} color={colors.cta} />
-              <Text style={{ ...typography.bodySemiBold, color: colors.cta, marginLeft: spacing.sm }}>Contact for Availability</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
+            {activeTab === 'features' && (
+        <VendorFeaturesTab
+          vendor={vendor}
+          whatsappUrl={whatsappUrl}
+          emailUrl={emailUrl}
+          goToQuoteRequest={goToQuoteRequest}
+          handleOpenUrl={handleOpenUrl}
+          setAlertState={setAlertState}
+        />
       )}
 
-      {activeTab === 'reviews' && (
-        <View>
-          <View
-            style={{
-              marginBottom: spacing.md,
-              padding: spacing.md,
-              borderRadius: radii.lg,
-              backgroundColor: colors.surface,
-              borderWidth: 1,
-              borderColor: colors.borderSubtle,
-              flexDirection: 'row',
-              alignItems: 'center',
-              gap: spacing.md,
-            }}
-          >
-            <View style={{ alignItems: 'center' }}>
-              <Text style={{ ...typography.titleLarge, color: colors.textPrimary }}>{ratingSummaryValue}</Text>
-              <View style={{ flexDirection: 'row', marginVertical: 2 }}>
-                {Array.from({ length: 5 }).map((_, index) => (
-                  <MaterialIcons
-                    key={index}
-                    name={averageRating && averageRating >= index + 1 ? 'star' : 'star-border'}
-                    size={14}
-                    color="#F59E0B"
-                  />
-                ))}
-              </View>
-              <Text style={{ ...typography.caption, color: colors.textMuted, fontSize: 11 }}>
-                {ratingSummaryCount} review{ratingSummaryCount === 1 ? '' : 's'}
-              </Text>
-            </View>
-            <View style={{ flex: 1 }}>
-              {[5, 4, 3, 2, 1].map((rating) => {
-                const count = ratingBreakdown[rating as 1 | 2 | 3 | 4 | 5] ?? 0;
-                const progress = reviewCount ? count / reviewCount : 0;
-                return (
-                  <View key={rating} style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 3 }}>
-                    <Text style={{ ...typography.caption, color: colors.textMuted, width: 12, fontSize: 11 }}>{rating}</Text>
-                    <MaterialIcons name="star" size={10} color="#F59E0B" />
-                    <View
-                      style={{
-                        flex: 1,
-                        height: 5,
-                        backgroundColor: colors.surfaceMuted,
-                        borderRadius: 999,
-                        marginHorizontal: spacing.xs,
-                        overflow: 'hidden',
-                      }}
-                    >
-                      <View style={{ width: `${progress * 100}%`, height: '100%', backgroundColor: colors.coral }} />
-                    </View>
-                    <Text style={{ ...typography.caption, color: colors.textMuted, width: 16, textAlign: 'right', fontSize: 11 }}>
-                      {count}
-                    </Text>
-                  </View>
-                );
-              })}
-            </View>
-          </View>
-
-          <View
-            style={{
-              marginBottom: spacing.md,
-              padding: spacing.md,
-              borderRadius: radii.lg,
-              backgroundColor: colors.surface,
-              borderWidth: 1,
-              borderColor: colors.borderSubtle,
-            }}
-          >
-            <Text style={{ ...typography.bodySemiBold, color: colors.textPrimary, marginBottom: spacing.sm }}>
-              Rating Breakdown
-            </Text>
-            <Text style={{ ...typography.caption, color: colors.textMuted, marginBottom: spacing.sm, fontSize: 11 }}>
-              Average ratings by category
-            </Text>
-            {ratingCategories.map((category) => (
-              <View key={category.label} style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
-                <Text style={{ ...typography.caption, color: colors.textPrimary, flex: 1, fontSize: 12 }}>{category.label}</Text>
-                <View style={{ flexDirection: 'row', marginRight: spacing.xs }}>
-                  {Array.from({ length: 5 }).map((_, index) => (
-                    <MaterialIcons
-                      key={index}
-                      name={category.value >= index + 1 ? 'star' : 'star-border'}
-                      size={12}
-                      color="#F59E0B"
-                    />
-                  ))}
-                </View>
-                <Text style={{ ...typography.caption, color: colors.textMuted, fontSize: 11 }}>{category.value.toFixed(1)}</Text>
-              </View>
-            ))}
-          </View>
-
-          {user?.id ? (
-            <View
-              style={{
-                marginBottom: spacing.lg,
-                padding: spacing.lg,
-                borderRadius: radii.lg,
-                backgroundColor: colors.surface,
-                borderWidth: 1,
-                borderColor: colors.borderSubtle,
-              }}
-            >
-              <Text style={{ ...typography.titleMedium, color: colors.textPrimary, marginBottom: spacing.sm }}>
-                Leave a review
-              </Text>
-              <Text style={{ ...typography.body, color: colors.textSecondary, marginBottom: spacing.md }}>
-                Share your experience with this vendor. Reviews help other users make informed decisions.
-              </Text>
-              <PrimaryButton
-                title="Leave a review"
-                onPress={() =>
-                  navigation.navigate('CreateReview', {
-                    type: 'vendor',
-                    targetId: vendor.id,
-                    targetName: name,
-                  })
-                }
-              />
-            </View>
-          ) : (
-            <View
-              style={{
-                marginBottom: spacing.lg,
-                padding: spacing.lg,
-                borderRadius: radii.lg,
-                backgroundColor: colors.surface,
-                borderWidth: 1,
-                borderColor: colors.borderSubtle,
-              }}
-            >
-              <Text style={{ ...typography.body, color: colors.textSecondary }}>
-                Sign in to leave a review.
-              </Text>
-            </View>
-          )}
-
-          {reviewsLoading ? (
-            <View style={{ paddingVertical: spacing.lg, alignItems: 'center' }}>
-              <ActivityIndicator />
-            </View>
-          ) : reviewsError instanceof Error ? (
-            <View
-              style={{
-                marginBottom: spacing.lg,
-                padding: spacing.lg,
-                borderRadius: radii.lg,
-                backgroundColor: colors.surface,
-                borderWidth: 1,
-                borderColor: colors.borderSubtle,
-              }}
-            >
-              <Text style={{ ...typography.titleMedium, color: colors.textPrimary, marginBottom: spacing.sm }}>
-                Failed to load reviews
-              </Text>
-              <Text style={{ ...typography.body, color: colors.textMuted }}>{reviewsError.message}</Text>
-            </View>
-          ) : !reviews || reviews.length === 0 ? (
-            <View
-              style={{
-                marginBottom: spacing.lg,
-                padding: spacing.lg,
-                borderRadius: radii.lg,
-                backgroundColor: colors.surface,
-                borderWidth: 1,
-                borderColor: colors.borderSubtle,
-                alignItems: 'center',
-              }}
-            >
-              <MaterialIcons name="rate-review" size={48} color={colors.textMuted} />
-              <Text
-                style={{
-                  ...typography.body,
-                  color: colors.textSecondary,
-                  marginTop: spacing.md,
-                  textAlign: 'center',
-                }}
-              >
-                No reviews yet.
-              </Text>
-            </View>
-          ) : (
-            <View style={{ gap: spacing.md, marginBottom: spacing.lg }}>
-              {reviews.map((review) => (
-                <View
-                  key={review.id}
-                  style={{
-                    padding: spacing.lg,
-                    borderRadius: radii.lg,
-                    backgroundColor: colors.surface,
-                    borderWidth: 1,
-                    borderColor: colors.borderSubtle,
-                  }}
-                >
-                  <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                      {Array.from({ length: 5 }).map((_, idx) => (
-                        <MaterialIcons
-                          key={idx}
-                          name={review.rating >= idx + 1 ? 'star' : 'star-border'}
-                          size={16}
-                          color="#F59E0B"
-                        />
-                      ))}
-                      {review.is_verified ? (
-                        <View
-                          style={{
-                            marginLeft: spacing.sm,
-                            backgroundColor: '#DCFCE7',
-                            paddingHorizontal: spacing.sm,
-                            paddingVertical: 4,
-                            borderRadius: radii.full,
-                            borderWidth: 1,
-                            borderColor: '#BBF7D0',
-                          }}
-                        >
-                          <Text style={{ ...typography.captionSemiBold, color: '#166534' }}>
-                            Verified
-                          </Text>
-                        </View>
-                      ) : null}
-                      {review.status === 'pending' ? (
-                        <View
-                          style={{
-                            marginLeft: spacing.sm,
-                            backgroundColor: '#FEF3C7',
-                            paddingHorizontal: spacing.sm,
-                            paddingVertical: 4,
-                            borderRadius: radii.full,
-                            borderWidth: 1,
-                            borderColor: '#FDE68A',
-                          }}
-                        >
-                          <Text style={{ ...typography.captionSemiBold, color: '#92400E' }}>
-                            Pending
-                          </Text>
-                        </View>
-                      ) : null}
-                    </View>
-                  </View>
-
-                  {review.title ? (
-                    <Text
-                      style={{
-                        ...typography.titleMedium,
-                        color: colors.textPrimary,
-                        marginTop: spacing.sm,
-                      }}
-                    >
-                      {review.title}
-                    </Text>
-                  ) : null}
-
-                  {review.review_text ? (
-                    <Text style={{ ...typography.body, color: colors.textSecondary, marginTop: spacing.sm, lineHeight: 20 }}>
-                      {review.review_text}
-                    </Text>
-                  ) : (
-                    <Text style={{ ...typography.body, color: colors.textMuted, marginTop: spacing.sm }}>
-                      No written review provided.
-                    </Text>
-                  )}
-
-                  {review.created_at ? (
-                    <Text style={{ ...typography.caption, color: colors.textMuted, marginTop: spacing.sm }}>
-                      {new Date(review.created_at).toLocaleDateString('en-ZA', { day: 'numeric', month: 'long', year: 'numeric' })}
-                    </Text>
-                  ) : null}
-                </View>
-              ))}
-            </View>
-          )}
-        </View>
+            {activeTab === 'reviews' && (
+        <VendorReviewsTab
+          reviews={reviews}
+          reviewsLoading={reviewsLoading}
+          reviewsError={reviewsError ?? null}
+          ratingSummaryValue={ratingSummaryValue}
+          ratingSummaryCount={ratingSummaryCount}
+          averageRating={averageRating}
+          ratingBreakdown={ratingBreakdown}
+          ratingCategories={ratingCategories}
+          user={user ?? null}
+          navigation={navigation}
+          vendorId={vendor.id}
+          name={name}
+        />
       )}
 
-      {activeTab === 'calendar' && (
-        <View
-          style={{
-            marginBottom: spacing.lg,
-            padding: spacing.lg,
-            borderRadius: radii.lg,
-            backgroundColor: colors.surface,
-            borderWidth: 1,
-            borderColor: colors.borderSubtle,
-          }}
-        >
-          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.md }}>
-            <MaterialIcons name="calendar-today" size={18} color={colors.textPrimary} />
-            <Text style={{ ...typography.titleMedium, color: colors.textPrimary, marginLeft: spacing.sm }}>
-              Availability Calendar
-            </Text>
-          </View>
-          {availabilityLoading ? (
-            <View style={{ alignItems: 'center', paddingVertical: spacing.lg }}>
-              <ActivityIndicator color={colors.textPrimary} />
-            </View>
-          ) : availability && availability.length > 0 ? (
-            <View style={{ gap: spacing.sm }}>
-              {availability.map((entry) => {
-                const isAvailable = entry.is_available;
-                return (
-                  <View
-                    key={entry.id}
-                    style={{
-                      borderRadius: radii.md,
-                      padding: spacing.md,
-                      borderWidth: 1,
-                      borderColor: isAvailable ? '#BBF7D0' : '#FECACA',
-                      backgroundColor: isAvailable ? '#DCFCE7' : '#FEE2E2',
-                    }}
-                  >
-                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: spacing.md }}>
-                      <Text style={{ ...typography.bodySemiBold, color: colors.textPrimary, flex: 1 }}>
-                        {formatAvailabilityDate(entry.date)}
-                      </Text>
-                      <Text style={{ ...typography.captionBold, color: isAvailable ? '#166534' : '#991B1B' }}>
-                        {isAvailable ? 'Available' : 'Unavailable'}
-                      </Text>
-                    </View>
-                    {entry.availability_type ? (
-                      <Text style={{ ...typography.caption, color: colors.textSecondary, marginTop: spacing.xs }}>
-                        {entry.availability_type}
-                      </Text>
-                    ) : null}
-                    {Array.isArray(entry.time_slots) && entry.time_slots.length > 0 ? (
-                      <Text style={{ ...typography.caption, color: colors.textSecondary, marginTop: spacing.xs }}>
-                        {entry.time_slots.join(', ')}
-                      </Text>
-                    ) : null}
-                    {entry.notes ? (
-                      <Text style={{ ...typography.caption, color: colors.textSecondary, marginTop: spacing.xs }}>
-                        {entry.notes}
-                      </Text>
-                    ) : null}
-                  </View>
-                );
-              })}
-            </View>
-          ) : (
-            <View style={{ alignItems: 'center', paddingVertical: spacing.lg }}>
-              <MaterialIcons name="event-busy" size={48} color={colors.textMuted} />
-              <Text style={{ ...typography.bodySemiBold, color: colors.textPrimary, marginTop: spacing.md }}>
-                Availability will be updated soon
-              </Text>
-              <Text style={{ ...typography.caption, color: colors.textMuted, textAlign: 'center', marginTop: spacing.xs }}>
-                Contact {name} directly while calendar slots are being updated.
-              </Text>
-            </View>
-          )}
-          <TouchableOpacity
-            onPress={() =>
-              whatsappUrl
-                ? handleOpenUrl(whatsappUrl)
-                : emailUrl
-                  ? handleOpenUrl(emailUrl)
-                  : goToQuoteRequest()
-            }
-            style={{
-              marginTop: spacing.md,
-              backgroundColor: colors.cta,
-              paddingVertical: spacing.md,
-              borderRadius: radii.md,
-              alignItems: 'center',
-              flexDirection: 'row',
-              justifyContent: 'center',
-            }}
-          >
-            <MaterialIcons name="calendar-today" size={16} color="#FFFFFF" />
-            <Text style={{ ...typography.bodySemiBold, color: '#FFFFFF', marginLeft: spacing.sm }}>
-              Contact for Availability
-            </Text>
-          </TouchableOpacity>
-        </View>
+            {activeTab === 'calendar' && (
+        <VendorCalendarTab
+          availability={availability}
+          availabilityLoading={availabilityLoading}
+          name={name}
+          whatsappUrl={whatsappUrl}
+          emailUrl={emailUrl}
+          handleOpenUrl={handleOpenUrl}
+          goToQuoteRequest={goToQuoteRequest}
+        />
       )}
 
           </>
