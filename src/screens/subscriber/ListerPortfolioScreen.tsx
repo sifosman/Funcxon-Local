@@ -75,35 +75,52 @@ export default function ListerPortfolioScreen() {
       return;
     }
     try {
-      const { data: userRow } = await supabase
-        .from('users')
-        .select('id, auth_user_id')
-        .eq('auth_user_id', user.id)
-        .maybeSingle();
+      // Try multiple user_id resolutions so we catch vendor/venue records
+      // created with either auth_user_id or internal users.id.
+      let resolvedIds: string[] = [user.id];
+      try {
+        const { data: userRow } = await supabase
+          .from('users')
+          .select('id, auth_user_id')
+          .eq('auth_user_id', user.id)
+          .maybeSingle();
+        if (userRow?.id) resolvedIds.push(String(userRow.id));
+      } catch {}
 
-      const listingUserId = userRow?.auth_user_id ?? user.id;
+      // Query all tables with all candidate user ids
+      const queries = resolvedIds.map(async (uid) => {
+        const [vendorRes, venueListingRes, venuesRes] = await Promise.all([
+          supabase.from('vendors').select('id, name, subscription_tier, subscription_status, subscription_expires_at').eq('user_id', uid).maybeSingle(),
+          supabase.from('venue_listings').select('id, name, subscription_plan, subscription_status').eq('user_id', uid).maybeSingle(),
+          supabase.from('venues').select('id, name, subscription_plan_key, subscription_status, subscription_expires_at').eq('user_id', uid).maybeSingle(),
+        ]);
+        return { vendorData: vendorRes.data, venueData: venueListingRes.data, venuesData: venuesRes.data };
+      });
 
-      const [{ data: vendorData }, { data: venueData }, { data: venuesData }] = await Promise.all([
-        supabase.from('vendors').select('id, name, subscription_tier, subscription_status, subscription_expires_at').eq('user_id', listingUserId).maybeSingle(),
-        supabase.from('venue_listings').select('id, name, subscription_plan, subscription_status').eq('user_id', listingUserId).maybeSingle(),
-        supabase.from('venues').select('id, name, subscription_plan_key, subscription_status, subscription_expires_at').eq('user_id', listingUserId).maybeSingle(),
-      ]);
-
-      if (vendorData) setVendorListing(vendorData);
-      if (venueData) {
-        setVenueListing(venueData);
-        setVenueListingNeedsSetup(false);
-      } else if (venuesData) {
-        setVenueListing({
-          id: venuesData.id,
-          name: venuesData.name,
-          subscription_plan: venuesData.subscription_plan_key,
-          subscription_status: venuesData.subscription_status,
-          subscription_expires_at: venuesData.subscription_expires_at,
-        });
-        setVenueListingNeedsSetup(true);
-      } else {
-        setVenueListingNeedsSetup(false);
+      const results = await Promise.all(queries);
+      // Use the first result that found something
+      for (const r of results) {
+        if (r.vendorData) {
+          setVendorListing(r.vendorData as VendorListing);
+          break;
+        }
+      }
+      for (const r of results) {
+        if (r.venueData) {
+          setVenueListing(r.venueData as VenueListing);
+          setVenueListingNeedsSetup(false);
+          break;
+        } else if (r.venuesData) {
+          setVenueListing({
+            id: r.venuesData.id,
+            name: r.venuesData.name,
+            subscription_plan: r.venuesData.subscription_plan_key,
+            subscription_status: r.venuesData.subscription_status,
+            subscription_expires_at: r.venuesData.subscription_expires_at,
+          });
+          setVenueListingNeedsSetup(true);
+          break;
+        }
       }
     } catch {
       // silently fail
@@ -174,32 +191,31 @@ export default function ListerPortfolioScreen() {
       label: 'View your portfolio',
       icon: 'visibility',
       action: () => {
-        const parentNav = (navigation as any).getParent?.();
         if (vendorListing && venueListing) {
           setAlertState({
             visible: true,
             title: 'View Portfolio',
             message: 'Which portfolio would you like to view?',
             buttons: [
-              { text: 'Vendor', style: 'default', onPress: () => { setAlertState(null); parentNav?.navigate?.('Main', { screen: 'Home', params: { screen: 'VendorProfile', params: { vendorId: vendorListing.id } } }); } },
+              { text: 'Vendor', style: 'default', onPress: () => { setAlertState(null); navigation.navigate('VendorProfile', { vendorId: vendorListing.id }); } },
               { text: 'Venue', style: 'default', onPress: () => {
                 setAlertState(null);
                 if (venueListingNeedsSetup) {
                   setAlertState({ visible: true, title: 'Venue Listing Setup', message: 'Your venue listing needs to be completed before it can be viewed publicly. Tap "Edit your portfolio details" to finish setting it up.', buttons: [{ text: 'OK', style: 'default', onPress: () => setAlertState(null) }] });
                 } else {
-                  parentNav?.navigate?.('Main', { screen: 'Home', params: { screen: 'VenueProfile', params: { venueId: venueListing.id } } });
+                  navigation.navigate('VenueProfile', { venueId: venueListing.id });
                 }
               } },
               { text: 'Cancel', style: 'cancel', onPress: () => setAlertState(null) },
             ],
           });
         } else if (vendorListing) {
-          parentNav?.navigate?.('Main', { screen: 'Home', params: { screen: 'VendorProfile', params: { vendorId: vendorListing.id } } });
+          navigation.navigate('VendorProfile', { vendorId: vendorListing.id });
         } else if (venueListing) {
           if (venueListingNeedsSetup) {
             setAlertState({ visible: true, title: 'Venue Listing Setup', message: 'Your venue listing needs to be completed before it can be viewed publicly. Tap "Edit your portfolio details" to finish setting it up.', buttons: [{ text: 'OK', style: 'default', onPress: () => setAlertState(null) }] });
           } else {
-            parentNav?.navigate?.('Main', { screen: 'Home', params: { screen: 'VenueProfile', params: { venueId: venueListing.id } } });
+            navigation.navigate('VenueProfile', { venueId: venueListing.id });
           }
         } else {
           setAlertState({ visible: true, title: 'No portfolio found', message: 'You do not have an active portfolio yet. Create one first.' });
@@ -486,11 +502,9 @@ export default function ListerPortfolioScreen() {
               setAlertState({
                 visible: true,
                 title: 'Get Featured',
-                message: 'Which portfolio would you like to feature?',
+                message: 'Contact support for more info on how to get featured.',
                 buttons: [
-                  { text: 'Vendor', style: 'default', onPress: () => { setAlertState(null); navigation.navigate('SubscriptionPlans'); } },
-                  { text: 'Venue', style: 'default', onPress: () => { setAlertState(null); navigation.navigate('VenueListingPlans'); } },
-                  { text: 'Cancel', style: 'cancel', onPress: () => setAlertState(null) },
+                  { text: 'OK', style: 'default', onPress: () => setAlertState(null) },
                 ],
               });
             }}

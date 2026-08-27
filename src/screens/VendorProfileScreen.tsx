@@ -1224,6 +1224,7 @@ const renderSidebar = () => (
     <ScrollView
       style={{ flex: 1, backgroundColor: isDesktop ? colors.surfaceBg : colors.background }}
       contentContainerStyle={isDesktop ? { paddingHorizontal: 48, paddingBottom: spacing.lg, paddingTop: spacing.xl, maxWidth: 1200, width: '100%', alignSelf: 'center' } : { paddingHorizontal: spacing.lg, paddingBottom: spacing.lg, paddingTop: spacing.sm }}
+      keyboardShouldPersistTaps="handled"
     >
       <TouchableOpacity
           onPress={handleBackNavigation}

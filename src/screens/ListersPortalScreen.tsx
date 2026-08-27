@@ -91,13 +91,13 @@ export default function ListersPortalScreen() {
   };
 
   const handleEnterPortfolio = () => {
-    // Logged-in listers go straight to portfolio management (no re-auth)
+    // Logged-in listers go straight to portfolio management (no re-auth).
     // Navigate to the Account tab (in the bottom Tab navigator) and then
     // to the ListerPortfolio screen within the Profile stack.
-    // NOTE: getParent() returns the Tab navigator (RootNavigator) where
-    // 'Account' is a valid tab. Using getParent()?.getParent() would climb
-    // to the AppNavigator which only has 'Main' and 'Auth' screens.
-    const tabNav = navigation.getParent() as any;
+    // We climb two levels: ListersPortal is inside AttendeeNavigator
+    // which is inside RootNavigator (Tab navigator).
+    // RootNavigator has the 'Account' tab which wraps ProfileNavigator.
+    const tabNav = navigation.getParent() as any; // AttendeeNavigator's parent = RootNavigator
     tabNav?.navigate?.('Account', { screen: 'ListerPortfolio' });
   };
 
@@ -140,6 +140,18 @@ export default function ListersPortalScreen() {
         { text: 'Venue', style: 'default', onPress: () => { setAlertState(null); handleRegisterVenue(); } },
         { text: 'Vendor', style: 'default', onPress: () => { setAlertState(null); handleRegisterVendor(); } },
         { text: 'Cancel', style: 'cancel', onPress: () => setAlertState(null) },
+      ],
+    });
+  };
+
+  const handleGetFeatured = () => {
+    // "Get Featured" should go to a contact support message, not subscriptions.
+    setAlertState({
+      visible: true,
+      title: 'Get Featured',
+      message: 'Contact support for more info on how to get featured.',
+      buttons: [
+        { text: 'OK', style: 'default', onPress: () => setAlertState(null) },
       ],
     });
   };
@@ -272,7 +284,7 @@ export default function ListersPortalScreen() {
       </TouchableOpacity>
 
       <TouchableOpacity
-        onPress={handleUpgrade}
+        onPress={handleGetFeatured}
         style={{
           marginTop: spacing.sm,
           paddingVertical: spacing.md,
@@ -742,7 +754,7 @@ export default function ListersPortalScreen() {
             </TouchableOpacity>
 
             <TouchableOpacity
-              onPress={handleUpgrade}
+              onPress={handleGetFeatured}
               style={{
                 marginTop: spacing.sm,
                 paddingVertical: spacing.md,

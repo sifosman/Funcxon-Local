@@ -119,7 +119,7 @@ test.describe('Fix Group C — UPGRADE/GET FEATURED venue/vendor selection (#7, 
     await expect(cancelBtn).toBeAttached({ timeout: 5000 });
   });
 
-  test('GET FEATURED button shows venue/vendor selection alert', async ({ page }) => {
+  test('GET FEATURED button shows contact support message (27.08 requirement)', async ({ page }) => {
     await goToListersPortal(page);
     // Consent modal can re-render between tests — dismiss again before interacting.
     await dismissConsentIfPresent(page);
@@ -130,12 +130,12 @@ test.describe('Fix Group C — UPGRADE/GET FEATURED venue/vendor selection (#7, 
     await clickByText(page, 'Get Featured');
     await page.waitForTimeout(1000);
 
-    // Alert should appear with "Venue" and "Vendor" options
-    const alertTitle = page.getByText(/Upgrade your listing/i).first();
+    // Per 27.08 bug list, "Get Featured" must show a contact-support message,
+    // NOT navigate to the subscription pricing page.
+    const alertTitle = page.getByText(/Get Featured/i).first();
     await expect(alertTitle).toBeAttached({ timeout: 5000 });
-
-    const venueBtn = page.getByText('Venue', { exact: true }).first();
-    await expect(venueBtn).toBeAttached({ timeout: 5000 });
+    const contactMessage = page.getByText(/Contact support for more info on how to get featured/i).first();
+    await expect(contactMessage).toBeAttached({ timeout: 5000 });
   });
 
   test('Cancel dismisses the upgrade selection alert', async ({ page }) => {

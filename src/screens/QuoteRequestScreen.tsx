@@ -753,13 +753,11 @@ export default function QuoteRequestScreen({ route, navigation }: Props) {
       <View style={{ gap: spacing.sm }}>
         {catalogueItems.map((item) => {
           const isSelected = selectedIds.has(item.id);
+          const qty = quantities[item.id] || 1;
           return (
-            <TouchableOpacity
+            <View
               key={item.id}
-              activeOpacity={0.9}
-              onPress={() => toggleItem(item.id)}
               style={{
-                flexDirection: 'row',
                 borderRadius: radii.md,
                 backgroundColor: isDesktop ? colors.surfaceContainerLow : colors.surfaceMuted,
                 borderWidth: 2,
@@ -767,34 +765,88 @@ export default function QuoteRequestScreen({ route, navigation }: Props) {
                 overflow: 'hidden',
               }}
             >
-              {item.image_url ? (
-                <Image source={{ uri: item.image_url }} style={{ width: 80, height: 80 }} resizeMode="cover" />
-              ) : (
-                <View style={{ width: 80, height: 80, backgroundColor: isDesktop ? colors.surfaceContainerLowest : colors.surface, alignItems: 'center', justifyContent: 'center' }}>
-                  <MaterialIcons name="image" size={28} color={colors.textMuted} />
+              <TouchableOpacity
+                activeOpacity={0.9}
+                onPress={() => toggleItem(item.id)}
+                style={{ flexDirection: 'row' }}
+              >
+                {item.image_url ? (
+                  <Image source={{ uri: item.image_url }} style={{ width: 80, height: 80 }} resizeMode="cover" />
+                ) : (
+                  <View style={{ width: 80, height: 80, backgroundColor: isDesktop ? colors.surfaceContainerLowest : colors.surface, alignItems: 'center', justifyContent: 'center' }}>
+                    <MaterialIcons name="image" size={28} color={colors.textMuted} />
+                  </View>
+                )}
+                <View style={{ flex: 1, padding: spacing.sm, justifyContent: 'center' }}>
+                  <Text style={isDesktop ? { ...typography.bodyMd, fontWeight: '600', color: colors.textPrimary } : { ...typography.bodySemiBold, color: colors.textPrimary }} numberOfLines={1}>
+                    {item.title}
+                  </Text>
+                  {item.description ? (
+                    <Text style={isDesktop ? { ...typography.bodyMd, color: colors.textMuted, marginTop: 2 } : { ...typography.caption, color: colors.textMuted, marginTop: 2 }} numberOfLines={2}>
+                      {item.description}
+                    </Text>
+                  ) : null}
+                  <Text style={isDesktop ? { ...typography.bodyMd, fontWeight: '700', color: colors.textPrimary, marginTop: spacing.xs } : { ...typography.bodyBold, color: colors.textPrimary, marginTop: spacing.xs }}>
+                    {item.price === null || item.price === undefined ? '—' : `R${Number(item.price).toLocaleString()}`}
+                  </Text>
+                </View>
+                <View style={{ justifyContent: 'center', paddingRight: spacing.md }}>
+                  <MaterialIcons
+                    name={isSelected ? 'check-circle' : 'radio-button-unchecked'}
+                    size={28}
+                    color={isSelected ? colors.primary : colors.textPrimary}
+                  />
+                </View>
+              </TouchableOpacity>
+              {/* Quantity controls shown inline when item is selected */}
+              {isSelected && (
+                <View style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  justifyContent: 'flex-end',
+                  paddingHorizontal: spacing.md,
+                  paddingBottom: spacing.sm,
+                  gap: spacing.sm,
+                }}>
+                  <Text style={isDesktop ? { ...typography.bodyMd, color: colors.textMuted } : { ...typography.caption, color: colors.textMuted }}>
+                    Qty:
+                  </Text>
+                  <TouchableOpacity
+                    onPress={(e) => { (e as any).stopPropagation?.(); updateQuantity(item.id, -1); }}
+                    style={{
+                      width: 32,
+                      height: 32,
+                      borderRadius: 16,
+                      backgroundColor: isDesktop ? colors.surfaceContainerLowest : colors.surface,
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      borderWidth: 1,
+                      borderColor: isDesktop ? colors.outlineVariant : colors.borderSubtle,
+                    }}
+                  >
+                    <MaterialIcons name="remove" size={18} color={colors.textPrimary} />
+                  </TouchableOpacity>
+                  <Text style={isDesktop ? { ...typography.bodyMd, fontWeight: '700', color: colors.textPrimary, minWidth: 28, textAlign: 'center' } : { ...typography.bodySemiBold, color: colors.textPrimary, minWidth: 28, textAlign: 'center' }}>
+                    {qty}
+                  </Text>
+                  <TouchableOpacity
+                    onPress={(e) => { (e as any).stopPropagation?.(); updateQuantity(item.id, 1); }}
+                    style={{
+                      width: 32,
+                      height: 32,
+                      borderRadius: 16,
+                      backgroundColor: isDesktop ? colors.surfaceContainerLowest : colors.surface,
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      borderWidth: 1,
+                      borderColor: isDesktop ? colors.outlineVariant : colors.borderSubtle,
+                    }}
+                  >
+                    <MaterialIcons name="add" size={18} color={colors.textPrimary} />
+                  </TouchableOpacity>
                 </View>
               )}
-              <View style={{ flex: 1, padding: spacing.sm, justifyContent: 'center' }}>
-                <Text style={isDesktop ? { ...typography.bodyMd, fontWeight: '600', color: colors.textPrimary } : { ...typography.bodySemiBold, color: colors.textPrimary }} numberOfLines={1}>
-                  {item.title}
-                </Text>
-                {item.description ? (
-                  <Text style={isDesktop ? { ...typography.bodyMd, color: colors.textMuted, marginTop: 2 } : { ...typography.caption, color: colors.textMuted, marginTop: 2 }} numberOfLines={2}>
-                    {item.description}
-                  </Text>
-                ) : null}
-                <Text style={isDesktop ? { ...typography.bodyMd, fontWeight: '700', color: colors.textPrimary, marginTop: spacing.xs } : { ...typography.bodyBold, color: colors.textPrimary, marginTop: spacing.xs }}>
-                  {item.price === null || item.price === undefined ? '—' : `R${Number(item.price).toLocaleString()}`}
-                </Text>
-              </View>
-              <View style={{ justifyContent: 'center', paddingRight: spacing.md }}>
-                <MaterialIcons
-                  name={isSelected ? 'check-circle' : 'radio-button-unchecked'}
-                  size={28}
-                  color={isSelected ? colors.primary : colors.textPrimary}
-                />
-              </View>
-            </TouchableOpacity>
+            </View>
           );
         })}
       </View>
@@ -804,64 +856,20 @@ export default function QuoteRequestScreen({ route, navigation }: Props) {
   const renderSelectionSummary = () => {
     if (selectedItems.length === 0) return null;
     return (
-      <>
-        <Text style={isDesktop ? { ...typography.headlineSm, color: colors.textPrimary, marginBottom: spacing.md } : { ...typography.titleMedium, color: colors.textPrimary }}>Your Selection</Text>
-        <View style={{ gap: spacing.sm }}>
-          {selectedItems.map((item) => (
-            <View key={item.id} style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-              <View style={{ flex: 1 }}>
-                <Text style={isDesktop ? { ...typography.bodyMd, color: colors.textPrimary } : { ...typography.body, color: colors.textPrimary }} numberOfLines={1}>
-                  {item.title}
-                </Text>
-              </View>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
-                <TouchableOpacity
-                  onPress={() => updateQuantity(item.id, -1)}
-                  style={{
-                    width: 28,
-                    height: 28,
-                    borderRadius: 14,
-                    backgroundColor: isDesktop ? colors.surfaceContainerLow : colors.surface,
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                  }}
-                >
-                  <MaterialIcons name="remove" size={16} color={colors.textPrimary} />
-                </TouchableOpacity>
-                <Text style={isDesktop ? { ...typography.bodyMd, color: colors.textPrimary, minWidth: 24, textAlign: 'center' } : { ...typography.body, color: colors.textPrimary, minWidth: 24, textAlign: 'center' }}>
-                  {quantities[item.id] || 1}
-                </Text>
-                <TouchableOpacity
-                  onPress={() => updateQuantity(item.id, 1)}
-                  style={{
-                    width: 28,
-                    height: 28,
-                    borderRadius: 14,
-                    backgroundColor: isDesktop ? colors.surfaceContainerLow : colors.surface,
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                  }}
-                >
-                  <MaterialIcons name="add" size={16} color={colors.textPrimary} />
-                </TouchableOpacity>
-              </View>
-            </View>
-          ))}
-          <View
-            style={{
-              borderTopWidth: 1,
-              borderTopColor: isDesktop ? colors.outlineVariant : colors.borderSubtle,
-              paddingTop: spacing.sm,
-              flexDirection: 'row',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-            }}
-          >
-            <Text style={isDesktop ? { ...typography.bodyMd, fontWeight: '700', color: colors.textPrimary } : { ...typography.bodyBold, color: colors.textPrimary }}>Estimated Total</Text>
-            <Text style={isDesktop ? { ...typography.bodyMd, fontWeight: '700', color: colors.primary } : { ...typography.bodyBold, color: colors.primary }}>R{total.toLocaleString('en-ZA')}</Text>
-          </View>
-        </View>
-      </>
+      <View
+        style={{
+          borderTopWidth: 1,
+          borderTopColor: isDesktop ? colors.outlineVariant : colors.borderSubtle,
+          paddingTop: spacing.sm,
+          flexDirection: 'row',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          marginTop: spacing.md,
+        }}
+      >
+        <Text style={isDesktop ? { ...typography.bodyMd, fontWeight: '700', color: colors.textPrimary } : { ...typography.bodyBold, color: colors.textPrimary }}>Estimated Total</Text>
+        <Text style={isDesktop ? { ...typography.bodyMd, fontWeight: '700', color: colors.primary } : { ...typography.bodyBold, color: colors.primary }}>R{total.toLocaleString('en-ZA')}</Text>
+      </View>
     );
   };
 

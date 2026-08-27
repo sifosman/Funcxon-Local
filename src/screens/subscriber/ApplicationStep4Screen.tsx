@@ -110,10 +110,24 @@ export default function ApplicationStep4Screen() {
           ];
         }
         setTiers(mapped);
+        // Auto-select free 'get_started' plan if no plan is selected yet (prevents Page 4 error)
+        if (!state.step4.subscriptionPlan) {
+          const free = mapped.find((t) => normalizeTierKey(t.tier_name) === 'get_started');
+          if (free) {
+            updateStep4({ subscriptionPlan: free.tier_name, billingPeriod: 'monthly' });
+          }
+        }
       } else {
         // Load vendor subscription tiers
         const data = await getSubscriptionTiers();
         setTiers(data);
+        // Auto-select free 'get_started' plan if no plan is selected yet
+        if (!state.step4.subscriptionPlan && data.length > 0) {
+          const free = data.find((t) => normalizeTierKey(t.tier_name) === 'get_started');
+          if (free) {
+            updateStep4({ subscriptionPlan: free.tier_name, billingPeriod: 'monthly' });
+          }
+        }
       }
     } catch (error) {
       console.error('Failed to load tiers:', error);
@@ -140,7 +154,14 @@ export default function ApplicationStep4Screen() {
 
     if (!validation.isValid) {
       setErrors(validation.errors);
-      setAlertState({ visible: true, title: 'Validation Error', message: 'Please fix the errors before continuing' });
+      const missingFields: string[] = [];
+      if (validation.errors.subscriptionPlan) missingFields.push('Subscription plan');
+      if (validation.errors.termsAccepted) missingFields.push('Terms & Conditions');
+      if (validation.errors.privacyAccepted) missingFields.push('Privacy Policy');
+      const message = missingFields.length > 0
+        ? `Please complete the following before submitting: ${missingFields.join(', ')}.`
+        : 'Please fix the errors before continuing';
+      setAlertState({ visible: true, title: 'Incomplete', message });
       return;
     }
 
@@ -446,7 +467,17 @@ export default function ApplicationStep4Screen() {
         await sendApplicationConfirmationEmail(submission, createdListingId);
 
         // Reset form and navigate to the Lister Portfolio Dashboard on success.
+        // Navigate to the Account tab first so the user lands on the Lister Portfolio
+        // screen in the correct tab stack, then reset the Profile stack to
+        // ListerPortfolio. The Profile stack navigator's parent IS the RootNavigator
+        // (bottom Tab navigator), so getParent() returns the tab navigator.
+        const tabNav = (navigation as any).getParent?.() as any;
         resetForm();
+        if (tabNav?.navigate) {
+          tabNav.navigate('Account', { screen: 'ListerPortfolio' });
+        }
+        // Also reset the Profile stack so back from ListerPortfolio doesn't go
+        // back to Step 4.
         navigation.reset({
           index: 0,
           routes: [{ name: 'ListerPortfolio' }],

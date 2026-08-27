@@ -41,6 +41,8 @@ import MyToursScreen from '../screens/MyToursScreen';
 import BookingDetailScreen from '../screens/BookingDetailScreen';
 import VendorDashboardScreen from '../screens/VendorDashboardScreen';
 import VendorBookingsScreen from '../screens/subscriber/VendorBookingsScreen';
+import VendorProfileScreen from '../screens/VendorProfileScreen';
+import VenueProfileScreen from '../screens/VenueProfileScreen';
 
 export type ProfileStackParamList = {
     AccountMain: undefined;
@@ -88,6 +90,8 @@ export type ProfileStackParamList = {
     VendorBookings: undefined;
     ListerPortfolio: undefined;
     CreateReview: { type: 'vendor' | 'venue' | 'app'; targetId?: number; targetName?: string };
+    VendorProfile: { vendorId: number; from?: string };
+    VenueProfile: { venueId: number; from?: string };
     ActionItems: undefined;
     CalendarUpdates: undefined;
     Billing: undefined;
@@ -316,6 +320,16 @@ export function ProfileNavigator() {
             <Stack.Screen
                 name="DebugUser"
                 component={DebugUserScreen}
+                options={{ headerShown: false }}
+            />
+            <Stack.Screen
+                name="VendorProfile"
+                component={VendorProfileScreen as any}
+                options={{ headerShown: false }}
+            />
+            <Stack.Screen
+                name="VenueProfile"
+                component={VenueProfileScreen as any}
                 options={{ headerShown: false }}
             />
         </Stack.Navigator>
