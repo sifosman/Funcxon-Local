@@ -1029,7 +1029,10 @@ export default function VenueProfileScreen({ route, navigation }: Props) {
         })}
       </View>
 
-            {activeTab === 'about' && (
+            {/* All tab content is always rendered (mounted) but hidden via display:none when inactive.
+       This prevents expensive remounts of WebView (Google Maps in About tab) and
+       catalogue lists when switching between tabs on Android. */}
+      <View style={{ display: activeTab === 'about' ? 'flex' : 'none' }}>
         <VenueAboutTab
           venue={venue}
           halls={halls}
@@ -1055,16 +1058,16 @@ export default function VenueProfileScreen({ route, navigation }: Props) {
           navigation={navigation}
           venueId={venue.id}
         />
-      )}
+      </View>
 
-            {activeTab === 'amenities' && (
+      <View style={{ display: activeTab === 'amenities' ? 'flex' : 'none' }}>
         <VenueAmenitiesTab
           halls={halls}
           amenities={venue.amenities}
         />
-      )}
+      </View>
 
-            {activeTab === 'reviews' && (
+      <View style={{ display: activeTab === 'reviews' ? 'flex' : 'none' }}>
         <VenueReviewsTab
           reviews={reviews}
           reviewsLoading={reviewsLoading}
@@ -1079,9 +1082,9 @@ export default function VenueProfileScreen({ route, navigation }: Props) {
           venueId={venue.id}
           name={venue.name}
         />
-      )}
+      </View>
 
-            {activeTab === 'catalogue' && (
+      <View style={{ display: activeTab === 'catalogue' ? 'flex' : 'none' }}>
         <VenueCatalogueTab
           catalogueItems={catalogueItems}
           cataloguePdfs={cataloguePdfs}
@@ -1091,7 +1094,7 @@ export default function VenueProfileScreen({ route, navigation }: Props) {
           venueId={venue.id}
           name={venue.name}
         />
-      )}
+      </View>
 
           </>
   );

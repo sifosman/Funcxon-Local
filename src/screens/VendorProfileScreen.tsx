@@ -963,7 +963,10 @@ export default function VendorProfileScreen({ route, navigation }: Props) {
         })}
       </View>
 
-            {activeTab === 'about' && (
+            {/* All tab content is always rendered (mounted) but hidden via display:none when inactive.
+       This prevents expensive remounts of WebView (Google Maps in About tab) and
+       catalogue/calendar lists when switching between tabs on Android. */}
+      <View style={{ display: activeTab === 'about' ? 'flex' : 'none' }}>
         <VendorAboutTab
           name={name}
           description={description}
@@ -985,9 +988,9 @@ export default function VendorProfileScreen({ route, navigation }: Props) {
           handleOpenMap={handleOpenMap}
           setMapImageFailed={setMapImageFailed}
         />
-      )}
+      </View>
 
-            {activeTab === 'features' && (
+      <View style={{ display: activeTab === 'features' ? 'flex' : 'none' }}>
         <VendorFeaturesTab
           vendor={vendor}
           whatsappUrl={whatsappUrl}
@@ -996,9 +999,9 @@ export default function VendorProfileScreen({ route, navigation }: Props) {
           handleOpenUrl={handleOpenUrl}
           setAlertState={setAlertState}
         />
-      )}
+      </View>
 
-            {activeTab === 'reviews' && (
+      <View style={{ display: activeTab === 'reviews' ? 'flex' : 'none' }}>
         <VendorReviewsTab
           reviews={reviews}
           reviewsLoading={reviewsLoading}
@@ -1013,9 +1016,9 @@ export default function VendorProfileScreen({ route, navigation }: Props) {
           vendorId={vendor.id}
           name={name}
         />
-      )}
+      </View>
 
-            {activeTab === 'calendar' && (
+      <View style={{ display: activeTab === 'calendar' ? 'flex' : 'none' }}>
         <VendorCalendarTab
           availability={availability}
           availabilityLoading={availabilityLoading}
@@ -1025,7 +1028,7 @@ export default function VendorProfileScreen({ route, navigation }: Props) {
           handleOpenUrl={handleOpenUrl}
           goToQuoteRequest={goToQuoteRequest}
         />
-      )}
+      </View>
 
           </>
   );
