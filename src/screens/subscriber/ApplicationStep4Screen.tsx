@@ -270,10 +270,14 @@ export default function ApplicationStep4Screen() {
             return Number.isFinite(parsed) ? parsed : null;
           };
 
-          const halls = (state.step2.halls ?? []).map((h) => ({
-            name: (h?.name ?? '').trim(),
-            capacity: (h?.capacity ?? '').trim(),
-          }));
+          const halls = (state.step2.halls ?? [])
+            .map((h) => ({
+              name: (h?.name ?? '').trim(),
+              capacity: (h?.capacity ?? '').trim(),
+            }))
+            // Only persist halls that actually have a name or capacity,
+            // so empty placeholder rows don't clobber real data.
+            .filter((h) => h.name !== '' || h.capacity !== '');
           const hallCapacities = halls
             .map((h) => parseCapacityNumber(h.capacity))
             .filter((n): n is number => typeof n === 'number' && Number.isFinite(n));

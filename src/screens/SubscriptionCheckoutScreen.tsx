@@ -408,10 +408,14 @@ export default function SubscriptionCheckoutScreen() {
         const parsed = parseInt(last.replace(/,/g, ''), 10);
         return Number.isFinite(parsed) ? parsed : null;
       };
-      const halls = (serviceCategories.halls ?? []).map((h: any) => ({
-        name: (h?.name ?? '').trim(),
-        capacity: (h?.capacity ?? '').trim(),
-      }));
+      const halls = (serviceCategories.halls ?? [])
+        .map((h: any) => ({
+          name: (h?.name ?? '').trim(),
+          capacity: (h?.capacity ?? '').trim(),
+        }))
+        // Only persist halls that actually have a name or capacity,
+        // so empty placeholder rows don't clobber real data.
+        .filter((h: any) => h.name !== '' || h.capacity !== '');
       const hallCapacities = halls
         .map((h: any) => parseCapacityNumber(h.capacity))
         .filter((n: any): n is number => typeof n === 'number' && Number.isFinite(n));
