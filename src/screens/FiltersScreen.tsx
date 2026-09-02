@@ -107,6 +107,26 @@ export default function FiltersScreen() {
     setSelectedVendorProvinces([]);
     setSelectedVendorCities([]);
     setSelectedLocationProvince('');
+    // Auto-apply cleared filters immediately so user sees all listings without
+    // having to press "Show Results" after clearing.
+    const emptyState: FilterState = {
+      category: 'all',
+      minRating: null,
+      onlyWithPrice: false,
+      featuredOnly: false,
+      selectedVenueTypes: [],
+      selectedVenueAmenities: [],
+      selectedCapacity: null,
+      selectedProvinces: [],
+      selectedCities: [],
+      selectedVendorCategories: [],
+      selectedVendorSubcategories: [],
+      selectedVendorProvinces: [],
+      selectedVendorCities: [],
+      selectedLocationProvince: '',
+    };
+    setSharedFilterState(emptyState);
+    navigation.goBack();
   };
 
   const handleShowResults = () => {

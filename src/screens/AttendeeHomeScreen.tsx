@@ -89,22 +89,14 @@ type CategoryOption = {
   subcategories: string[];
 };
 
-export const VENDOR_CATEGORIES: CategoryOption[] = [
-  { id: 12, label: 'Photography & Videography', subcategories: [
-      'Drone Operator',
-      'Live Streaming',
-      'Photographer',
-      'Social Media',
-      'Videographer',
-    ] },
-  { id: 9, label: 'Planners', subcategories: ['Concept Development', 'Event Planners', 'Promoters'] },
-  { id: 14, label: 'Props Hire', subcategories: ['Backdrop Frames', 'Photo Booths', 'Themed décor'] },
-  { id: 20, label: 'Sanitation Facilities', subcategories: ['Luxury Restrooms', 'Portable Toilets'] },
-  { id: 16, label: 'Stages & Rigging', subcategories: ['Podiums & Platforms', 'Stage Balustrade', 'Stage Builds', 'Trussing & Rigging'] },
-  { id: 18, label: 'Tents & Marquees', subcategories: ['Clear Roof / Stretch Tents', 'Frame Tents', 'Gazebos', 'Peg & Pole Marquees'] },
-  { id: 22, label: 'Ticketing & Access Control', subcategories: ['Access Management', 'Onsight Ticketing'] },
-  { id: 4, label: 'Waste Management', subcategories: ['Recycling', 'Waste Removal'] }
-];
+// Build VENDOR_CATEGORIES from the canonical serviceProfessionals config so the
+// filter dropdown and discover screen show ALL available vendor categories.
+import { serviceCategories } from '../config/serviceProfessionals';
+export const VENDOR_CATEGORIES: CategoryOption[] = serviceCategories.map((cat, idx) => ({
+  id: idx + 1,
+  label: cat.name,
+  subcategories: cat.types,
+}));
 
 const VENUE_TYPES: string[] = [
   'Auditoriums',

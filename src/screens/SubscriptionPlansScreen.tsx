@@ -306,7 +306,7 @@ export default function SubscriptionPlansScreen() {
       >
         <View
           style={{
-            height: 480,
+            height: 520,
             borderRadius: radii.xl,
             backgroundColor: plan.theme.background,
             padding: spacing.lg,
@@ -542,7 +542,7 @@ export default function SubscriptionPlansScreen() {
             scrollAnimationDuration={350}
             overscrollEnabled={false}
             width={SNAP_INTERVAL}
-            height={460}
+            height={540}
             data={plans}
             style={{ width: '100%', overflow: 'visible' }}
             customAnimation={customAnimation}
@@ -582,7 +582,7 @@ export default function SubscriptionPlansScreen() {
                   <Animated.View
                     style={[
                       {
-                        height: 440,
+                        height: 520,
                         borderRadius: radii.xl,
                         backgroundColor: plan.theme.background,
                         padding: spacing.md,

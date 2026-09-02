@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -12,6 +12,7 @@ import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '../auth/AuthContext';
+import { supabase } from '../lib/supabaseClient';
 import { colors, spacing, radii, typography } from '../theme';
 import { AttendeeStackParamList } from '../navigation/AttendeeNavigator';
 import { useIsDesktop } from '../hooks/useIsDesktop';
@@ -58,6 +59,8 @@ export default function ListersPortalScreen() {
   const { session, user, userRole } = useAuth();
   const [helpVisible, setHelpVisible] = useState(false);
   const [alertState, setAlertState] = useState<{visible: boolean; title: string; message: string; buttons?: Array<{ text: string; style?: 'default' | 'cancel' | 'destructive'; onPress?: () => void }>} | null>(null);
+  const [hasListingOverride, setHasListingOverride] = useState(false);
+  const [listingCheckDone, setListingCheckDone] = useState(false);
 
   const getUsername = () => {
     if (!user) return null;
@@ -69,8 +72,35 @@ export default function ListersPortalScreen() {
     return null;
   };
 
+  // Check for active listings directly (bypasses userRole loading delay)
+  useEffect(() => {
+    if (!user?.id || userRole === 'vendor') {
+      if (userRole === 'vendor') { setHasListingOverride(true); setListingCheckDone(true); }
+      return;
+    }
+    let cancelled = false;
+    async function checkListings() {
+      try {
+        const { data: vendorRow } = await supabase
+          .from('vendors').select('id').eq('user_id', user!.id).maybeSingle();
+        if (cancelled) return;
+        if (vendorRow) { setHasListingOverride(true); setListingCheckDone(true); return; }
+        const { data: venueRow } = await supabase
+          .from('venue_listings').select('id').eq('user_id', user!.id).maybeSingle();
+        if (cancelled) return;
+        if (venueRow) { setHasListingOverride(true); setListingCheckDone(true); return; }
+        const { data: venuesRow } = await supabase
+          .from('venues').select('id').eq('user_id', user!.id).maybeSingle();
+        if (cancelled) return;
+        if (venuesRow) { setHasListingOverride(true); setListingCheckDone(true); return; }
+      } catch {} finally { if (!cancelled) setListingCheckDone(true); }
+    }
+    checkListings();
+    return () => { cancelled = true; };
+  }, [user?.id, userRole]);
+
   const username = getUsername();
-  const isLister = !!session && userRole === 'vendor';
+  const isLister = !!session && (userRole === 'vendor' || hasListingOverride);
 
   // Item 29: Always render the Listers Portal button — no auto-redirect.
   // Logged-in listers tap the button to enter portfolio management.
@@ -130,6 +160,33 @@ export default function ListersPortalScreen() {
   };
 
   const handleUpgrade = () => {
+    // If the user is logged in and already has a listing, skip the venue/vendor
+    // picker and go straight to the relevant plans pages so they can upgrade.
+    if (session && hasListingOverride) {
+      // Check what they have and navigate directly
+      supabase.from('vendors').select('id').eq('user_id', user!.id).maybeSingle().then(({ data: v }) => {
+        if (v) navigation.navigate('SubscriptionPlans');
+        else supabase.from('venue_listings').select('id').eq('user_id', user!.id).maybeSingle().then(({ data: vl }) => {
+          if (vl) navigation.navigate('VenueListingPlans');
+          else supabase.from('venues').select('id').eq('user_id', user!.id).maybeSingle().then(({ data: vn }) => {
+            if (vn) navigation.navigate('VenueListingPlans');
+            else {
+              // No listing found — show the picker as fallback
+              setAlertState({
+                visible: true, title: 'Upgrade your listing',
+                message: 'Which type of listing would you like to upgrade?',
+                buttons: [
+                  { text: 'Venue', style: 'default', onPress: () => { setAlertState(null); handleRegisterVenue(); } },
+                  { text: 'Vendor', style: 'default', onPress: () => { setAlertState(null); handleRegisterVendor(); } },
+                  { text: 'Cancel', style: 'cancel', onPress: () => setAlertState(null) },
+                ],
+              });
+            }
+          });
+        });
+      });
+      return;
+    }
     // Ask the user whether they want to upgrade a Venue or Vendor listing
     // before routing to the relevant plans screen.
     setAlertState({
