@@ -9,59 +9,60 @@ export interface SubscriptionPlan {
 
 export const subscriptionPlans: SubscriptionPlan[] = [
   {
-    id: "free",
-    name: "Free",
+    id: "get_started",
+    name: "Basic Package",
     price: "R0",
     billingPeriod: "forever",
     features: [
-      "Basic profile listing",
-      "Up to 8 images",
-      "Contact information display",
-      "Email support"
-    ]
-  },
-  {
-    id: "basic",
-    name: "Basic",
-    price: "TBC",
-    billingPeriod: "per month",
-    features: [
-      "Basic profile listing",
-      "Up to 5 images",
-      "Contact information display",
-      "Basic search visibility",
-      "Email support"
+      "Up to 5 photos",
+      "0 videos",
+      "Limited catalogue / pricelist",
+      "Online quote requests",
+      "Map location display",
+      "Limited ratings & reviews",
+      "Self edit portfolio anytime",
+      "Funxon portfolio build assistance"
     ]
   },
   {
     id: "premium",
     name: "Premium",
-    price: "TBC",
+    price: "R299",
     billingPeriod: "per month",
     features: [
-      "Featured profile listing",
-      "Unlimited images & videos",
-      "Priority search ranking",
-      "Quote request management",
-      "Analytics dashboard",
-      "Social media integration",
-      "Priority support"
+      "Up to 25 photos",
+      "5 videos",
+      "Full catalogue / pricelist",
+      "Online quote requests",
+      "WhatsApp chat",
+      "Website & social links",
+      "Map location display",
+      "Ratings & reviews",
+      "Self edit portfolio anytime",
+      "Limited portfolio performance analytics & stats",
+      "Funxon portfolio build assistance"
     ],
     highlighted: true
   },
   {
-    id: "enterprise",
-    name: "Enterprise",
-    price: "TBC",
+    id: "premium_plus",
+    name: "Premium Plus",
+    price: "R399",
     billingPeriod: "per month",
     features: [
-      "Everything in Premium",
-      "Multiple venue/service listings",
-      "Custom branding",
-      "API access",
-      "Dedicated account manager",
-      "Advanced analytics",
-      "24/7 phone support"
+      "Up to 50 photos",
+      "10 videos",
+      "Full catalogue / pricelist",
+      "Online quote requests",
+      "WhatsApp chat",
+      "Website & social links",
+      "Map location display",
+      "Ratings & reviews",
+      "Self edit portfolio anytime",
+      "Full portfolio performance analytics & stats",
+      "Featured Listings",
+      "Funxon portfolio build assistance",
+      "Dedicated Funxon portfolio manager"
     ]
   }
 ];

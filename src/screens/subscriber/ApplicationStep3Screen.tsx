@@ -1,23 +1,24 @@
 import { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, Image, Alert, Platform, Linking, Dimensions, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView, Image, Platform, KeyboardAvoidingView } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import * as ImagePicker from 'expo-image-picker';
 import * as DocumentPicker from 'expo-document-picker';
-import * as FileSystem from 'expo-file-system/legacy';
-import { useFocusEffect } from '@react-navigation/native';
-import { useCallback } from 'react';
 import { useApplicationForm } from '../../context/ApplicationFormContext';
+import type { DocKey } from '../../context/ApplicationFormContext';
 import { validateStep3 } from '../../utils/formValidation';
 import { colors, spacing, radii, typography } from '../../theme';
-import { convertBlobToBase64 } from '../../lib/applicationService';
+import { convertBlobToBase64, stabilizeDocumentPickerUri } from '../../lib/applicationService';
+import { MAX_IMAGE_SIZE, MAX_VIDEO_SIZE } from '../../lib/mediaUpload';
 import { ApplicationProgress } from '../../components/ApplicationProgress';
 import { PhotoUploadCounter } from '../../components/PhotoUploadCounter';
-import { canUploadMorePhotos, incrementVendorPhotoCount, decrementVendorPhotoCount } from '../../lib/subscription';
+import { canUploadMorePhotos, incrementVendorPhotoCount, decrementVendorPhotoCount, getVendorTierLimits } from '../../lib/subscription';
 import { getMyVenueEntitlement } from '../../lib/venueSubscription';
 import { useAuth } from '../../auth/AuthContext';
 import { supabase } from '../../lib/supabaseClient';
+import ThemedAlert from '../../components/ThemedAlert';
+import { useIsDesktop } from '../../hooks/useIsDesktop';
 
 type ProfileStackParamList = {
   ApplicationStep2: undefined;
@@ -25,18 +26,12 @@ type ProfileStackParamList = {
   ApplicationStep4: undefined;
 };
 
-const MAX_IMAGE_SIZE = 10 * 1024 * 1024; // 10MB
-const MAX_VIDEO_SIZE = 50 * 1024 * 1024; // 50MB
-const MAX_DOCUMENT_SIZE = 10 * 1024 * 1024; // 10MB
-
-type RequiredDocKey = 'id_copy' | 'company_logo';
-type DocKey = RequiredDocKey | 'cipro' | 'catalogue';
+const MAX_DOC_SIZE = 10 * 1024 * 1024; // 10MB
 
 const BUSINESS_DOCS: Array<{ key: DocKey; label: string; required: boolean; acceptLabel?: string }> = [
-  { key: 'id_copy', label: 'ID copy', required: true },
-  { key: 'cipro', label: 'CIPRO', required: false, acceptLabel: 'If applicable' },
+  { key: 'id_copy', label: 'ID Copy', required: true },
+  { key: 'cipro', label: 'CIPRO / Company Registration', required: false, acceptLabel: 'If applicable' },
   { key: 'company_logo', label: 'Company Logo', required: true },
-  { key: 'catalogue', label: 'Upload Catalogue (PDF)', required: false, acceptLabel: 'Optional' },
 ];
 
 export default function ApplicationStep3Screen() {
@@ -45,8 +40,13 @@ export default function ApplicationStep3Screen() {
   const { user } = useAuth();
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [vendorId, setVendorId] = useState<number | null>(null);
+  const [alertState, setAlertState] = useState<{visible: boolean; title: string; message: string; buttons?: any[]} | null>(null);
   const [vendorVideoLimit, setVendorVideoLimit] = useState<number | null>(null);
+  const [vendorPhotoLimit, setVendorPhotoLimit] = useState<number | null>(null);
   const [venueLimits, setVenueLimits] = useState<{ photoLimit: number; videoLimit: number } | null>(null);
+  const isDesktop = useIsDesktop();
+  const cardSurface = isDesktop ? colors.surfaceContainerLowest : colors.surface;
+  const cardBorder = isDesktop ? colors.outlineVariant : colors.borderSubtle;
 
   useEffect(() => {
     async function loadVendorId() {
@@ -59,11 +59,15 @@ export default function ApplicationStep3Screen() {
 
       if (data) {
         setVendorId(data.id);
-        const tier = String((data as any).subscription_tier ?? '').toLowerCase();
-        const limit = tier === 'premium_plus' ? 10 : tier === 'premium' ? 5 : 0;
-        setVendorVideoLimit(limit);
+        const tierKey = String((data as any).subscription_tier ?? 'get_started');
+        const limits = getVendorTierLimits(tierKey);
+        setVendorVideoLimit(limits.videos);
+        setVendorPhotoLimit(limits.photos);
       } else {
-        setVendorVideoLimit(null);
+        // New applicant with no vendor record yet: enforce free-tier limits
+        // (5 photos / 0 videos) until they select a plan on page 4.
+        setVendorVideoLimit(0);
+        setVendorPhotoLimit(5);
       }
     }
     loadVendorId();
@@ -88,26 +92,10 @@ export default function ApplicationStep3Screen() {
     try {
       // Venue upload limit enforcement
       if (state.portfolioType === 'venues') {
-        const limit = venueLimits?.photoLimit ?? 10;
+        const limit = venueLimits?.photoLimit ?? 5;
         const remaining = Math.max(0, limit - state.step3.images.length);
         if (remaining <= 0) {
-          Alert.alert(
-            'Photo Limit Reached',
-            "You've reached your photo upload limit for your current venue plan.",
-            [{ text: 'OK' }],
-          );
-          return;
-        }
-      }
-
-      // Vendor upload limit enforcement (based on subscription tier)
-      if (state.portfolioType !== 'venues' && vendorVideoLimit !== null) {
-        const remaining = Math.max(0, vendorVideoLimit - state.step3.videos.length);
-        if (remaining <= 0) {
-          const message = vendorVideoLimit === 0
-            ? 'Video uploads are available on paid vendor plans. Please upgrade to upload videos.'
-            : "You've reached your video upload limit for your current vendor plan.";
-          Alert.alert('Video Limit Reached', message, [{ text: 'OK' }]);
+          setAlertState({ visible: true, title: 'Photo Limit Reached', message: "You've reached your photo upload limit for your current venue plan.", buttons: [{ text: 'OK', style: 'default', onPress: () => setAlertState(null) }] });
           return;
         }
       }
@@ -116,11 +104,16 @@ export default function ApplicationStep3Screen() {
       if (vendorId) {
         const canUpload = await canUploadMorePhotos(vendorId);
         if (!canUpload) {
-          Alert.alert(
-            'Photo Limit Reached',
-            'You\'ve reached your photo limit. Upgrade your subscription to add more photos.',
-            [{ text: 'OK' }]
-          );
+          setAlertState({ visible: true, title: 'Photo Limit Reached', message: 'You\'ve reached your photo limit. Upgrade your subscription to add more photos.', buttons: [{ text: 'OK', style: 'default', onPress: () => setAlertState(null) }] });
+          return;
+        }
+      }
+
+      // Vendor plan-based photo limit enforcement (free tier = 5 photos)
+      if (state.portfolioType !== 'venues' && vendorPhotoLimit !== null) {
+        const remaining = Math.max(0, vendorPhotoLimit - state.step3.images.length);
+        if (remaining <= 0) {
+          setAlertState({ visible: true, title: 'Photo Limit Reached', message: "You've reached your photo limit for your current vendor plan. Upgrade to add more photos.", buttons: [{ text: 'OK', style: 'default', onPress: () => setAlertState(null) }] });
           return;
         }
       }
@@ -128,19 +121,17 @@ export default function ApplicationStep3Screen() {
       // Request permission
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (status !== 'granted') {
-        Alert.alert(
-          'Permission Required',
-          'Please grant access to your photo library to upload images.',
-          [{ text: 'OK' }]
-        );
+        setAlertState({ visible: true, title: 'Permission Required', message: 'Please grant access to your photo library to upload images.', buttons: [{ text: 'OK', style: 'default', onPress: () => setAlertState(null) }] });
         return;
       }
 
       // Launch image picker
       const venueRemaining =
         state.portfolioType === 'venues'
-          ? Math.max(0, (venueLimits?.photoLimit ?? 10) - state.step3.images.length)
-          : 10;
+          ? Math.max(0, (venueLimits?.photoLimit ?? 5) - state.step3.images.length)
+          : vendorPhotoLimit !== null
+            ? Math.max(0, vendorPhotoLimit - state.step3.images.length)
+            : 5;
       const selectionLimit = Math.max(1, Math.min(10, venueRemaining));
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ['images'],
@@ -155,10 +146,7 @@ export default function ApplicationStep3Screen() {
         const validImages = result.assets.filter((asset) => {
           const fileSize = asset.fileSize || 0;
           if (fileSize > MAX_IMAGE_SIZE) {
-            Alert.alert(
-              'File Too Large',
-              `${asset.fileName || 'Image'} exceeds 10MB limit.`
-            );
+            setAlertState({ visible: true, title: 'File Too Large', message: `${asset.fileName || 'Image'} exceeds 10MB limit.` });
             return false;
           }
           return true;
@@ -192,13 +180,16 @@ export default function ApplicationStep3Screen() {
         const updatedImages = [...state.step3.images, ...newImages];
 
         if (state.portfolioType === 'venues') {
-          const limit = venueLimits?.photoLimit ?? 10;
+          const limit = venueLimits?.photoLimit ?? 5;
           if (updatedImages.length > limit) {
-            Alert.alert(
-              'Photo Limit Reached',
-              `Your venue plan allows up to ${limit} photo(s).`,
-              [{ text: 'OK' }],
-            );
+            setAlertState({ visible: true, title: 'Photo Limit Reached', message: `Your venue plan allows up to ${limit} photo(s).`, buttons: [{ text: 'OK', style: 'default', onPress: () => setAlertState(null) }] });
+            updateStep3({ images: updatedImages.slice(0, limit) });
+            return;
+          }
+        } else if (vendorPhotoLimit !== null) {
+          const limit = vendorPhotoLimit;
+          if (updatedImages.length > limit) {
+            setAlertState({ visible: true, title: 'Photo Limit Reached', message: `Your vendor plan allows up to ${limit} photo(s). Upgrade to add more.`, buttons: [{ text: 'OK', style: 'default', onPress: () => setAlertState(null) }] });
             updateStep3({ images: updatedImages.slice(0, limit) });
             return;
           }
@@ -214,173 +205,12 @@ export default function ApplicationStep3Screen() {
         }
 
         if (validImages.length > 0) {
-          Alert.alert('Success', `${validImages.length} image(s) added successfully.`);
+          setAlertState({ visible: true, title: 'Success', message: `${validImages.length} image(s) added successfully.` });
         }
       }
     } catch (error) {
       console.error('Image picker error:', error);
-      Alert.alert('Error', 'Failed to pick images. Please try again.');
-    }
-  };
-
-  const getBusinessDoc = (key: DocKey) =>
-    state.step3.documents.find((d) => typeof d.name === 'string' && d.name.startsWith(`${key}__`));
-
-  const upsertBusinessDoc = (key: DocKey, doc: { uri: string; name: string; type: string; size: number }) => {
-    const prefix = `${key}__`;
-    const kept = state.step3.documents.filter((d) => !(typeof d.name === 'string' && d.name.startsWith(prefix)));
-    updateStep3({ documents: [...kept, doc] });
-  };
-
-  const handlePickDocumentFor = async (key: DocKey) => {
-    try {
-      const result = await DocumentPicker.getDocumentAsync({
-        type: [
-          'application/pdf',
-          'application/msword',
-          'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-        ],
-        copyToCacheDirectory: true,
-        multiple: false,
-      });
-
-      if (!result.canceled && result.assets) {
-        const asset = result.assets[0];
-        if (asset.size && asset.size > MAX_DOCUMENT_SIZE) {
-          Alert.alert('File Too Large', `${asset.name} exceeds 10MB limit.`);
-          return;
-        }
-
-        let uri = asset.uri;
-        
-        // Convert blob URL to base64 for web
-        if (asset.uri.startsWith('blob:')) {
-          try {
-            uri = await convertBlobToBase64(asset.uri, asset.mimeType || 'application/pdf');
-          } catch (error) {
-            console.error('Failed to convert document to base64:', error);
-            // Fallback to original URI if conversion fails
-          }
-        }
-
-        const newDoc = {
-          uri,
-          name: `${key}__${asset.name}`,
-          type: asset.mimeType || 'application/pdf',
-          size: asset.size || 0,
-        };
-
-        upsertBusinessDoc(key, newDoc);
-
-        Alert.alert('Success', `${asset.name} uploaded successfully.`);
-      }
-    } catch (error) {
-      console.error('Document picker error:', error);
-      Alert.alert('Error', 'Failed to pick documents. Please try again.');
-    }
-  };
-
-  const handlePickCompanyLogo = async () => {
-    try {
-      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-      if (status !== 'granted') {
-        Alert.alert(
-          'Permission Required',
-          'Please grant access to your photo library to upload your company logo.',
-          [{ text: 'OK' }],
-        );
-        return;
-      }
-
-      const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ['images'],
-        allowsMultipleSelection: false,
-        allowsEditing: true,
-        quality: 1,
-      });
-
-      if (!result.canceled && result.assets?.[0]) {
-        const asset = result.assets[0];
-        const fileSize = asset.fileSize || 0;
-        if (fileSize > MAX_IMAGE_SIZE) {
-          Alert.alert('File Too Large', `${asset.fileName || 'Logo'} exceeds 10MB limit.`);
-          return;
-        }
-
-        let uri = asset.uri;
-        
-        // Convert blob URL to base64 for web
-        if (asset.uri.startsWith('blob:')) {
-          try {
-            uri = await convertBlobToBase64(asset.uri, asset.mimeType || 'image/png');
-          } catch (error) {
-            console.error('Failed to convert logo to base64:', error);
-            // Fallback to original URI if conversion fails
-          }
-        }
-
-        const originalName = asset.fileName || 'company-logo.png';
-        const sanitizedBaseName = originalName.replace(/\.[^.]+$/, '') || 'company-logo';
-        const logoDoc = {
-          uri,
-          name: `company_logo__${sanitizedBaseName}.png`,
-          type: 'image/png',
-          size: fileSize,
-        };
-
-        upsertBusinessDoc('company_logo', logoDoc);
-        Alert.alert('Success', 'Company logo uploaded successfully.');
-      }
-    } catch (error) {
-      console.error('Company logo picker error:', error);
-      Alert.alert('Error', 'Failed to pick the company logo. Please try again.');
-    }
-  };
-
-  const handleRemoveBusinessDoc = (key: DocKey) => {
-    const prefix = `${key}__`;
-    const updated = state.step3.documents.filter((d) => !(typeof d.name === 'string' && d.name.startsWith(prefix)));
-    updateStep3({ documents: updated });
-  };
-
-  const handleDownloadBusinessDoc = async (key: DocKey) => {
-    const doc = getBusinessDoc(key);
-    if (!doc) return;
-
-    const originalName = doc.name.split('__').slice(1).join('__') || 'document';
-    const safeName = originalName.replace(/[\\/:*?"<>|]+/g, '_');
-
-    try {
-      if (Platform.OS === 'android') {
-        const permissions = await FileSystem.StorageAccessFramework.requestDirectoryPermissionsAsync();
-        if (!permissions.granted) {
-          return;
-        }
-
-        const fileUri = await FileSystem.StorageAccessFramework.createFileAsync(
-          permissions.directoryUri,
-          safeName,
-          doc.type || 'application/pdf',
-        );
-
-        const base64 = await FileSystem.readAsStringAsync(doc.uri, {
-          encoding: FileSystem.EncodingType.Base64,
-        });
-
-        await FileSystem.writeAsStringAsync(fileUri, base64, {
-          encoding: FileSystem.EncodingType.Base64,
-        });
-
-        const contentUri = await FileSystem.getContentUriAsync(fileUri);
-        await Linking.openURL(contentUri);
-        return;
-      }
-
-      const destUri = `${FileSystem.documentDirectory}${safeName}`;
-      await FileSystem.copyAsync({ from: doc.uri, to: destUri });
-      await Linking.openURL(destUri);
-    } catch {
-      Alert.alert('Unable to download file', 'Please try again.');
+      setAlertState({ visible: true, title: 'Error', message: 'Failed to pick images. Please try again.' });
     }
   };
 
@@ -388,14 +218,22 @@ export default function ApplicationStep3Screen() {
     try {
       // Venue upload limit enforcement
       if (state.portfolioType === 'venues') {
-        const limit = venueLimits?.videoLimit ?? 1;
+        const limit = venueLimits?.videoLimit ?? 0;
         const remaining = Math.max(0, limit - state.step3.videos.length);
         if (remaining <= 0) {
-          Alert.alert(
-            'Video Limit Reached',
-            "You've reached your video upload limit for your current venue plan.",
-            [{ text: 'OK' }],
-          );
+          setAlertState({ visible: true, title: 'Video Limit Reached', message: "You've reached your video upload limit for your current venue plan.", buttons: [{ text: 'OK', style: 'default', onPress: () => setAlertState(null) }] });
+          return;
+        }
+      }
+
+      // Vendor upload limit enforcement (free tier = 0 videos)
+      if (state.portfolioType !== 'venues' && vendorVideoLimit !== null) {
+        const remaining = Math.max(0, vendorVideoLimit - state.step3.videos.length);
+        if (remaining <= 0) {
+          const message = vendorVideoLimit === 0
+            ? 'Video uploads are available on paid vendor plans. Please upgrade to upload videos.'
+            : "You've reached your video upload limit for your current vendor plan.";
+          setAlertState({ visible: true, title: 'Video Limit Reached', message, buttons: [{ text: 'OK', style: 'default', onPress: () => setAlertState(null) }] });
           return;
         }
       }
@@ -403,11 +241,7 @@ export default function ApplicationStep3Screen() {
       // Request permission
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (status !== 'granted') {
-        Alert.alert(
-          'Permission Required',
-          'Please grant access to your photo library to upload videos.',
-          [{ text: 'OK' }]
-        );
+        setAlertState({ visible: true, title: 'Permission Required', message: 'Please grant access to your photo library to upload videos.', buttons: [{ text: 'OK', style: 'default', onPress: () => setAlertState(null) }] });
         return;
       }
 
@@ -415,10 +249,10 @@ export default function ApplicationStep3Screen() {
       const vendorRemaining =
         state.portfolioType !== 'venues' && vendorVideoLimit !== null
           ? Math.max(0, vendorVideoLimit - state.step3.videos.length)
-          : 5;
+          : 0;
       const venueRemaining =
         state.portfolioType === 'venues'
-          ? Math.max(0, (venueLimits?.videoLimit ?? 1) - state.step3.videos.length)
+          ? Math.max(0, (venueLimits?.videoLimit ?? 0) - state.step3.videos.length)
           : vendorRemaining;
       const selectionLimit = Math.max(1, Math.min(5, venueRemaining));
       const result = await ImagePicker.launchImageLibraryAsync({
@@ -433,10 +267,7 @@ export default function ApplicationStep3Screen() {
         const validVideos = result.assets.filter((asset) => {
           const fileSize = asset.fileSize || 0;
           if (fileSize > MAX_VIDEO_SIZE) {
-            Alert.alert(
-              'File Too Large',
-              `${asset.fileName || 'Video'} exceeds 50MB limit.`
-            );
+            setAlertState({ visible: true, title: 'File Too Large', message: `${asset.fileName || 'Video'} exceeds 50MB limit.` });
             return false;
           }
           return true;
@@ -469,13 +300,16 @@ export default function ApplicationStep3Screen() {
         const updatedVideos = [...state.step3.videos, ...newVideos];
 
         if (state.portfolioType === 'venues') {
-          const limit = venueLimits?.videoLimit ?? 1;
+          const limit = venueLimits?.videoLimit ?? 0;
           if (updatedVideos.length > limit) {
-            Alert.alert(
-              'Video Limit Reached',
-              `Your venue plan allows up to ${limit} video(s).`,
-              [{ text: 'OK' }],
-            );
+            setAlertState({ visible: true, title: 'Video Limit Reached', message: `Your venue plan allows up to ${limit} video(s).`, buttons: [{ text: 'OK', style: 'default', onPress: () => setAlertState(null) }] });
+            updateStep3({ videos: updatedVideos.slice(0, limit) });
+            return;
+          }
+        } else if (vendorVideoLimit !== null) {
+          const limit = vendorVideoLimit;
+          if (updatedVideos.length > limit) {
+            setAlertState({ visible: true, title: 'Video Limit Reached', message: `Your vendor plan allows up to ${limit} video(s). Upgrade to add more.`, buttons: [{ text: 'OK', style: 'default', onPress: () => setAlertState(null) }] });
             updateStep3({ videos: updatedVideos.slice(0, limit) });
             return;
           }
@@ -484,12 +318,12 @@ export default function ApplicationStep3Screen() {
         updateStep3({ videos: updatedVideos });
 
         if (validVideos.length > 0) {
-          Alert.alert('Success', `${validVideos.length} video(s) added successfully.`);
+          setAlertState({ visible: true, title: 'Success', message: `${validVideos.length} video(s) added successfully.` });
         }
       }
     } catch (error) {
       console.error('Video picker error:', error);
-      Alert.alert('Error', 'Failed to pick videos. Please try again.');
+      setAlertState({ visible: true, title: 'Error', message: 'Failed to pick videos. Please try again.' });
     }
   };
 
@@ -513,49 +347,106 @@ export default function ApplicationStep3Screen() {
     updateStep3({ videos: newVideos });
   };
 
+  const handlePickDocument = async (docType: DocKey) => {
+    try {
+      const result = await DocumentPicker.getDocumentAsync({
+        type: ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'image/*'],
+        copyToCacheDirectory: true,
+      });
+
+      if (result.canceled || !result.assets || result.assets.length === 0) return;
+
+      const asset = result.assets[0];
+      // Stabilize the DocumentPicker cache URI so it survives OS cleanup
+      const stableUri = await stabilizeDocumentPickerUri(asset.uri);
+
+      const fileSize = asset.size || 0;
+      if (fileSize > MAX_DOC_SIZE) {
+        setAlertState({ visible: true, title: 'File Too Large', message: `${asset.name} exceeds 10MB limit.`, buttons: [{ text: 'OK', style: 'default', onPress: () => setAlertState(null) }] });
+        return;
+      }
+
+      // Remove any existing document of the same type (one per type)
+      const filtered = state.step3.documents.filter((d) => d.docType !== docType);
+      const newDoc = {
+        uri: stableUri,
+        name: asset.name,
+        type: asset.mimeType || 'application/octet-stream',
+        docType,
+      };
+      updateStep3({ documents: [...filtered, newDoc] });
+      setAlertState({ visible: true, title: 'Success', message: `${BUSINESS_DOCS.find((d) => d.key === docType)?.label} uploaded successfully.`, buttons: [{ text: 'OK', style: 'default', onPress: () => setAlertState(null) }] });
+    } catch (error) {
+      console.error('Document picker error:', error);
+      setAlertState({ visible: true, title: 'Error', message: 'Failed to pick document. Please try again.', buttons: [{ text: 'OK', style: 'default', onPress: () => setAlertState(null) }] });
+    }
+  };
+
+  const handleRemoveDocument = (docType: DocKey) => {
+    const newDocs = state.step3.documents.filter((d) => d.docType !== docType);
+    updateStep3({ documents: newDocs });
+  };
+
   const handleNext = () => {
     const validation = validateStep3(state.step3);
 
     if (!validation.isValid) {
       setErrors(validation.errors);
-      Alert.alert('Validation Error', 'Please fix the errors before continuing');
+      setAlertState({ visible: true, title: 'Validation Error', message: 'Please fix the errors before continuing' });
       return;
     }
 
     navigation.navigate('ApplicationStep4');
   };
 
-  return (
-    <View style={{ flex: 1, backgroundColor: colors.background }}>
-      <ScrollView contentContainerStyle={{ paddingBottom: spacing.xl }}>
-        <View style={{ paddingHorizontal: spacing.lg, paddingTop: spacing.xl }}>
-          <TouchableOpacity
-            onPress={() => navigation.goBack()}
-            style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.lg }}
-          >
-            <MaterialIcons name="arrow-back" size={20} color={colors.textPrimary} />
-            <Text style={{ ...typography.body, color: colors.textPrimary, marginLeft: spacing.sm }}>
-              Back
-            </Text>
-          </TouchableOpacity>
+  const desktopContainerStyle = {
+    maxWidth: 1200,
+    width: '100%',
+    alignSelf: 'center' as const,
+    paddingHorizontal: 48,
+    paddingBottom: spacing.xxl * 6,
+  };
 
-          <View style={{ marginBottom: spacing.lg }}>
+  return (
+    <KeyboardAvoidingView
+      style={{ flex: 1, backgroundColor: isDesktop ? colors.surfaceBg : colors.background }}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? spacing.lg : 0}
+    >
+      <ScrollView
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
+        contentContainerStyle={isDesktop ? { ...desktopContainerStyle } as any : { paddingBottom: spacing.xxl * 6 }}
+      >
+        <View style={{ paddingHorizontal: isDesktop ? 0 : spacing.lg, paddingTop: spacing.sm }}>
+          <TouchableOpacity
+              onPress={() => navigation.goBack()}
+              style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.sm }}
+            >
+              <MaterialIcons name="arrow-back" size={20} color={colors.textPrimary} />
+              <Text style={{ ...typography.body, color: colors.textPrimary, marginLeft: spacing.sm }}>
+                Back
+              </Text>
+            </TouchableOpacity>
+
+          <View style={{ marginBottom: spacing.lg, maxWidth: isDesktop ? 800 : undefined, width: isDesktop ? '100%' : undefined, alignSelf: isDesktop ? 'center' as const : undefined }}>
             <View style={{ marginBottom: spacing.md, alignSelf: 'flex-start' }}>
               <ApplicationProgress currentStep={3} />
             </View>
             <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: spacing.md }}>
               <MaterialIcons name="cloud-upload" size={32} color={colors.textPrimary} />
               <View style={{ flex: 1 }}>
-                <Text style={{ ...typography.titleMedium, color: colors.textPrimary }}>
-                  Documents & Media
+                <Text style={isDesktop ? { ...typography.headlineMd, color: colors.primary } as any : { ...typography.titleMedium, color: colors.textPrimary }}>
+                  Portfolio Media
                 </Text>
-                <Text style={{ ...typography.caption, color: colors.textMuted }}>
+                <Text style={isDesktop ? { ...typography.bodyMd, color: colors.onSurfaceVariant } as any : { ...typography.caption, color: colors.textMuted }}>
                   Page 3 of 4
                 </Text>
               </View>
             </View>
           </View>
 
+          <View style={{ maxWidth: isDesktop ? 800 : undefined, width: isDesktop ? '100%' : undefined, alignSelf: isDesktop ? 'center' as const : undefined }}>
           {/* Photo Upload Counter — vendors with an existing record use the full counter;
               venues use an inline summary built from the already-loaded venueLimits */}
           {state.portfolioType !== 'venues' && vendorId && (
@@ -570,15 +461,15 @@ export default function ApplicationStep3Screen() {
           {state.portfolioType === 'venues' && venueLimits && (
             <View
               style={{
-                backgroundColor: colors.surface,
+                backgroundColor: cardSurface,
                 borderRadius: radii.lg,
                 padding: spacing.md,
                 borderWidth: 1,
-                borderColor: colors.borderSubtle,
+                borderColor: cardBorder,
                 marginBottom: spacing.md,
               }}
             >
-              <Text style={{ ...typography.caption, color: colors.textPrimary, fontWeight: '600', marginBottom: spacing.sm }}>
+              <Text style={{ ...typography.captionSemiBold, color: colors.textPrimary, marginBottom: spacing.sm }}>
                 Uploads limited to subscription plan
               </Text>
               {/* Photos */}
@@ -594,7 +485,7 @@ export default function ApplicationStep3Screen() {
                     {Math.max(0, venueLimits.photoLimit - state.step3.images.length)} remaining
                   </Text>
                 </View>
-                <View style={{ height: 4, backgroundColor: colors.borderSubtle, borderRadius: 2, overflow: 'hidden' }}>
+                <View style={{ height: 4, backgroundColor: cardBorder, borderRadius: 2, overflow: 'hidden' }}>
                   <View
                     style={{
                       height: '100%',
@@ -623,7 +514,7 @@ export default function ApplicationStep3Screen() {
                     {Math.max(0, venueLimits.videoLimit - state.step3.videos.length)} remaining
                   </Text>
                 </View>
-                <View style={{ height: 4, backgroundColor: colors.borderSubtle, borderRadius: 2, overflow: 'hidden' }}>
+                <View style={{ height: 4, backgroundColor: cardBorder, borderRadius: 2, overflow: 'hidden' }}>
                   <View
                     style={{
                       height: '100%',
@@ -645,12 +536,12 @@ export default function ApplicationStep3Screen() {
           {/* Portfolio Images */}
           <View
             style={{
-              backgroundColor: colors.surface,
+              backgroundColor: cardSurface,
               borderRadius: radii.lg,
               padding: spacing.lg,
               marginBottom: spacing.lg,
               borderWidth: 1,
-              borderColor: colors.borderSubtle,
+              borderColor: cardBorder,
               shadowColor: '#000',
               shadowOpacity: 0.05,
               shadowRadius: 8,
@@ -705,7 +596,7 @@ export default function ApplicationStep3Screen() {
               onPress={handlePickImages}
               style={{
                 borderWidth: 2,
-                borderColor: colors.textPrimary,
+                borderColor: colors.primary,
                 borderStyle: 'dashed',
                 borderRadius: radii.md,
                 padding: spacing.xl,
@@ -715,7 +606,7 @@ export default function ApplicationStep3Screen() {
               }}
             >
               <MaterialIcons name="add-photo-alternate" size={48} color={colors.textPrimary} />
-              <Text style={{ ...typography.body, color: colors.textPrimary, marginTop: spacing.sm, fontWeight: '600' }}>
+              <Text style={{ ...typography.bodySemiBold, color: colors.textPrimary, marginTop: spacing.sm }}>
                 Upload Images
               </Text>
               <Text style={{ ...typography.caption, color: colors.textMuted, marginTop: 4 }}>
@@ -723,7 +614,7 @@ export default function ApplicationStep3Screen() {
               </Text>
             </TouchableOpacity>
             {errors.images && (
-              <Text style={{ fontSize: 12, color: '#EF4444', marginTop: spacing.xs }}>
+              <Text style={{ ...typography.caption, fontSize: 12, color: '#EF4444', marginTop: spacing.xs }}>
                 {errors.images}
               </Text>
             )}
@@ -732,12 +623,12 @@ export default function ApplicationStep3Screen() {
           {/* Videos */}
           <View
             style={{
-              backgroundColor: colors.surface,
+              backgroundColor: cardSurface,
               borderRadius: radii.lg,
               padding: spacing.lg,
               marginBottom: spacing.lg,
               borderWidth: 1,
-              borderColor: colors.borderSubtle,
+              borderColor: cardBorder,
               shadowColor: '#000',
               shadowOpacity: 0.05,
               shadowRadius: 8,
@@ -784,7 +675,7 @@ export default function ApplicationStep3Screen() {
               onPress={handlePickVideos}
               style={{
                 borderWidth: 2,
-                borderColor: colors.borderSubtle,
+                borderColor: cardBorder,
                 borderStyle: 'dashed',
                 borderRadius: radii.md,
                 padding: spacing.lg,
@@ -802,15 +693,15 @@ export default function ApplicationStep3Screen() {
             </TouchableOpacity>
           </View>
 
-          {/* Documents */}
+          {/* Business Documents */}
           <View
             style={{
-              backgroundColor: colors.surface,
+              backgroundColor: cardSurface,
               borderRadius: radii.lg,
               padding: spacing.lg,
               marginBottom: spacing.lg,
               borderWidth: 1,
-              borderColor: colors.borderSubtle,
+              borderColor: cardBorder,
               shadowColor: '#000',
               shadowOpacity: 0.05,
               shadowRadius: 8,
@@ -822,144 +713,83 @@ export default function ApplicationStep3Screen() {
               Business Documents
             </Text>
             <Text style={{ ...typography.caption, color: colors.textMuted, marginBottom: spacing.md }}>
-              Upload the required business documents below.
+              Upload required business documents (PDF, DOC, DOCX, PNG, JPG — max 10MB each)
             </Text>
 
-            <View style={{ gap: spacing.sm }}>
-              {BUSINESS_DOCS.map((d) => {
-                const uploaded = getBusinessDoc(d.key);
-                const requiredTag = d.required ? 'Required' : d.acceptLabel || 'Optional';
-
-                const errorKey =
-                  d.key === 'id_copy'
-                    ? 'idCopy'
-                    : d.key === 'company_logo'
-                      ? 'companyLogo'
-                      : null;
-
-                const errorText = errorKey ? errors[errorKey] : undefined;
-
-                return (
-                  <View key={d.key}>
-                    <View
-                      style={{
-                        padding: spacing.md,
-                        borderRadius: radii.md,
-                        backgroundColor: colors.background,
-                        borderWidth: 1,
-                        borderColor: errorText ? '#EF4444' : colors.borderSubtle,
-                      }}
-                    >
-                      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.md }}>
-                        <View style={{ flex: 1 }}>
-                          <Text style={{ ...typography.body, color: colors.textPrimary, fontWeight: '600' }}>{d.label}</Text>
-                          <Text style={{ ...typography.caption, color: colors.textMuted, marginTop: 2 }}>
-                            {uploaded ? uploaded.name.split('__').slice(1).join('__') : requiredTag}
-                          </Text>
-                        </View>
-
-                        {uploaded ? (
-                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
-                            <MaterialIcons name="check-circle" size={20} color="#22C55E" />
-                            <TouchableOpacity
-                              onPress={() => handleDownloadBusinessDoc(d.key)}
-                              style={{
-                                paddingHorizontal: spacing.sm,
-                                paddingVertical: 6,
-                                borderRadius: radii.full,
-                                backgroundColor: '#f2f7ff',
-                                flexDirection: 'row',
-                                alignItems: 'center',
-                                gap: 6,
-                              }}
-                              activeOpacity={0.8}
-                            >
-                              <MaterialIcons name="download" size={16} color={colors.textPrimary} />
-                              <Text style={{ ...typography.caption, color: colors.textPrimary, fontWeight: '700' }}>Download</Text>
-                            </TouchableOpacity>
-                          </View>
-                        ) : (
-                          <View
-                            style={{
-                              paddingHorizontal: spacing.sm,
-                              paddingVertical: 6,
-                              borderRadius: radii.full,
-                              backgroundColor: d.required ? '#FEE2E2' : '#FEF3C7',
-                            }}
-                          >
-                            <Text style={{ ...typography.caption, color: d.required ? '#991B1B' : '#92400E', fontWeight: '700' }}>
-                              {requiredTag}
-                            </Text>
-                          </View>
-                        )}
-                      </View>
-
-                      <View style={{ flexDirection: 'row', gap: spacing.sm, marginTop: spacing.md }}>
-                        <TouchableOpacity
-                          onPress={() => {
-                            if (d.key === 'company_logo') {
-                              handlePickCompanyLogo();
-                              return;
-                            }
-                            handlePickDocumentFor(d.key);
-                          }}
-                          style={{
-                            flex: 1,
-                            borderWidth: 1,
-                            borderColor: colors.textPrimary,
-                            borderRadius: radii.md,
-                            paddingVertical: spacing.sm,
-                            alignItems: 'center',
-                            flexDirection: 'row',
-                            justifyContent: 'center',
-                            gap: 6,
-                            backgroundColor: '#FFFFFF',
-                          }}
-                          activeOpacity={0.8}
-                        >
-                          <MaterialIcons name="upload-file" size={18} color={colors.textPrimary} />
-                          <Text style={{ color: colors.textPrimary, fontWeight: '700' }}>
-                            {uploaded ? 'Replace' : 'Upload'}
-                          </Text>
-                        </TouchableOpacity>
-
-                        {uploaded && (
-                          <TouchableOpacity
-                            onPress={() => handleRemoveBusinessDoc(d.key)}
-                            style={{
-                              borderWidth: 1,
-                              borderColor: '#EF4444',
-                              borderRadius: radii.md,
-                              paddingVertical: spacing.sm,
-                              paddingHorizontal: spacing.md,
-                              alignItems: 'center',
-                              flexDirection: 'row',
-                              justifyContent: 'center',
-                              gap: 6,
-                              backgroundColor: '#FFFFFF',
-                            }}
-                            activeOpacity={0.8}
-                          >
-                            <MaterialIcons name="delete" size={18} color="#EF4444" />
-                            <Text style={{ color: '#EF4444', fontWeight: '700' }}>Remove</Text>
-                          </TouchableOpacity>
-                        )}
-                      </View>
-
-                      <Text style={{ ...typography.caption, color: colors.textMuted, marginTop: spacing.sm }}>
-                        {d.key === 'company_logo' ? 'PNG logo (Max 10MB)' : 'PDF, DOC, DOCX (Max 10MB)'}
+            {BUSINESS_DOCS.map((doc) => {
+              const existing = state.step3.documents.find((d) => d.docType === doc.key);
+              const hasError = errors[doc.key];
+              return (
+                <View key={doc.key} style={{ marginBottom: spacing.md }}>
+                  <View
+                    style={{
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      marginBottom: spacing.xs,
+                    }}
+                  >
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, flex: 1 }}>
+                      <MaterialIcons name="description" size={18} color={colors.textPrimary} />
+                      <Text style={{ ...typography.body, color: colors.textPrimary }}>
+                        {doc.label}{doc.required ? ' *' : ''}
                       </Text>
                     </View>
-
-                    {errorText && (
-                      <Text style={{ fontSize: 12, color: '#EF4444', marginTop: spacing.xs }}>
-                        {errorText}
+                    {doc.acceptLabel && !existing && (
+                      <Text style={{ ...typography.caption, color: colors.textMuted, fontStyle: 'italic' }}>
+                        {doc.acceptLabel}
                       </Text>
                     )}
                   </View>
-                );
-              })}
-            </View>
+
+                  {existing ? (
+                    <View
+                      style={{
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        padding: spacing.md,
+                        backgroundColor: colors.background,
+                        borderRadius: radii.md,
+                      }}
+                    >
+                      <MaterialIcons name="check-circle" size={20} color="#22C55E" />
+                      <Text
+                        style={{ ...typography.body, color: colors.textPrimary, marginLeft: spacing.sm, flex: 1 }}
+                        numberOfLines={1}
+                      >
+                        {existing.name}
+                      </Text>
+                      <TouchableOpacity onPress={() => handleRemoveDocument(doc.key)}>
+                        <MaterialIcons name="delete" size={20} color="#EF4444" />
+                      </TouchableOpacity>
+                    </View>
+                  ) : (
+                    <TouchableOpacity
+                      onPress={() => handlePickDocument(doc.key)}
+                      style={{
+                        borderWidth: 2,
+                        borderColor: hasError ? '#EF4444' : cardBorder,
+                        borderStyle: 'dashed',
+                        borderRadius: radii.md,
+                        padding: spacing.md,
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                      }}
+                    >
+                      <MaterialIcons name="upload-file" size={28} color={colors.textMuted} />
+                      <Text style={{ ...typography.caption, color: colors.textMuted, marginTop: 4 }}>
+                        Tap to upload
+                      </Text>
+                    </TouchableOpacity>
+                  )}
+                  {hasError && (
+                    <Text style={{ ...typography.caption, fontSize: 12, color: '#EF4444', marginTop: spacing.xs }}>
+                      {hasError}
+                    </Text>
+                  )}
+                </View>
+              );
+            })}
           </View>
 
           {/* Note about uploads */}
@@ -975,7 +805,7 @@ export default function ApplicationStep3Screen() {
             <MaterialIcons name="info" size={20} color="#F59E0B" style={{ marginRight: spacing.sm }} />
             <View style={{ flex: 1 }}>
               <Text style={{ ...typography.caption, color: '#92400E' }}>
-              Note: Supported formats: JPG, PNG (max 10MB each), MP4, MOV (max 50MB each), PDF, DOC, DOCX (max 10MB each).
+              Note: Supported formats: JPG, PNG (max 10MB each), MP4, MOV (max 50MB each), PDF, DOC, DOCX (max 10MB each). Images are saved to your profile gallery.
               </Text>
             </View>
           </View>
@@ -986,15 +816,15 @@ export default function ApplicationStep3Screen() {
               onPress={() => navigation.goBack()}
               style={{
                 flex: 1,
-                backgroundColor: colors.surface,
+                backgroundColor: cardSurface,
                 borderWidth: 1,
-                borderColor: colors.textPrimary,
+                borderColor: colors.primary,
                 paddingVertical: spacing.md,
                 borderRadius: radii.md,
                 alignItems: 'center',
               }}
             >
-              <Text style={{ color: colors.textPrimary, fontSize: 16, fontWeight: '600' }}>
+              <Text style={{ ...typography.bodySemiBold, color: colors.textPrimary, fontSize: 16 }}>
                 Back
               </Text>
             </TouchableOpacity>
@@ -1002,7 +832,7 @@ export default function ApplicationStep3Screen() {
               onPress={handleNext}
               style={{
                 flex: 1,
-                backgroundColor: colors.textPrimary,
+                backgroundColor: colors.cta,
                 paddingVertical: spacing.md,
                 borderRadius: radii.md,
                 flexDirection: 'row',
@@ -1011,14 +841,25 @@ export default function ApplicationStep3Screen() {
               }}
               activeOpacity={0.8}
             >
-              <Text style={{ color: '#FFFFFF', fontSize: 16, fontWeight: '600', marginRight: spacing.sm }}>
+              <Text style={{ ...typography.bodySemiBold, color: '#FFFFFF', fontSize: 16, marginRight: spacing.sm }}>
                 Next
               </Text>
               <MaterialIcons name="arrow-forward" size={16} color="#FFFFFF" />
             </TouchableOpacity>
           </View>
+          </View>
         </View>
       </ScrollView>
-    </View>
+
+      {alertState && (
+        <ThemedAlert
+          visible={alertState.visible}
+          title={alertState.title}
+          message={alertState.message}
+          buttons={alertState.buttons ?? [{ text: 'OK', style: 'default', onPress: () => setAlertState(null) }]}
+          onDismiss={() => setAlertState(null)}
+        />
+      )}
+    </KeyboardAvoidingView>
   );
 }

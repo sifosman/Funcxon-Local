@@ -32,7 +32,34 @@ function base64ToBlob(base64: string, mimeType: string): Blob {
   return new Blob([byteArray], { type: mimeType });
 }
 
-const BLOCKING_APPLICATION_STATUSES = ['pending', 'under_review'] as const;
+/**
+ * Copies a file from expo-document-picker's transient cache into the app's own
+ * cache directory so it survives OS cleanup before upload begins.
+ * Returns the stable URI, or the original URI if copying is not needed/possible.
+ */
+export async function stabilizeDocumentPickerUri(uri: string): Promise<string> {
+  // Only copy when the URI points to the DocumentPicker cache on Android/iOS
+  if (!uri.includes('/cache/DocumentPicker/') && !uri.includes('DocumentPicker')) {
+    return uri;
+  }
+  try {
+    const destDir = `${FileSystem.cacheDirectory}stable_docs/`;
+    const info = await FileSystem.getInfoAsync(destDir);
+    if (!info.exists) {
+      await FileSystem.makeDirectoryAsync(destDir, { intermediates: true });
+    }
+    const fileName = uri.split('/').pop() || `doc_${Date.now()}`;
+    const destUri = `${destDir}${fileName}`;
+    await FileSystem.copyAsync({ from: uri, to: destUri });
+    console.log(`[stabilizeDocumentPickerUri] Copied ${uri} -> ${destUri}`);
+    return destUri;
+  } catch (err) {
+    console.warn('[stabilizeDocumentPickerUri] Copy failed, using original URI:', err);
+    return uri;
+  }
+}
+
+const BLOCKING_APPLICATION_STATUSES: readonly string[] = ['pending', 'under_review', 'needs_changes'];
 const EDITABLE_APPLICATION_STATUSES = ['needs_changes'] as const;
 
 export type ApplicationSubmission = {
@@ -96,9 +123,30 @@ export async function submitApplication(data: ApplicationSubmission) {
       terms_accepted: data.terms_accepted,
       privacy_accepted: data.privacy_accepted,
       marketing_consent: data.marketing_consent,
+      status: 'pending',
     };
 
     const existingApplicationId = data.existing_application_id ?? null;
+
+    // Prevent duplicate approved applications for the same portfolio type
+    if (!existingApplicationId) {
+      const { data: existingApproved, error: existingApprovedError } = await supabase
+        .from('subscriber_applications')
+        .select('id')
+        .eq('user_id', user.id)
+        .eq('portfolio_type', data.portfolio_type)
+        .eq('status', 'approved')
+        .maybeSingle();
+
+      if (existingApprovedError) {
+        console.error('Existing approved application check error:', existingApprovedError);
+        throw new Error('Failed to verify application status');
+      }
+
+      if (existingApproved) {
+        throw new Error(`You already have an approved ${data.portfolio_type} application. You cannot submit another one.`);
+      }
+    }
 
     const query = existingApplicationId
       ? supabase
@@ -137,7 +185,7 @@ export async function submitApplication(data: ApplicationSubmission) {
 }
 
 export async function uploadFileToStorage(
-  bucket: 'portfolio-images' | 'portfolio-videos' | 'business-documents',
+  bucket: 'portfolio-images' | 'portfolio-videos' | 'quote-attachments' | 'business-documents',
   file: { uri: string; name: string; type: string },
   userId: string
 ) {
@@ -170,9 +218,17 @@ export async function uploadFileToStorage(
         const base64 = await FileSystem.readAsStringAsync(file.uri, { encoding: 'base64' });
         fileBody = decode(base64);
         fileSize = fileBody.byteLength;
-      } catch (nativeFetchError) {
+      } catch (nativeFetchError: any) {
         console.error('Native file read failed for file URI:', file.uri, nativeFetchError);
-        throw new Error(`Failed to read native file: ${nativeFetchError instanceof Error ? nativeFetchError.message : String(nativeFetchError)}`);
+        const msg = nativeFetchError instanceof Error ? nativeFetchError.message : String(nativeFetchError);
+        // Detect ENOENT — the temp file was cleaned up by the OS before we could read it
+        if (msg.includes('ENOENT') || msg.includes('No such file')) {
+          throw new Error(
+            `The selected file "${file.name}" is no longer accessible. ` +
+            'It may have been removed from your device or its temporary cache expired. Please select it again.'
+          );
+        }
+        throw new Error(`Failed to read file "${file.name}": ${msg}`);
       }
     }
 
@@ -218,7 +274,7 @@ export async function uploadFileToStorage(
 }
 
 export async function deleteFileFromStorage(
-  bucket: 'portfolio-images' | 'portfolio-videos' | 'business-documents',
+  bucket: 'portfolio-images' | 'portfolio-videos' | 'quote-attachments' | 'business-documents',
   path: string
 ) {
   try {
@@ -329,6 +385,75 @@ export async function getLatestUserApplicationByType(portfolioType: 'venue' | 'v
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Failed to get latest application',
+    };
+  }
+}
+
+export async function getApprovedUserApplicationByType(portfolioType: 'venue' | 'vendor') {
+  try {
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+
+    if (authError || !user) {
+      throw new Error('User not authenticated');
+    }
+
+    const { data, error } = await supabase
+      .from('subscriber_applications')
+      .select('*')
+      .eq('user_id', user.id)
+      .eq('portfolio_type', portfolioType)
+      .eq('status', 'approved')
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle<SubscriberApplication>();
+
+    if (error) {
+      console.error('Get approved application by type error:', error);
+      throw new Error(error.message);
+    }
+
+    return { success: true, data: data ?? null };
+  } catch (error) {
+    console.error('Get approved application by type error:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to get approved application',
+    };
+  }
+}
+
+export async function updateUserRoleToVendor() {
+  try {
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    if (authError || !user) {
+      throw new Error('User not authenticated');
+    }
+
+    const { error: dbError } = await supabase
+      .from('users')
+      .update({ role: 'vendor' })
+      .eq('auth_user_id', user.id);
+
+    if (dbError) {
+      console.error('Update users role error:', dbError);
+      throw dbError;
+    }
+
+    const { error: metadataError } = await supabase.auth.updateUser({
+      data: { role: 'vendor' },
+    });
+
+    if (metadataError) {
+      console.error('Update auth metadata error:', metadataError);
+      throw metadataError;
+    }
+
+    return { success: true };
+  } catch (error) {
+    console.error('Update user role to vendor error:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to update user role',
     };
   }
 }

@@ -79,6 +79,10 @@ export function validateStep2(data: Step2Data, portfolioType: 'vendors' | 'venue
     if (data.eventTypes.length === 0) {
       errors.eventTypes = 'Please select at least one event type';
     }
+    const hasValidHall = data.halls.some((h) => h.name.trim() && h.capacity.trim());
+    if (!hasValidHall) {
+      errors.halls = 'Please provide at least one hall name and capacity';
+    }
   } else if (portfolioType === 'vendors') {
     if (data.serviceCategories.length === 0) {
       errors.serviceCategories = 'Please select at least one service category';
@@ -108,15 +112,14 @@ export function validateStep3(data: Step3Data): ValidationResult {
     errors.images = 'Please upload at least one image';
   }
 
-  const hasDoc = (prefix: string) =>
-    data.documents.some((d) => typeof d.name === 'string' && d.name.startsWith(`${prefix}__`));
-
-  if (!hasDoc('id_copy')) {
-    errors.idCopy = 'ID copy is required';
+  const hasIdCopy = data.documents.some((d) => d.docType === 'id_copy');
+  if (!hasIdCopy) {
+    errors.id_copy = 'ID copy is required';
   }
 
-  if (!hasDoc('company_logo')) {
-    errors.companyLogo = 'Company logo is required';
+  const hasCompanyLogo = data.documents.some((d) => d.docType === 'company_logo');
+  if (!hasCompanyLogo) {
+    errors.company_logo = 'Company logo is required';
   }
 
   return {

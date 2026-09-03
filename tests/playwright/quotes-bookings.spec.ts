@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test';
 import {
+  dismissConsentIfPresent,
   goToWelcomeFromHomeSearch,
   loginFromWelcome,
   createMockAssets,
@@ -17,13 +18,33 @@ test.afterAll(async () => {
 });
 
 /**
- * Helper to perform a search and open the first listing card.
+ * Helper to navigate to Discover via the top header "Vendors" button,
+ * perform a search, and open the first listing card.
  */
 async function openFirstListing(page: any) {
-  // Navigate to Discover screen via Search tab
-  const searchTab = page.getByRole('button', { name: /Search/i }).last();
-  await expect(searchTab).toBeVisible();
-  await searchTab.click();
+  await dismissConsentIfPresent(page);
+
+  // Use the top header "Vendors" button to reach Discover (same pattern as discover.spec.ts)
+  const vendorsButton = page.getByText('Vendors', { exact: true }).first();
+  if (await vendorsButton.isVisible().catch(() => false)) {
+    await vendorsButton.click({ force: true });
+    await page.waitForTimeout(400);
+  } else {
+    // Fallback to direct JavaScript click if Playwright cannot target the header
+    await page.evaluate(() => {
+      const vendors = Array.from(document.querySelectorAll('div')).find(
+        (d) => d.textContent === 'Vendors' && d.getBoundingClientRect().width > 0
+      );
+      if (vendors) {
+        let clickable = vendors.parentElement;
+        while (clickable && !clickable.getAttribute('tabindex') && !clickable.getAttribute('role')) {
+          clickable = clickable.parentElement;
+        }
+        (clickable || vendors).click();
+      }
+    });
+    await page.waitForTimeout(400);
+  }
 
   // Wait for search input and perform a generic query
   const searchInput = page.locator('input[placeholder*=\"Search\"]').first();
@@ -31,10 +52,31 @@ async function openFirstListing(page: any) {
   await searchInput.fill('test');
   await searchInput.press('Enter');
 
-  // Wait for results and click the first card
-  const firstCard = page.locator('[data-testid*=\"card\"], .vendor-card, .venue-card').first();
-  await expect(firstCard).toBeVisible({ timeout: 10000 });
-  await firstCard.click();
+  // Wait for results and click the first card.
+  // RN Web doesn't render data-testid or CSS class names on cards — cards are
+  // divs with inline cursor:pointer containing the business name text.
+  // Use JS evaluate to find and click the first clickable result card.
+  await expect(page.getByText(/Search results|Showing.*listing/i).first()).toBeVisible({ timeout: 10000 });
+  await page.evaluate(() => {
+    const resultText = Array.from(document.querySelectorAll('div')).find(
+      (d) => /Search results|Showing.*listing/i.test(d.textContent || '') && d.getBoundingClientRect().width > 0
+    );
+    if (!resultText) return;
+    // The card containers are siblings after the results header — find the first
+    // div with cursor:pointer that appears after the results header.
+    const allDivs = Array.from(document.querySelectorAll('div'));
+    const headerIdx = allDivs.indexOf(resultText);
+    for (let i = headerIdx + 1; i < allDivs.length; i++) {
+      const el = allDivs[i];
+      const style = window.getComputedStyle(el);
+      const rect = el.getBoundingClientRect();
+      if (style.cursor === 'pointer' && rect.width > 50 && rect.height > 50) {
+        (el as HTMLElement).click();
+        return;
+      }
+    }
+  });
+  await page.waitForTimeout(500);
 }
 
 /**
@@ -98,8 +140,8 @@ test('Venue: book a tour and verify backend', async ({ page }) => {
   // Open a venue profile (assumes first result is a venue)
   await openFirstListing(page);
 
-  // Click Book Venue Tour button
-  const bookTourBtn = page.getByText('Book Venue Tour', { exact: true }).first();
+  // Click Book a Tour button
+  const bookTourBtn = page.getByText('Book a Tour', { exact: true }).first();
   await expect(bookTourBtn).toBeVisible();
   await bookTourBtn.click();
 

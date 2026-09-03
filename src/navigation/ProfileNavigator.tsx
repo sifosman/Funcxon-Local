@@ -25,17 +25,24 @@ import VendorCatalogueScreen from '../screens/subscriber/VendorCatalogueScreen';
 import VenueQuoteRequestsScreen from '../screens/subscriber/VenueQuoteRequestsScreen';
 import VenueTourBookingsScreen from '../screens/subscriber/VenueTourBookingsScreen';
 import VenueAnalyticsScreen from '../screens/subscriber/VenueAnalyticsScreen';
+import VendorAnalyticsScreen from '../screens/subscriber/VendorAnalyticsScreen';
 import VendorQuoteCreateScreen from '../screens/subscriber/VendorQuoteCreateScreen';
 import VendorQuoteHistoryScreen from '../screens/subscriber/VendorQuoteHistoryScreen';
 import ActionItemsScreen from '../screens/subscriber/ActionItemsScreen';
 import CalendarUpdatesScreen from '../screens/subscriber/CalendarUpdatesScreen';
 import ListerPortfolioScreen from '../screens/subscriber/ListerPortfolioScreen';
+import CreateReviewScreen from '../screens/CreateReviewScreen';
 import BillingScreen from '../screens/BillingScreen';
 import AccountSettingsScreen from '../screens/AccountSettingsScreen';
 import ChangePasswordScreen from '../screens/ChangePasswordScreen';
 import MarketingPermissionsScreen from '../screens/MarketingPermissionsScreen';
 import DebugUserScreen from '../screens/DebugUserScreen';
-import { colors, typography } from '../theme';
+import MyToursScreen from '../screens/MyToursScreen';
+import BookingDetailScreen from '../screens/BookingDetailScreen';
+import VendorDashboardScreen from '../screens/VendorDashboardScreen';
+import VendorBookingsScreen from '../screens/subscriber/VendorBookingsScreen';
+import VendorProfileScreen from '../screens/VendorProfileScreen';
+import VenueProfileScreen from '../screens/VenueProfileScreen';
 
 export type ProfileStackParamList = {
     AccountMain: undefined;
@@ -59,8 +66,8 @@ export type ProfileStackParamList = {
         productType?: 'vendor' | 'venue';
         planKey?: string;
     };
-    VendorSignupSuccess: { email: string; fullName: string; tierName: string; productType?: 'vendor' | 'venue' };
-    PortfolioAssistance: undefined;
+    VendorSignupSuccess: { email: string; fullName: string; tierName: string; productType?: 'vendor' | 'venue'; businessName?: string };
+    PortfolioAssistance: { openFaqs?: boolean } | undefined;
     UpdatePortfolio: undefined;
     UpdateVendorPortfolio: undefined;
     UpdateVenuePortfolio: undefined;
@@ -68,7 +75,10 @@ export type ProfileStackParamList = {
     VendorCatalogue: undefined;
     VenueQuoteRequests: undefined;
     VenueTourBookings: undefined;
+    MyTours: undefined;
+    BookingDetail: { bookingId: number };
     VenueAnalytics: undefined;
+    VendorAnalytics: undefined;
     VendorQuoteCreate: {
         quoteRequestId: number;
         clientName?: string;
@@ -76,7 +86,12 @@ export type ProfileStackParamList = {
         eventDetails?: string;
     };
     VendorQuoteHistory: { quoteRequestId: number };
+    VendorDashboard: undefined;
+    VendorBookings: undefined;
     ListerPortfolio: undefined;
+    CreateReview: { type: 'vendor' | 'venue' | 'app'; targetId?: number; targetName?: string };
+    VendorProfile: { vendorId: number; from?: string };
+    VenueProfile: { venueId: number; from?: string };
     ActionItems: undefined;
     CalendarUpdates: undefined;
     Billing: undefined;
@@ -94,14 +109,7 @@ export function ProfileNavigator() {
     return (
         <Stack.Navigator
             screenOptions={{
-                headerStyle: {
-                    backgroundColor: colors.surface,
-                },
-                headerTitleStyle: {
-                    ...typography.titleMedium,
-                    color: colors.textPrimary,
-                },
-                headerTintColor: colors.textPrimary,
+                headerShown: false,
             }}
         >
             <Stack.Screen
@@ -225,8 +233,23 @@ export function ProfileNavigator() {
                 options={{ headerShown: false }}
             />
             <Stack.Screen
+                name="VendorDashboard"
+                component={VendorDashboardScreen}
+                options={{ headerShown: false }}
+            />
+            <Stack.Screen
+                name="VendorBookings"
+                component={VendorBookingsScreen}
+                options={{ headerShown: false }}
+            />
+            <Stack.Screen
                 name="ListerPortfolio"
                 component={ListerPortfolioScreen}
+                options={{ headerShown: false }}
+            />
+            <Stack.Screen
+                name="CreateReview"
+                component={CreateReviewScreen}
                 options={{ headerShown: false }}
             />
             <Stack.Screen
@@ -235,8 +258,23 @@ export function ProfileNavigator() {
                 options={{ headerShown: false }}
             />
             <Stack.Screen
+                name="MyTours"
+                component={MyToursScreen}
+                options={{ headerShown: false }}
+            />
+            <Stack.Screen
+                name="BookingDetail"
+                component={BookingDetailScreen}
+                options={{ headerShown: false }}
+            />
+            <Stack.Screen
                 name="VenueAnalytics"
                 component={VenueAnalyticsScreen}
+                options={{ headerShown: false }}
+            />
+            <Stack.Screen
+                name="VendorAnalytics"
+                component={VendorAnalyticsScreen}
                 options={{ headerShown: false }}
             />
             <Stack.Screen
@@ -282,6 +320,16 @@ export function ProfileNavigator() {
             <Stack.Screen
                 name="DebugUser"
                 component={DebugUserScreen}
+                options={{ headerShown: false }}
+            />
+            <Stack.Screen
+                name="VendorProfile"
+                component={VendorProfileScreen as any}
+                options={{ headerShown: false }}
+            />
+            <Stack.Screen
+                name="VenueProfile"
+                component={VenueProfileScreen as any}
                 options={{ headerShown: false }}
             />
         </Stack.Navigator>

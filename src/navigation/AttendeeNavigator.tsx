@@ -1,5 +1,4 @@
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import { Image, Platform, Text, TouchableOpacity, View } from 'react-native';
 import AttendeeHomeScreen from '../screens/AttendeeHomeScreen';
 import DiscoverScreen from '../screens/DiscoverScreen';
 import VendorProfileScreen from '../screens/VendorProfileScreen';
@@ -14,7 +13,12 @@ import ListersPortalScreen from '../screens/ListersPortalScreen';
 import SubscriptionPlansScreen from '../screens/SubscriptionPlansScreen';
 import VenueListingPlansScreen from '../screens/VenueListingPlansScreen';
 import VenueCatalogueViewScreen from '../screens/VenueCatalogueViewScreen';
-import { colors, typography } from '../theme';
+import TermsAndPoliciesScreen from '../screens/TermsAndPoliciesScreen';
+import LegalDocumentScreen from '../screens/LegalDocumentScreen';
+import PortfolioAssistanceScreen from '../screens/PortfolioAssistanceScreen';
+import FiltersScreen from '../screens/FiltersScreen';
+import MyToursScreen from '../screens/MyToursScreen';
+import BookingDetailScreen from '../screens/BookingDetailScreen';
 
 export type AttendeeStackParamList = {
   VendorList: undefined;
@@ -29,9 +33,18 @@ export type AttendeeStackParamList = {
     | undefined;
   VendorProfile: { vendorId: number; from?: 'Favourites' | 'Quotes' };
   VenueProfile: { venueId: number; from?: 'Favourites' | 'Quotes' };
-  QuoteRequest: { vendorId: number; vendorName: string; type?: 'vendor' | 'venue' };
+  QuoteRequest: {
+    vendorId: number;
+    vendorName: string;
+    type?: 'vendor' | 'venue';
+    editMode?: boolean;
+    quoteId?: number;
+    initialLineItems?: Array<{ name: string; quantity: string; price: string }>;
+  };
   BookTour: { venueId: number; venueName: string };
-  CreateReview: { type: 'vendor' | 'venue'; targetId: number; targetName: string };
+  MyTours: undefined;
+  BookingDetail: { bookingId: number };
+  CreateReview: { type: 'vendor' | 'venue' | 'app'; targetId?: number; targetName?: string };
   VenueCatalogueView: { venueId: number; venueName: string };
   Planner: undefined;
   BlogList: undefined;
@@ -39,6 +52,10 @@ export type AttendeeStackParamList = {
   ListersPortal: undefined;
   SubscriptionPlans: undefined;
   VenueListingPlans: undefined;
+  TermsAndPolicies: undefined;
+  LegalDocument: { documentId: string };
+  PortfolioAssistance: { openFaqs?: boolean } | undefined;
+  Filters: undefined;
 };
 
 const Stack = createNativeStackNavigator<AttendeeStackParamList>();
@@ -47,15 +64,7 @@ export function AttendeeNavigator() {
   return (
     <Stack.Navigator
       screenOptions={{
-        headerShown: Platform.OS !== 'web',
-        headerStyle: {
-          backgroundColor: colors.surface,
-        },
-        headerTitleStyle: {
-          color: colors.textPrimary,
-          fontWeight: '600',
-        },
-        headerTintColor: colors.textPrimary,
+        headerShown: false,
       }}
     >
       <Stack.Screen
@@ -66,37 +75,47 @@ export function AttendeeNavigator() {
       <Stack.Screen
         name="Discover"
         component={DiscoverScreen}
-        options={{ title: 'Discover' }}
+        options={{ headerShown: false }}
       />
       <Stack.Screen
         name="VendorProfile"
         component={VendorProfileScreen}
-        options={{ title: 'Vendor profile' }}
+        options={{ headerShown: false }}
       />
       <Stack.Screen
         name="VenueProfile"
         component={VenueProfileScreen}
-        options={{ title: 'Venue profile' }}
+        options={{ headerShown: false }}
       />
       <Stack.Screen
         name="QuoteRequest"
         component={QuoteRequestScreen}
-        options={{ title: 'Request a quote' }}
+        options={{ headerShown: false }}
       />
       <Stack.Screen
         name="CreateReview"
         component={CreateReviewScreen}
-        options={{ title: 'Leave a review' }}
+        options={{ headerShown: false }}
       />
       <Stack.Screen
         name="BookTour"
         component={BookTourScreen}
-        options={{ title: 'Book a venue tour' }}
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name="MyTours"
+        component={MyToursScreen}
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name="BookingDetail"
+        component={BookingDetailScreen}
+        options={{ headerShown: false }}
       />
       <Stack.Screen
         name="Planner"
         component={PlannerScreen}
-        options={{ title: 'My planner (demo)' }}
+        options={{ headerShown: false }}
       />
       <Stack.Screen
         name="BlogList"
@@ -126,7 +145,27 @@ export function AttendeeNavigator() {
       <Stack.Screen
         name="VenueCatalogueView"
         component={VenueCatalogueViewScreen}
-        options={{ title: 'Catalogue' }}
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name="TermsAndPolicies"
+        component={TermsAndPoliciesScreen}
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name="LegalDocument"
+        component={LegalDocumentScreen}
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name="PortfolioAssistance"
+        component={PortfolioAssistanceScreen}
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name="Filters"
+        component={FiltersScreen}
+        options={{ headerShown: false }}
       />
     </Stack.Navigator>
   );

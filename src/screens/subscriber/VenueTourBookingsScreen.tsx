@@ -1,18 +1,17 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, Alert, ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Modal, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import DateTimePicker from '@react-native-community/datetimepicker';
 import { colors, spacing, radii, typography } from '../../theme';
 import { supabase } from '../../lib/supabaseClient';
 import { useAuth } from '../../auth/AuthContext';
+import ThemedAlert from '../../components/ThemedAlert';
 import { getMyVenueEntitlement, isVenueFeatureEnabled } from '../../lib/venueSubscription';
-
-type ProfileStackParamList = {
-  UpdateVenuePortfolio: undefined;
-  VenueTourBookings: undefined;
-  VenueListingPlans: undefined;
-};
+import { createTourResponseNotification } from '../../lib/notifications';
+import type { ProfileStackParamList } from '../../navigation/ProfileNavigator';
+import { useIsDesktop } from '../../hooks/useIsDesktop';
 
 type VenueListingRow = {
   id: number;
@@ -22,28 +21,53 @@ type VenueListingRow = {
 type TourBookingRow = {
   id: number;
   listing_id: number;
+  requester_user_id: string | null;
   requester_name: string | null;
   requester_email: string | null;
   requester_phone: string | null;
   requested_date: string | null;
   requested_time: string | null;
   message: string | null;
+  countered_date: string | null;
+  countered_time: string | null;
+  countered_message: string | null;
   status: string;
   created_at: string;
 };
 
-const STATUS_OPTIONS = ['new', 'scheduled', 'completed', 'closed'] as const;
+const STATUS_ORDER: Record<string, number> = {
+  pending: 0,
+  countered: 1,
+  confirmed: 2,
+  completed: 3,
+  cancelled: 4,
+};
+
+const STATUS_LABEL: Record<string, string> = {
+  pending: 'Pending',
+  countered: 'Alternative proposed',
+  confirmed: 'Confirmed',
+  cancelled: 'Cancelled',
+  completed: 'Completed',
+};
 
 export default function VenueTourBookingsScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<ProfileStackParamList>>();
   const { user } = useAuth();
+  const isDesktop = useIsDesktop();
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [alertState, setAlertState] = useState<{visible: boolean; title: string; message: string} | null>(null);
 
   const [listing, setListing] = useState<VenueListingRow | null>(null);
   const [bookings, setBookings] = useState<TourBookingRow[]>([]);
   const [canUseTours, setCanUseTours] = useState<boolean>(false);
+  const [counterBooking, setCounterBooking] = useState<TourBookingRow | null>(null);
+  const [counterDate, setCounterDate] = useState(new Date());
+  const [counterTime, setCounterTime] = useState('');
+  const [counterMessage, setCounterMessage] = useState('');
+  const [showDatePicker, setShowDatePicker] = useState(false);
 
   const loadEntitlement = useCallback(async () => {
     if (!user?.id) return;
@@ -71,7 +95,7 @@ export default function VenueTourBookingsScreen() {
 
       const { data: rows, error } = await supabase
         .from('venue_tour_bookings')
-        .select('id, listing_id, requester_name, requester_email, requester_phone, requested_date, requested_time, message, status, created_at')
+        .select('id, listing_id, requester_user_id, requester_name, requester_email, requester_phone, requested_date, requested_time, message, countered_date, countered_time, countered_message, status, created_at')
         .eq('listing_id', listingRow.id)
         .order('created_at', { ascending: false })
         .limit(100);
@@ -82,7 +106,9 @@ export default function VenueTourBookingsScreen() {
         return;
       }
 
-      setBookings((rows || []) as TourBookingRow[]);
+      const sorted = (rows || []) as TourBookingRow[];
+      sorted.sort((a, b) => STATUS_ORDER[a.status] - STATUS_ORDER[b.status]);
+      setBookings(sorted);
     } finally {
       setLoading(false);
     }
@@ -103,34 +129,63 @@ export default function VenueTourBookingsScreen() {
   const statusColor = useMemo(() => {
     return (status: string) => {
       switch (status) {
-        case 'new':
-          return '#3B82F6';
-        case 'scheduled':
+        case 'pending':
           return '#F59E0B';
-        case 'completed':
+        case 'countered':
+          return '#3B82F6';
+        case 'confirmed':
           return '#16A34A';
-        case 'closed':
-          return colors.textMuted;
+        case 'cancelled':
+          return '#DC2626';
+        case 'completed':
+          return colors.textPrimary;
         default:
           return colors.textMuted;
       }
     };
   }, []);
 
-  const updateStatus = async (booking: TourBookingRow) => {
-    const currentIndex = STATUS_OPTIONS.indexOf(booking.status as any);
-    const next = STATUS_OPTIONS[(currentIndex + 1) % STATUS_OPTIONS.length];
-
+  const updateBooking = async (booking: TourBookingRow, patch: Partial<TourBookingRow>) => {
     setSaving(true);
     try {
-      const { error } = await supabase.from('venue_tour_bookings').update({ status: next }).eq('id', booking.id);
+      const { error } = await supabase.from('venue_tour_bookings').update(patch).eq('id', booking.id);
       if (error) throw error;
-      setBookings((prev) => prev.map((b) => (b.id === booking.id ? { ...b, status: next } : b)));
+      setBookings((prev) =>
+        prev
+          .map((b) => (b.id === booking.id ? { ...b, ...patch } : b))
+          .sort((a, b) => STATUS_ORDER[a.status] - STATUS_ORDER[b.status])
+      );
+      if (patch.status && booking.requester_user_id && booking.requester_user_id !== user?.id) {
+        await createTourResponseNotification(booking.requester_user_id, listing?.name || 'Venue', patch.status, booking.id).catch(() => {});
+      }
     } catch (err: any) {
-      Alert.alert('Error', err?.message ?? 'Failed to update status.');
+      setAlertState({ visible: true, title: 'Error', message: err?.message ?? 'Failed to update booking.' });
     } finally {
       setSaving(false);
     }
+  };
+
+  const openCounter = (booking: TourBookingRow) => {
+    setCounterBooking(booking);
+    setCounterDate(booking.requested_date ? new Date(booking.requested_date) : new Date());
+    setCounterTime(booking.requested_time || '');
+    setCounterMessage('');
+  };
+
+  const submitCounter = async () => {
+    if (!counterBooking) return;
+    await updateBooking(counterBooking, {
+      status: 'countered',
+      countered_date: counterDate.toISOString().slice(0, 10),
+      countered_time: counterTime || null,
+      countered_message: counterMessage || null,
+    });
+    setCounterBooking(null);
+  };
+
+  const onCounterDateChange = (event: any, selectedDate?: Date) => {
+    setShowDatePicker(false);
+    if (selectedDate) setCounterDate(selectedDate);
   };
 
   if (loading) {
@@ -142,28 +197,47 @@ export default function VenueTourBookingsScreen() {
     );
   }
 
+  const desktopContainerStyle = {
+    maxWidth: 1200,
+    width: '100%',
+    alignSelf: 'center' as const,
+    paddingHorizontal: 48,
+  };
+
+  const cardSurface = isDesktop ? colors.surfaceContainerLowest : colors.surface;
+  const cardBorder = isDesktop ? colors.outlineVariant : colors.borderSubtle;
+
+  const renderHeader = (isDesktopHeader: boolean, subtitle: string) => (
+    <View style={{ marginBottom: spacing.md }}>
+      <Text style={isDesktopHeader ? { ...typography.labelMd, color: colors.dustyRose, textTransform: 'uppercase', marginBottom: spacing.sm } as any : { display: 'none' } as any}>
+        Bookings
+      </Text>
+      <Text style={isDesktopHeader ? { ...typography.headlineMd, color: colors.primary } as any : { ...typography.displayMedium, color: colors.textPrimary, marginBottom: spacing.xs }}>
+        Tour Bookings
+      </Text>
+      <Text style={{ ...typography.bodyMd, color: isDesktopHeader ? colors.onSurfaceVariant : colors.textMuted }}>
+        {subtitle}
+      </Text>
+    </View>
+  );
+
   if (!canUseTours) {
     return (
-      <View style={{ flex: 1, backgroundColor: colors.background }}>
-        <ScrollView contentContainerStyle={{ paddingBottom: spacing.xl }}>
-          <View style={{ paddingHorizontal: spacing.lg, paddingTop: spacing.xl, paddingBottom: spacing.md }}>
+      <View style={{ flex: 1, backgroundColor: isDesktop ? colors.surfaceBg : colors.background }}>
+        <ScrollView contentContainerStyle={isDesktop ? { ...desktopContainerStyle, paddingBottom: spacing.xxl } as any : { paddingBottom: spacing.xl }}>
+          <View style={{ paddingHorizontal: isDesktop ? 0 : spacing.lg, paddingTop: spacing.sm, paddingBottom: spacing.md }}>
             <TouchableOpacity
-              onPress={() => navigation.goBack()}
-              style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.lg }}
-            >
-              <MaterialIcons name="arrow-back" size={20} color={colors.textPrimary} />
-              <Text style={{ ...typography.body, color: colors.textPrimary, marginLeft: spacing.sm }}>Back</Text>
-            </TouchableOpacity>
+                onPress={() => navigation.goBack()}
+                style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.sm }}
+              >
+                <MaterialIcons name="arrow-back" size={20} color={colors.textPrimary} />
+                <Text style={{ ...typography.body, color: colors.textPrimary, marginLeft: spacing.sm }}>Back</Text>
+              </TouchableOpacity>
 
-            <Text style={{ ...typography.displayMedium, color: colors.textPrimary, marginBottom: spacing.xs }}>
-              Tour Bookings
-            </Text>
-            <Text style={{ ...typography.body, color: colors.textMuted }}>
-              This feature is available on paid venue plans.
-            </Text>
+            {renderHeader(isDesktop, 'This feature is available on paid venue plans.')}
           </View>
 
-          <View style={{ paddingHorizontal: spacing.lg }}>
+          <View style={{ paddingHorizontal: isDesktop ? 0 : spacing.lg }}>
             <View
               style={{
                 backgroundColor: '#FFF7ED',
@@ -176,8 +250,8 @@ export default function VenueTourBookingsScreen() {
               <Text style={{ ...typography.titleMedium, color: '#9A3412', marginBottom: spacing.sm }}>
                 Upgrade required
               </Text>
-              <Text style={{ ...typography.body, color: '#9A3412', marginBottom: spacing.md }}>
-                Upgrade your venue plan to enable instant venue tour bookings.
+              <Text style={{ ...typography.bodyMd, color: '#9A3412', marginBottom: spacing.md }}>
+                Upgrade your venue plan to receive and manage online tour bookings.
               </Text>
 
               <TouchableOpacity
@@ -189,7 +263,7 @@ export default function VenueTourBookingsScreen() {
                   alignItems: 'center',
                 }}
               >
-                <Text style={{ ...typography.body, color: '#FFFFFF', fontWeight: '700' }}>View Venue Plans</Text>
+                <Text style={{ ...typography.bodyBold, color: '#FFFFFF' }}>View Venue Plans</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -200,36 +274,31 @@ export default function VenueTourBookingsScreen() {
 
   if (!listing) {
     return (
-      <View style={{ flex: 1, backgroundColor: colors.background }}>
-        <ScrollView contentContainerStyle={{ paddingBottom: spacing.xl }}>
-          <View style={{ paddingHorizontal: spacing.lg, paddingTop: spacing.xl, paddingBottom: spacing.md }}>
+      <View style={{ flex: 1, backgroundColor: isDesktop ? colors.surfaceBg : colors.background }}>
+        <ScrollView contentContainerStyle={isDesktop ? { ...desktopContainerStyle, paddingBottom: spacing.xxl } as any : { paddingBottom: spacing.xl }}>
+          <View style={{ paddingHorizontal: isDesktop ? 0 : spacing.lg, paddingTop: spacing.sm, paddingBottom: spacing.md }}>
             <TouchableOpacity
-              onPress={() => navigation.goBack()}
-              style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.lg }}
-            >
-              <MaterialIcons name="arrow-back" size={20} color={colors.textPrimary} />
-              <Text style={{ ...typography.body, color: colors.textPrimary, marginLeft: spacing.sm }}>Back</Text>
-            </TouchableOpacity>
+                onPress={() => navigation.goBack()}
+                style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.sm }}
+              >
+                <MaterialIcons name="arrow-back" size={20} color={colors.textPrimary} />
+                <Text style={{ ...typography.body, color: colors.textPrimary, marginLeft: spacing.sm }}>Back</Text>
+              </TouchableOpacity>
 
-            <Text style={{ ...typography.displayMedium, color: colors.textPrimary, marginBottom: spacing.xs }}>
-              Tour Bookings
-            </Text>
-            <Text style={{ ...typography.body, color: colors.textMuted }}>
-              Create your venue listing first.
-            </Text>
+            {renderHeader(isDesktop, 'Create your venue listing first.')}
           </View>
 
-          <View style={{ paddingHorizontal: spacing.lg }}>
+          <View style={{ paddingHorizontal: isDesktop ? 0 : spacing.lg }}>
             <View
               style={{
-                backgroundColor: colors.surface,
+                backgroundColor: cardSurface,
                 borderRadius: radii.lg,
                 padding: spacing.lg,
                 borderWidth: 1,
-                borderColor: colors.borderSubtle,
+                borderColor: cardBorder,
               }}
             >
-              <Text style={{ ...typography.body, color: colors.textPrimary }}>
+              <Text style={{ ...typography.bodyMd, color: colors.textPrimary }}>
                 You don’t have a venue listing yet. Please create it in “Update Venue Portfolio” before managing tour bookings.
               </Text>
               <TouchableOpacity
@@ -243,7 +312,7 @@ export default function VenueTourBookingsScreen() {
                   alignItems: 'center',
                 }}
               >
-                <Text style={{ ...typography.body, color: colors.primary, fontWeight: '700' }}>Go to Update Venue Portfolio</Text>
+                <Text style={{ ...typography.bodyBold, color: colors.primary }}>Go to Update Venue Portfolio</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -252,143 +321,333 @@ export default function VenueTourBookingsScreen() {
     );
   }
 
-  return (
-    <View style={{ flex: 1, backgroundColor: colors.background }}>
-      <ScrollView contentContainerStyle={{ paddingBottom: spacing.xl }}>
-        <View style={{ paddingHorizontal: spacing.lg, paddingTop: spacing.xl, paddingBottom: spacing.md }}>
-          <TouchableOpacity
-            onPress={() => navigation.goBack()}
-            style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.lg }}
-          >
-            <MaterialIcons name="arrow-back" size={20} color={colors.textPrimary} />
-            <Text style={{ ...typography.body, color: colors.textPrimary, marginLeft: spacing.sm }}>Back</Text>
-          </TouchableOpacity>
-
-          <Text style={{ ...typography.displayMedium, color: colors.textPrimary, marginBottom: spacing.xs }}>
-            Tour Bookings
+  const renderBookingCard = (b: TourBookingRow) => (
+    <View
+      key={b.id}
+      style={{
+        backgroundColor: cardSurface,
+        borderRadius: radii.lg,
+        padding: spacing.lg,
+        borderWidth: 1,
+        borderColor: cardBorder,
+        marginBottom: spacing.md,
+      }}
+    >
+      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+        <View style={{ flex: 1, paddingRight: spacing.md }}>
+          <Text style={isDesktop ? { ...typography.bodyMd, color: colors.textPrimary, fontWeight: '600' } as any : { ...typography.titleMedium, color: colors.textPrimary }}>
+            {b.requester_name || 'Visitor'}
           </Text>
-          <Text style={{ ...typography.body, color: colors.textMuted }}>
-            {listing.name}
+          <Text style={isDesktop ? { ...typography.bodyMd, color: colors.onSurfaceVariant, marginTop: spacing.xs } as any : { ...typography.caption, color: colors.textMuted, marginTop: spacing.xs }}>
+            Requested: {formatDate(b.created_at)}
           </Text>
+          {b.requested_date ? (
+            <Text style={isDesktop ? { ...typography.bodyMd, color: colors.onSurfaceVariant, marginTop: spacing.xs } as any : { ...typography.caption, color: colors.textMuted, marginTop: spacing.xs }}>
+              Date: {formatDate(b.requested_date)}
+            </Text>
+          ) : null}
+          {b.requested_time ? (
+            <Text style={isDesktop ? { ...typography.bodyMd, color: colors.onSurfaceVariant, marginTop: spacing.xs } as any : { ...typography.caption, color: colors.textMuted, marginTop: spacing.xs }}>
+              Time: {b.requested_time}
+            </Text>
+          ) : null}
         </View>
 
-        <View style={{ paddingHorizontal: spacing.lg }}>
-          {bookings.length === 0 ? (
-            <View
+        <View
+          style={{
+            paddingHorizontal: spacing.md,
+            paddingVertical: spacing.xs,
+            borderRadius: radii.full,
+            backgroundColor: statusColor(b.status) + '20',
+          }}
+        >
+          <Text
+            style={{
+              ...typography.captionBold,
+              color: statusColor(b.status),
+              textTransform: 'uppercase',
+            }}
+          >
+            {STATUS_LABEL[b.status] || b.status}
+          </Text>
+        </View>
+      </View>
+
+      {(b.requester_email || b.requester_phone) && (
+        <View style={{ marginTop: spacing.md }}>
+          {b.requester_email ? (
+            <Text style={isDesktop ? { ...typography.bodyMd, color: colors.textPrimary } as any : { ...typography.body, color: colors.textPrimary }}>
+              Email: {b.requester_email}
+            </Text>
+          ) : null}
+          {b.requester_phone ? (
+            <Text style={isDesktop ? { ...typography.bodyMd, color: colors.textPrimary, marginTop: spacing.xs } as any : { ...typography.body, color: colors.textPrimary, marginTop: spacing.xs }}>
+              Phone: {b.requester_phone}
+            </Text>
+          ) : null}
+        </View>
+      )}
+
+      {b.message ? (
+        <View style={{ marginTop: spacing.md }}>
+          <Text style={{ ...typography.caption, color: colors.textMuted }}>Message</Text>
+          <Text style={isDesktop ? { ...typography.bodyMd, color: colors.textPrimary, marginTop: spacing.xs } as any : { ...typography.body, color: colors.textPrimary, marginTop: spacing.xs }}>
+            {b.message}
+          </Text>
+        </View>
+      ) : null}
+
+      {b.status === 'countered' && (
+        <View style={{ marginTop: spacing.md, padding: spacing.md, borderRadius: radii.md, backgroundColor: '#3B82F620', borderWidth: 1, borderColor: '#3B82F6' }}>
+          <Text style={{ ...typography.captionBold, color: '#3B82F6' }}>Your proposed alternative</Text>
+          <Text style={{ ...typography.body, color: colors.textPrimary, marginTop: spacing.xs }}>
+            {formatDate(b.countered_date)} {b.countered_time}
+          </Text>
+          {b.countered_message && (
+            <Text style={{ ...typography.body, color: colors.textSecondary, marginTop: spacing.xs }}>{b.countered_message}</Text>
+          )}
+          <Text style={{ ...typography.caption, color: '#3B82F6', marginTop: spacing.xs }}>Waiting for visitor response.</Text>
+        </View>
+      )}
+
+      <View style={{ flexDirection: 'row', gap: spacing.sm, marginTop: spacing.md }}>
+        {b.status === 'pending' && (
+          <>
+            <TouchableOpacity
+              onPress={() => updateBooking(b, { status: 'confirmed' })}
+              disabled={saving}
+              style={{ flex: 1, paddingVertical: spacing.sm, borderRadius: radii.md, backgroundColor: '#16A34A', alignItems: 'center', opacity: saving ? 0.6 : 1 }}
+            >
+              <Text style={{ ...typography.bodyBold, color: '#FFFFFF' }}>Accept as-is</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={() => openCounter(b)}
+              disabled={saving}
+              style={{ flex: 1, paddingVertical: spacing.sm, borderRadius: radii.md, borderWidth: 1, borderColor: colors.primary, alignItems: 'center', opacity: saving ? 0.6 : 1 }}
+            >
+              <Text style={{ ...typography.bodyBold, color: colors.primary }}>Propose alternative</Text>
+            </TouchableOpacity>
+          </>
+        )}
+        {b.status === 'countered' && (
+          <>
+            <TouchableOpacity
+              onPress={() => updateBooking(b, { status: 'confirmed' })}
+              disabled={saving}
+              style={{ flex: 1, paddingVertical: spacing.sm, borderRadius: radii.md, backgroundColor: '#16A34A', alignItems: 'center', opacity: saving ? 0.6 : 1 }}
+            >
+              <Text style={{ ...typography.bodyBold, color: '#FFFFFF' }}>Accept as-is</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={() => updateBooking(b, { status: 'cancelled' })}
+              disabled={saving}
+              style={{ flex: 1, paddingVertical: spacing.sm, borderRadius: radii.md, borderWidth: 1, borderColor: '#DC2626', alignItems: 'center', opacity: saving ? 0.6 : 1 }}
+            >
+              <Text style={{ ...typography.bodyBold, color: '#DC2626' }}>Cancel</Text>
+            </TouchableOpacity>
+          </>
+        )}
+        {b.status === 'confirmed' && (
+          <>
+            <TouchableOpacity
+              onPress={() => updateBooking(b, { status: 'completed' })}
+              disabled={saving}
+              style={{ flex: 1, paddingVertical: spacing.sm, borderRadius: radii.md, backgroundColor: colors.primary, alignItems: 'center', opacity: saving ? 0.6 : 1 }}
+            >
+              <Text style={{ ...typography.bodyBold, color: '#FFFFFF' }}>Mark completed</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={() => updateBooking(b, { status: 'cancelled' })}
+              disabled={saving}
+              style={{ flex: 1, paddingVertical: spacing.sm, borderRadius: radii.md, borderWidth: 1, borderColor: '#DC2626', alignItems: 'center', opacity: saving ? 0.6 : 1 }}
+            >
+              <Text style={{ ...typography.bodyBold, color: '#DC2626' }}>Cancel</Text>
+            </TouchableOpacity>
+          </>
+        )}
+        {(b.status === 'cancelled' || b.status === 'completed') && (
+          <View style={{ flex: 1, alignItems: 'center' }}>
+            <Text style={{ ...typography.caption, color: colors.textMuted }}>This tour is {b.status}. No further action available.</Text>
+          </View>
+        )}
+      </View>
+    </View>
+  );
+
+  const renderEmptyState = () => (
+    <View
+      style={{
+        backgroundColor: cardSurface,
+        borderRadius: radii.lg,
+        padding: spacing.xl,
+        borderWidth: 1,
+        borderColor: cardBorder,
+        alignItems: 'center',
+      }}
+    >
+      <MaterialIcons name="calendar-month" size={48} color={colors.textMuted} />
+      <Text style={isDesktop ? { ...typography.bodyMd, color: colors.textMuted, marginTop: spacing.md, textAlign: 'center' } as any : { ...typography.body, color: colors.textMuted, marginTop: spacing.md, textAlign: 'center' }}>
+        No tour bookings yet.
+      </Text>
+    </View>
+  );
+
+  return (
+    <View style={{ flex: 1, backgroundColor: isDesktop ? colors.surfaceBg : colors.background }}>
+      <ScrollView contentContainerStyle={isDesktop ? { ...desktopContainerStyle, paddingBottom: spacing.xxl } as any : { paddingBottom: spacing.xl }}>
+        {isDesktop ? (
+          <>
+            {renderHeader(true, listing.name)}
+            <View style={{ flexDirection: 'row', gap: spacing.gutter } as any}>
+              <View style={{ flex: 2 } as any}>
+                <View style={{ backgroundColor: cardSurface, borderRadius: radii.lg, padding: spacing.lg, borderWidth: 1, borderColor: cardBorder }}>
+                  <Text style={{ ...typography.headlineSm, color: colors.textPrimary, marginBottom: spacing.md }}>
+                    Bookings
+                  </Text>
+                  {bookings.length === 0 ? renderEmptyState() : bookings.map(renderBookingCard)}
+                </View>
+              </View>
+              <View style={{ flex: 1 } as any}>
+                <View style={{ backgroundColor: cardSurface, borderRadius: radii.lg, padding: spacing.lg, borderWidth: 1, borderColor: cardBorder }}>
+                  <Text style={{ ...typography.headlineSm, color: colors.textPrimary, marginBottom: spacing.sm }}>
+                    Overview
+                  </Text>
+                  <Text style={{ ...typography.bodyMd, color: colors.onSurfaceVariant } as any}>
+                    {bookings.length} booking{bookings.length === 1 ? '' : 's'} for {listing.name}
+                  </Text>
+                </View>
+              </View>
+            </View>
+          </>
+        ) : (
+          <>
+            <View style={{ paddingHorizontal: spacing.lg, paddingTop: spacing.sm, paddingBottom: spacing.md }}>
+              <TouchableOpacity
+                onPress={() => navigation.goBack()}
+                style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.sm }}
+              >
+                <MaterialIcons name="arrow-back" size={20} color={colors.textPrimary} />
+                <Text style={{ ...typography.body, color: colors.textPrimary, marginLeft: spacing.sm }}>Back</Text>
+              </TouchableOpacity>
+
+              {renderHeader(false, listing.name)}
+            </View>
+
+            <View style={{ paddingHorizontal: spacing.lg }}>
+              {bookings.length === 0 ? renderEmptyState() : bookings.map(renderBookingCard)}
+            </View>
+          </>
+        )}
+      </ScrollView>
+
+      <Modal
+        visible={counterBooking !== null}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setCounterBooking(null)}
+      >
+        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' }}>
+          <View style={{ backgroundColor: cardSurface, borderTopLeftRadius: radii.xl, borderTopRightRadius: radii.xl, padding: spacing.lg, paddingBottom: spacing.xl, borderTopWidth: isDesktop ? 1 : 0, borderColor: cardBorder }}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.md }}>
+              <Text style={isDesktop ? { ...typography.headlineSm, color: colors.textPrimary } as any : { ...typography.titleMedium, color: colors.textPrimary }}>Propose alternative date</Text>
+              <TouchableOpacity onPress={() => setCounterBooking(null)}>
+                <MaterialIcons name="close" size={24} color={colors.textMuted} />
+              </TouchableOpacity>
+            </View>
+
+            <Text style={{ ...typography.label, color: colors.textSecondary, marginBottom: spacing.xs }}>Date</Text>
+            <TouchableOpacity
+              onPress={() => setShowDatePicker(true)}
               style={{
-                backgroundColor: colors.surface,
-                borderRadius: radii.lg,
-                padding: spacing.xl,
+                padding: spacing.md,
                 borderWidth: 1,
-                borderColor: colors.borderSubtle,
-                alignItems: 'center',
+                borderColor: cardBorder,
+                borderRadius: radii.md,
+                marginBottom: spacing.md,
+                backgroundColor: colors.surface,
               }}
             >
-              <MaterialIcons name="calendar-month" size={48} color={colors.textMuted} />
-              <Text style={{ ...typography.body, color: colors.textMuted, marginTop: spacing.md, textAlign: 'center' }}>
-                No tour bookings yet.
+              <Text style={{ ...typography.body, color: colors.textPrimary }}>
+                {counterDate.toLocaleDateString('en-ZA', { day: 'numeric', month: 'long', year: 'numeric' })}
               </Text>
-            </View>
-          ) : (
-            bookings.map((b) => (
-              <View
-                key={b.id}
-                style={{
-                  backgroundColor: colors.surface,
-                  borderRadius: radii.lg,
-                  padding: spacing.lg,
-                  borderWidth: 1,
-                  borderColor: colors.borderSubtle,
-                  marginBottom: spacing.md,
-                }}
+            </TouchableOpacity>
+            {showDatePicker && (
+              <DateTimePicker
+                value={counterDate}
+                mode="date"
+                display="default"
+                onChange={onCounterDateChange}
+                minimumDate={new Date()}
+              />
+            )}
+
+            <Text style={{ ...typography.label, color: colors.textSecondary, marginBottom: spacing.xs }}>Time</Text>
+            <TextInput
+              value={counterTime}
+              onChangeText={setCounterTime}
+              placeholder="e.g. 10:00"
+              placeholderTextColor={colors.textMuted}
+              style={{
+                padding: spacing.md,
+                borderWidth: 1,
+                borderColor: cardBorder,
+                borderRadius: radii.md,
+                marginBottom: spacing.md,
+                backgroundColor: colors.surface,
+                color: colors.textPrimary,
+              }}
+            />
+
+            <Text style={{ ...typography.label, color: colors.textSecondary, marginBottom: spacing.xs }}>Message (optional)</Text>
+            <TextInput
+              value={counterMessage}
+              onChangeText={setCounterMessage}
+              placeholder="Explain why you’re proposing a different time..."
+              placeholderTextColor={colors.textMuted}
+              multiline
+              numberOfLines={4}
+              textAlignVertical="top"
+              style={{
+                padding: spacing.md,
+                borderWidth: 1,
+                borderColor: cardBorder,
+                borderRadius: radii.md,
+                marginBottom: spacing.md,
+                backgroundColor: colors.surface,
+                color: colors.textPrimary,
+                minHeight: 80,
+              }}
+            />
+
+            <View style={{ flexDirection: 'row', gap: spacing.sm }}>
+              <TouchableOpacity
+                onPress={() => setCounterBooking(null)}
+                disabled={saving}
+                style={{ flex: 1, paddingVertical: spacing.md, borderRadius: radii.md, borderWidth: 1, borderColor: cardBorder, alignItems: 'center', opacity: saving ? 0.6 : 1 }}
               >
-                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                  <View style={{ flex: 1, paddingRight: spacing.md }}>
-                    <Text style={{ ...typography.titleMedium, color: colors.textPrimary }}>
-                      {b.requester_name || 'New booking'}
-                    </Text>
-                    <Text style={{ ...typography.caption, color: colors.textMuted, marginTop: spacing.xs }}>
-                      Requested: {formatDate(b.created_at)}
-                    </Text>
-                    {b.requested_date ? (
-                      <Text style={{ ...typography.caption, color: colors.textMuted, marginTop: spacing.xs }}>
-                        Date: {formatDate(b.requested_date)}
-                      </Text>
-                    ) : null}
-                    {b.requested_time ? (
-                      <Text style={{ ...typography.caption, color: colors.textMuted, marginTop: spacing.xs }}>
-                        Time: {b.requested_time}
-                      </Text>
-                    ) : null}
-                  </View>
-
-                  <View
-                    style={{
-                      paddingHorizontal: spacing.md,
-                      paddingVertical: spacing.xs,
-                      borderRadius: radii.full,
-                      backgroundColor: statusColor(b.status) + '20',
-                    }}
-                  >
-                    <Text
-                      style={{
-                        ...typography.caption,
-                        color: statusColor(b.status),
-                        fontWeight: '700',
-                        textTransform: 'uppercase',
-                      }}
-                    >
-                      {b.status}
-                    </Text>
-                  </View>
-                </View>
-
-                {(b.requester_email || b.requester_phone) && (
-                  <View style={{ marginTop: spacing.md }}>
-                    {b.requester_email ? (
-                      <Text style={{ ...typography.body, color: colors.textPrimary }}>
-                        Email: {b.requester_email}
-                      </Text>
-                    ) : null}
-                    {b.requester_phone ? (
-                      <Text style={{ ...typography.body, color: colors.textPrimary, marginTop: spacing.xs }}>
-                        Phone: {b.requester_phone}
-                      </Text>
-                    ) : null}
-                  </View>
-                )}
-
-                {b.message ? (
-                  <View style={{ marginTop: spacing.md }}>
-                    <Text style={{ ...typography.caption, color: colors.textMuted }}>Message</Text>
-                    <Text style={{ ...typography.body, color: colors.textPrimary, marginTop: spacing.xs }}>
-                      {b.message}
-                    </Text>
-                  </View>
-                ) : null}
-
-                <TouchableOpacity
-                  onPress={() => updateStatus(b)}
-                  disabled={saving}
-                  style={{
-                    marginTop: spacing.md,
-                    paddingVertical: spacing.sm,
-                    borderRadius: radii.md,
-                    borderWidth: 1,
-                    borderColor: colors.primary,
-                    alignItems: 'center',
-                    opacity: saving ? 0.6 : 1,
-                  }}
-                >
-                  <Text style={{ ...typography.body, color: colors.primary, fontWeight: '700' }}>
-                    Change status
-                  </Text>
-                </TouchableOpacity>
-              </View>
-            ))
-          )}
+                <Text style={{ ...typography.bodyBold, color: colors.textPrimary }}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={submitCounter}
+                disabled={saving}
+                style={{ flex: 1, paddingVertical: spacing.md, borderRadius: radii.md, backgroundColor: colors.primary, alignItems: 'center', opacity: saving ? 0.6 : 1 }}
+              >
+                <Text style={{ ...typography.bodyBold, color: '#FFFFFF' }}>Send proposal</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
         </View>
-      </ScrollView>
+      </Modal>
+
+      {alertState && (
+        <ThemedAlert
+          visible={alertState.visible}
+          title={alertState.title}
+          message={alertState.message}
+          buttons={[{ text: 'OK', style: 'default', onPress: () => setAlertState(null) }]}
+          onDismiss={() => setAlertState(null)}
+        />
+      )}
     </View>
   );
 }

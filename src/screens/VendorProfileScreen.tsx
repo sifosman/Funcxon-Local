@@ -1,6 +1,13 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, Alert, BackHandler, Image, Linking, Platform, ScrollView, Text, TouchableOpacity, View } from 'react-native';
-import { useQuery } from '@tanstack/react-query';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { ActivityIndicator, BackHandler, Dimensions, Image, Linking, Platform, ScrollView, Share, Text, TouchableOpacity, View } from 'react-native';
+import Carousel from 'react-native-reanimated-carousel';
+import type { ICarouselInstance } from 'react-native-reanimated-carousel';
+import ThemedAlert from '../components/ThemedAlert';
+import { openExternalUrl } from '../utils/openUrl';
+import NetworkImage from '../components/NetworkImage';
+import ImageZoomModal, { type GalleryItem } from '../components/ImageZoomModal';
+import VideoThumbnail from '../components/VideoThumbnail';
+import { useQuery} from '@tanstack/react-query';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { WebView } from 'react-native-webview';
 import { MaterialIcons } from '@expo/vector-icons';
@@ -12,6 +19,12 @@ import { colors, spacing, radii, typography } from '../theme';
 import { PrimaryButton } from '../components/ui';
 import { getFavourites, toggleFavourite } from '../lib/favourites';
 import { useAuth } from '../auth/AuthContext';
+import { useIsDesktop } from '../hooks/useIsDesktop';
+
+import VendorAboutTab from '../components/profile/VendorAboutTab';
+import VendorFeaturesTab from '../components/profile/VendorFeaturesTab';
+import VendorReviewsTab from '../components/profile/VendorReviewsTab';
+import VendorCalendarTab from '../components/profile/VendorCalendarTab';
 
 type Props = NativeStackScreenProps<AttendeeStackParamList, 'VendorProfile'>;
 
@@ -61,6 +74,10 @@ type VendorRecord = {
 type Review = {
   id: number;
   rating: number;
+  title: string | null;
+  review_text: string | null;
+  is_verified: boolean | null;
+  created_at: string | null;
   status: string | null;
 };
 
@@ -73,15 +90,29 @@ type AvailabilityRecord = {
   notes: string | null;
 };
 
+type GalleryMedia = {
+  id: number;
+  media_url: string;
+  media_type: 'image' | 'video';
+  sort_order: number;
+};
+
 export default function VendorProfileScreen({ route, navigation }: Props) {
   const { vendorId } = route.params;
-  const [activeTab, setActiveTab] = useState<'about' | 'catalog' | 'reviews' | 'calendar'>('about');
+  const [activeTab, setActiveTab] = useState<'about' | 'features' | 'reviews' | 'calendar'>('about');
+  const [galleryIndex, setGalleryIndex] = useState(0);
+  const [zoomVisible, setZoomVisible] = useState(false);
+  const [zoomInitialIndex, setZoomInitialIndex] = useState(0);
+  const carouselRef = useRef<ICarouselInstance>(null);
   const [mapImageFailed, setMapImageFailed] = useState(false);
+  const [galleryContainerWidth, setGalleryContainerWidth] = useState(Dimensions.get('window').width);
   const [favouriteIds, setFavouriteIds] = useState<{ vendorIds: number[]; venueIds: number[] }>({
     vendorIds: [],
     venueIds: [],
   });
+  const [alertState, setAlertState] = useState<{visible: boolean; title: string; message: string} | null>(null);
   const { user, session } = useAuth();
+  const isDesktop = useIsDesktop();
 
   const goToQuoteRequest = () => {
     if (!vendor) return;
@@ -174,8 +205,9 @@ export default function VendorProfileScreen({ route, navigation }: Props) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('reviews')
-        .select('id, rating, status')
+        .select('id, rating, title, review_text, is_verified, created_at, status')
         .eq('vendor_id', vendorId)
+        .order('created_at', { ascending: false })
         .limit(20);
 
       if (error) {
@@ -187,39 +219,25 @@ export default function VendorProfileScreen({ route, navigation }: Props) {
   });
 
   const {
-    data: canLeaveReview,
-    isLoading: eligibilityLoading,
-  } = useQuery<boolean>({
-    queryKey: ['vendor-review-eligibility', vendorId, user?.id],
-    enabled: !!vendorId && !!user?.id,
+    data: galleryMedia,
+    isLoading: galleryMediaLoading,
+  } = useQuery<GalleryMedia[]>({
+    queryKey: ['vendor-gallery-media', vendorId],
+    enabled: !!vendorId,
     queryFn: async () => {
-      if (!user?.id) return false;
-
-      const { data: userRow, error: userError } = await supabase
-        .from('users')
-        .select('id')
-        .eq('auth_user_id', user.id)
-        .maybeSingle();
-
-      if (userError) {
-        throw userError;
-      }
-
-      const internalUserId = (userRow as any)?.id ?? null;
-      if (!internalUserId) return false;
-
-      const { count, error } = await supabase
-        .from('quote_requests')
-        .select('id', { count: 'exact', head: true })
+      const { data, error } = await supabase
+        .from('gallery_media')
+        .select('id, media_url, media_type, sort_order')
         .eq('vendor_id', vendorId)
-        .eq('user_id', internalUserId)
-        .in('status', ['accepted', 'finalised']);
+        .eq('is_active', true)
+        .order('sort_order', { ascending: true });
 
       if (error) {
-        throw error;
+        console.warn('gallery_media query failed, falling back to additional_photos:', error);
+        return [];
       }
 
-      return (count ?? 0) > 0;
+      return (data as GalleryMedia[]) ?? [];
     },
   });
 
@@ -260,21 +278,25 @@ export default function VendorProfileScreen({ route, navigation }: Props) {
   }, [vendor?.location, vendor?.city, vendor?.province]);
 
   const physicalAddress = useMemo(() => {
-    const structured = [
-      vendor?.address_line_1,
-      vendor?.address_line_2,
-      vendor?.suburb,
-      vendor?.city,
-      vendor?.province,
-      vendor?.postal_code,
-      vendor?.country,
-    ]
-      .map((part) => part?.trim() ?? '')
-      .filter(Boolean)
-      .join(', ');
+    const hasStreetAddress = Boolean(vendor?.address_line_1?.trim());
 
-    if (structured) {
-      return structured;
+    if (hasStreetAddress) {
+      const structured = [
+        vendor?.address_line_1,
+        vendor?.address_line_2,
+        vendor?.suburb,
+        vendor?.city,
+        vendor?.province,
+        vendor?.postal_code,
+        vendor?.country,
+      ]
+        .map((part) => part?.trim() ?? '')
+        .filter(Boolean)
+        .join(', ');
+
+      if (structured) {
+        return structured;
+      }
     }
 
     if (vendor?.location?.trim()) {
@@ -301,7 +323,7 @@ export default function VendorProfileScreen({ route, navigation }: Props) {
     return { latitude, longitude };
   }, [vendor?.latitude, vendor?.longitude]);
 
-  const mapSearchTarget = physicalAddress ?? mapQuery;
+  const mapSearchTarget = mapQuery || physicalAddress;
 
   useEffect(() => {
     setMapImageFailed(false);
@@ -382,10 +404,23 @@ export default function VendorProfileScreen({ route, navigation }: Props) {
     `;
   }, [mapCoordinates, mapSearchTarget, vendor?.name]);
 
-  const galleryImages = useMemo(
-    () => [vendor?.image_url, ...(Array.isArray(vendor?.additional_photos) ? vendor.additional_photos : [])].filter(Boolean) as string[],
-    [vendor?.image_url, vendor?.additional_photos],
-  );
+  const galleryItems = useMemo<GalleryItem[]>(() => {
+    const legacyImages = [vendor?.image_url, ...(Array.isArray(vendor?.additional_photos) ? vendor.additional_photos : [])].filter(Boolean) as string[];
+    const legacyItems = legacyImages.map((url) => ({ url, type: 'image' as const }));
+    const mediaItems = (galleryMedia ?? []).map((m) => ({ url: m.media_url, type: m.media_type }));
+    const merged = [...legacyItems, ...mediaItems];
+    const seen = new Set<string>();
+    const deduped = merged.filter((item) => {
+      if (seen.has(item.url)) return false;
+      seen.add(item.url);
+      return true;
+    });
+    return deduped.sort((a, b) => {
+      if (a.type === 'video' && b.type !== 'video') return 1;
+      if (a.type !== 'video' && b.type === 'video') return -1;
+      return 0;
+    });
+  }, [galleryMedia, vendor?.image_url, vendor?.additional_photos]);
 
   const tagArrays: string[][] = [
     Array.isArray(vendor?.vendor_tags) ? vendor.vendor_tags : [],
@@ -449,7 +484,7 @@ export default function VendorProfileScreen({ route, navigation }: Props) {
   const handleToggleFavourite = async () => {
     if (!vendor?.id) return;
     if (!user?.id) {
-      Alert.alert('Sign in required', 'Please sign in to save favourites.');
+      setAlertState({ visible: true, title: 'Sign in required', message: 'Please sign in to save favourites.' });
       return;
     }
 
@@ -470,7 +505,28 @@ export default function VendorProfileScreen({ route, navigation }: Props) {
     } catch (error) {
       setFavouriteIds(previous);
       const message = error instanceof Error ? error.message : 'We could not update favourites right now.';
-      Alert.alert('Favourite update failed', message);
+      setAlertState({ visible: true, title: 'Favourite update failed', message });
+    }
+  };
+
+  const handleShare = async () => {
+    if (!vendor) return;
+    const url = `https://funxon-web.vercel.app/vendor/${vendor.id}`;
+    const message = encodeURIComponent(`Check out ${vendor.name} on Funxon: ${url}`);
+    const whatsappUrl = Platform.select({
+      ios: `https://wa.me/?text=${message}`,
+      android: `whatsapp://send?text=${message}`,
+      default: `https://wa.me/?text=${message}`,
+    });
+    try {
+      const supported = await Linking.canOpenURL(whatsappUrl);
+      if (supported) {
+        await Linking.openURL(whatsappUrl);
+      } else {
+        await Share.share({ message: `Check out ${vendor.name} on Funxon! ${url}`, title: vendor.name });
+      }
+    } catch (error) {
+      console.error('Share failed:', error);
     }
   };
 
@@ -480,20 +536,20 @@ export default function VendorProfileScreen({ route, navigation }: Props) {
       ? vendor.google_maps_link
       : mapCoordinates
         ? `https://www.google.com/maps/search/?api=1&query=${mapCoordinates.latitude},${mapCoordinates.longitude}`
-        : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(mapSearchTarget)}`;
+        : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(mapSearchTarget ?? '')}`;
     Linking.openURL(mapsUrl).catch(() => null);
   };
 
   const handleOpenUrl = (url?: string | null) => {
-    if (!url) return;
-    Linking.openURL(url).catch(() => null);
+    openExternalUrl(url);
   };
 
   const whatsappUrl = vendor?.whatsapp_number
     ? `https://wa.me/${String(vendor.whatsapp_number).replace(/[^0-9]/g, '')}`
     : null;
   const contactNumber = vendor?.whatsapp_number?.trim() || null;
-  const emailUrl = vendor?.email ? `mailto:${vendor.email}` : null;
+  const contactEmail = vendor?.email?.trim() || (vendor as any)?.billing_email?.trim() || null;
+  const emailUrl = contactEmail ? `mailto:${contactEmail}` : null;
   const webMapEmbedUrl = mapCoordinates
     ? `https://www.google.com/maps?q=${mapCoordinates.latitude},${mapCoordinates.longitude}&z=16&output=embed`
     : mapSearchTarget
@@ -509,7 +565,7 @@ export default function VendorProfileScreen({ route, navigation }: Props) {
     if (!items || items.length === 0) return null;
     return (
       <View style={{ marginBottom: spacing.md }}>
-        <Text style={{ ...typography.body, color: colors.textPrimary, fontWeight: '600', marginBottom: spacing.xs }}>
+        <Text style={{ ...typography.bodySemiBold, color: colors.textPrimary, marginBottom: spacing.xs }}>
           {title}
         </Text>
         {items.map((item) => (
@@ -519,7 +575,7 @@ export default function VendorProfileScreen({ route, navigation }: Props) {
                 width: 6,
                 height: 6,
                 borderRadius: 3,
-                backgroundcolor: colors.textPrimary,
+                backgroundColor: colors.cta,
                 marginRight: spacing.sm,
               }}
             />
@@ -595,22 +651,9 @@ export default function VendorProfileScreen({ route, navigation }: Props) {
   const name: string = vendor.name ?? 'Vendor';
   const description: string | null = vendor.description;
 
-  return (
-    <ScrollView
-      style={{ flex: 1, backgroundColor: colors.background }}
-      contentContainerStyle={{ paddingHorizontal: spacing.lg, paddingBottom: spacing.lg, paddingTop: spacing.sm }}
-    >
-      <TouchableOpacity
-        onPress={handleBackNavigation}
-        style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.md }}
-      >
-        <MaterialIcons name="arrow-back" size={20} color={colors.textPrimary} />
-        <Text style={{ ...typography.body, color: colors.textPrimary, marginLeft: spacing.sm }}>
-          Back
-        </Text>
-      </TouchableOpacity>
-
-      {/* Header */}
+  const renderMainContent = () => (
+    <>
+{/* Header */}
       <View
         style={{
           marginBottom: spacing.lg,
@@ -621,53 +664,66 @@ export default function VendorProfileScreen({ route, navigation }: Props) {
           borderColor: colors.borderSubtle,
         }}
       >
-        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+        <View style={{ flexDirection: 'row', alignItems: isDesktop ? 'flex-start' : 'center', justifyContent: 'space-between' }}>
           <View style={{ flex: 1, paddingRight: spacing.md }}>
-            <Text style={{ ...typography.titleLarge, color: colors.textPrimary }}>{name}</Text>
-            {vendor.subscription_tier && (
-              <Text style={{ ...typography.caption, color: colors.textMuted, marginTop: 4 }}>
-                Subscription: {vendor.subscription_tier}
-              </Text>
-            )}
+            <Text style={{ ...(isDesktop ? typography.headlineMd : typography.titleLarge), color: colors.primary }}>{name}</Text>
           </View>
-          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-            <TouchableOpacity
-              onPress={handleToggleFavourite}
-              style={{
-                width: 36,
-                height: 36,
-                borderRadius: 18,
-                borderWidth: 1,
-                borderColor: colors.borderSubtle,
-                alignItems: 'center',
-                justifyContent: 'center',
-                marginRight: vendor.logo_url ? spacing.sm : 0,
-              }}
-            >
-              <MaterialIcons
-                name={favouriteIds.vendorIds.includes(vendor.id) ? 'favorite' : 'favorite-border'}
-                size={18}
-                color={favouriteIds.vendorIds.includes(vendor.id) ? colors.primaryTeal : colors.textMuted}
-              />
-            </TouchableOpacity>
-            {vendor.logo_url && (
-              <View
+          {/* On desktop, fav/share are in the sidebar; on mobile show here */}
+          {!isDesktop && (
+            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+              <TouchableOpacity
+                onPress={handleToggleFavourite}
                 style={{
-                  width: 56,
-                  height: 56,
-                  borderRadius: 28,
-                  backgroundColor: colors.surfaceMuted,
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  overflow: 'hidden',
+                  width: 36,
+                  height: 36,
+                  borderRadius: 18,
                   borderWidth: 1,
                   borderColor: colors.borderSubtle,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  marginRight: spacing.sm,
                 }}
               >
-                <Image source={{ uri: vendor.logo_url }} style={{ width: '100%', height: '100%' }} />
-              </View>
-            )}
-          </View>
+                <MaterialIcons
+                  name={favouriteIds.vendorIds.includes(vendor.id) ? 'favorite' : 'favorite-border'}
+                  size={18}
+                  color={favouriteIds.vendorIds.includes(vendor.id) ? colors.coral : colors.textMuted}
+                />
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={handleShare}
+                style={{
+                  width: 36,
+                  height: 36,
+                  borderRadius: 18,
+                  borderWidth: 1,
+                  borderColor: colors.borderSubtle,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  marginRight: vendor.logo_url ? spacing.sm : 0,
+                }}
+              >
+                <MaterialIcons name="share" size={18} color={colors.textMuted} />
+              </TouchableOpacity>
+              {vendor.logo_url && (
+                <View
+                  style={{
+                    width: 56,
+                    height: 56,
+                    borderRadius: 28,
+                    backgroundColor: colors.surfaceMuted,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    overflow: 'hidden',
+                    borderWidth: 1,
+                    borderColor: colors.borderSubtle,
+                  }}
+                >
+                  <Image source={{ uri: vendor.logo_url }} style={{ width: '100%', height: '100%' }} />
+                </View>
+              )}
+            </View>
+          )}
         </View>
 
         {physicalAddress && (
@@ -677,7 +733,8 @@ export default function VendorProfileScreen({ route, navigation }: Props) {
           </View>
         )}
 
-        {averageRating !== null && (
+        {/* Show rating row on mobile */}
+        {!isDesktop && averageRating !== null && (
           <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: spacing.xs }}>
             <MaterialIcons name="star" size={16} color="#F59E0B" />
             <Text style={{ ...typography.body, color: colors.textSecondary, marginLeft: 6 }}>
@@ -685,10 +742,14 @@ export default function VendorProfileScreen({ route, navigation }: Props) {
             </Text>
           </View>
         )}
-        {vendor.price_range && (
-          <Text style={{ marginTop: spacing.xs, ...typography.body, color: colors.textSecondary }}>
-            Price range: {vendor.price_range}
-          </Text>
+        {/* On desktop always show full rating below name */}
+        {isDesktop && averageRating !== null && (
+          <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: spacing.xs }}>
+            <MaterialIcons name="star" size={16} color="#F59E0B" />
+            <Text style={{ ...typography.body, color: colors.textSecondary, marginLeft: 6 }}>
+              {averageRating.toFixed(1)} / 5 · {reviewCount} review{reviewCount === 1 ? '' : 's'}
+            </Text>
+          </View>
         )}
       </View>
 
@@ -702,33 +763,160 @@ export default function VendorProfileScreen({ route, navigation }: Props) {
           borderColor: colors.borderSubtle,
           overflow: 'hidden',
         }}
+        onLayout={(e) => setGalleryContainerWidth(e.nativeEvent.layout.width)}
       >
-        <View style={{ height: 220, backgroundColor: colors.surfaceMuted }}>
-          {galleryImages[0] ? (
-            <Image source={{ uri: galleryImages[0] }} style={{ width: '100%', height: '100%' }} resizeMode="cover" />
-          ) : (
-            <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
-              <MaterialIcons name="image" size={48} color={colors.textMuted} />
-              <Text style={{ ...typography.caption, color: colors.textMuted, marginTop: spacing.sm }}>
-                No images available
-              </Text>
-            </View>
-          )}
-        </View>
-        {galleryImages.length > 1 && (
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ padding: spacing.md }}>
-            {galleryImages.slice(1).map((imageUrl) => (
-              <View key={imageUrl} style={{ marginRight: spacing.sm }}>
-                <Image
-                  source={{ uri: imageUrl }}
-                  style={{ width: 80, height: 80, borderRadius: radii.md, backgroundColor: colors.surfaceMuted }}
+        {isDesktop ? (
+          /* Desktop: single hero image */
+          galleryItems.length > 0 ? (
+            <TouchableOpacity
+              activeOpacity={0.9}
+              onPress={() => { setZoomInitialIndex(0); setZoomVisible(true); }}
+              style={{ height: 320 }}
+            >
+              {galleryItems[0].type === 'video' ? (
+                <VideoThumbnail
+                  uri={galleryItems[0].url}
+                  style={{ width: '100%', height: '100%' }}
+                  playIconSize={36}
+                />
+              ) : (
+                <NetworkImage
+                  uri={galleryItems[0].url}
+                  style={{ width: '100%', height: '100%' }}
                   resizeMode="cover"
                 />
-              </View>
-            ))}
-          </ScrollView>
+              )}
+              {galleryItems.length > 1 && (
+                <View style={{ position: 'absolute', bottom: spacing.md, right: spacing.md, flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: 'rgba(255,255,255,0.15)', paddingHorizontal: spacing.md, paddingVertical: spacing.sm, borderRadius: radii.md, borderWidth: 1, borderColor: 'rgba(255,255,255,0.4)' }}>
+                  <MaterialIcons name="photo-library" size={16} color="#FFFFFF" />
+                  <Text style={{ ...typography.bodySemiBold, color: '#FFFFFF' }}>View all photos</Text>
+                </View>
+              )}
+            </TouchableOpacity>
+          ) : (
+            <View style={{ height: 320, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.surfaceMuted }}>
+              <MaterialIcons name="image" size={48} color={colors.textMuted} />
+              <Text style={{ ...typography.caption, color: colors.textMuted, marginTop: spacing.sm }}>No images available</Text>
+            </View>
+          )
+        ) : (
+          /* Mobile: carousel only */
+          <>
+            <View style={{ height: 220, backgroundColor: colors.surfaceMuted }}>
+              {galleryItems.length > 0 ? (
+                <>
+                  <Carousel
+                    ref={carouselRef}
+                    width={galleryContainerWidth || Dimensions.get('window').width}
+                    height={220}
+                    data={galleryItems}
+                    loop={galleryItems.length > 1}
+                    pagingEnabled={false}
+                    snapEnabled
+                    onSnapToItem={(index) => setGalleryIndex(index)}
+                    renderItem={({ item }) => (
+                      <TouchableOpacity
+                        activeOpacity={0.9}
+                        onPress={() => {
+                          setZoomInitialIndex(galleryIndex);
+                          setZoomVisible(true);
+                        }}
+                        style={{ width: '100%', height: '100%' }}
+                      >
+                        {item.type === 'video' ? (
+                          <VideoThumbnail
+                            uri={item.url}
+                            style={{ width: '100%', height: '100%' }}
+                            playIconSize={32}
+                          />
+                        ) : (
+                          <NetworkImage uri={item.url} style={{ width: '100%', height: '100%' }} resizeMode="cover" />
+                        )}
+                      </TouchableOpacity>
+                    )}
+                  />
+                  {galleryItems.length > 1 && (
+                    <>
+                      <TouchableOpacity
+                        onPress={() => carouselRef.current?.prev()}
+                        style={{
+                          position: 'absolute',
+                          left: spacing.md,
+                          top: '50%',
+                          marginTop: -18,
+                          width: 36,
+                          height: 36,
+                          borderRadius: 18,
+                          backgroundColor: 'rgba(0,0,0,0.5)',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                        }}
+                      >
+                        <MaterialIcons name="chevron-left" size={24} color="#FFFFFF" />
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        onPress={() => carouselRef.current?.next()}
+                        style={{
+                          position: 'absolute',
+                          right: spacing.md,
+                          top: '50%',
+                          marginTop: -18,
+                          width: 36,
+                          height: 36,
+                          borderRadius: 18,
+                          backgroundColor: 'rgba(0,0,0,0.5)',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                        }}
+                      >
+                        <MaterialIcons name="chevron-right" size={24} color="#FFFFFF" />
+                      </TouchableOpacity>
+                      <View
+                        style={{
+                          position: 'absolute',
+                          bottom: spacing.md,
+                          left: 0,
+                          right: 0,
+                          flexDirection: 'row',
+                          justifyContent: 'center',
+                          gap: 6,
+                        }}
+                      >
+                        {galleryItems.map((_, idx) => (
+                          <View
+                            key={idx}
+                            style={{
+                              width: 8,
+                              height: 8,
+                              borderRadius: 4,
+                              backgroundColor: idx === galleryIndex ? '#FFFFFF' : 'rgba(255,255,255,0.4)',
+                            }}
+                          />
+                        ))}
+                      </View>
+                    </>
+                  )}
+                </>
+              ) : (
+                <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+                  <MaterialIcons name="image" size={48} color={colors.textMuted} />
+                  <Text style={{ ...typography.caption, color: colors.textMuted, marginTop: spacing.sm }}>
+                    No images available
+                  </Text>
+                </View>
+              )}
+            </View>
+          </>
         )}
       </View>
+
+      {/* Zoom / Video Modal */}
+      <ImageZoomModal
+        visible={zoomVisible}
+        items={galleryItems}
+        initialIndex={zoomInitialIndex}
+        onClose={() => setZoomVisible(false)}
+      />
 
       {/* Tabs */}
       <View
@@ -744,7 +932,7 @@ export default function VendorProfileScreen({ route, navigation }: Props) {
       >
         {([
           { key: 'about', label: 'About' },
-          { key: 'catalog', label: 'Catalog' },
+          { key: 'features', label: 'Features' },
           { key: 'reviews', label: 'Reviews' },
           { key: 'calendar', label: 'Calendar' },
         ] as const).map((tab) => {
@@ -757,7 +945,7 @@ export default function VendorProfileScreen({ route, navigation }: Props) {
                 flex: 1,
                 paddingVertical: spacing.sm,
                 borderRadius: radii.full,
-                backgroundColor: isActive ? colors.textPrimary : 'transparent',
+                backgroundColor: isActive ? colors.coral : 'transparent',
                 alignItems: 'center',
               }}
             >
@@ -775,613 +963,354 @@ export default function VendorProfileScreen({ route, navigation }: Props) {
         })}
       </View>
 
-      {activeTab === 'about' && (
-        <View>
-          {/* About */}
-          {description && (
-            <View
-              style={{
-                marginBottom: spacing.lg,
-                padding: spacing.lg,
-                borderRadius: radii.lg,
-                backgroundColor: colors.surface,
-                borderWidth: 1,
-                borderColor: colors.borderSubtle,
-              }}
-            >
-              <Text
-                style={{
-                  ...typography.titleMedium,
-                  color: colors.textPrimary,
-                  marginBottom: spacing.sm,
-                }}
-              >
-                About {name}
-              </Text>
-              <Text style={{ ...typography.body, color: colors.textSecondary, lineHeight: 20 }}>{description}</Text>
-            </View>
-          )}
+            {/* All tab content is always rendered (mounted) but hidden via display:none when inactive.
+       This prevents expensive remounts of WebView (Google Maps in About tab) and
+       catalogue/calendar lists when switching between tabs on Android. */}
+      <View style={{ display: activeTab === 'about' ? 'flex' : 'none' }}>
+        <VendorAboutTab
+          name={name}
+          description={description}
+          tags={tags}
+          physicalAddress={physicalAddress}
+          contactNumber={contactNumber}
+          mapQuery={mapQuery}
+          whatsappUrl={whatsappUrl}
+          emailUrl={emailUrl}
+          vendor={vendor}
+          contactEmail={contactEmail}
+          webMapEmbedUrl={webMapEmbedUrl}
+          mapCoordinates={mapCoordinates}
+          mapSearchTarget={mapSearchTarget ?? ''}
+          nativeMapHtml={nativeMapHtml}
+          staticMapUrl={staticMapUrl}
+          mapImageFailed={mapImageFailed}
+          handleOpenUrl={handleOpenUrl}
+          handleOpenMap={handleOpenMap}
+          setMapImageFailed={setMapImageFailed}
+        />
+      </View>
 
-          {/* Features & Amenities */}
-          {(vendor.amenities?.length || vendor.service_options?.length || vendor.dietary_options?.length || vendor.cuisine_types?.length) ? (
-            <View
-              style={{
-                marginBottom: spacing.lg,
-                padding: spacing.lg,
-                borderRadius: radii.lg,
-                backgroundColor: colors.surface,
-                borderWidth: 1,
-                borderColor: colors.borderSubtle,
-              }}
-            >
-              <Text style={{ ...typography.titleMedium, color: colors.textPrimary, marginBottom: spacing.md }}>
-                Features & Amenities
-              </Text>
-              <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
-                <View style={{ width: '50%', paddingRight: spacing.sm }}>
-                  {renderBulletSection('Venue Amenities', vendor.amenities)}
-                  {renderBulletSection('Service Options', vendor.service_options)}
-                </View>
-                <View style={{ width: '50%', paddingLeft: spacing.sm }}>
-                  {renderBulletSection('Dietary Options', vendor.dietary_options)}
-                  {renderBulletSection('Cuisine Types', vendor.cuisine_types)}
-                </View>
-              </View>
-              {vendor.venue_capacity && (
-                <Text style={{ ...typography.caption, color: colors.textMuted, marginTop: spacing.sm }}>
-                  Capacity: {vendor.venue_capacity} guests
-                </Text>
-              )}
-            </View>
-          ) : null}
+      <View style={{ display: activeTab === 'features' ? 'flex' : 'none' }}>
+        <VendorFeaturesTab
+          vendor={vendor}
+          whatsappUrl={whatsappUrl}
+          emailUrl={emailUrl}
+          goToQuoteRequest={goToQuoteRequest}
+          handleOpenUrl={handleOpenUrl}
+          setAlertState={setAlertState}
+        />
+      </View>
 
-          {/* Tags / highlights */}
-          {tags.length > 0 && (
-            <View
-              style={{
-                marginBottom: spacing.lg,
-                padding: spacing.lg,
-                borderRadius: radii.lg,
-                backgroundColor: colors.surface,
-                borderWidth: 1,
-                borderColor: colors.borderSubtle,
-              }}
-            >
-              <Text
-                style={{
-                  ...typography.titleMedium,
-                  color: colors.textPrimary,
-                  marginBottom: spacing.sm,
-                }}
-              >
-                Highlights
-              </Text>
-              <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
-                {tags?.map((tag) => (
-                  <View
-                    key={tag}
-                    style={{
-                      paddingHorizontal: spacing.md,
-                      paddingVertical: spacing.xs,
-                      borderRadius: radii.full,
-                      backgroundColor: colors.surfaceMuted,
-                      marginRight: spacing.sm,
-                      marginBottom: spacing.sm,
-                    }}
-                  >
-                    <Text style={{ ...typography.caption, color: colors.textPrimary }}>{tag}</Text>
-                  </View>
-                ))}
-              </View>
-            </View>
-          )}
+      <View style={{ display: activeTab === 'reviews' ? 'flex' : 'none' }}>
+        <VendorReviewsTab
+          reviews={reviews}
+          reviewsLoading={reviewsLoading}
+          reviewsError={reviewsError ?? null}
+          ratingSummaryValue={ratingSummaryValue}
+          ratingSummaryCount={ratingSummaryCount}
+          averageRating={averageRating}
+          ratingBreakdown={ratingBreakdown}
+          ratingCategories={ratingCategories}
+          user={user ?? null}
+          navigation={navigation}
+          vendorId={vendor.id}
+          name={name}
+        />
+      </View>
 
-          {/* Contact */}
-          {(whatsappUrl || emailUrl || vendor.website_url || vendor.instagram_url) && (
-            <View
-              style={{
-                marginBottom: spacing.lg,
-                padding: spacing.lg,
-                borderRadius: radii.lg,
-                backgroundColor: colors.surface,
-                borderWidth: 1,
-                borderColor: colors.borderSubtle,
-              }}
-            >
-              <Text style={{ ...typography.titleMedium, color: colors.textPrimary, marginBottom: spacing.md }}>
-                Contact
-              </Text>
-              <View style={{ gap: spacing.sm }}>
-                {whatsappUrl && (
-                  <TouchableOpacity
-                    onPress={() => handleOpenUrl(whatsappUrl)}
-                    style={{
-                      backgroundColor: '#22C55E',
-                      paddingVertical: spacing.md,
-                      borderRadius: radii.md,
-                      flexDirection: 'row',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                    }}
-                  >
-                    <MaterialIcons name="chat" size={18} color="#FFFFFF" />
-                    <Text style={{ color: '#FFFFFF', fontWeight: '600', marginLeft: spacing.sm }}>Contact via WhatsApp</Text>
-                  </TouchableOpacity>
-                )}
-                {emailUrl && (
-                  <TouchableOpacity
-                    onPress={() => handleOpenUrl(emailUrl)}
-                    style={{
-                      backgroundColor: '#3B82F6',
-                      paddingVertical: spacing.md,
-                      borderRadius: radii.md,
-                      flexDirection: 'row',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                    }}
-                  >
-                    <MaterialIcons name="email" size={18} color="#FFFFFF" />
-                    <Text style={{ color: '#FFFFFF', fontWeight: '600', marginLeft: spacing.sm }}>Contact via Email</Text>
-                  </TouchableOpacity>
-                )}
-              </View>
-            </View>
-          )}
+      <View style={{ display: activeTab === 'calendar' ? 'flex' : 'none' }}>
+        <VendorCalendarTab
+          availability={availability}
+          availabilityLoading={availabilityLoading}
+          name={name}
+          whatsappUrl={whatsappUrl}
+          emailUrl={emailUrl}
+          handleOpenUrl={handleOpenUrl}
+          goToQuoteRequest={goToQuoteRequest}
+        />
+      </View>
 
-          {/* Location & Map */}
-          {(mapQuery || physicalAddress) && (
-            <View
-              style={{
-                marginBottom: spacing.lg,
-                padding: spacing.lg,
-                borderRadius: radii.lg,
-                backgroundColor: colors.surface,
-                borderWidth: 1,
-                borderColor: colors.borderSubtle,
-              }}
-            >
-              <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.sm }}>
-                <MaterialIcons name="place" size={18} color={colors.textPrimary} />
-                <Text style={{ ...typography.titleMedium, color: colors.textPrimary, marginLeft: spacing.sm }}>
-                  Location
-                </Text>
-              </View>
-              {physicalAddress && (
-                <Text style={{ ...typography.body, color: colors.textSecondary, marginBottom: spacing.sm }}>
-                  {physicalAddress}
-                </Text>
-              )}
-              {contactNumber && (
-                <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.sm }}>
-                  <MaterialIcons name="phone" size={16} color={colors.textPrimary} />
-                  <Text style={{ ...typography.body, color: colors.textSecondary, marginLeft: spacing.sm }}>
-                    {contactNumber}
-                  </Text>
-                </View>
-              )}
-              <View
-                style={{
-                  height: 220,
-                  borderRadius: radii.md,
-                  overflow: 'hidden',
-                  borderWidth: 1,
-                  borderColor: colors.borderSubtle,
-                  backgroundColor: colors.surfaceMuted,
-                  marginBottom: spacing.md,
-                }}
-              >
-                {Platform.OS === 'web' ? (
-                  webMapEmbedUrl ? (
-                    <iframe
-                      title="Google Map"
-                      style={{ width: '100%', height: '100%', border: 'none' } as any}
-                      src={webMapEmbedUrl}
-                      allowFullScreen
-                    />
-                  ) : (
-                    <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
-                      <Text style={{ ...typography.caption, color: colors.textMuted }}>Map unavailable</Text>
-                    </View>
-                  )
-                ) : nativeMapHtml ? (
-                  !mapImageFailed && staticMapUrl ? (
-                    <Image
-                      source={{ uri: staticMapUrl }}
-                      style={{ width: '100%', height: '100%' }}
-                      resizeMode="cover"
-                      onError={() => setMapImageFailed(true)}
-                    />
-                  ) : (
-                    <WebView
-                      source={{ html: nativeMapHtml }}
-                      style={{ width: '100%', height: '100%' }}
-                      originWhitelist={['*']}
-                      javaScriptEnabled
-                      domStorageEnabled
-                      setSupportMultipleWindows={false}
-                      startInLoadingState
-                      scrollEnabled={false}
-                    />
-                  )
-                ) : (
-                  <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
-                    <Text style={{ ...typography.caption, color: colors.textMuted }}>Map unavailable</Text>
-                  </View>
-                )}
-              </View>
-              <TouchableOpacity
-                onPress={handleOpenMap}
-                style={{
-                  paddingVertical: spacing.sm,
-                  borderRadius: radii.md,
-                  borderWidth: 1,
-                  bordercolor: colors.textPrimary,
-                  alignItems: 'center',
-                  flexDirection: 'row',
-                  justifyContent: 'center',
-                }}
-              >
-                <MaterialIcons name="map" size={16} color={colors.textPrimary} />
-                <Text style={{ color: colors.textPrimary, marginLeft: spacing.sm, fontWeight: '600' }}>
-                  Open in Google Maps
-                </Text>
-              </TouchableOpacity>
-            </View>
-          )}
-        </View>
-      )}
+          </>
+  );
 
-      {activeTab === 'catalog' && (
-        <View>
-          <View
-            style={{
-              marginBottom: spacing.lg,
-              padding: spacing.lg,
-              borderRadius: radii.lg,
-              backgroundColor: colors.surface,
-              borderWidth: 1,
-              borderColor: colors.borderSubtle,
-            }}
-          >
-            <Text style={{ ...typography.titleMedium, color: colors.textPrimary, marginBottom: spacing.sm }}>
-              View Catalogue
-            </Text>
-            <View
-              style={{
-                borderWidth: 1,
-                borderStyle: 'dashed',
-                borderColor: colors.borderSubtle,
-                borderRadius: radii.md,
-                padding: spacing.lg,
-                alignItems: 'center',
-                backgroundColor: colors.surfaceMuted,
-              }}
-            >
-              <Text style={{ ...typography.body, color: colors.textPrimary, fontWeight: '600', marginBottom: spacing.xs }}>
-                Your catalog is empty
+const renderSidebar = () => (
+    <View
+      style={{
+        flex: 1,
+        gap: spacing.lg,
+      } as any}
+    >
+      <View
+        style={{
+          backgroundColor: colors.surface,
+          borderRadius: radii.lg,
+          borderWidth: 1,
+          borderColor: colors.outlineVariant,
+          padding: spacing.lg,
+          shadowColor: '#000',
+          shadowOpacity: 0.06,
+          shadowRadius: 6,
+          shadowOffset: { width: 0, height: 3 },
+        }}
+      >
+        <View style={{ marginBottom: spacing.lg }}>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+            <View style={{ flex: 1, paddingRight: spacing.md }}>
+              <Text style={{ ...typography.headlineMd, color: colors.primary }}>
+                Request a quote
               </Text>
-              <Text style={{ ...typography.caption, color: colors.textMuted, textAlign: 'center' }}>
-                This vendor hasn't added any items to their catalog yet.
+              <Text style={{ ...typography.body, color: colors.onSurfaceVariant }}>
+                Pricing details
               </Text>
             </View>
           </View>
 
-          <View
-            style={{
-              marginBottom: spacing.lg,
-              padding: spacing.lg,
-              borderRadius: radii.lg,
-              backgroundColor: colors.surface,
-              borderWidth: 1,
-              borderColor: colors.borderSubtle,
-            }}
-          >
-            <Text style={{ ...typography.titleMedium, color: colors.textPrimary, marginBottom: spacing.md }}>
-              Quote Options
-            </Text>
+          <View style={{ flexDirection: 'row', justifyContent: 'flex-end', gap: spacing.sm, marginTop: spacing.md }}>
             <TouchableOpacity
-              onPress={goToQuoteRequest}
+              onPress={handleToggleFavourite}
               style={{
-                backgroundcolor: colors.textPrimary,
-                paddingVertical: spacing.md,
-                borderRadius: radii.md,
-                alignItems: 'center',
-                marginBottom: spacing.sm,
-              }}
-            >
-              <Text style={{ color: '#FFFFFF', fontWeight: '600' }}>Request Quote</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              onPress={() => Alert.alert('Coming soon', 'Amend quote functionality will be available soon.')}
-              style={{
+                width: 36,
+                height: 36,
+                borderRadius: 18,
                 borderWidth: 1,
-                bordercolor: colors.textPrimary,
-                paddingVertical: spacing.md,
-                borderRadius: radii.md,
+                borderColor: colors.outlineVariant,
                 alignItems: 'center',
+                justifyContent: 'center',
+                backgroundColor: colors.surfaceBg,
               }}
             >
-              <Text style={{ color: colors.textPrimary, fontWeight: '600' }}>Amend Quote</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      )}
-
-      {activeTab === 'reviews' && (
-        <View>
-          <View
-            style={{
-              marginBottom: spacing.lg,
-              padding: spacing.lg,
-              borderRadius: radii.lg,
-              backgroundColor: colors.surface,
-              borderWidth: 1,
-              borderColor: colors.borderSubtle,
-              alignItems: 'center',
-            }}
-          >
-            <Text style={{ ...typography.titleMedium, color: colors.textPrimary, marginBottom: spacing.sm }}>
-              Overall Rating
-            </Text>
-            <Text style={{ ...typography.displayLarge, color: colors.textPrimary }}>{ratingSummaryValue}</Text>
-            <View style={{ flexDirection: 'row', marginVertical: spacing.xs }}>
-              {Array.from({ length: 5 }).map((_, index) => (
-                <MaterialIcons
-                  key={index}
-                  name={averageRating && averageRating >= index + 1 ? 'star' : 'star-border'}
-                  size={20}
-                  color="#F59E0B"
-                />
-              ))}
-            </View>
-            <Text style={{ ...typography.caption, color: colors.textMuted }}>
-              Based on {ratingSummaryCount} review{ratingSummaryCount === 1 ? '' : 's'}
-            </Text>
-            <View style={{ marginTop: spacing.md, width: '100%' }}>
-              {[5, 4, 3, 2, 1].map((rating) => {
-                const count = ratingBreakdown[rating as 1 | 2 | 3 | 4 | 5] ?? 0;
-                const progress = reviewCount ? count / reviewCount : 0;
-                return (
-                  <View key={rating} style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
-                    <Text style={{ ...typography.caption, color: colors.textMuted, width: 16 }}>{rating}</Text>
-                    <MaterialIcons name="star" size={14} color="#F59E0B" />
-                    <View
-                      style={{
-                        flex: 1,
-                        height: 6,
-                        backgroundColor: colors.surfaceMuted,
-                        borderRadius: 999,
-                        marginHorizontal: spacing.sm,
-                        overflow: 'hidden',
-                      }}
-                    >
-                      <View style={{ width: `${progress * 100}%`, height: '100%', backgroundcolor: colors.textPrimary }} />
-                    </View>
-                    <Text style={{ ...typography.caption, color: colors.textMuted, width: 20, textAlign: 'right' }}>
-                      {count}
-                    </Text>
-                  </View>
-                );
-              })}
-            </View>
-          </View>
-
-          <View
-            style={{
-              marginBottom: spacing.lg,
-              padding: spacing.lg,
-              borderRadius: radii.lg,
-              backgroundColor: colors.surface,
-              borderWidth: 1,
-              borderColor: colors.borderSubtle,
-            }}
-          >
-            <Text style={{ ...typography.titleMedium, color: colors.textPrimary, marginBottom: spacing.md }}>
-              Rating Breakdown
-            </Text>
-            <Text style={{ ...typography.caption, color: colors.textMuted, marginBottom: spacing.md }}>
-              Average ratings by category
-            </Text>
-            {ratingCategories.map((category) => (
-              <View key={category.label} style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.sm }}>
-                <Text style={{ ...typography.caption, color: colors.textPrimary, flex: 1 }}>{category.label}</Text>
-                <View style={{ flexDirection: 'row', marginRight: spacing.sm }}>
-                  {Array.from({ length: 5 }).map((_, index) => (
-                    <MaterialIcons
-                      key={index}
-                      name={category.value >= index + 1 ? 'star' : 'star-border'}
-                      size={14}
-                      color="#F59E0B"
-                    />
-                  ))}
-                </View>
-                <Text style={{ ...typography.caption, color: colors.textMuted }}>{category.value.toFixed(1)}</Text>
-              </View>
-            ))}
-          </View>
-
-          {user?.id ? (
-            <View
-              style={{
-                marginBottom: spacing.lg,
-                padding: spacing.lg,
-                borderRadius: radii.lg,
-                backgroundColor: colors.surface,
-                borderWidth: 1,
-                borderColor: colors.borderSubtle,
-              }}
-            >
-              <Text style={{ ...typography.titleMedium, color: colors.textPrimary, marginBottom: spacing.sm }}>
-                Leave a review
-              </Text>
-              <Text style={{ ...typography.body, color: colors.textSecondary, marginBottom: spacing.md }}>
-                Reviews are available after you have used this service.
-              </Text>
-              <PrimaryButton
-                title={eligibilityLoading ? 'Checking eligibility...' : 'Leave a review'}
-                disabled={!canLeaveReview || eligibilityLoading}
-                onPress={() =>
-                  navigation.navigate('CreateReview', {
-                    type: 'vendor',
-                    targetId: vendor.id,
-                    targetName: name,
-                  })
-                }
+              <MaterialIcons
+                name={favouriteIds.vendorIds.includes(vendor.id) ? 'favorite' : 'favorite-border'}
+                size={20}
+                color={favouriteIds.vendorIds.includes(vendor.id) ? colors.coral : colors.outline}
               />
-              {!eligibilityLoading && !canLeaveReview ? (
-                <Text style={{ ...typography.caption, color: colors.textMuted, marginTop: spacing.sm }}>
-                  You can leave a review once your booking or quote is accepted/finalised.
-                </Text>
-              ) : null}
-            </View>
-          ) : (
-            <View
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={handleShare}
               style={{
-                marginBottom: spacing.lg,
-                padding: spacing.lg,
-                borderRadius: radii.lg,
-                backgroundColor: colors.surface,
+                width: 36,
+                height: 36,
+                borderRadius: 18,
                 borderWidth: 1,
-                borderColor: colors.borderSubtle,
+                borderColor: colors.outlineVariant,
+                alignItems: 'center',
+                justifyContent: 'center',
+                backgroundColor: colors.surfaceBg,
               }}
             >
-              <Text style={{ ...typography.body, color: colors.textSecondary }}>
-                Sign in to leave a review.
-              </Text>
-            </View>
-          )}
-
-          {/* Review functionality removed - only users who have used the service can leave reviews */}
-          {/* This feature will be re-implemented with proper booking verification */}
-        </View>
-      )}
-
-      {activeTab === 'calendar' && (
-        <View
-          style={{
-            marginBottom: spacing.lg,
-            padding: spacing.lg,
-            borderRadius: radii.lg,
-            backgroundColor: colors.surface,
-            borderWidth: 1,
-            borderColor: colors.borderSubtle,
-          }}
-        >
-          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.md }}>
-            <MaterialIcons name="calendar-today" size={18} color={colors.textPrimary} />
-            <Text style={{ ...typography.titleMedium, color: colors.textPrimary, marginLeft: spacing.sm }}>
-              Availability Calendar
-            </Text>
+              <MaterialIcons name="share" size={20} color={colors.outline} />
+            </TouchableOpacity>
           </View>
-          {availabilityLoading ? (
-            <View style={{ alignItems: 'center', paddingVertical: spacing.lg }}>
-              <ActivityIndicator color={colors.textPrimary} />
-            </View>
-          ) : availability && availability.length > 0 ? (
-            <View style={{ gap: spacing.sm }}>
-              {availability.map((entry) => {
-                const isAvailable = entry.is_available;
-                return (
-                  <View
-                    key={entry.id}
-                    style={{
-                      borderRadius: radii.md,
-                      padding: spacing.md,
-                      borderWidth: 1,
-                      borderColor: isAvailable ? '#BBF7D0' : '#FECACA',
-                      backgroundColor: isAvailable ? '#DCFCE7' : '#FEE2E2',
-                    }}
-                  >
-                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: spacing.md }}>
-                      <Text style={{ ...typography.body, color: colors.textPrimary, fontWeight: '600', flex: 1 }}>
-                        {formatAvailabilityDate(entry.date)}
-                      </Text>
-                      <Text style={{ ...typography.caption, color: isAvailable ? '#166534' : '#991B1B', fontWeight: '700' }}>
-                        {isAvailable ? 'Available' : 'Unavailable'}
-                      </Text>
-                    </View>
-                    {entry.availability_type ? (
-                      <Text style={{ ...typography.caption, color: colors.textSecondary, marginTop: spacing.xs }}>
-                        {entry.availability_type}
-                      </Text>
-                    ) : null}
-                    {Array.isArray(entry.time_slots) && entry.time_slots.length > 0 ? (
-                      <Text style={{ ...typography.caption, color: colors.textSecondary, marginTop: spacing.xs }}>
-                        {entry.time_slots.join(', ')}
-                      </Text>
-                    ) : null}
-                    {entry.notes ? (
-                      <Text style={{ ...typography.caption, color: colors.textSecondary, marginTop: spacing.xs }}>
-                        {entry.notes}
-                      </Text>
-                    ) : null}
-                  </View>
-                );
-              })}
-            </View>
-          ) : (
-            <View style={{ alignItems: 'center', paddingVertical: spacing.lg }}>
-              <MaterialIcons name="event-busy" size={48} color={colors.textMuted} />
-              <Text style={{ ...typography.body, color: colors.textPrimary, marginTop: spacing.md, fontWeight: '600' }}>
-                Availability will be updated soon
-              </Text>
-              <Text style={{ ...typography.caption, color: colors.textMuted, textAlign: 'center', marginTop: spacing.xs }}>
-                Contact {name} directly while calendar slots are being updated.
-              </Text>
-            </View>
-          )}
+        </View>
+
+        <View style={{ gap: spacing.sm }}>
           <TouchableOpacity
-            onPress={() =>
-              whatsappUrl
-                ? handleOpenUrl(whatsappUrl)
-                : emailUrl
-                  ? handleOpenUrl(emailUrl)
-                  : goToQuoteRequest()
-            }
+            onPress={goToQuoteRequest}
             style={{
-              marginTop: spacing.md,
-              backgroundcolor: colors.textPrimary,
+              backgroundColor: colors.primary,
               paddingVertical: spacing.md,
               borderRadius: radii.md,
               alignItems: 'center',
-              flexDirection: 'row',
-              justifyContent: 'center',
             }}
           >
-            <MaterialIcons name="calendar-today" size={16} color="#FFFFFF" />
-            <Text style={{ color: '#FFFFFF', fontWeight: '600', marginLeft: spacing.sm }}>
-              Contact for Availability
-            </Text>
+            <Text style={{ ...typography.bodySemiBold, color: '#FFFFFF' }}>Request Quote</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={() => {
+              if (whatsappUrl) {
+                handleOpenUrl(whatsappUrl);
+              } else if (emailUrl) {
+                handleOpenUrl(emailUrl);
+              } else {
+                setAlertState({ visible: true, title: 'Contact', message: 'No contact details available.' });
+              }
+            }}
+            style={{
+              paddingVertical: spacing.md,
+              borderRadius: radii.md,
+              borderWidth: 2,
+              borderColor: colors.primary,
+              alignItems: 'center',
+            }}
+          >
+            <Text style={{ ...typography.bodySemiBold, color: colors.primary }}>Contact Vendor</Text>
           </TouchableOpacity>
         </View>
+
+        <View style={{ borderTopWidth: 1, borderTopColor: colors.outlineVariant, paddingTop: spacing.lg, marginTop: spacing.lg }}>
+          {/* Vendor identity row */}
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md, marginBottom: spacing.md }}>
+            {vendor.logo_url ? (
+              <View style={{ width: 48, height: 48, borderRadius: 24, overflow: 'hidden', backgroundColor: colors.surfaceBg }}>
+                <Image source={{ uri: vendor.logo_url }} style={{ width: '100%', height: '100%' }} />
+              </View>
+            ) : (
+              <View style={{ width: 48, height: 48, borderRadius: 24, backgroundColor: colors.surfaceBg, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: colors.outlineVariant }}>
+                <MaterialIcons name="store" size={24} color={colors.outline} />
+              </View>
+            )}
+            <View style={{ flex: 1 }}>
+              <Text style={{ ...typography.bodySemiBold, color: colors.textPrimary }}>{name}</Text>
+            </View>
+          </View>
+
+          {/* Address */}
+          {physicalAddress ? (
+            <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm, marginBottom: spacing.sm }}>
+              <MaterialIcons name="place" size={16} color={colors.outline} style={{ marginTop: 2 } as any} />
+              <Text style={{ ...typography.caption, color: colors.onSurfaceVariant, flex: 1, lineHeight: 18 }}>
+                {physicalAddress}
+              </Text>
+            </View>
+          ) : null}
+
+          {/* Contact details */}
+          <View style={{ gap: spacing.sm, marginTop: physicalAddress ? spacing.xs : 0 }}>
+            {vendor.whatsapp_number ? (
+              <TouchableOpacity
+                onPress={() => handleOpenUrl(whatsappUrl)}
+                style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}
+              >
+                <MaterialIcons name="phone" size={16} color={colors.primaryTeal} />
+                <Text style={{ ...typography.caption, color: colors.primaryTeal }}>
+                  {vendor.whatsapp_number}
+                </Text>
+              </TouchableOpacity>
+            ) : null}
+
+            {contactEmail ? (
+              <TouchableOpacity
+                onPress={() => handleOpenUrl(emailUrl)}
+                style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}
+              >
+                <MaterialIcons name="email" size={16} color={colors.primary} />
+                <Text style={{ ...typography.caption, color: colors.primary }}>
+                  {contactEmail}
+                </Text>
+              </TouchableOpacity>
+            ) : null}
+
+            {vendor.website_url ? (
+              <TouchableOpacity
+                onPress={() => handleOpenUrl(vendor.website_url!)}
+                style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}
+              >
+                <MaterialIcons name="language" size={16} color={colors.primary} />
+                <Text style={{ ...typography.caption, color: colors.primary }} numberOfLines={1}>
+                  {vendor.website_url.replace(/^https?:\/\//, '')}
+                </Text>
+              </TouchableOpacity>
+            ) : null}
+
+            {vendor.instagram_url ? (
+              <TouchableOpacity
+                onPress={() => handleOpenUrl(vendor.instagram_url!)}
+                style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}
+              >
+                <MaterialIcons name="photo-camera" size={16} color={colors.primary} />
+                <Text style={{ ...typography.caption, color: colors.primary }} numberOfLines={1}>
+                  {vendor.instagram_url.replace(/^https?:\/\/(www\.)?instagram\.com\//, '@').replace(/\/$/, '')}
+                </Text>
+              </TouchableOpacity>
+            ) : null}
+
+            {!vendor.whatsapp_number && !vendor.email && !vendor.website_url && !vendor.instagram_url ? (
+              <Text style={{ ...typography.caption, color: colors.textMuted }}>No contact details available</Text>
+            ) : null}
+          </View>
+        </View>
+      </View>
+    </View>
+  );
+
+  return (
+    <ScrollView
+      style={{ flex: 1, backgroundColor: isDesktop ? colors.surfaceBg : colors.background }}
+      contentContainerStyle={isDesktop ? { paddingHorizontal: 48, paddingBottom: spacing.lg, paddingTop: spacing.xl, maxWidth: 1200, width: '100%', alignSelf: 'center' } : { paddingHorizontal: spacing.lg, paddingBottom: spacing.lg, paddingTop: spacing.sm }}
+      keyboardShouldPersistTaps="handled"
+    >
+      <TouchableOpacity
+          onPress={handleBackNavigation}
+          style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.md }}
+        >
+          <MaterialIcons name="arrow-back" size={20} color={colors.textPrimary} />
+          <Text style={{ ...typography.body, color: colors.textPrimary, marginLeft: spacing.sm }}>
+            Back
+          </Text>
+        </TouchableOpacity>
+
+      {isDesktop ? (
+        <View style={{ flexDirection: 'row', gap: 24 } as any}>
+          <View style={{ flex: 2 } as any}>
+            {renderMainContent()}
+          </View>
+          {renderSidebar()}
+        </View>
+      ) : (
+        <>
+          {renderMainContent()}
+          {/* Request Quote entry */}
+          <View
+            style={{
+              paddingVertical: spacing.lg,
+              borderTopWidth: 1,
+              borderTopColor: colors.borderSubtle,
+              marginTop: spacing.lg,
+            }}
+          >
+            <Text
+              style={{
+                ...typography.titleMedium,
+                color: colors.textPrimary,
+                marginBottom: spacing.sm,
+              }}
+            >
+              Request a quote
+            </Text>
+            <Text style={{ ...typography.body, color: colors.textSecondary, marginBottom: spacing.md }}>
+              Share your event details and request a custom quote from this vendor.
+            </Text>
+            <PrimaryButton
+              title="Request a quote"
+              onPress={goToQuoteRequest}
+            />
+            <TouchableOpacity
+              onPress={() => {
+                if (whatsappUrl) {
+                  handleOpenUrl(whatsappUrl);
+                } else if (emailUrl) {
+                  handleOpenUrl(emailUrl);
+                } else {
+                  setAlertState({ visible: true, title: 'Contact', message: 'No contact details available for this vendor.' });
+                }
+              }}
+              style={{
+                marginTop: spacing.sm,
+                paddingVertical: spacing.md,
+                borderRadius: radii.md,
+                borderWidth: 2,
+                borderColor: colors.cta,
+                alignItems: 'center',
+                flexDirection: 'row',
+                justifyContent: 'center',
+              }}
+            >
+              <MaterialIcons name="calendar-today" size={16} color={colors.cta} />
+              <Text style={{ ...typography.bodySemiBold, color: colors.cta, marginLeft: spacing.sm }}>Contact for Availability</Text>
+            </TouchableOpacity>
+          </View>
+        </>
       )}
 
-      {/* Request Quote entry */}
-      <View
-        style={{
-          paddingVertical: spacing.lg,
-          borderTopWidth: 1,
-          borderTopColor: colors.borderSubtle,
-          marginTop: spacing.lg,
-        }}
-      >
-        <Text
-          style={{
-            ...typography.titleMedium,
-            color: colors.textPrimary,
-            marginBottom: spacing.sm,
-          }}
-        >
-          Request a quote
-        </Text>
-        <Text style={{ ...typography.body, color: colors.textSecondary, marginBottom: spacing.md }}>
-          Share your event details and request a custom quote from this vendor.
-        </Text>
-        <PrimaryButton
-          title="Request a quote"
-          onPress={goToQuoteRequest}
+      {alertState && (
+        <ThemedAlert
+          visible={alertState.visible}
+          title={alertState.title}
+          message={alertState.message}
+          buttons={[{ text: 'OK', style: 'default', onPress: () => setAlertState(null) }]}
+          onDismiss={() => setAlertState(null)}
         />
-      </View>
+      )}
     </ScrollView>
   );
 }

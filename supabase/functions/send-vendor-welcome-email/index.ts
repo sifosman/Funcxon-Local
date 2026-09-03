@@ -19,6 +19,7 @@ interface EmailRequest {
   businessName?: string;
   tierName: string;
   applicationUrl: string;
+  catalogueUrl?: string;
 }
 
 interface BrevoEmailPayload {
@@ -45,15 +46,15 @@ Deno.serve(async (req: Request) => {
   try {
     // Get environment variables
     const brevoApiKey = Deno.env.get('BREVO_API_KEY');
-    const fromEmail = Deno.env.get('FROM_EMAIL') || 'noreply@funcxon.com';
-    const fromName = Deno.env.get('FROM_NAME') || 'Funcxon Team';
+    const fromEmail = Deno.env.get('FROM_EMAIL') || 'noreply@funxon.co.za';
+    const fromName = Deno.env.get('FROM_NAME') || 'Funxon Team';
 
     if (!brevoApiKey) {
       throw new Error('BREVO_API_KEY environment variable is not set');
     }
 
     // Parse request body
-    const { email, fullName, businessName, tierName, applicationUrl }: EmailRequest = await req.json();
+    const { email, fullName, businessName, tierName, applicationUrl, catalogueUrl }: EmailRequest = await req.json();
 
     if (!email || !fullName || !tierName) {
       return new Response(
@@ -63,7 +64,7 @@ Deno.serve(async (req: Request) => {
     }
 
     // Create email content
-    const subject = `Welcome to Funcxon - Complete Your Vendor Application`;
+    const subject = `Welcome to Funxon - Complete Your Vendor Application`;
     
     const htmlContent = `
       <!DOCTYPE html>
@@ -71,17 +72,17 @@ Deno.serve(async (req: Request) => {
       <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Welcome to Funcxon</title>
+        <title>Welcome to Funxon</title>
       </head>
       <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
         <div style="background: linear-gradient(135deg, #2D5A4C 0%, #4A7C6F 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
-          <h1 style="color: white; margin: 0; font-size: 28px;">Welcome to Funcxon!</h1>
+          <h1 style="color: white; margin: 0; font-size: 28px;">Welcome to Funxon!</h1>
         </div>
         
         <div style="background: #ffffff; padding: 30px; border: 1px solid #e0e0e0; border-top: none; border-radius: 0 0 10px 10px;">
           <p style="font-size: 18px; margin-bottom: 20px;">Hi ${fullName},</p>
           
-          <p>Congratulations on choosing the <strong>${tierName}</strong> plan! You're now one step closer to becoming a Funcxon vendor.</p>
+          <p>Congratulations on choosing the <strong>${tierName}</strong> plan! You're now one step closer to becoming a Funxon vendor.</p>
           
           <div style="background: #f5f5f5; padding: 20px; border-radius: 8px; margin: 25px 0;">
             <h3 style="margin-top: 0; color: #2D5A4C;">What's Next?</h3>
@@ -99,28 +100,51 @@ Deno.serve(async (req: Request) => {
           
           <hr style="border: none; border-top: 1px solid #e0e0e0; margin: 30px 0;">
           
-          <p style="font-size: 14px; color: #666; margin-bottom: 5px;">Need help? Contact us at <a href="mailto:support@funcxon.com" style="color: #2D5A4C;">support@funcxon.com</a></p>
-          <p style="font-size: 14px; color: #666; margin-top: 5px;">The Funcxon Team</p>
+          <div style="background: #f0f7f5; padding: 20px; border-radius: 8px; margin: 25px 0; border: 1px solid #d0e0db;">
+            <h3 style="margin-top: 0; color: #2D5A4C;">Set Up Your Catalogue / Pricelist</h3>
+            <p style="margin-bottom: 15px; color: #333;">Add catalogue items (like an online store) so customers can see your offerings when they request a quote. Upload an image, add a product name and price for each item. Customers will be able to select items and quantities, and a total is calculated automatically.</p>
+            <p style="margin-bottom: 0; color: #555; font-size: 14px;">The number of items you can add depends on your plan: <strong>${tierName}</strong>.</p>
+          </div>
+          
+          ${catalogueUrl ? `
+          <div style="text-align: center; margin: 30px 0;">
+            <a href="${catalogueUrl}"
+               style="background: #4A7C6F; color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; font-weight: bold; display: inline-block;">
+              Add Catalogue Items
+            </a>
+          </div>
+          <p style="font-size: 14px; color: #666;">Or copy and paste this link: <a href="${catalogueUrl}" style="color: #2D5A4C;">${catalogueUrl}</a></p>
+          ` : ''}
+          
+          <hr style="border: none; border-top: 1px solid #e0e0e0; margin: 30px 0;">
+          
+          <p style="font-size: 14px; color: #666; margin-bottom: 5px;">Need help? Contact us at <a href="mailto:support@funxon.co.za" style="color: #2D5A4C;">support@funxon.co.za</a></p>
+          <p style="font-size: 14px; color: #666; margin-top: 5px;">The Funxon Team</p>
         </div>
       </body>
       </html>
     `;
 
     const textContent = `
-Welcome to Funcxon!
+Welcome to Funxon!
 
 Hi ${fullName},
 
-Congratulations on choosing the ${tierName} plan! You're now one step closer to becoming a Funcxon vendor.
+Congratulations on choosing the ${tierName} plan! You're now one step closer to becoming a Funxon vendor.
 
 What's Next?
 Complete your vendor application to set up your profile, add your services, and start receiving bookings.
 
 Complete Your Application: ${applicationUrl}
 
-Need help? Contact us at support@funcxon.com
+Set Up Your Catalogue / Pricelist
+Add catalogue items (like an online store) so customers can see your offerings when they request a quote. Upload an image, add a product name and price for each item. Customers will be able to select items and quantities, and a total is calculated automatically.
+The number of items you can add depends on your plan: ${tierName}.
+${catalogueUrl ? `Add Catalogue Items: ${catalogueUrl}` : ''}
 
-The Funcxon Team
+Need help? Contact us at support@funxon.co.za
+
+The Funxon Team
     `;
 
     // Send email via Brevo API

@@ -1,4 +1,4 @@
-import { View, ActivityIndicator } from 'react-native';
+import { View, ActivityIndicator, Platform } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { MaterialIcons } from '@expo/vector-icons';
 import { AttendeeNavigator } from './AttendeeNavigator';
@@ -11,19 +11,21 @@ import PortfolioProfileScreen from '../screens/subscriber/PortfolioProfileScreen
 import { colors, typography } from '../theme';
 import { useAuth } from '../auth/AuthContext';
 import GuardedScreen from '../components/GuardedScreen';
+import { useIsDesktop } from '../hooks/useIsDesktop';
 
 export type RootTabParamList = {
   Home: undefined;
   Favourites: undefined;
   Quotes: undefined;
   Planner: undefined;
-  Account: undefined;
+  Account: { screen: string } | undefined;
 };
 
 const Tab = createBottomTabNavigator<RootTabParamList>();
 
 export function RootNavigator() {
   const { userRole, isLoading, session } = useAuth();
+  const isDesktop = useIsDesktop();
 
   // Show loading indicator while determining user role
   if (isLoading) {
@@ -57,7 +59,8 @@ export function RootNavigator() {
           elevation: 12,
           borderTopLeftRadius: 18,
           borderTopRightRadius: 18,
-        },
+          ...(isDesktop ? { display: 'none' } : {}),
+        } as any,
         tabBarLabelStyle: {
           ...typography.caption,
         },
@@ -72,7 +75,7 @@ export function RootNavigator() {
           let iconName: keyof typeof MaterialIcons.glyphMap = 'home';
 
           if (route.name === 'Home') {
-            iconName = 'search';
+            iconName = 'home';
           } else if (route.name === 'Favourites') {
             iconName = 'favorite';
           } else if (route.name === 'Quotes') {
@@ -108,7 +111,7 @@ export function RootNavigator() {
       <Tab.Screen
         name="Home"
         component={AttendeeNavigator}
-        options={{ headerShown: false, tabBarLabel: 'Search' }}
+        options={{ headerShown: false, tabBarLabel: 'Home' }}
       />
       <Tab.Screen
         name="Favourites"
@@ -131,6 +134,12 @@ export function RootNavigator() {
       <Tab.Screen
         name="Account"
         options={{ headerShown: false, tabBarLabel: 'Account' }}
+        listeners={({ navigation }) => ({
+          tabPress: (e) => {
+            e.preventDefault();
+            navigation.navigate('Account', { screen: 'AccountMain' });
+          },
+        })}
       >
         {() => <GuardedScreen component={ProfileNavigator} label="Account" />}
       </Tab.Screen>

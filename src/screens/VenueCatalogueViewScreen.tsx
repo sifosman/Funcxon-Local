@@ -1,9 +1,12 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, Alert, Image, KeyboardAvoidingView, Linking, Platform, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
-import { MaterialIcons } from '@expo/vector-icons';
+import { ActivityIndicator, Image, KeyboardAvoidingView, Linking, Platform, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import ThemedAlert from '../components/ThemedAlert';
+import NetworkImage from '../components/NetworkImage';
+import { MaterialIcons} from '@expo/vector-icons';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { AttendeeStackParamList } from '../navigation/AttendeeNavigator';
 import { colors, spacing, radii, typography } from '../theme';
+import { useIsDesktop } from '../hooks/useIsDesktop';
 import { supabase } from '../lib/supabaseClient';
 import { useAuth } from '../auth/AuthContext';
 
@@ -30,22 +33,16 @@ type PdfDocument = {
 
 export default function VenueCatalogueViewScreen({ route, navigation }: Props) {
   const { venueId, venueName } = route.params;
-  const { user } = useAuth();
+  const { session } = useAuth();
+  const isDesktop = useIsDesktop();
 
   const [loading, setLoading] = useState(true);
   const [items, setItems] = useState<CatalogueItem[]>([]);
   const [pdfDocs, setPdfDocs] = useState<PdfDocument[]>([]);
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
   const [quantities, setQuantities] = useState<Record<number, number>>({});
-  const [saving, setSaving] = useState(false);
-  const [saved, setSaved] = useState(false);
 
-  const [clientName, setClientName] = useState('');
-  const [clientEmail, setClientEmail] = useState('');
-  const [clientPhone, setClientPhone] = useState('');
-  const [eventDate, setEventDate] = useState('');
-  const [eventDetails, setEventDetails] = useState('');
-  const [showQuoteForm, setShowQuoteForm] = useState(false);
+  const [alertState, setAlertState] = useState<{visible: boolean; title: string; message: string} | null>(null);
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -108,7 +105,6 @@ export default function VenueCatalogueViewScreen({ route, navigation }: Props) {
       return next;
     });
     setQuantities((prev) => ({ ...prev, [id]: prev[id] || 1 }));
-    setSaved(false);
   };
 
   const updateQuantity = (id: number, delta: number) => {
@@ -117,60 +113,28 @@ export default function VenueCatalogueViewScreen({ route, navigation }: Props) {
       const next = Math.max(1, current + delta);
       return { ...prev, [id]: next };
     });
-    setSaved(false);
   };
 
-  const handleSave = () => {
-    setSaving(true);
-    setTimeout(() => {
-      setSaving(false);
-      setSaved(true);
-      Alert.alert('Saved', 'Your selection has been saved.');
-    }, 400);
+  const setQuantityDirect = (id: number, value: string) => {
+    const parsed = parseInt(value, 10);
+    setQuantities((prev) => ({ ...prev, [id]: isNaN(parsed) || parsed < 1 ? 1 : parsed }));
   };
 
-  const handleSubmitQuotation = async () => {
-    if (!user?.id) {
-      Alert.alert('Sign in required', 'Please sign in to submit a quotation.');
+  const handleRequestQuote = () => {
+    if (!session) {
+      (navigation as any).getParent()?.getParent()?.navigate('Auth', { screen: 'SignIn' });
       return;
     }
-    if (!clientName.trim() || !clientEmail.trim()) {
-      Alert.alert('Missing details', 'Please provide your name and email.');
-      return;
-    }
-    if (selectedItems.length === 0) {
-      Alert.alert('No items selected', 'Please select at least one catalogue item.');
-      return;
-    }
-
-    const itemsSummary = selectedItems
-      .map((item) => `- ${item.title} x${quantities[item.id] || 1} @ R${Number(item.price ?? 0).toLocaleString()}`)
-      .join('\n');
-    const totalLine = `\nTotal: R${total.toLocaleString()}`;
-    const fullMessage = `Catalogue Quotation Request:\n\n${itemsSummary}${totalLine}\n\nEvent Details:\n${eventDetails || 'N/A'}\nEvent Date: ${eventDate || 'N/A'}\nPhone: ${clientPhone || 'N/A'}`;
-
-    setSaving(true);
-    try {
-      const { error: insertError } = await supabase.from('venue_quote_requests').insert({
-        listing_id: venueId,
-        requester_user_id: user.id,
-        requester_name: clientName,
-        requester_email: clientEmail,
-        requester_phone: clientPhone.trim() || null,
-        event_date: eventDate.trim() || null,
-        message: fullMessage,
-        status: 'pending',
-      });
-
-      if (insertError) throw insertError;
-
-      Alert.alert('Quotation Submitted', 'Your catalogue quotation has been sent to the venue. You will be notified when they respond.');
-      setShowQuoteForm(false);
-    } catch (err: any) {
-      Alert.alert('Error', err?.message ?? 'Failed to submit quotation.');
-    } finally {
-      setSaving(false);
-    }
+    navigation.navigate('QuoteRequest', {
+      vendorId: venueId,
+      vendorName: venueName,
+      type: 'venue',
+      initialLineItems: selectedItems.map((item) => ({
+        name: item.title,
+        quantity: String(quantities[item.id] || 1),
+        price: item.price != null ? String(item.price) : '',
+      })),
+    });
   };
 
   if (loading) {
@@ -184,44 +148,150 @@ export default function VenueCatalogueViewScreen({ route, navigation }: Props) {
 
   const hasCatalogueItems = activeItems.length > 0;
 
+  const renderCatalogueItem = (item: CatalogueItem) => {
+    const isSelected = selectedIds.has(item.id);
+    const qty = quantities[item.id] || 1;
+    if (isDesktop) {
+      return (
+        <TouchableOpacity
+          key={item.id}
+          activeOpacity={0.9}
+          onPress={() => toggleItem(item.id)}
+          style={{
+            width: 'calc(33.3333% - 16px)',
+            borderRadius: radii.lg,
+            backgroundColor: colors.surfaceContainerLowest,
+            borderWidth: 2,
+            borderColor: isSelected ? colors.cta : colors.outlineVariant,
+            overflow: 'hidden',
+          } as any}
+        >
+          <View>
+            {item.image_url ? (
+              <NetworkImage uri={item.image_url} style={{ width: '100%', height: 160 }} resizeMode="cover" />
+            ) : (
+              <View style={{ width: '100%', height: 160, backgroundColor: colors.surfaceMuted, alignItems: 'center', justifyContent: 'center' }}>
+                <MaterialIcons name="image" size={40} color={colors.textMuted} />
+              </View>
+            )}
+            <View style={{ position: 'absolute', top: spacing.sm, right: spacing.sm }}>
+              <MaterialIcons name={isSelected ? 'check-circle' : 'radio-button-unchecked'} size={28} color={isSelected ? colors.textPrimary : colors.outlineVariant} />
+            </View>
+          </View>
+          <View style={{ flex: 1, padding: spacing.md, justifyContent: 'center' }}>
+            <Text style={{ ...typography.titleMedium, color: colors.textPrimary }}>{item.title}</Text>
+            {item.description ? (
+              <Text style={{ ...typography.bodyMd, color: colors.textMuted, marginTop: 2 }} numberOfLines={3}>{item.description}</Text>
+            ) : null}
+            <Text style={{ ...typography.bodyMd, color: colors.textPrimary, marginTop: spacing.sm }}>R{Number(item.price ?? 0).toLocaleString()}</Text>
+          </View>
+        </TouchableOpacity>
+      );
+    }
+    return (
+      <TouchableOpacity
+        key={item.id}
+        activeOpacity={0.9}
+        onPress={() => toggleItem(item.id)}
+        style={{
+          borderRadius: radii.lg,
+          backgroundColor: colors.surface,
+          borderWidth: 2,
+          borderColor: isSelected ? colors.cta : colors.textPrimary,
+          overflow: 'hidden',
+        }}
+      >
+        <View style={{ flexDirection: 'row' }}>
+          {item.image_url ? (
+            <NetworkImage uri={item.image_url} style={{ width: 100, height: 100 }} resizeMode="cover" />
+          ) : (
+            <View style={{ width: 100, height: 100, backgroundColor: colors.surfaceMuted, alignItems: 'center', justifyContent: 'center' }}>
+              <MaterialIcons name="image" size={32} color={colors.textMuted} />
+            </View>
+          )}
+          <View style={{ flex: 1, padding: spacing.md, justifyContent: 'center' }}>
+            <Text style={{ ...typography.bodySemiBold, color: colors.textPrimary }}>{item.title}</Text>
+            {item.description ? (
+              <Text style={{ ...typography.caption, color: colors.textMuted, marginTop: 2 }} numberOfLines={2}>{item.description}</Text>
+            ) : null}
+            <Text style={{ ...typography.bodyBold, color: colors.textPrimary, marginTop: spacing.sm }}>R{Number(item.price ?? 0).toLocaleString()}</Text>
+          </View>
+          <View style={{ justifyContent: 'center', paddingRight: spacing.md }}>
+            <MaterialIcons name={isSelected ? 'check-circle' : 'radio-button-unchecked'} size={28} color={colors.textPrimary} />
+          </View>
+        </View>
+        {isSelected && (
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', gap: spacing.sm, paddingHorizontal: spacing.md, paddingBottom: spacing.md }}>
+            <TouchableOpacity
+              onPress={() => updateQuantity(item.id, -1)}
+              style={{ width: 28, height: 28, borderRadius: 14, backgroundColor: colors.surfaceMuted, alignItems: 'center', justifyContent: 'center' }}
+            >
+              <MaterialIcons name="remove" size={16} color={colors.textPrimary} />
+            </TouchableOpacity>
+            <TextInput
+              value={String(qty)}
+              onChangeText={(text) => setQuantityDirect(item.id, text)}
+              keyboardType="numeric"
+              selectTextOnFocus
+              style={{ width: 44, textAlign: 'center', borderWidth: 1, borderColor: colors.borderSubtle, borderRadius: radii.sm, paddingVertical: 2, paddingHorizontal: spacing.xs, ...typography.body, color: colors.textPrimary }}
+            />
+            <TouchableOpacity
+              onPress={() => updateQuantity(item.id, 1)}
+              style={{ width: 28, height: 28, borderRadius: 14, backgroundColor: colors.surfaceMuted, alignItems: 'center', justifyContent: 'center' }}
+            >
+              <MaterialIcons name="add" size={16} color={colors.textPrimary} />
+            </TouchableOpacity>
+          </View>
+        )}
+      </TouchableOpacity>
+    );
+  };
+
   return (
     <KeyboardAvoidingView
-      style={{ flex: 1, backgroundColor: colors.background }}
+      style={{ flex: 1, backgroundColor: isDesktop ? colors.surfaceBg : colors.background }}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
       <ScrollView
         style={{ flex: 1 }}
-        contentContainerStyle={{ paddingHorizontal: spacing.lg, paddingVertical: spacing.lg, paddingBottom: 140 }}
+        contentContainerStyle={isDesktop ? { paddingHorizontal: 48, paddingTop: spacing.xl, paddingBottom: 140, maxWidth: 1200, width: '100%', alignSelf: 'center' } : { paddingHorizontal: spacing.lg, paddingTop: spacing.sm, paddingBottom: 140 }}
         keyboardShouldPersistTaps="handled"
       >
         <TouchableOpacity
-          onPress={() => navigation.goBack()}
-          style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.lg }}
-        >
-          <MaterialIcons name="arrow-back" size={20} color={colors.textPrimary} />
-          <Text style={{ ...typography.body, color: colors.textPrimary, marginLeft: spacing.sm }}>Back</Text>
-        </TouchableOpacity>
+            onPress={() => navigation.goBack()}
+            style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.sm }}
+          >
+            <MaterialIcons name="arrow-back" size={20} color={colors.textPrimary} />
+            <Text style={{ ...typography.body, color: colors.textPrimary, marginLeft: spacing.sm }}>Back</Text>
+          </TouchableOpacity>
 
-        <Text style={{ ...typography.titleLarge, color: colors.textPrimary, marginBottom: spacing.xs }}>
-          {venueName}
-        </Text>
-        <Text style={{ ...typography.body, color: colors.textMuted, marginBottom: spacing.lg }}>
-          Catalogue
-        </Text>
+        <View style={{ marginBottom: spacing.lg }}>
+          {isDesktop && (
+            <Text style={{ ...typography.labelMd, color: colors.dustyRose, marginBottom: spacing.sm, textTransform: 'uppercase', letterSpacing: 0.05 }}>
+              Catalogue
+            </Text>
+          )}
+          <Text style={{ ...(isDesktop ? typography.headlineMd : typography.titleLarge), color: colors.textPrimary, marginBottom: spacing.xs }}>
+            {venueName}
+          </Text>
+          <Text style={{ ...(isDesktop ? typography.bodyMd : typography.body), color: colors.textMuted, marginBottom: spacing.lg }}>
+            Catalogue
+          </Text>
+        </View>
 
         {!hasCatalogueItems && pdfDocs.length === 0 && (
           <View
             style={{
               padding: spacing.xl,
               borderRadius: radii.lg,
-              backgroundColor: colors.surface,
+              backgroundColor: isDesktop ? colors.surfaceContainerLowest : colors.surface,
               borderWidth: 1,
-              borderColor: colors.borderSubtle,
+              borderColor: isDesktop ? colors.outlineVariant : colors.borderSubtle,
               alignItems: 'center',
             }}
           >
             <MaterialIcons name="inventory-2" size={48} color={colors.textMuted} />
-            <Text style={{ ...typography.body, color: colors.textMuted, marginTop: spacing.md, textAlign: 'center' }}>
+            <Text style={{ ...(isDesktop ? typography.bodyMd : typography.body), color: colors.textMuted, marginTop: spacing.md, textAlign: 'center' }}>
               No catalogue items available yet.
             </Text>
           </View>
@@ -229,7 +299,7 @@ export default function VenueCatalogueViewScreen({ route, navigation }: Props) {
 
         {!hasCatalogueItems && pdfDocs.length > 0 && (
           <View style={{ gap: spacing.md }}>
-            <Text style={{ ...typography.titleMedium, color: colors.textPrimary, marginBottom: spacing.sm }}>
+            <Text style={{ ...(isDesktop ? typography.headlineSm : typography.titleMedium), color: colors.textPrimary, marginBottom: spacing.sm }}>
               PDF Catalogue
             </Text>
             {pdfDocs.map((doc) => (
@@ -245,14 +315,14 @@ export default function VenueCatalogueViewScreen({ route, navigation }: Props) {
                   alignItems: 'center',
                   padding: spacing.md,
                   borderRadius: radii.lg,
-                  backgroundColor: colors.surface,
+                  backgroundColor: isDesktop ? colors.surfaceContainerLowest : colors.surface,
                   borderWidth: 1,
-                  borderColor: colors.borderSubtle,
+                  borderColor: isDesktop ? colors.outlineVariant : colors.borderSubtle,
                   gap: spacing.sm,
                 }}
               >
                 <MaterialIcons name="picture-as-pdf" size={28} color={colors.destructive} />
-                <Text style={{ ...typography.body, color: colors.textPrimary, flex: 1 }} numberOfLines={1}>
+                <Text style={{ ...(isDesktop ? typography.bodyMd : typography.body), color: colors.textPrimary, flex: 1 }} numberOfLines={1}>
                   {doc.file_name || 'Catalogue PDF'}
                 </Text>
                 <MaterialIcons name="open-in-new" size={18} color={colors.textPrimary} />
@@ -263,116 +333,37 @@ export default function VenueCatalogueViewScreen({ route, navigation }: Props) {
 
         {hasCatalogueItems && (
           <View style={{ gap: spacing.md }}>
-            {activeItems.map((item) => {
-              const isSelected = selectedIds.has(item.id);
-              return (
-                <TouchableOpacity
-                  key={item.id}
-                  activeOpacity={0.9}
-                  onPress={() => toggleItem(item.id)}
-                  style={{
-                    flexDirection: 'row',
-                    borderRadius: radii.lg,
-                    backgroundColor: colors.surface,
-                    borderWidth: 2,
-                    borderColor: isSelected ? colors.textPrimary : colors.borderSubtle,
-                    overflow: 'hidden',
-                  }}
-                >
-                  {item.image_url ? (
-                    <Image
-                      source={{ uri: item.image_url }}
-                      style={{ width: 100, height: 100 }}
-                      resizeMode="cover"
-                    />
-                  ) : (
-                    <View
-                      style={{
-                        width: 100,
-                        height: 100,
-                        backgroundColor: colors.surfaceMuted,
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                      }}
-                    >
-                      <MaterialIcons name="image" size={32} color={colors.textMuted} />
-                    </View>
-                  )}
-                  <View style={{ flex: 1, padding: spacing.md, justifyContent: 'center' }}>
-                    <Text style={{ ...typography.body, color: colors.textPrimary, fontWeight: '600' }}>
-                      {item.title}
-                    </Text>
-                    {item.description ? (
-                      <Text style={{ ...typography.caption, color: colors.textMuted, marginTop: 2 }} numberOfLines={2}>
-                        {item.description}
-                      </Text>
-                    ) : null}
-                    <Text style={{ ...typography.body, color: colors.textPrimary, fontWeight: '700', marginTop: spacing.sm }}>
-                      R{Number(item.price ?? 0).toLocaleString()}
-                    </Text>
-                  </View>
-                  <View style={{ justifyContent: 'center', paddingRight: spacing.md }}>
-                    <MaterialIcons
-                      name={isSelected ? 'check-circle' : 'radio-button-unchecked'}
-                      size={28}
-                      color={isSelected ? colors.textPrimary : colors.borderSubtle}
-                    />
-                  </View>
-                </TouchableOpacity>
-              );
-            })}
+            {isDesktop && (
+              <Text style={{ ...typography.headlineSm, color: colors.textPrimary, marginBottom: spacing.sm }}>
+                Items
+              </Text>
+            )}
+            <View style={isDesktop ? { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.md } as any : { gap: spacing.md }}>
+              {activeItems.map(renderCatalogueItem)}
+            </View>
 
             {selectedItems.length > 0 && (
               <View
                 style={{
                   padding: spacing.lg,
                   borderRadius: radii.lg,
-                  backgroundColor: colors.surface,
+                  backgroundColor: isDesktop ? colors.surfaceContainerLowest : colors.surface,
                   borderWidth: 1,
-                  borderColor: colors.borderSubtle,
+                  borderColor: isDesktop ? colors.outlineVariant : colors.borderSubtle,
                   gap: spacing.md,
+                  ...(isDesktop ? { maxWidth: 800, width: '100%', alignSelf: 'center' } : {}),
                 }}
               >
-                <Text style={{ ...typography.titleMedium, color: colors.textPrimary }}>Your Selection</Text>
+                <Text style={{ ...(isDesktop ? typography.headlineSm : typography.titleMedium), color: colors.textPrimary }}>Your Selection</Text>
                 {selectedItems.map((item) => (
                   <View key={item.id} style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
                     <View style={{ flex: 1 }}>
-                      <Text style={{ ...typography.body, color: colors.textPrimary }}>{item.title}</Text>
-                      <Text style={{ ...typography.caption, color: colors.textMuted }}>
+                      <Text style={{ ...(isDesktop ? typography.bodyMd : typography.body), color: colors.textPrimary }}>{item.title}</Text>
+                      <Text style={{ ...(isDesktop ? typography.bodyMd : typography.caption), color: colors.textMuted }}>
                         R{Number(item.price ?? 0).toLocaleString()} each
                       </Text>
                     </View>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
-                      <TouchableOpacity
-                        onPress={() => updateQuantity(item.id, -1)}
-                        style={{
-                          width: 28,
-                          height: 28,
-                          borderRadius: 14,
-                          backgroundColor: colors.surfaceMuted,
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                        }}
-                      >
-                        <MaterialIcons name="remove" size={16} color={colors.textPrimary} />
-                      </TouchableOpacity>
-                      <Text style={{ ...typography.body, color: colors.textPrimary, minWidth: 24, textAlign: 'center' }}>
-                        {quantities[item.id] || 1}
-                      </Text>
-                      <TouchableOpacity
-                        onPress={() => updateQuantity(item.id, 1)}
-                        style={{
-                          width: 28,
-                          height: 28,
-                          borderRadius: 14,
-                          backgroundColor: colors.surfaceMuted,
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                        }}
-                      >
-                        <MaterialIcons name="add" size={16} color={colors.textPrimary} />
-                      </TouchableOpacity>
-                    </View>
+                    <Text style={{ ...(isDesktop ? typography.bodyMd : typography.body), color: colors.textPrimary }}>×{quantities[item.id] || 1}</Text>
                   </View>
                 ))}
                 <View
@@ -385,204 +376,48 @@ export default function VenueCatalogueViewScreen({ route, navigation }: Props) {
                     alignItems: 'center',
                   }}
                 >
-                  <Text style={{ ...typography.titleMedium, color: colors.textPrimary }}>Total</Text>
-                  <Text style={{ ...typography.titleMedium, color: colors.textPrimary }}>R{total.toLocaleString()}</Text>
+                  <Text style={{ ...(isDesktop ? typography.headlineSm : typography.titleMedium), color: colors.textPrimary }}>Total</Text>
+                  <Text style={{ ...(isDesktop ? typography.headlineSm : typography.titleMedium), color: colors.textPrimary }}>R{total.toLocaleString()}</Text>
                 </View>
               </View>
             )}
 
-            <View style={{ flexDirection: 'row', gap: spacing.sm }}>
-              <TouchableOpacity
-                onPress={handleSave}
-                disabled={saving}
-                style={{
-                  flex: 1,
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  paddingVertical: spacing.md,
-                  borderRadius: radii.lg,
-                  backgroundColor: saved ? colors.surfaceMuted : colors.surface,
-                  borderWidth: 1,
-                  borderColor: colors.borderSubtle,
-                  gap: spacing.sm,
-                }}
-              >
-                <MaterialIcons name={saved ? 'check' : 'save'} size={20} color={saved ? '#16A34A' : colors.textMuted} />
-                <Text style={{ ...typography.body, color: saved ? '#16A34A' : colors.textPrimary, fontWeight: '600' }}>
-                  {saved ? 'Saved' : 'Save'}
-                </Text>
-              </TouchableOpacity>
-
-              {saved && (
-                <TouchableOpacity
-                  onPress={() => setShowQuoteForm(true)}
-                  disabled={saving || selectedItems.length === 0}
-                  style={{
-                    flex: 1,
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    paddingVertical: spacing.md,
-                    borderRadius: radii.lg,
-                    backgroundColor: selectedItems.length > 0 ? colors.textPrimary : colors.surfaceMuted,
-                    gap: spacing.sm,
-                  }}
-                >
-                  <MaterialIcons name="send" size={20} color="#FFFFFF" />
-                  <Text style={{ ...typography.body, color: '#FFFFFF', fontWeight: '700' }}>Submit Quotation</Text>
-                </TouchableOpacity>
-              )}
-            </View>
-
-            {!saved && selectedItems.length > 0 && (
-              <Text style={{ ...typography.caption, color: colors.textMuted, textAlign: 'center' }}>
-                Save your selection before submitting a quotation.
-              </Text>
-            )}
           </View>
         )}
 
-        {/* Quote Form */}
-        {showQuoteForm && (
-          <View
-            style={{
-              marginTop: spacing.lg,
-              padding: spacing.lg,
-              borderRadius: radii.lg,
-              backgroundColor: colors.surface,
-              borderWidth: 1,
-              borderColor: colors.borderSubtle,
-              gap: spacing.md,
-            }}
-          >
-            <Text style={{ ...typography.titleMedium, color: colors.textPrimary, marginBottom: spacing.sm }}>
-              Submit Quotation
-            </Text>
-            <Text style={{ ...typography.caption, color: colors.textMuted, marginBottom: spacing.sm }}>
-              The venue will receive your selected items and contact you.
-            </Text>
+        <TouchableOpacity
+          onPress={handleRequestQuote}
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'center',
+            paddingVertical: spacing.md,
+            borderRadius: radii.lg,
+            backgroundColor: colors.cta,
+            gap: spacing.sm,
+            ...(isDesktop ? { maxWidth: 800, width: '100%', alignSelf: 'center' } : {}),
+          }}
+        >
+          <MaterialIcons name="request-quote" size={20} color="#FFFFFF" />
+          <Text style={{ ...typography.bodyBold, color: '#FFFFFF' }}>Request Quote</Text>
+        </TouchableOpacity>
 
-            <Text style={{ ...typography.label, color: colors.textSecondary }}>Your Name *</Text>
-            <TextInput
-              value={clientName}
-              onChangeText={setClientName}
-              placeholder="e.g. Thandi M"
-              placeholderTextColor={colors.textMuted}
-              style={{
-                borderWidth: 1,
-                borderColor: colors.borderSubtle,
-                borderRadius: radii.md,
-                paddingHorizontal: spacing.md,
-                paddingVertical: spacing.sm,
-                backgroundColor: colors.surfaceMuted,
-                color: colors.textPrimary,
-              }}
-            />
-
-            <Text style={{ ...typography.label, color: colors.textSecondary }}>Email *</Text>
-            <TextInput
-              value={clientEmail}
-              onChangeText={setClientEmail}
-              placeholder="you@example.com"
-              placeholderTextColor={colors.textMuted}
-              keyboardType="email-address"
-              autoCapitalize="none"
-              style={{
-                borderWidth: 1,
-                borderColor: colors.borderSubtle,
-                borderRadius: radii.md,
-                paddingHorizontal: spacing.md,
-                paddingVertical: spacing.sm,
-                backgroundColor: colors.surfaceMuted,
-                color: colors.textPrimary,
-              }}
-            />
-
-            <Text style={{ ...typography.label, color: colors.textSecondary }}>Phone</Text>
-            <TextInput
-              value={clientPhone}
-              onChangeText={setClientPhone}
-              placeholder="+27 ..."
-              placeholderTextColor={colors.textMuted}
-              keyboardType="phone-pad"
-              style={{
-                borderWidth: 1,
-                borderColor: colors.borderSubtle,
-                borderRadius: radii.md,
-                paddingHorizontal: spacing.md,
-                paddingVertical: spacing.sm,
-                backgroundColor: colors.surfaceMuted,
-                color: colors.textPrimary,
-              }}
-            />
-
-            <Text style={{ ...typography.label, color: colors.textSecondary }}>Event Date</Text>
-            <TextInput
-              value={eventDate}
-              onChangeText={setEventDate}
-              placeholder="e.g. 2026-06-15"
-              placeholderTextColor={colors.textMuted}
-              style={{
-                borderWidth: 1,
-                borderColor: colors.borderSubtle,
-                borderRadius: radii.md,
-                paddingHorizontal: spacing.md,
-                paddingVertical: spacing.sm,
-                backgroundColor: colors.surfaceMuted,
-                color: colors.textPrimary,
-              }}
-            />
-
-            <Text style={{ ...typography.label, color: colors.textSecondary }}>Event Details</Text>
-            <TextInput
-              value={eventDetails}
-              onChangeText={setEventDetails}
-              placeholder="Guest count, type of event, special requests..."
-              placeholderTextColor={colors.textMuted}
-              multiline
-              numberOfLines={4}
-              style={{
-                borderWidth: 1,
-                borderColor: colors.borderSubtle,
-                borderRadius: radii.md,
-                paddingHorizontal: spacing.md,
-                paddingVertical: spacing.sm,
-                backgroundColor: colors.surfaceMuted,
-                color: colors.textPrimary,
-                minHeight: 90,
-                textAlignVertical: 'top',
-              }}
-            />
-
-            <TouchableOpacity
-              onPress={handleSubmitQuotation}
-              disabled={saving}
-              style={{
-                paddingVertical: spacing.md,
-                borderRadius: radii.lg,
-                backgroundColor: saving ? colors.textMuted : colors.textPrimary,
-                alignItems: 'center',
-                flexDirection: 'row',
-                justifyContent: 'center',
-                gap: spacing.sm,
-              }}
-            >
-              <MaterialIcons name="send" size={20} color="#FFFFFF" />
-              <Text style={{ ...typography.body, color: '#FFFFFF', fontWeight: '700' }}>
-                {saving ? 'Submitting...' : 'Submit Quotation'}
-              </Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              onPress={() => setShowQuoteForm(false)}
-              style={{ alignItems: 'center', paddingVertical: spacing.sm }}
-            >
-              <Text style={{ ...typography.body, color: colors.textMuted }}>Cancel</Text>
-            </TouchableOpacity>
-          </View>
+        {selectedItems.length > 0 && (
+          <Text style={{ ...(isDesktop ? typography.bodyMd : typography.caption), color: colors.textMuted, textAlign: 'center', marginTop: spacing.sm }}>
+            Selected items will be pre-filled on the quote request screen.
+          </Text>
         )}
       </ScrollView>
+
+      {alertState && (
+        <ThemedAlert
+          visible={alertState.visible}
+          title={alertState.title}
+          message={alertState.message}
+          buttons={[{ text: 'OK', style: 'default', onPress: () => setAlertState(null) }]}
+          onDismiss={() => setAlertState(null)}
+        />
+      )}
     </KeyboardAvoidingView>
   );
 }

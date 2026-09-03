@@ -1,7 +1,7 @@
 import { useState, useCallback, useEffect } from 'react';
 import {
-  Alert,
   KeyboardAvoidingView,
+  Linking,
   Platform,
   ScrollView,
   Text,
@@ -17,18 +17,29 @@ import { supabase } from '../lib/supabaseClient';
 import { colors, spacing, radii, typography } from '../theme';
 import { PrimaryButton, ThemedInput } from '../components/ui';
 import { useAuth } from '../auth/AuthContext';
+import ThemedAlert from '../components/ThemedAlert';
+import { useIsDesktop } from '../hooks/useIsDesktop';
 
 type QuotesStackParamList = {
   QuoteResponse: {
-    revisionId: number;
+    revisionId?: number | null;
     quoteRequestId: number;
     vendorName?: string;
     amount?: number;
     description?: string;
+    accepted?: boolean;
+    rejectOnly?: boolean;
+    from?: string;
   };
   QuoteHistory: {
     quoteRequestId: number;
   };
+};
+
+type QuoteAttachment = {
+  url: string;
+  name: string;
+  type?: string;
 };
 
 type QuoteRevision = {
@@ -44,6 +55,7 @@ type QuoteRevision = {
   created_at: string;
   client_notes?: string | null;
   responded_at?: string | null;
+  attachments?: QuoteAttachment[] | null;
 };
 
 type VendorInfo = {
@@ -57,100 +69,117 @@ export default function QuoteResponseScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<QuotesStackParamList>>();
   const route = useRoute<RouteProp<QuotesStackParamList, 'QuoteResponse'>>();
   const { user } = useAuth();
+  const isDesktop = useIsDesktop();
 
-  const { revisionId, quoteRequestId, vendorName: initialVendorName, amount: initialAmount, description: initialDescription } = route.params;
+  const { revisionId, quoteRequestId, vendorName: initialVendorName, amount: initialAmount, description: initialDescription, accepted: preAccepted, rejectOnly, from } = route.params;
 
   const [loading, setLoading] = useState(true);
+  const [showCelebration, setShowCelebration] = useState(false);
+  const [quoteRequest, setQuoteRequest] = useState<{ is_venue?: boolean; original_id?: number; vendor_id?: number; listing_id?: number; target_name?: string } | null>(null);
   const [saving, setSaving] = useState(false);
   const [revision, setRevision] = useState<QuoteRevision | null>(null);
   const [vendor, setVendor] = useState<VendorInfo | null>(null);
   const [feedback, setFeedback] = useState('');
   const [responseType, setResponseType] = useState<'accept' | 'reject' | null>(null);
+  const [alertState, setAlertState] = useState<{visible: boolean; title: string; message: string; buttons?: any[]} | null>(null);
 
   const loadQuoteDetails = useCallback(async () => {
     if (!user?.id) return;
 
     try {
-      // Get internal user ID
-      const { data: internalUser } = await supabase
-        .from('users')
-        .select('id')
-        .eq('auth_user_id', user.id)
+      // Resolve quote request
+      const isVenueQuote = typeof quoteRequestId === 'string' && String(quoteRequestId).startsWith('venue-');
+      const resolvedQuoteId = isVenueQuote ? Number(String(quoteRequestId).replace('venue-', '')) : quoteRequestId;
+      const quoteTable = isVenueQuote ? 'venue_quote_requests' : 'quote_requests';
+      const { data: quoteRow } = await supabase
+        .from(quoteTable)
+        .select('id, vendor_id, listing_id, status, quote_amount')
+        .eq('id', resolvedQuoteId)
         .maybeSingle();
+      setQuoteRequest({
+        is_venue: isVenueQuote,
+        original_id: quoteRow?.id,
+        vendor_id: (quoteRow as any)?.vendor_id,
+        listing_id: (quoteRow as any)?.listing_id,
+        target_name: initialVendorName,
+      });
 
-      if (!internalUser) {
-        Alert.alert('Error', 'User not found');
-        return;
+      if (preAccepted) {
+        setShowCelebration(true);
+        setTimeout(() => setShowCelebration(false), 3000);
       }
 
-      // Get revision details
-      const { data: rev } = await supabase
-        .from('quote_revisions')
-        .select('*')
-        .eq('id', revisionId)
-        .maybeSingle();
+      if (revisionId) {
+        // Get revision details
+        const { data: rev } = await supabase
+          .from('quote_revisions')
+          .select('*')
+          .eq('id', revisionId)
+          .maybeSingle();
 
-      if (!rev) {
-        Alert.alert('Error', 'Quote not found');
-        return;
-      }
-
-      setRevision(rev as QuoteRevision);
-
-      // Get vendor info
-      const { data: vendorData } = await supabase
-        .from('vendors')
-        .select('id, name, email, phone')
-        .eq('id', rev.vendor_id)
-        .maybeSingle();
-
-      if (vendorData) {
-        setVendor(vendorData as VendorInfo);
+        if (rev) {
+          setRevision(rev as QuoteRevision);
+          // Get vendor info
+          const { data: vendorData } = await supabase
+            .from('vendors')
+            .select('id, name, email, phone')
+            .eq('id', rev.vendor_id)
+            .maybeSingle();
+          if (vendorData) {
+            setVendor(vendorData as VendorInfo);
+          }
+        }
       }
     } catch (err) {
       console.error('Error loading quote:', err);
-      Alert.alert('Error', 'Failed to load quote details');
+      setAlertState({ visible: true, title: 'Error', message: 'Failed to load quote details' });
     } finally {
       setLoading(false);
     }
-  }, [revisionId, user?.id]);
+  }, [revisionId, quoteRequestId, user?.id, preAccepted]);
 
   useEffect(() => {
     loadQuoteDetails();
   }, [loadQuoteDetails]);
 
   const handleResponse = async () => {
-    if (!responseType || !revision || !user?.id) return;
-
+    if (!responseType || !user?.id) return;
     if (responseType === 'reject' && !feedback.trim()) {
-      Alert.alert('Feedback Required', 'Please provide feedback on why you\'re rejecting this quote. This helps the vendor improve their offer.');
+      setAlertState({ visible: true, title: 'Feedback Required', message: 'Please provide feedback on why you\'re rejecting this quote. This helps the vendor improve their offer.' });
       return;
     }
 
     setSaving(true);
     try {
-      // Update revision status
-      const { error: updateError } = await supabase
-        .from('quote_revisions')
-        .update({
-          status: responseType === 'accept' ? 'accepted' : 'rejected',
-          client_notes: feedback.trim() || null,
-          responded_at: new Date().toISOString(),
-        })
-        .eq('id', revisionId);
+      const tableName = quoteRequest?.is_venue ? 'venue_quote_requests' : 'quote_requests';
+      const resolvedId = quoteRequest?.original_id ?? quoteRequestId;
+      const now = new Date().toISOString();
 
-      if (updateError) throw updateError;
+      if (revisionId && revision) {
+        // Update revision status
+        const { error: updateError } = await supabase
+          .from('quote_revisions')
+          .update({
+            status: responseType === 'accept' ? 'accepted' : 'rejected',
+            client_notes: feedback.trim() || null,
+            responded_at: now,
+          })
+          .eq('id', revisionId);
+        if (updateError) throw updateError;
+      }
 
       // Update quote request status
       await supabase
-        .from('quote_requests')
+        .from(tableName)
         .update({
-          status: responseType === 'accept' ? 'finalised' : 'rejected',
+          status: responseType === 'accept' ? 'accepted' : 'rejected',
+          response_message: feedback.trim() || null,
+          ...(responseType === 'accept' ? { accepted_at: now } : { rejected_at: now }),
         })
-        .eq('id', quoteRequestId);
+        .eq('id', resolvedId);
 
       // Add comment
-      if (feedback.trim()) {
+      if (feedback.trim() && revisionId) {
         await supabase.from('quote_comments').insert({
           quote_revision_id: revisionId,
           author_id: user.id,
@@ -163,31 +192,55 @@ export default function QuoteResponseScreen() {
       // Send notification to vendor
       await sendVendorNotification(responseType);
 
-      Alert.alert(
-        responseType === 'accept' ? 'Quote Accepted!' : 'Quote Rejected',
-        responseType === 'accept'
+      if (responseType === 'accept') {
+        setShowCelebration(true);
+        setTimeout(() => setShowCelebration(false), 3000);
+      }
+
+      setAlertState({
+        visible: true,
+        title: responseType === 'accept' ? 'Quote Accepted!' : 'Quote Rejected',
+        message: responseType === 'accept'
           ? 'You have accepted this quote. The vendor will be notified to proceed.'
           : 'You have rejected this quote. The vendor may submit a revised quote.',
-        [{ text: 'OK', onPress: () => navigation.goBack() }]
-      );
+        buttons: [{ text: 'OK', style: 'default', onPress: () => { setAlertState(null); navigation.goBack(); } }],
+      });
     } catch (err: any) {
-      Alert.alert('Error', err?.message || 'Failed to submit response');
+      setAlertState({ visible: true, title: 'Error', message: err?.message || 'Failed to submit response' });
     } finally {
       setSaving(false);
     }
   };
 
+  const handleAmend = () => {
+    const targetId = quoteRequest?.is_venue ? quoteRequest.listing_id : quoteRequest?.vendor_id;
+    if (!targetId) return;
+    (navigation as any).navigate('Home', {
+      screen: 'QuoteRequest',
+      params: {
+        vendorId: targetId,
+        vendorName: quoteRequest?.target_name ?? initialVendorName ?? 'Vendor',
+        type: quoteRequest?.is_venue ? 'venue' : 'vendor',
+        editMode: true,
+        quoteId: quoteRequest?.original_id ?? quoteRequestId,
+        from,
+      },
+    });
+  };
+
   const sendVendorNotification = async (type: 'accept' | 'reject') => {
     try {
+      const isVenue = quoteRequest?.is_venue ?? false;
       await supabase.functions.invoke('send-quote-notifications', {
         body: {
           type: type === 'accept' ? 'quote-accepted-vendor' : 'quote-rejected-vendor',
-          quoteRequestId,
+          quoteRequestId: quoteRequest?.original_id ?? quoteRequestId,
           quoteRevisionId: revisionId,
           vendorBusinessName: vendor?.name || initialVendorName,
           vendorEmail: vendor?.email,
           quoteAmount: revision?.quote_amount || initialAmount,
           clientNotes: feedback.trim() || undefined,
+          isVenue,
         },
       });
     } catch (err) {
@@ -219,23 +272,408 @@ export default function QuoteResponseScreen() {
 
   return (
     <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-      <ScrollView style={{ flex: 1, backgroundColor: colors.background }} contentContainerStyle={{ paddingBottom: 120 }}>
-        {/* Header */}
-        <View style={{ paddingHorizontal: spacing.lg, paddingTop: spacing.sm, paddingBottom: spacing.md }}>
-          <TouchableOpacity onPress={() => navigation.goBack()} style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.md }}>
-            <MaterialIcons name="arrow-back" size={20} color={colors.textPrimary} />
-            <Text style={{ ...typography.body, color: colors.textPrimary, marginLeft: spacing.sm }}>Back</Text>
-          </TouchableOpacity>
+      <ScrollView style={{ flex: 1, backgroundColor: isDesktop ? colors.surfaceBg : colors.background }} contentContainerStyle={{ paddingBottom: isDesktop ? spacing.xl : 120 }}>
+        {isDesktop ? (
+          <View style={{ maxWidth: 1200, width: '100%', alignSelf: 'center', paddingHorizontal: 48, paddingTop: spacing.xl }}>
+            {/* Header */}
+            <Text style={{ ...typography.displayMedium, color: colors.textPrimary, marginBottom: spacing.xs }}>
+              Review Quote
+            </Text>
+            <Text style={{ ...typography.body, color: colors.textMuted, marginBottom: spacing.lg }}>
+              From: {displayVendor}
+            </Text>
 
-          <Text style={{ ...typography.displayMedium, color: colors.textPrimary, marginBottom: spacing.xs }}>
-            Review Quote
-          </Text>
-          <Text style={{ ...typography.body, color: colors.textMuted }}>
-            From: {displayVendor}
-          </Text>
-        </View>
+            <View style={{ flexDirection: 'row', gap: spacing.gutter } as any}>
+              {/* Left column - quote details (flex: 7) */}
+              <View style={{ flex: 7, gap: spacing.gutter } as any}>
+                <View
+                  style={{
+                    backgroundColor: colors.surfaceContainerLowest,
+                    borderRadius: radii.lg,
+                    padding: spacing.lg,
+                    borderWidth: 1,
+                    borderColor: colors.outlineVariant,
+                  }}
+                >
+                  {/* Amount */}
+                  <View style={{ alignItems: 'center', marginBottom: spacing.lg }}>
+                    <Text style={{ ...typography.caption, color: colors.textMuted }}>Quoted Amount</Text>
+                    <Text style={{ ...typography.displayLarge, color: colors.primary, fontWeight: '700' }}>
+                      R{displayAmount.toLocaleString()}
+                    </Text>
+                    {revision?.revision_number && revision.revision_number > 1 && (
+                      <View
+                        style={{
+                          marginTop: spacing.sm,
+                          paddingHorizontal: spacing.md,
+                          paddingVertical: spacing.xs,
+                          backgroundColor: '#FEF3C7',
+                          borderRadius: radii.full,
+                        }}
+                      >
+                        <Text style={{ ...typography.caption, color: '#92400E' }}>
+                          Revision #{revision.revision_number}
+                        </Text>
+                      </View>
+                    )}
+                  </View>
 
-        {/* Quote Card */}
+                  {/* Description */}
+                  {displayDescription && (
+                    <View style={{ marginBottom: spacing.md }}>
+                      <Text style={{ ...typography.caption, color: colors.textMuted, marginBottom: spacing.xs }}>Description</Text>
+                      <Text style={{ ...typography.body, color: colors.textPrimary }}>{displayDescription}</Text>
+                    </View>
+                  )}
+
+                  {/* Terms */}
+                  {revision?.terms && (
+                    <View style={{ marginBottom: spacing.md }}>
+                      <Text style={{ ...typography.caption, color: colors.textMuted, marginBottom: spacing.xs }}>Terms & Conditions</Text>
+                      <Text style={{ ...typography.body, color: colors.textSecondary }}>{revision.terms}</Text>
+                    </View>
+                  )}
+
+                  {/* Validity */}
+                  {revision?.validity_days && (
+                    <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: spacing.sm }}>
+                      <MaterialIcons name="schedule" size={16} color={expired ? '#DC2626' : colors.textMuted} />
+                      <Text
+                        style={{
+                          ...typography.caption,
+                          color: expired ? '#DC2626' : colors.textMuted,
+                          marginLeft: spacing.xs,
+                        }}
+                      >
+                        {expired ? 'Quote Expired' : `Valid for ${revision.validity_days} days`}
+                      </Text>
+                    </View>
+                  )}
+
+                  {/* Attachments */}
+                  {revision?.attachments && revision.attachments.length > 0 && (
+                    <View style={{ marginTop: spacing.md }}>
+                      <Text style={{ ...typography.caption, color: colors.textMuted, marginBottom: spacing.sm }}>
+                        Attachments ({revision.attachments.length})
+                      </Text>
+                      {revision.attachments.map((attachment, idx) => (
+                        <TouchableOpacity
+                          key={idx}
+                          onPress={() => {
+                            if (attachment.url) {
+                              Linking.openURL(attachment.url).catch(() => {
+                                setAlertState({ visible: true, title: 'Error', message: 'Could not open attachment', buttons: [{ text: 'OK', style: 'default', onPress: () => setAlertState(null) }] });
+                              });
+                            }
+                          }}
+                          style={{
+                            flexDirection: 'row',
+                            alignItems: 'center',
+                            padding: spacing.sm,
+                            backgroundColor: '#FEE2E2',
+                            borderRadius: radii.md,
+                            marginBottom: spacing.xs,
+                            borderLeftWidth: 3,
+                            borderLeftColor: '#DC2626',
+                          }}
+                        >
+                          <MaterialIcons name="picture-as-pdf" size={18} color="#DC2626" />
+                          <Text
+                            style={{
+                              ...typography.body,
+                              color: colors.textPrimary,
+                              marginLeft: spacing.sm,
+                              flex: 1,
+                            }}
+                            numberOfLines={1}
+                          >
+                            {attachment.name || 'Attachment'}
+                          </Text>
+                          <MaterialIcons name="open-in-new" size={16} color={colors.textMuted} />
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                  )}
+                </View>
+
+                {/* Expired Warning */}
+                {expired && (
+                  <View
+                    style={{
+                      backgroundColor: '#FEE2E2',
+                      borderRadius: radii.lg,
+                      padding: spacing.md,
+                      borderWidth: 1,
+                      borderColor: '#FCA5A5',
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                    }}
+                  >
+                    <MaterialIcons name="error" size={24} color="#DC2626" />
+                    <Text style={{ ...typography.body, color: '#DC2626', marginLeft: spacing.sm, flex: 1 }}>
+                      This quote has expired. Please contact the vendor for a revised quote.
+                    </Text>
+                  </View>
+                )}
+
+                {/* Already Responded */}
+                {revision?.status && ['accepted', 'rejected'].includes(revision.status) && (
+                  <View
+                    style={{
+                      backgroundColor: revision.status === 'accepted' ? '#DCFCE7' : '#FEE2E2',
+                      borderRadius: radii.lg,
+                      padding: spacing.lg,
+                      borderWidth: 1,
+                      borderColor: revision.status === 'accepted' ? '#86EFAC' : '#FCA5A5',
+                      alignItems: 'center',
+                    }}
+                  >
+                    <MaterialIcons
+                      name={revision.status === 'accepted' ? 'check-circle' : 'cancel'}
+                      size={48}
+                      color={revision.status === 'accepted' ? '#16A34A' : '#DC2626'}
+                    />
+                    <Text
+                      style={{
+                        ...typography.titleMedium,
+                        color: revision.status === 'accepted' ? '#16A34A' : '#DC2626',
+                        marginTop: spacing.sm,
+                      }}
+                    >
+                      Quote {revision.status === 'accepted' ? 'Accepted' : 'Rejected'}
+                    </Text>
+                    {revision.responded_at && (
+                      <Text style={{ ...typography.caption, color: colors.textMuted, marginTop: spacing.xs }}>
+                        {new Date(revision.responded_at).toLocaleDateString('en-ZA', {
+                          day: 'numeric',
+                          month: 'long',
+                          year: 'numeric',
+                        })}
+                      </Text>
+                    )}
+                    {revision.client_notes && (
+                      <View
+                        style={{
+                          marginTop: spacing.md,
+                          padding: spacing.sm,
+                          backgroundColor: 'rgba(255,255,255,0.5)',
+                          borderRadius: radii.md,
+                          width: '100%',
+                        }}
+                      >
+                        <Text style={{ ...typography.caption, color: colors.textMuted }}>Your Feedback:</Text>
+                        <Text style={{ ...typography.body, color: colors.textPrimary, marginTop: 2 }}>
+                          {revision.client_notes}
+                        </Text>
+                      </View>
+                    )}
+                  </View>
+                )}
+
+                {/* View History Button */}
+                <TouchableOpacity
+                  onPress={() => navigation.navigate('QuoteHistory', { quoteRequestId })}
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    paddingVertical: spacing.md,
+                    borderRadius: radii.md,
+                    borderWidth: 1,
+                    borderColor: colors.outlineVariant,
+                    backgroundColor: colors.surfaceContainerLowest,
+                  }}
+                >
+                  <MaterialIcons name="history" size={20} color={colors.textPrimary} />
+                  <Text style={{ ...typography.body, color: colors.textPrimary, marginLeft: spacing.sm }}>
+                    View Quote History
+                  </Text>
+                </TouchableOpacity>
+              </View>
+
+              {/* Right column - response form (flex: 5) */}
+              <View style={{ flex: 5, gap: spacing.gutter } as any}>
+                {!expired && revision?.status === 'sent' && (
+                  <View
+                    style={{
+                      backgroundColor: colors.surfaceContainerLowest,
+                      borderRadius: radii.lg,
+                      padding: spacing.lg,
+                      borderWidth: 1,
+                      borderColor: colors.outlineVariant,
+                    }}
+                  >
+                    <Text style={{ ...typography.titleMedium, color: colors.textPrimary, marginBottom: spacing.md }}>
+                      Your Response
+                    </Text>
+
+                    {/* Accept/Reject/Amend Buttons */}
+                    <View style={{ flexDirection: 'row', gap: spacing.md, marginBottom: spacing.md }}>
+                      {!rejectOnly && (
+                        <TouchableOpacity
+                          onPress={() => setResponseType('accept')}
+                          style={{
+                          flex: 1,
+                          paddingVertical: spacing.md,
+                          borderRadius: radii.md,
+                          backgroundColor: responseType === 'accept' ? '#16A34A' : '#F3F4F6',
+                          alignItems: 'center',
+                          borderWidth: 1,
+                          borderColor: responseType === 'accept' ? '#16A34A' : colors.borderSubtle,
+                        }}
+                        >
+                          <MaterialIcons
+                            name="check-circle"
+                            size={24}
+                            color={responseType === 'accept' ? '#FFFFFF' : '#16A34A'}
+                          />
+                          <Text
+                            style={{
+                              ...typography.body,
+                              color: responseType === 'accept' ? '#FFFFFF' : '#16A34A',
+                              marginTop: spacing.xs,
+                              fontWeight: '600',
+                            }}
+                          >
+                            Accept
+                          </Text>
+                        </TouchableOpacity>
+                      )}
+
+                      <TouchableOpacity
+                        onPress={() => setResponseType('reject')}
+                        style={{
+                          flex: 1,
+                          paddingVertical: spacing.md,
+                          borderRadius: radii.md,
+                          backgroundColor: responseType === 'reject' ? '#DC2626' : '#F3F4F6',
+                          alignItems: 'center',
+                          borderWidth: 1,
+                          borderColor: responseType === 'reject' ? '#DC2626' : colors.borderSubtle,
+                        }}
+                      >
+                        <MaterialIcons
+                          name="cancel"
+                          size={24}
+                          color={responseType === 'reject' ? '#FFFFFF' : '#DC2626'}
+                        />
+                        <Text
+                          style={{
+                            ...typography.body,
+                            color: responseType === 'reject' ? '#FFFFFF' : '#DC2626',
+                            marginTop: spacing.xs,
+                            fontWeight: '600',
+                          }}
+                        >
+                          Reject
+                        </Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        onPress={handleAmend}
+                        style={{
+                          flex: 1,
+                          paddingVertical: spacing.md,
+                          borderRadius: radii.md,
+                          backgroundColor: '#F3F4F6',
+                          alignItems: 'center',
+                          borderWidth: 1,
+                          borderColor: colors.borderSubtle,
+                        }}
+                      >
+                        <MaterialIcons name="edit" size={24} color={colors.primary} />
+                        <Text
+                          style={{
+                            ...typography.body,
+                            color: colors.primary,
+                            marginTop: spacing.xs,
+                            fontWeight: '600',
+                          }}
+                        >
+                          Amend
+                        </Text>
+                      </TouchableOpacity>
+                    </View>
+
+                    {/* Feedback Input */}
+                    {responseType && (
+                      <View style={{ marginTop: spacing.md }}>
+                        <Text style={{ ...typography.body, color: colors.textSecondary, marginBottom: spacing.xs }}>
+                          {responseType === 'accept'
+                            ? 'Additional Comments (Optional)'
+                            : 'Feedback for Vendor (Required)'}
+                        </Text>
+                        <ThemedInput
+                          value={feedback}
+                          onChangeText={setFeedback}
+                          placeholder={
+                            responseType === 'accept'
+                              ? 'Any special requests or notes...'
+                              : 'Why are you rejecting? What would make this work?'
+                          }
+                          multiline
+                          numberOfLines={4}
+                          style={{ minHeight: 100, textAlignVertical: 'top' }}
+                        />
+                      </View>
+                    )}
+
+                    {/* Submit Button */}
+                    {responseType && !['accepted', 'rejected'].includes(revision?.status || '') && !expired && (
+                      <View style={{ marginTop: spacing.lg }}>
+                        <PrimaryButton
+                          title={saving ? 'Submitting...' : responseType === 'accept' ? 'Confirm Acceptance' : 'Submit Rejection'}
+                          onPress={handleResponse}
+                          disabled={saving}
+                          style={{
+                            backgroundColor: responseType === 'accept' ? '#16A34A' : '#DC2626',
+                          }}
+                        />
+                      </View>
+                    )}
+                  </View>
+                )}
+
+                {expired && (
+                  <View
+                    style={{
+                      backgroundColor: colors.surfaceContainerLowest,
+                      borderRadius: radii.lg,
+                      padding: spacing.lg,
+                      borderWidth: 1,
+                      borderColor: colors.outlineVariant,
+                      alignItems: 'center',
+                    }}
+                  >
+                    <MaterialIcons name="error-outline" size={48} color="#DC2626" />
+                    <Text style={{ ...typography.titleMedium, color: '#DC2626', marginTop: spacing.sm }}>
+                      Quote Expired
+                    </Text>
+                    <Text style={{ ...typography.body, color: colors.textMuted, marginTop: spacing.xs, textAlign: 'center' }}>
+                      Please contact the vendor for a revised quote.
+                    </Text>
+                  </View>
+                )}
+              </View>
+            </View>
+          </View>
+        ) : (
+          <>
+            {/* Header */}
+            <View style={{ paddingHorizontal: spacing.lg, paddingTop: spacing.sm, paddingBottom: spacing.md }}>
+              <TouchableOpacity onPress={() => navigation.goBack()} style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.md }}>
+                <MaterialIcons name="arrow-back" size={20} color={colors.textPrimary} />
+                <Text style={{ ...typography.body, color: colors.textPrimary, marginLeft: spacing.sm }}>Back</Text>
+              </TouchableOpacity>
+
+              <Text style={{ ...typography.displayMedium, color: colors.textPrimary, marginBottom: spacing.xs }}>
+                Review Quote
+              </Text>
+              <Text style={{ ...typography.body, color: colors.textMuted }}>
+                From: {displayVendor}
+              </Text>
+            </View>
+
+            {/* Quote Card */}
         <View style={{ paddingHorizontal: spacing.lg, marginBottom: spacing.lg }}>
           <View
             style={{
@@ -300,6 +738,51 @@ export default function QuoteResponseScreen() {
                 </Text>
               </View>
             )}
+
+            {/* Attachments */}
+            {revision?.attachments && revision.attachments.length > 0 && (
+              <View style={{ marginTop: spacing.md }}>
+                <Text style={{ ...typography.caption, color: colors.textMuted, marginBottom: spacing.sm }}>
+                  Attachments ({revision.attachments.length})
+                </Text>
+                {revision.attachments.map((attachment, idx) => (
+                  <TouchableOpacity
+                    key={idx}
+                    onPress={() => {
+                      if (attachment.url) {
+                        Linking.openURL(attachment.url).catch(() => {
+                          setAlertState({ visible: true, title: 'Error', message: 'Could not open attachment', buttons: [{ text: 'OK', style: 'default', onPress: () => setAlertState(null) }] });
+                        });
+                      }
+                    }}
+                    style={{
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      padding: spacing.sm,
+                      backgroundColor: '#FEE2E2',
+                      borderRadius: radii.md,
+                      marginBottom: spacing.xs,
+                      borderLeftWidth: 3,
+                      borderLeftColor: '#DC2626',
+                    }}
+                  >
+                    <MaterialIcons name="picture-as-pdf" size={18} color="#DC2626" />
+                    <Text
+                      style={{
+                        ...typography.body,
+                        color: colors.textPrimary,
+                        marginLeft: spacing.sm,
+                        flex: 1,
+                      }}
+                      numberOfLines={1}
+                    >
+                      {attachment.name || 'Attachment'}
+                    </Text>
+                    <MaterialIcons name="open-in-new" size={16} color={colors.textMuted} />
+                  </TouchableOpacity>
+                ))}
+              </View>
+            )}
           </View>
         </View>
 
@@ -341,11 +824,12 @@ export default function QuoteResponseScreen() {
                 Your Response
               </Text>
 
-              {/* Accept/Reject Buttons */}
+              {/* Accept/Reject/Amend Buttons */}
               <View style={{ flexDirection: 'row', gap: spacing.md, marginBottom: spacing.md }}>
-                <TouchableOpacity
-                  onPress={() => setResponseType('accept')}
-                  style={{
+                {!rejectOnly && (
+                  <TouchableOpacity
+                    onPress={() => setResponseType('accept')}
+                    style={{
                     flex: 1,
                     paddingVertical: spacing.md,
                     borderRadius: radii.md,
@@ -371,6 +855,7 @@ export default function QuoteResponseScreen() {
                     Accept
                   </Text>
                 </TouchableOpacity>
+                )}
 
                 <TouchableOpacity
                   onPress={() => setResponseType('reject')}
@@ -398,6 +883,30 @@ export default function QuoteResponseScreen() {
                     }}
                   >
                     Reject
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={handleAmend}
+                  style={{
+                    flex: 1,
+                    paddingVertical: spacing.md,
+                    borderRadius: radii.md,
+                    backgroundColor: '#F3F4F6',
+                    alignItems: 'center',
+                    borderWidth: 1,
+                    borderColor: colors.borderSubtle,
+                  }}
+                >
+                  <MaterialIcons name="edit" size={24} color={colors.primary} />
+                  <Text
+                    style={{
+                      ...typography.body,
+                      color: colors.primary,
+                      marginTop: spacing.xs,
+                      fontWeight: '600',
+                    }}
+                  >
+                    Amend
                   </Text>
                 </TouchableOpacity>
               </View>
@@ -518,7 +1027,54 @@ export default function QuoteResponseScreen() {
             />
           </View>
         )}
+          </>
+        )}
       </ScrollView>
+
+      {showCelebration && (
+        <View
+          style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(255,255,255,0.95)',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 100,
+          }}
+          pointerEvents="none"
+        >
+          <View
+            style={{
+              width: 120,
+              height: 120,
+              borderRadius: 60,
+              backgroundColor: '#DCFCE7',
+              alignItems: 'center',
+              justifyContent: 'center',
+              marginBottom: spacing.md,
+            }}
+          >
+            <MaterialIcons name="celebration" size={64} color="#16A34A" />
+          </View>
+          <Text style={{ ...typography.titleMedium, color: '#16A34A' }}>Congratulations!</Text>
+          <Text style={{ ...typography.body, color: colors.textSecondary, marginTop: spacing.xs }}>
+            You have accepted this quote.
+          </Text>
+        </View>
+      )}
+
+      {alertState && (
+        <ThemedAlert
+          visible={alertState.visible}
+          title={alertState.title}
+          message={alertState.message}
+          buttons={alertState.buttons ?? [{ text: 'OK', style: 'default', onPress: () => setAlertState(null) }]}
+          onDismiss={() => setAlertState(null)}
+        />
+      )}
     </KeyboardAvoidingView>
   );
 }

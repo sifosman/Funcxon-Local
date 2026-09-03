@@ -1,14 +1,16 @@
 import { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, Linking, RefreshControl, ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Linking, Platform, RefreshControl, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import * as WebBrowser from 'expo-web-browser';
 import { colors, spacing, radii, typography } from '../theme';
-import { supabase } from '../lib/supabaseClient';
+import { supabase, SUPABASE_URL } from '../lib/supabaseClient';
 import { useAuth } from '../auth/AuthContext';
 import { buildPayFastPaymentData, getPayFastCheckoutUrl } from '../config/payfast';
 import type { ProfileStackParamList } from '../navigation/ProfileNavigator';
+import ThemedAlert from '../components/ThemedAlert';
+import { useIsDesktop } from '../hooks/useIsDesktop';
 
 type BillingInfo = {
     vendor_id: number;
@@ -57,15 +59,21 @@ type VenueBillingInfo = {
 export default function BillingScreen() {
     const navigation = useNavigation<NativeStackNavigationProp<ProfileStackParamList>>();
     const { user } = useAuth();
+    const isDesktop = useIsDesktop();
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
     const [billing, setBilling] = useState<BillingInfo | null>(null);
     const [venueBilling, setVenueBilling] = useState<VenueBillingInfo | null>(null);
     const [invoices, setInvoices] = useState<Invoice[]>([]);
     const [payingNow, setPayingNow] = useState(false);
+    const [cancelling, setCancelling] = useState(false);
+    const [alertState, setAlertState] = useState<{visible: boolean; title: string; message: string; buttons?: any[]} | null>(null);
+    const [selectedTab, setSelectedTab] = useState<'vendor' | 'venue'>('vendor');
 
     const loadBillingData = useCallback(async () => {
         if (!user?.id) return;
+        let hasVendor = false;
+        let hasVenue = false;
         try {
             // Get vendor data with subscription info
             const { data: vendorData, error: vendorError } = await supabase
@@ -87,13 +95,13 @@ export default function BillingScreen() {
                 const { data: tierData } = await supabase
                     .from('subscription_tiers')
                     .select('price_monthly, price_yearly')
-                    .eq('tier_name', vendorData.subscription_tier || 'free')
+                    .eq('tier_name', vendorData.subscription_tier || 'get_started')
                     .maybeSingle();
 
                 setBilling({
                     vendor_id: vendorData.id,
                     vendor_name: vendorData.name,
-                    subscription_tier: vendorData.subscription_tier || 'free',
+                    subscription_tier: vendorData.subscription_tier || 'get_started',
                     subscription_status: vendorData.subscription_status || 'inactive',
                     billing_period: vendorData.billing_period,
                     billing_email: vendorData.billing_email || vendorData.email,
@@ -106,6 +114,7 @@ export default function BillingScreen() {
                     price_monthly: tierData?.price_monthly ? Number(tierData.price_monthly) : null,
                     price_yearly: tierData?.price_yearly ? Number(tierData.price_yearly) : null,
                 });
+                hasVendor = true;
 
                 // Load invoices
                 const { data: invoiceData } = await supabase
@@ -142,10 +151,20 @@ export default function BillingScreen() {
                     next_payment_due: venueData.next_payment_due,
                     last_payment_at: venueData.last_payment_at,
                 });
+                hasVenue = true;
             }
         } catch (err) {
             console.error('Failed to load billing data:', err);
         } finally {
+            // Auto-select the available subscription tab.
+            // If only a venue subscription exists, default to 'venue'.
+            // If only a vendor subscription exists, default to 'vendor'.
+            // If both exist, keep the user's current selection (defaults to 'vendor').
+            if (!hasVendor && hasVenue) {
+                setSelectedTab('venue');
+            } else if (hasVendor && !hasVenue) {
+                setSelectedTab('vendor');
+            }
             setLoading(false);
             setRefreshing(false);
         }
@@ -164,9 +183,9 @@ export default function BillingScreen() {
 
     const handlePayNow = async () => {
         if (!billing) return;
-        const isFree = billing.subscription_tier === 'free';
+        const isFree = billing.subscription_tier === 'get_started';
         if (isFree) {
-            Alert.alert('Free Plan', 'Your plan is free and does not require payment. Upgrade to a paid plan for more features.');
+            setAlertState({ visible: true, title: 'Free Plan', message: 'Your plan is free and does not require payment. Upgrade to a paid plan for more features.' });
             return;
         }
 
@@ -175,13 +194,30 @@ export default function BillingScreen() {
             : billing.price_monthly;
 
         if (!price || price <= 0) {
-            Alert.alert('Error', 'Could not determine the payment amount.');
+            setAlertState({ visible: true, title: 'Error', message: 'Could not determine the payment amount.' });
             return;
         }
 
         setPayingNow(true);
         try {
             const nameParts = (billing.billing_name || billing.vendor_name || '').split(' ');
+            // On web, PayFast must redirect back to an actual https page (this web app's own
+            // origin), since browsers cannot navigate to the native-only `funxon://` custom URI
+            // scheme. On native, we route through the payfast-redirect edge function which 302s
+            // to the funxon:// deep link.
+            const webOrigin = Platform.OS === 'web' && typeof window !== 'undefined' ? window.location.origin : '';
+            const returnUrl = Platform.OS === 'web'
+                ? `${webOrigin}/payment/success`
+                : `${SUPABASE_URL}/functions/v1/payfast-redirect?type=success`;
+            const cancelUrl = Platform.OS === 'web'
+                ? `${webOrigin}/payment/cancel`
+                : `${SUPABASE_URL}/functions/v1/payfast-redirect?type=cancel`;
+            // Use the bare origin (not the full success path) as the web redirect target so that
+            // both the success AND cancel redirects (different paths) are detected by
+            // openAuthSessionAsync's URL match.
+            const paymentRedirectTarget = Platform.OS === 'web' ? webOrigin : 'funxon://payment/success';
+            const paymentCancelTarget = Platform.OS === 'web' ? cancelUrl : 'funxon://payment/cancel';
+
             const paymentData = buildPayFastPaymentData({
                 amount: price,
                 itemName: `Funxon ${billing.subscription_tier} Plan (${billing.billing_period || 'monthly'})`,
@@ -190,20 +226,78 @@ export default function BillingScreen() {
                 lastName: nameParts.slice(1).join(' ') || '',
                 email: billing.billing_email || '',
                 phone: billing.billing_phone || '',
-                returnUrl: 'https://funxon.com/payment/success',
-                cancelUrl: 'https://funxon.com/payment/cancel',
-                notifyUrl: 'https://funxon.com/api/payfast/notify',
+                returnUrl,
+                cancelUrl,
+                notifyUrl: `${SUPABASE_URL}/functions/v1/payfast-itn`,
             });
 
             const checkoutUrl = getPayFastCheckoutUrl(paymentData);
-            await WebBrowser.openBrowserAsync(checkoutUrl);
+            const result = await WebBrowser.openAuthSessionAsync(checkoutUrl, paymentRedirectTarget);
+
+            if (result.type === 'cancel' || result.type === 'dismiss') {
+                return;
+            }
+            if (result.type === 'success' && result.url?.startsWith(paymentCancelTarget)) {
+                return;
+            }
 
             // After returning, refresh billing data
             loadBillingData();
         } catch (err) {
-            Alert.alert('Payment Error', 'Could not open PayFast checkout. Please try again.');
+            setAlertState({ visible: true, title: 'Payment Error', message: 'Could not open PayFast checkout. Please try again.' });
         } finally {
             setPayingNow(false);
+        }
+    };
+
+    const handleCancelSubscription = async () => {
+        if (!user?.id) return;
+        setCancelling(true);
+        try {
+            if (billing && billing.subscription_status === 'active' && billing.subscription_tier !== 'get_started') {
+                const { error: vendorErr } = await supabase
+                    .from('vendors')
+                    .update({
+                        subscription_status: 'cancelled',
+                        subscription_tier: 'get_started',
+                        featured_listing: false,
+                        subscription_expires_at: new Date().toISOString(),
+                        next_payment_due: null,
+                    })
+                    .eq('id', billing.vendor_id);
+
+                if (vendorErr) throw vendorErr;
+            }
+
+            if (venueBilling && venueBilling.subscription_status === 'active' && venueBilling.subscription_plan_key !== 'get_started') {
+                const { error: venueErr } = await supabase
+                    .from('venues')
+                    .update({
+                        subscription_status: 'cancelled',
+                        subscription_plan_key: 'get_started',
+                        subscription_expires_at: new Date().toISOString(),
+                        next_payment_due: null,
+                    })
+                    .eq('user_id', user.id);
+
+                if (venueErr) throw venueErr;
+            }
+
+            setAlertState({
+                visible: true,
+                title: 'Subscription Cancelled',
+                message: 'Your subscription has been cancelled and your account has been downgraded to the free plan. You will retain access to free-tier features.',
+                buttons: [{ text: 'OK', style: 'default', onPress: () => { setAlertState(null); loadBillingData(); } }],
+            });
+        } catch (err) {
+            setAlertState({
+                visible: true,
+                title: 'Cancellation Failed',
+                message: 'We could not cancel your subscription right now. Please try again or contact support.',
+                buttons: [{ text: 'OK', style: 'default', onPress: () => setAlertState(null) }],
+            });
+        } finally {
+            setCancelling(false);
         }
     };
 
@@ -242,10 +336,9 @@ export default function BillingScreen() {
 
     const getTierColor = (tier: string) => {
         switch (tier.toLowerCase()) {
-            case 'free': return colors.textMuted;
-            case 'basic': return colors.primary;
+            case 'get_started': return colors.textMuted;
             case 'premium': return '#8B5CF6';
-            case 'enterprise': return '#DC2626';
+            case 'premium_plus': return '#DC2626';
             default: return colors.textPrimary;
         }
     };
@@ -284,10 +377,10 @@ export default function BillingScreen() {
     if (!billing && !venueBilling) {
         return (
             <View style={{ flex: 1, backgroundColor: colors.background }}>
-                <View style={{ paddingHorizontal: spacing.lg, paddingTop: spacing.xl }}>
+                <View style={{ paddingHorizontal: spacing.lg, paddingTop: spacing.sm }}>
                     <TouchableOpacity
                         onPress={() => navigation.goBack()}
-                        style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.lg }}
+                        style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.sm }}
                     >
                         <MaterialIcons name="arrow-back" size={20} color={colors.textPrimary} />
                         <Text style={{ ...typography.body, color: colors.textPrimary, marginLeft: spacing.sm }}>Back</Text>
@@ -306,40 +399,68 @@ export default function BillingScreen() {
         );
     }
 
-    const isFree = billing ? billing.subscription_tier === 'free' : true;
+    const isFree = billing ? billing.subscription_tier === 'get_started' : true;
     const currentPrice = billing
         ? (billing.billing_period === 'yearly' ? billing.price_yearly : billing.price_monthly)
         : null;
 
     return (
-        <View style={{ flex: 1, backgroundColor: colors.background }}>
+        <View style={{ flex: 1, backgroundColor: isDesktop ? colors.surfaceBg : colors.background }}>
             <ScrollView
                 contentContainerStyle={{ paddingBottom: spacing.xl }}
                 refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={colors.primary} />}
             >
-                {/* Header */}
-                <View style={{ paddingHorizontal: spacing.lg, paddingTop: spacing.xl, paddingBottom: spacing.md }}>
-                    <TouchableOpacity
-                        onPress={() => navigation.goBack()}
-                        style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.lg }}
-                    >
-                        <MaterialIcons name="arrow-back" size={20} color={colors.textPrimary} />
-                        <Text style={{ ...typography.body, color: colors.textPrimary, marginLeft: spacing.sm }}>Back</Text>
-                    </TouchableOpacity>
+                <View style={isDesktop ? { maxWidth: 1200, width: '100%', alignSelf: 'center', paddingHorizontal: 48, paddingTop: spacing.xl, paddingBottom: spacing.xl } : undefined}>
+                    {/* Header */}
+                    <View style={{ paddingHorizontal: isDesktop ? 0 : spacing.lg, paddingTop: spacing.sm, paddingBottom: spacing.md }}>
+                        <TouchableOpacity
+                                onPress={() => navigation.goBack()}
+                                style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.sm }}
+                            >
+                                <MaterialIcons name="arrow-back" size={20} color={colors.textPrimary} />
+                                <Text style={{ ...typography.body, color: colors.textPrimary, marginLeft: spacing.sm }}>Back</Text>
+                            </TouchableOpacity>
 
-                    <Text style={{ ...typography.displayMedium, color: colors.textPrimary, marginBottom: spacing.xs }}>
-                        Billing & Subscription
-                    </Text>
-                    <Text style={{ ...typography.body, color: colors.textMuted }}>
-                        Manage your subscription and view payment history
-                    </Text>
-                </View>
+                        <Text style={{ ...typography.displayMedium, color: colors.textPrimary, marginBottom: spacing.xs, fontSize: isDesktop ? 32 : undefined, fontWeight: isDesktop ? '600' : undefined }}>
+                            Billing & Subscription
+                        </Text>
+                        <Text style={{ ...typography.body, color: isDesktop ? colors.onSurfaceVariant : colors.textMuted, fontSize: isDesktop ? 16 : undefined, lineHeight: isDesktop ? 24 : undefined }}>
+                            Manage your subscription and view payment history
+                        </Text>
+                    </View>
+
+                    {/* Subscription type selector — only shown when user has both vendor and venue subscriptions */}
+                    {billing && venueBilling && (
+                        <View style={{ paddingHorizontal: isDesktop ? 0 : spacing.lg, marginBottom: spacing.md, flexDirection: 'row', backgroundColor: isDesktop ? colors.surfaceContainerLow : colors.surface, borderRadius: radii.lg, padding: 4, borderWidth: 1, borderColor: isDesktop ? colors.outlineVariant : colors.borderSubtle }}>
+                            {(['vendor', 'venue'] as const).map((tab) => (
+                                <TouchableOpacity
+                                    key={tab}
+                                    onPress={() => setSelectedTab(tab)}
+                                    style={{
+                                        flex: 1,
+                                        paddingVertical: spacing.sm,
+                                        borderRadius: radii.md,
+                                        alignItems: 'center',
+                                        backgroundColor: selectedTab === tab ? colors.primary : 'transparent',
+                                    }}
+                                >
+                                    <Text style={{
+                                        ...typography.bodySemiBold,
+                                        color: selectedTab === tab ? colors.surface : colors.textMuted,
+                                        textTransform: 'capitalize',
+                                    }}>
+                                        {tab}
+                                    </Text>
+                                </TouchableOpacity>
+                            ))}
+                        </View>
+                    )}
 
                 {/* Current Plan Card */}
-                {billing && (
-                <View style={{ paddingHorizontal: spacing.lg, marginBottom: spacing.md }}>
+                {billing && selectedTab === 'vendor' && (
+                <View style={{ paddingHorizontal: isDesktop ? 0 : spacing.lg, marginBottom: spacing.md }}>
                     <View style={{
-                        backgroundColor: colors.surface,
+                        backgroundColor: isDesktop ? colors.surfaceContainerLowest : colors.surface,
                         borderRadius: radii.lg,
                         padding: spacing.lg,
                         borderWidth: 2,
@@ -396,7 +517,7 @@ export default function BillingScreen() {
                                 alignItems: 'center',
                             }}
                         >
-                            <Text style={{ ...typography.body, color: colors.primary, fontWeight: '600' }}>
+                            <Text style={{ ...typography.bodySemiBold, color: colors.primary }}>
                                 {isFree ? 'Upgrade Plan' : 'Change Plan'}
                             </Text>
                         </TouchableOpacity>
@@ -405,15 +526,15 @@ export default function BillingScreen() {
                 )}
 
                 {/* Venue Subscription Card */}
-                {venueBilling && (
-                    <View style={{ paddingHorizontal: spacing.lg, marginBottom: spacing.md }}>
+                {venueBilling && selectedTab === 'venue' && (
+                    <View style={{ paddingHorizontal: isDesktop ? 0 : spacing.lg, marginBottom: spacing.md }}>
                         <View
                             style={{
-                                backgroundColor: colors.surface,
+                                backgroundColor: isDesktop ? colors.surfaceContainerLowest : colors.surface,
                                 borderRadius: radii.lg,
                                 padding: spacing.lg,
                                 borderWidth: 1,
-                                borderColor: colors.borderSubtle,
+                                borderColor: isDesktop ? colors.outlineVariant : colors.borderSubtle,
                             }}
                         >
                             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
@@ -447,24 +568,24 @@ export default function BillingScreen() {
                             <View style={{ marginTop: spacing.md }}>
                                 <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.sm }}>
                                     <Text style={{ ...typography.body, color: colors.textMuted }}>Started</Text>
-                                    <Text style={{ ...typography.body, color: colors.textPrimary, fontWeight: '500' }}>
+                                    <Text style={{ ...typography.bodyMedium, color: colors.textPrimary }}>
                                         {formatDate(venueBilling.subscription_started_at)}
                                     </Text>
                                 </View>
                                 <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.sm }}>
                                     <View>
                                         <Text style={{ ...typography.body, color: colors.textMuted }}>Expires</Text>
-                                        <Text style={{ ...typography.caption, color: getExpiryColor(venueBilling.subscription_expires_at), fontWeight: '600' }}>
+                                        <Text style={{ ...typography.captionSemiBold, color: getExpiryColor(venueBilling.subscription_expires_at) }}>
                                             {getExpiryLabel(venueBilling.subscription_expires_at)}
                                         </Text>
                                     </View>
-                                    <Text style={{ ...typography.body, color: colors.textPrimary, fontWeight: '500' }}>
+                                    <Text style={{ ...typography.bodyMedium, color: colors.textPrimary }}>
                                         {formatDate(venueBilling.subscription_expires_at)}
                                     </Text>
                                 </View>
                                 <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
                                     <Text style={{ ...typography.body, color: colors.textMuted }}>Last Payment</Text>
-                                    <Text style={{ ...typography.body, color: colors.textPrimary, fontWeight: '500' }}>
+                                    <Text style={{ ...typography.bodyMedium, color: colors.textPrimary }}>
                                         {formatDate(venueBilling.last_payment_at)}
                                     </Text>
                                 </View>
@@ -481,7 +602,7 @@ export default function BillingScreen() {
                                     alignItems: 'center',
                                 }}
                             >
-                                <Text style={{ ...typography.body, color: colors.primary, fontWeight: '600' }}>
+                                <Text style={{ ...typography.bodySemiBold, color: colors.primary }}>
                                     {venueBilling.subscription_plan_key === 'get_started' ? 'Upgrade Venue Plan' : 'View Venue Plans'}
                                 </Text>
                             </TouchableOpacity>
@@ -489,15 +610,50 @@ export default function BillingScreen() {
                     </View>
                 )}
 
+                {/* Cancel Venue Subscription Button */}
+                {venueBilling && venueBilling.subscription_status === 'active' && venueBilling.subscription_plan_key !== 'get_started' && selectedTab === 'venue' && (
+                    <View style={{ paddingHorizontal: isDesktop ? 0 : spacing.lg, marginBottom: spacing.md }}>
+                        <TouchableOpacity
+                            onPress={() => {
+                                setAlertState({
+                                    visible: true,
+                                    title: 'Cancel Venue Subscription',
+                                    message: 'Are you sure you want to cancel your venue subscription? Your plan will be downgraded to the free tier immediately.',
+                                    buttons: [
+                                        { text: 'Keep Plan', style: 'cancel', onPress: () => setAlertState(null) },
+                                        { text: 'Cancel Subscription', style: 'destructive', onPress: () => { setAlertState(null); handleCancelSubscription(); } },
+                                    ],
+                                });
+                            }}
+                            disabled={cancelling}
+                            style={{
+                                backgroundColor: 'transparent',
+                                borderRadius: radii.lg,
+                                paddingVertical: spacing.md,
+                                flexDirection: 'row',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                borderWidth: 1,
+                                borderColor: '#DC2626',
+                            }}
+                        >
+                            <MaterialIcons name="cancel" size={20} color="#DC2626" style={{ marginRight: spacing.sm }} />
+                            <Text style={{ ...typography.bodyBold, color: '#DC2626' }}>
+                                {cancelling ? 'Cancelling...' : 'Cancel Venue Subscription'}
+                            </Text>
+                        </TouchableOpacity>
+                    </View>
+                )}
+
                 {/* Expiry & Next Payment */}
-                {billing && !isFree && (
-                    <View style={{ paddingHorizontal: spacing.lg, marginBottom: spacing.md }}>
+                {billing && !isFree && selectedTab === 'vendor' && (
+                    <View style={{ paddingHorizontal: isDesktop ? 0 : spacing.lg, marginBottom: spacing.md }}>
                         <View style={{
-                            backgroundColor: colors.surface,
+                            backgroundColor: isDesktop ? colors.surfaceContainerLowest : colors.surface,
                             borderRadius: radii.lg,
                             padding: spacing.lg,
                             borderWidth: 1,
-                            borderColor: colors.borderSubtle,
+                            borderColor: isDesktop ? colors.outlineVariant : colors.borderSubtle,
                         }}>
                             <Text style={{ ...typography.titleMedium, color: colors.textPrimary, marginBottom: spacing.md }}>
                                 Subscription Details
@@ -510,10 +666,10 @@ export default function BillingScreen() {
                                     <Text style={{ ...typography.body, color: colors.textMuted }}>Expires</Text>
                                 </View>
                                 <View style={{ alignItems: 'flex-end' }}>
-                                    <Text style={{ ...typography.body, color: colors.textPrimary, fontWeight: '500' }}>
+                                    <Text style={{ ...typography.bodyMedium, color: colors.textPrimary }}>
                                         {formatDate(billing.subscription_expires_at)}
                                     </Text>
-                                    <Text style={{ ...typography.caption, color: getExpiryColor(billing.subscription_expires_at), fontWeight: '600' }}>
+                                    <Text style={{ ...typography.captionSemiBold, color: getExpiryColor(billing.subscription_expires_at) }}>
                                         {getExpiryLabel(billing.subscription_expires_at)}
                                     </Text>
                                 </View>
@@ -525,7 +681,7 @@ export default function BillingScreen() {
                                     <MaterialIcons name="payment" size={18} color={colors.textMuted} style={{ marginRight: spacing.sm }} />
                                     <Text style={{ ...typography.body, color: colors.textMuted }}>Next Payment</Text>
                                 </View>
-                                <Text style={{ ...typography.body, color: colors.textPrimary, fontWeight: '500' }}>
+                                <Text style={{ ...typography.bodyMedium, color: colors.textPrimary }}>
                                     {formatDate(billing.next_payment_due)}
                                 </Text>
                             </View>
@@ -536,7 +692,7 @@ export default function BillingScreen() {
                                     <MaterialIcons name="play-circle-outline" size={18} color={colors.textMuted} style={{ marginRight: spacing.sm }} />
                                     <Text style={{ ...typography.body, color: colors.textMuted }}>Started</Text>
                                 </View>
-                                <Text style={{ ...typography.body, color: colors.textPrimary, fontWeight: '500' }}>
+                                <Text style={{ ...typography.bodyMedium, color: colors.textPrimary }}>
                                     {formatDate(billing.subscription_started_at)}
                                 </Text>
                             </View>
@@ -547,7 +703,7 @@ export default function BillingScreen() {
                                     <MaterialIcons name="check-circle-outline" size={18} color={colors.textMuted} style={{ marginRight: spacing.sm }} />
                                     <Text style={{ ...typography.body, color: colors.textMuted }}>Last Payment</Text>
                                 </View>
-                                <Text style={{ ...typography.body, color: colors.textPrimary, fontWeight: '500' }}>
+                                <Text style={{ ...typography.bodyMedium, color: colors.textPrimary }}>
                                     {formatDate(billing.last_payment_at)}
                                 </Text>
                             </View>
@@ -556,8 +712,8 @@ export default function BillingScreen() {
                 )}
 
                 {/* Pay Now Button */}
-                {billing && !isFree && (
-                    <View style={{ paddingHorizontal: spacing.lg, marginBottom: spacing.md }}>
+                {billing && !isFree && selectedTab === 'vendor' && (
+                    <View style={{ paddingHorizontal: isDesktop ? 0 : spacing.lg, marginBottom: spacing.md }}>
                         <TouchableOpacity
                             onPress={handlePayNow}
                             disabled={payingNow}
@@ -571,7 +727,7 @@ export default function BillingScreen() {
                             }}
                         >
                             <MaterialIcons name="payment" size={20} color="#FFFFFF" style={{ marginRight: spacing.sm }} />
-                            <Text style={{ ...typography.body, color: '#FFFFFF', fontWeight: '700' }}>
+                            <Text style={{ ...typography.bodyBold, color: '#FFFFFF' }}>
                                 {payingNow ? 'Opening PayFast...' : 'Pay Now with PayFast'}
                             </Text>
                         </TouchableOpacity>
@@ -581,88 +737,187 @@ export default function BillingScreen() {
                     </View>
                 )}
 
+                {/* Cancel Subscription Button */}
+                {billing && !isFree && billing.subscription_status === 'active' && selectedTab === 'vendor' && (
+                    <View style={{ paddingHorizontal: isDesktop ? 0 : spacing.lg, marginBottom: spacing.md }}>
+                        <TouchableOpacity
+                            onPress={() => {
+                                setAlertState({
+                                    visible: true,
+                                    title: 'Cancel Subscription',
+                                    message: 'Are you sure you want to cancel your subscription? Your plan will be downgraded to the free tier immediately and premium features will be removed.',
+                                    buttons: [
+                                        { text: 'Keep Plan', style: 'cancel', onPress: () => setAlertState(null) },
+                                        { text: 'Cancel Subscription', style: 'destructive', onPress: () => { setAlertState(null); handleCancelSubscription(); } },
+                                    ],
+                                });
+                            }}
+                            disabled={cancelling}
+                            style={{
+                                backgroundColor: 'transparent',
+                                borderRadius: radii.lg,
+                                paddingVertical: spacing.md,
+                                flexDirection: 'row',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                borderWidth: 1,
+                                borderColor: '#DC2626',
+                            }}
+                        >
+                            <MaterialIcons name="cancel" size={20} color="#DC2626" style={{ marginRight: spacing.sm }} />
+                            <Text style={{ ...typography.bodyBold, color: '#DC2626' }}>
+                                {cancelling ? 'Cancelling...' : 'Cancel Subscription'}
+                            </Text>
+                        </TouchableOpacity>
+                    </View>
+                )}
+
                 {/* Invoice History */}
-                {billing && (
-                <View style={{ paddingHorizontal: spacing.lg }}>
-                    <Text style={{ ...typography.titleMedium, color: colors.textPrimary, marginBottom: spacing.md }}>
+                {billing && selectedTab === 'vendor' && (
+                <View style={{ paddingHorizontal: isDesktop ? 0 : spacing.lg }}>
+                    <Text style={{ ...typography.titleMedium, color: colors.textPrimary, marginBottom: spacing.md, fontSize: isDesktop ? 24 : undefined }}>
                         Payment History
                     </Text>
 
                     {invoices.length === 0 ? (
                         <View style={{
-                            backgroundColor: colors.surface,
+                            backgroundColor: isDesktop ? colors.surfaceContainerLowest : colors.surface,
                             borderRadius: radii.lg,
                             padding: spacing.xl,
                             borderWidth: 1,
-                            borderColor: colors.borderSubtle,
+                            borderColor: isDesktop ? colors.outlineVariant : colors.borderSubtle,
                             alignItems: 'center',
                         }}>
                             <MaterialIcons name="receipt" size={40} color={colors.textMuted} />
-                            <Text style={{ ...typography.body, color: colors.textMuted, marginTop: spacing.sm }}>
+                            <Text style={{ ...typography.body, color: colors.textMuted, marginTop: spacing.sm, fontSize: isDesktop ? 16 : undefined }}>
                                 No invoices yet
                             </Text>
-                            <Text style={{ ...typography.caption, color: colors.textMuted, marginTop: spacing.xs, textAlign: 'center' }}>
+                            <Text style={{ ...typography.caption, color: colors.textMuted, marginTop: spacing.xs, textAlign: 'center', fontSize: isDesktop ? 14 : undefined }}>
                                 Your payment history will appear here after your first payment.
                             </Text>
                         </View>
                     ) : (
-                        invoices.map((inv) => (
-                            <View
-                                key={inv.id}
-                                style={{
-                                    backgroundColor: colors.surface,
-                                    borderRadius: radii.md,
-                                    padding: spacing.md,
-                                    marginBottom: spacing.sm,
-                                    borderWidth: 1,
-                                    borderColor: colors.borderSubtle,
-                                }}
-                            >
-                                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.xs }}>
-                                    <Text style={{ ...typography.body, color: colors.textPrimary, fontWeight: '600' }}>
-                                        {inv.invoice_number}
-                                    </Text>
-                                    <View style={{
-                                        paddingHorizontal: spacing.sm,
-                                        paddingVertical: 2,
-                                        borderRadius: radii.full,
-                                        backgroundColor: getInvoiceStatusColor(inv.status) + '20',
-                                    }}>
-                                        <Text style={{
-                                            ...typography.caption,
-                                            color: getInvoiceStatusColor(inv.status),
-                                            fontWeight: '600',
-                                            textTransform: 'uppercase',
-                                            fontSize: 10,
-                                        }}>
-                                            {inv.status}
-                                        </Text>
-                                    </View>
+                        isDesktop ? (
+                            <View style={{ backgroundColor: colors.surfaceContainerLowest, borderRadius: radii.lg, borderWidth: 1, borderColor: colors.outlineVariant, overflow: 'hidden' }}>
+                                <View style={{ flexDirection: 'row', paddingHorizontal: spacing.md, paddingVertical: spacing.sm, borderBottomWidth: 1, borderBottomColor: colors.outlineVariant, backgroundColor: colors.surfaceContainerLow } as any}>
+                                    <Text style={{ flex: 2, ...typography.labelMd, color: colors.onSurfaceVariant }}>Invoice</Text>
+                                    <Text style={{ flex: 1, ...typography.labelMd, color: colors.onSurfaceVariant }}>Status</Text>
+                                    <Text style={{ flex: 1, ...typography.labelMd, color: colors.onSurfaceVariant }}>Plan</Text>
+                                    <Text style={{ flex: 1.5, ...typography.labelMd, color: colors.onSurfaceVariant }}>Period</Text>
+                                    <Text style={{ flex: 1, ...typography.labelMd, color: colors.onSurfaceVariant, textAlign: 'right' }}>Amount</Text>
                                 </View>
-                                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                                    <View>
-                                        <Text style={{ ...typography.caption, color: colors.textMuted }}>
-                                            {inv.tier_name.charAt(0).toUpperCase() + inv.tier_name.slice(1)} • {inv.billing_period}
+                                {invoices.map((inv, index) => (
+                                    <View
+                                        key={inv.id}
+                                        style={{
+                                            flexDirection: 'row',
+                                            alignItems: 'center',
+                                            paddingHorizontal: spacing.md,
+                                            paddingVertical: spacing.md,
+                                            borderBottomWidth: index < invoices.length - 1 ? 1 : 0,
+                                            borderBottomColor: colors.outlineVariant,
+                                        } as any}
+                                    >
+                                        <Text style={{ flex: 2, ...typography.bodyMd, color: colors.textPrimary }}>{inv.invoice_number}</Text>
+                                        <View style={{ flex: 1 }}>
+                                            <View style={{
+                                                paddingHorizontal: spacing.sm,
+                                                paddingVertical: 2,
+                                                borderRadius: radii.full,
+                                                backgroundColor: getInvoiceStatusColor(inv.status) + '20',
+                                                alignSelf: 'flex-start',
+                                            }}>
+                                                <Text style={{
+                                                    ...typography.labelMd,
+                                                    color: getInvoiceStatusColor(inv.status),
+                                                    textTransform: 'uppercase',
+                                                }}>
+                                                    {inv.status}
+                                                </Text>
+                                            </View>
+                                        </View>
+                                        <Text style={{ flex: 1, ...typography.bodyMd, color: colors.textPrimary }}>
+                                            {inv.tier_name.charAt(0).toUpperCase() + inv.tier_name.slice(1)}
                                         </Text>
-                                        <Text style={{ ...typography.caption, color: colors.textMuted }}>
+                                        <Text style={{ flex: 1.5, ...typography.bodyMd, color: colors.onSurfaceVariant }}>
                                             {formatDate(inv.period_start)} — {formatDate(inv.period_end)}
                                         </Text>
+                                        <Text style={{ flex: 1, ...typography.bodyMd, color: colors.textPrimary, textAlign: 'right' }}>
+                                            R{Number(inv.amount).toLocaleString()}
+                                        </Text>
                                     </View>
-                                    <Text style={{ ...typography.titleMedium, color: colors.textPrimary, fontWeight: '700' }}>
-                                        R{Number(inv.amount).toLocaleString()}
-                                    </Text>
-                                </View>
-                                {inv.payment_date && (
-                                    <Text style={{ ...typography.caption, color: colors.textMuted, marginTop: spacing.xs }}>
-                                        Paid: {formatDate(inv.payment_date)}
-                                    </Text>
-                                )}
+                                ))}
                             </View>
-                        ))
+                        ) : (
+                            invoices.map((inv) => (
+                                <View
+                                    key={inv.id}
+                                    style={{
+                                        backgroundColor: colors.surface,
+                                        borderRadius: radii.md,
+                                        padding: spacing.md,
+                                        marginBottom: spacing.sm,
+                                        borderWidth: 1,
+                                        borderColor: colors.borderSubtle,
+                                    }}
+                                >
+                                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.xs }}>
+                                        <Text style={{ ...typography.bodySemiBold, color: colors.textPrimary }}>
+                                            {inv.invoice_number}
+                                        </Text>
+                                        <View style={{
+                                            paddingHorizontal: spacing.sm,
+                                            paddingVertical: 2,
+                                            borderRadius: radii.full,
+                                            backgroundColor: getInvoiceStatusColor(inv.status) + '20',
+                                        }}>
+                                            <Text style={{
+                                                ...typography.caption,
+                                                color: getInvoiceStatusColor(inv.status),
+                                                fontWeight: '600',
+                                                textTransform: 'uppercase',
+                                                fontSize: 10,
+                                            }}>
+                                                {inv.status}
+                                            </Text>
+                                        </View>
+                                    </View>
+                                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                                        <View>
+                                            <Text style={{ ...typography.caption, color: colors.textMuted }}>
+                                                {inv.tier_name.charAt(0).toUpperCase() + inv.tier_name.slice(1)} • {inv.billing_period}
+                                            </Text>
+                                            <Text style={{ ...typography.caption, color: colors.textMuted }}>
+                                                {formatDate(inv.period_start)} — {formatDate(inv.period_end)}
+                                            </Text>
+                                        </View>
+                                        <Text style={{ ...typography.titleLarge, color: colors.textPrimary }}>
+                                            R{Number(inv.amount).toLocaleString()}
+                                        </Text>
+                                    </View>
+                                    {inv.payment_date && (
+                                        <Text style={{ ...typography.caption, color: colors.textMuted, marginTop: spacing.xs }}>
+                                            Paid: {formatDate(inv.payment_date)}
+                                        </Text>
+                                    )}
+                                </View>
+                            ))
+                        )
                     )}
                 </View>
                 )}
+                </View>
             </ScrollView>
+
+            {alertState && (
+                <ThemedAlert
+                    visible={alertState.visible}
+                    title={alertState.title}
+                    message={alertState.message}
+                    buttons={alertState.buttons ?? [{ text: 'OK', style: 'default', onPress: () => setAlertState(null) }]}
+                    onDismiss={() => setAlertState(null)}
+                />
+            )}
         </View>
     );
 }

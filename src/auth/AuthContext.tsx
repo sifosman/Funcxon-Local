@@ -1,11 +1,14 @@
-import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
-import { Platform, Alert } from 'react-native';
+import { createContext, useContext, useEffect, useState, useRef, useMemo, useCallback, ReactNode } from 'react';
+import { Platform } from 'react-native';
+import ThemedAlert from '../components/ThemedAlert';
 import type { Session } from '@supabase/supabase-js';
 import * as AuthSession from 'expo-auth-session';
 import * as WebBrowser from 'expo-web-browser';
+import * as Linking from 'expo-linking';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { GoogleSignin } from '@react-native-google-signin/google-signin';
 import { supabase, SUPABASE_URL } from '../lib/supabaseClient';
+import { ensureWelcomeNotification } from '../lib/notifications';
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -22,10 +25,11 @@ export type AuthContextValue = {
     password: string;
     data?: Record<string, any>;
     emailRedirectTo?: string;
-  }) => Promise<{ error?: Error }>;
+  }) => Promise<{ error?: Error; session?: Session }>;
   signOut: () => Promise<{ error?: Error }>;
   signInWithProvider: (provider: OAuthProvider) => Promise<{ error?: Error }>;
-  resendConfirmationEmail: (email: string) => Promise<{ error?: Error }>;
+  resendConfirmationEmail: (email: string, emailRedirectTo?: string) => Promise<{ error?: Error }>;
+  checkEmailExists: (email: string) => Promise<{ exists?: boolean; error?: Error }>;
 };
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
@@ -34,6 +38,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null | undefined>(undefined);
   const [userRole, setUserRole] = useState<'attendee' | 'vendor' | null | undefined>(undefined);
   const [isLoading, setIsLoading] = useState(true);
+  const [alertState, setAlertState] = useState<{visible: boolean; title: string; message: string} | null>(null);
+  const welcomeEmailSentFor = useRef<Set<string>>(new Set());
+  const welcomeNotifSentFor = useRef<Set<string>>(new Set());
 
   // Fetch user role from database
   const fetchUserRole = async (userId: string) => {
@@ -54,7 +61,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       if (!userError && userRow?.role) {
         const normalizedRole = String(userRow.role).toLowerCase();
-        const isVendorRole = normalizedRole === 'vendor' || normalizedRole === 'subscriber';
+        const isVendorRole = normalizedRole === 'vendor' || normalizedRole === 'subscriber' || normalizedRole === 'venue';
         console.log('[fetchUserRole] users.role =', normalizedRole, 'isVendorRole =', isVendorRole);
         if (isVendorRole) {
           setUserRole('vendor');
@@ -158,6 +165,73 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  // Send welcome email for OAuth (Google/Facebook) sign-ups.
+  // Detects new users by checking if their auth account was created within the last 5 minutes.
+  const maybeSendOAuthWelcomeEmail = async (user: Session['user']) => {
+    if (!user?.id || !user?.email) return;
+
+    // Prevent duplicate sends within the same app session
+    if (welcomeEmailSentFor.current.has(user.id)) return;
+
+    // Check if this is a newly created user (created within last 5 minutes)
+    const createdAt = user.created_at;
+    if (createdAt) {
+      const createdTime = new Date(createdAt).getTime();
+      const now = Date.now();
+      const fiveMinutes = 5 * 60 * 1000;
+      if (now - createdTime > fiveMinutes) {
+        // Not a new user, skip welcome email
+        welcomeEmailSentFor.current.add(user.id);
+        return;
+      }
+    }
+
+    // Mark as sent early to prevent concurrent duplicate calls
+    welcomeEmailSentFor.current.add(user.id);
+
+    // Determine sign-up method from app metadata
+    const provider = user.app_metadata?.provider as string | undefined;
+    const signUpMethod = provider === 'google' ? 'Google'
+      : provider === 'facebook' ? 'Facebook'
+      : provider === 'apple' ? 'Apple'
+      : provider ? provider.charAt(0).toUpperCase() + provider.slice(1)
+      : undefined;
+
+    // Get full name from user metadata
+    let fullName =
+      user.user_metadata?.full_name ||
+      user.user_metadata?.name ||
+      user.email?.split('@')[0] ||
+      'there';
+
+    // Prefer the authoritative full_name from the users table
+    try {
+      const { data: userRow } = await supabase
+        .from('users')
+        .select('full_name')
+        .eq('auth_user_id', user.id)
+        .maybeSingle();
+      if (userRow?.full_name?.trim()) {
+        fullName = userRow.full_name.trim();
+      }
+    } catch {
+      // Fall back to metadata-derived name if DB lookup fails
+    }
+
+    try {
+      const { error } = await supabase.functions.invoke('send-attendee-welcome-email', {
+        body: { email: user.email, fullName, signUpMethod },
+      });
+      if (error) {
+        console.warn('[maybeSendOAuthWelcomeEmail] Failed to send welcome email:', error);
+      } else {
+        console.log('[maybeSendOAuthWelcomeEmail] Welcome email sent for', user.email);
+      }
+    } catch (e) {
+      console.warn('[maybeSendOAuthWelcomeEmail] Exception sending welcome email:', e);
+    }
+  };
+
   useEffect(() => {
     // Configure Google Sign-In
     if (Platform.OS !== 'web') {
@@ -216,6 +290,70 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     }
 
+    // Handle deep links on native (email confirmation, magic links, OAuth redirects)
+    const handleDeepLink = async (url: string | null) => {
+      if (!url || Platform.OS === 'web') return;
+
+      console.log('[AuthContext] Deep link received:', url);
+
+      try {
+        const parsedUrl = new URL(url);
+        const hash = parsedUrl.hash;
+        const searchParams = parsedUrl.searchParams;
+
+        let access_token: string | null = null;
+        let refresh_token: string | null = null;
+        let code: string | null = null;
+
+        // Check hash fragment (implicit flow)
+        if (hash && hash.includes('access_token=')) {
+          const hashParams = new URLSearchParams(hash.substring(1));
+          access_token = hashParams.get('access_token');
+          refresh_token = hashParams.get('refresh_token');
+        }
+
+        // Check query params (implicit flow)
+        if (!access_token) {
+          access_token = searchParams.get('access_token');
+          refresh_token = searchParams.get('refresh_token');
+        }
+
+        // Check query params (PKCE flow - used by email confirmation links)
+        if (!access_token) {
+          code = searchParams.get('code');
+        }
+
+        if (access_token) {
+          console.log('[AuthContext] Setting session from deep link (implicit flow)');
+          const { error } = await supabase.auth.setSession({
+            access_token,
+            refresh_token: refresh_token || '',
+          });
+
+          if (error) {
+            console.error('[AuthContext] Failed to set session from deep link:', error);
+          } else {
+            console.log('[AuthContext] Session set from deep link');
+          }
+        } else if (code) {
+          console.log('[AuthContext] Exchanging code for session (PKCE flow)');
+          const { error } = await supabase.auth.exchangeCodeForSession(code);
+          if (error) {
+            console.error('[AuthContext] Failed to exchange code for session:', error);
+          } else {
+            console.log('[AuthContext] Session set from PKCE code exchange');
+          }
+        }
+      } catch (e) {
+        console.error('[AuthContext] Error parsing deep link:', e);
+      }
+    };
+
+    Linking.getInitialURL().then(handleDeepLink);
+    const linkingSubscription = Linking.addEventListener('url', (event) => {
+      handleDeepLink(event.url);
+    });
+
     // Get initial session
     let loadingTimeout: ReturnType<typeof setTimeout> | null = null;
 
@@ -237,6 +375,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setSession(data.session ?? null);
         if (data.session?.user) {
           await fetchUserRoleWithTimeout(data.session.user.id);
+          if (!welcomeNotifSentFor.current.has(data.session.user.id)) {
+            welcomeNotifSentFor.current.add(data.session.user.id);
+            ensureWelcomeNotification(data.session.user.id).catch(() => {});
+          }
         } else {
           setUserRole(null);
         }
@@ -257,6 +399,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (newSession?.user) {
         try {
           await fetchUserRoleWithTimeout(newSession.user.id);
+          // Send welcome email for new OAuth sign-ups (Google/Facebook/Apple)
+          maybeSendOAuthWelcomeEmail(newSession.user);
+          if (!welcomeNotifSentFor.current.has(newSession.user.id)) {
+            welcomeNotifSentFor.current.add(newSession.user.id);
+            ensureWelcomeNotification(newSession.user.id).catch(() => {});
+          }
         } catch (e) {
           console.error('[AuthContext] onAuthStateChange fetchUserRole error:', e);
         }
@@ -267,16 +415,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     return () => {
       data.subscription.unsubscribe();
+      linkingSubscription?.remove();
     };
   }, []);
 
-  const signIn: AuthContextValue['signIn'] = async ({ email, password }) => {
+  const signIn: AuthContextValue['signIn'] = useCallback(async ({ email, password }) => {
     const { error } = await supabase.auth.signInWithPassword({ email, password });
     return { error: error ?? undefined };
-  };
+  }, []);
 
-  const signUp: AuthContextValue['signUp'] = async ({ email, password, data, emailRedirectTo }) => {
-    const { error } = await supabase.auth.signUp({
+  const signUp: AuthContextValue['signUp'] = useCallback(async ({ email, password, data, emailRedirectTo }) => {
+    const { data: signUpData, error } = await supabase.auth.signUp({
       email,
       password,
       options: {
@@ -284,26 +433,45 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         emailRedirectTo,
       },
     });
-    return { error: error ?? undefined };
-  };
+    return { error: error ?? undefined, session: signUpData?.session ?? undefined };
+  }, []);
 
-  const signOut: AuthContextValue['signOut'] = async () => {
+  const signOut: AuthContextValue['signOut'] = useCallback(async () => {
     const { error } = await supabase.auth.signOut();
     return { error: error ?? undefined };
-  };
+  }, []);
 
-  const resendConfirmationEmail: AuthContextValue['resendConfirmationEmail'] = async (email) => {
+  const resendConfirmationEmail: AuthContextValue['resendConfirmationEmail'] = useCallback(async (email, emailRedirectTo) => {
     const { error } = await supabase.auth.resend({
       type: 'signup',
       email,
+      options: emailRedirectTo ? { emailRedirectTo } : undefined,
     });
     return { error: error ?? undefined };
-  };
+  }, []);
 
-  const signInWithProvider: AuthContextValue['signInWithProvider'] = async (provider) => {
+  const checkEmailExists: AuthContextValue['checkEmailExists'] = useCallback(async (email) => {
+    try {
+      const normalizedEmail = (email || '').trim().toLowerCase();
+      const { data, error } = await supabase.rpc('check_email_exists', {
+        p_email: normalizedEmail,
+      });
+
+      if (error) {
+        console.error('checkEmailExists RPC error:', error);
+        return { error: new Error(error.message || 'Unable to verify email. Please try again.') };
+      }
+
+      return { exists: !!data };
+    } catch (err) {
+      console.error('checkEmailExists unexpected error:', err);
+      return { error: err instanceof Error ? err : new Error(String(err)) };
+    }
+  }, []);
+
+  const signInWithProvider: AuthContextValue['signInWithProvider'] = useCallback(async (provider) => {
     const scopes = provider === 'facebook' ? 'email public_profile' : undefined;
 
-    Alert.alert('Debug', `Starting ${provider} sign in...`);
 
     // --- NATIVE GOOGLE SIGN-IN ---
     if (provider === 'google' && Platform.OS !== 'web') {
@@ -327,12 +495,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           
           if (error) {
             console.error('Google Sign-In: Supabase error:', error);
-            Alert.alert('Error', error.message);
+            setAlertState({ visible: true, title: 'Error', message: error.message });
             return { error };
           }
           console.log('Google Sign-In: Supabase success');
-          Alert.alert('Success', 'Signed in with Google successfully!');
-          return { error: undefined };
+                return { error: undefined };
         } else {
           console.error('Google Sign-In: No ID token found. userInfo:', JSON.stringify(userInfo, null, 2));
           return { error: new Error('No ID token present in Google Sign-In response') };
@@ -345,21 +512,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           return { error: new Error('Google sign-in was cancelled') };
         }
         if (error.code === 'DEVELOPER_ERROR') {
-          Alert.alert('Google Sign-In Error', 'Developer Error: Check your SHA-1 fingerprint and package name in Google Cloud Console. Make sure they match your Android build.');
+          setAlertState({ visible: true, title: 'Google Sign-In Error', message: 'Developer Error: Check your SHA-1 fingerprint and package name in Google Cloud Console. Make sure they match your Android build.' });
           return { error: new Error('Developer Error - Check Google Cloud Console configuration') };
         }
-        Alert.alert('Google Sign-In Error', error.message);
+        setAlertState({ visible: true, title: 'Google Sign-In Error', message: error.message });
         return { error };
       }
     }
 
     // --- WEB OAUTH FLOW (Facebook, Apple, or Web Platform) ---
     if (Platform.OS === 'web') {
-      // Get the current URL for the redirect
-      const redirectTo = typeof window !== 'undefined' 
+      // Use the web URL as the OAuth callback. This URL must be added to
+      // Supabase Auth > URL Configuration > Redirect URLs, otherwise Supabase
+      // falls back to the provider's default redirect URI (e.g. vibeventz://...).
+      const redirectTo = typeof window !== 'undefined'
         ? `${window.location.origin}/auth/callback`
         : undefined;
-      
+
+      console.log('[AuthContext] Web OAuth redirectTo:', redirectTo);
+
       const { error } = await supabase.auth.signInWithOAuth({
         provider,
         options: {
@@ -377,13 +548,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // Google Web OAuth clients don't accept custom URI schemes like funxon://
     const redirectUrl = 'https://auth.expo.io/@sifosman/funxon/auth/callback';
 
-    Alert.alert('Debug', `Redirect URL: ${redirectUrl}`);
     console.log('AuthContext signInWithProvider (native) redirectUrl:', redirectUrl);
     
     // Debug: Check AsyncStorage before OAuth
     const keysBefore = await AsyncStorage.getAllKeys();
     console.log('AuthContext: AsyncStorage keys before OAuth:', keysBefore.filter((k: string) => k.includes('supabase')));
-    Alert.alert('Debug', `Storage keys before: ${keysBefore.filter(k => k.includes('supabase')).length}`);
 
     const { data, error } = await supabase.auth.signInWithOAuth({
       provider,
@@ -398,15 +567,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       hasDataUrl: !!data?.url,
       error,
     });
-    Alert.alert('Debug', `Got OAuth URL: ${!!data?.url}`);
 
     if (error) {
-      Alert.alert('Error', `OAuth error: ${error.message}`);
+      setAlertState({ visible: true, title: 'Error', message: `OAuth error: ${error.message}` });
       return { error: error ?? undefined };
     }
 
     if (!data?.url) {
-      Alert.alert('Error', 'No OAuth URL returned from Supabase');
+      setAlertState({ visible: true, title: 'Error', message: 'No OAuth URL returned from Supabase' });
       return { error: new Error('No OAuth URL returned from Supabase') };
     }
 
@@ -414,20 +582,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const result = await WebBrowser.openAuthSessionAsync(data.url, redirectUrl);
 
       console.log('AuthContext signInWithProvider (native) WebBrowser result type:', result.type);
-      Alert.alert('Debug', `WebBrowser result: ${result.type}`);
-
+  
       if (result.type === 'cancel' || result.type === 'dismiss') {
         return { error: new Error(`${provider} sign-in was cancelled`) };
       }
 
       if (result.type === 'success' && result.url) {
         console.log('AuthContext: Full redirect URL:', result.url);
-        Alert.alert('Debug', `Success! URL: ${result.url.substring(0, 100)}...`);
         
         // Debug: Check AsyncStorage after OAuth
         const keysAfter = await AsyncStorage.getAllKeys();
         console.log('AuthContext: AsyncStorage keys after OAuth:', keysAfter.filter((k: string) => k.includes('supabase')));
-        Alert.alert('Debug', `Storage keys after: ${keysAfter.filter(k => k.includes('supabase')).length}`);
         
         // Parse the URL to extract the auth code
         // Handle both standard URLs and deep links (funxon://)
@@ -454,7 +619,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           console.log('AuthContext: code present:', !!code);
           console.log('AuthContext: error param:', errorParam);
           console.log('AuthContext: error_description:', errorDescription);
-          Alert.alert('Debug', `Parsed URL - Code: ${!!code}, Error: ${errorParam}`);
         } catch (e) {
           console.log('AuthContext: URL parsing failed, using regex fallback');
           // Fallback for deep link URLs that might not parse correctly
@@ -490,70 +654,78 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           }
           
           console.log('AuthContext: Extracted via regex - code:', !!code, 'error:', errorParam);
-          Alert.alert('Debug', `Regex fallback - Code: ${!!code}, Error: ${errorParam}`);
         }
         
         if (errorParam) {
           console.error('AuthContext: OAuth error:', errorParam, errorDescription);
-          Alert.alert('OAuth Error', `${errorParam}${errorDescription ? ` - ${errorDescription}` : ''}`);
+          setAlertState({ visible: true, title: 'OAuth Error', message: `${errorParam}${errorDescription ? ` - ${errorDescription}` : ''}` });
           return { error: new Error(`OAuth error: ${errorParam}${errorDescription ? ` - ${errorDescription}` : ''}`) };
         }
         
         if (!code) {
           console.error('AuthContext: No auth code found in redirect URL');
           console.error('AuthContext: Redirect URL was:', result.url);
-          Alert.alert('Debug', `No code in URL: ${result.url.substring(0, 50)}...`);
           
           // Check if session was already established by the auth state listener
           // This can happen if Supabase processed the OAuth via deep link before we got here
           const { data: sessionData } = await supabase.auth.getSession();
           if (sessionData.session) {
             console.log('AuthContext: Session already exists, OAuth succeeded');
-            Alert.alert('Success', 'Signed in successfully!');
             return { error: undefined };
           }
           
-          Alert.alert('Error', 'No auth code found in redirect URL');
+          setAlertState({ visible: true, title: 'Error', message: 'No auth code found in redirect URL' });
           return { error: new Error('No auth code found in redirect URL') };
         }
         
         console.log('AuthContext: Calling exchangeCodeForSession...');
-        Alert.alert('Debug', 'Exchanging code for session...');
         const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
         if (exchangeError) {
           console.error('AuthContext: exchangeCodeForSession error:', exchangeError);
-          Alert.alert('Exchange Error', exchangeError.message);
+          setAlertState({ visible: true, title: 'Exchange Error', message: exchangeError.message });
           return { error: exchangeError ?? undefined };
         }
         console.log('AuthContext: exchangeCodeForSession succeeded');
-        Alert.alert('Success', 'OAuth completed successfully!');
       }
     } catch (err: any) {
       console.log('AuthContext signInWithProvider (native) WebBrowser threw:', err);
-      Alert.alert('Exception', err.message);
+      setAlertState({ visible: true, title: 'Exception', message: err.message });
       return { error: err instanceof Error ? err : new Error(String(err)) };
     }
 
     // On success, Supabase will update the session via onAuthStateChange
     // if the OAuth flow completed successfully.
     return { error: undefined };
-  };
+  }, []); // useCallback for signInWithProvider
+
+  const contextValue = useMemo<AuthContextValue>(
+    () => ({
+      session,
+      user: session?.user,
+      userRole,
+      isLoading,
+      signIn,
+      signUp,
+      signOut,
+      signInWithProvider,
+      resendConfirmationEmail,
+      checkEmailExists,
+    }),
+    [session, userRole, isLoading, signIn, signUp, signOut, signInWithProvider, resendConfirmationEmail, checkEmailExists],
+  );
 
   return (
-    <AuthContext.Provider
-      value={{
-        session,
-        user: session?.user,
-        userRole,
-        isLoading,
-        signIn,
-        signUp,
-        signOut,
-        signInWithProvider,
-        resendConfirmationEmail,
-      }}
-    >
+    <AuthContext.Provider value={contextValue}>
       {children}
+      {alertState && (
+        <ThemedAlert
+          visible={alertState.visible}
+          title={alertState.title}
+          message={alertState.message}
+          buttons={[{ text: 'OK', style: 'default', onPress: () => setAlertState(null) }]}
+          onDismiss={() => setAlertState(null)}
+        />
+      )}
     </AuthContext.Provider>
   );
 }

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, TextInput, Alert } from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView, TextInput, KeyboardAvoidingView, Platform } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -8,8 +8,11 @@ import { useApplicationForm } from '../../context/ApplicationFormContext';
 import { validateStep2 } from '../../utils/formValidation';
 import { ApplicationProgress } from '../../components/ApplicationProgress';
 import { serviceCategories, specialServiceFeatures } from '../../config/serviceProfessionals';
+import { vendorTagGroups } from '../../config/vendorTags';
 import { venueTypes, amenitiesList, venueCapacityOptions, eventTypes } from '../../config/venueTypes';
 import { provinces, getCitiesByProvince } from '../../config/locations';
+import ThemedAlert from '../../components/ThemedAlert';
+import { useIsDesktop } from '../../hooks/useIsDesktop';
 
 type ProfileStackParamList = {
   ApplicationStep1: undefined;
@@ -21,8 +24,15 @@ export default function ApplicationStep2Screen() {
   const navigation = useNavigation<NativeStackNavigationProp<ProfileStackParamList>>();
   const { state, updateStep2 } = useApplicationForm();
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [alertState, setAlertState] = useState<{visible: boolean; title: string; message: string; buttons?: any[]} | null>(null);
+  const [customAmenityInput, setCustomAmenityInput] = useState('');
+  const [customFeatureInput, setCustomFeatureInput] = useState('');
+  const [expandedTagGroups, setExpandedTagGroups] = useState<string[]>([]);
+  const isDesktop = useIsDesktop();
   const isVenues = state.portfolioType === 'venues';
   const isVendors = state.portfolioType === 'vendors';
+  const cardSurface = isDesktop ? colors.surfaceContainerLowest : colors.surface;
+  const cardBorder = isDesktop ? colors.outlineVariant : colors.borderSubtle;
 
   // Debug logging
   console.log('ApplicationStep2Screen - portfolioType:', state.portfolioType);
@@ -47,8 +57,8 @@ export default function ApplicationStep2Screen() {
           paddingHorizontal: spacing.md,
           borderRadius: radii.lg,
           borderWidth: 1,
-          borderColor: colors.borderSubtle,
-          backgroundColor: colors.surface,
+          borderColor: cardBorder,
+          backgroundColor: cardSurface,
           marginBottom: spacing.sm,
         }}
       >
@@ -58,8 +68,8 @@ export default function ApplicationStep2Screen() {
             height: 22,
             borderRadius: 5,
             borderWidth: 1,
-            borderColor: opts.isSelected ? colors.textPrimary : colors.borderStrong,
-            backgroundColor: opts.isSelected ? colors.textPrimary : colors.surface,
+            borderColor: opts.isSelected ? colors.cta : colors.borderStrong,
+            backgroundColor: opts.isSelected ? colors.cta : cardSurface,
             alignItems: 'center',
             justifyContent: 'center',
             marginRight: spacing.md,
@@ -67,7 +77,7 @@ export default function ApplicationStep2Screen() {
         >
           {opts.isSelected && <MaterialIcons name="check" size={16} color="#FFFFFF" />}
         </View>
-        <Text style={{ ...typography.body, color: colors.textPrimary, fontWeight: '500' }}>{opts.label}</Text>
+        <Text style={{ ...typography.bodyMedium, color: colors.textPrimary }}>{opts.label}</Text>
       </TouchableOpacity>
     );
   };
@@ -91,8 +101,8 @@ export default function ApplicationStep2Screen() {
           paddingHorizontal: spacing.md,
           borderRadius: radii.lg,
           borderWidth: 1,
-          borderColor: colors.borderSubtle,
-          backgroundColor: colors.surface,
+          borderColor: cardBorder,
+          backgroundColor: cardSurface,
           marginBottom: spacing.sm,
         }}
       >
@@ -102,8 +112,8 @@ export default function ApplicationStep2Screen() {
             height: 22,
             borderRadius: 5,
             borderWidth: 1,
-            borderColor: opts.isSelected ? colors.textPrimary : colors.borderStrong,
-            backgroundColor: opts.isSelected ? colors.textPrimary : colors.surface,
+            borderColor: opts.isSelected ? colors.cta : colors.borderStrong,
+            backgroundColor: opts.isSelected ? colors.cta : cardSurface,
             alignItems: 'center',
             justifyContent: 'center',
             marginRight: spacing.md,
@@ -113,9 +123,8 @@ export default function ApplicationStep2Screen() {
         </View>
         <Text
           style={{
-            ...typography.body,
+            ...typography.bodyMedium,
             color: colors.textPrimary,
-            fontWeight: '500',
             flex: 1,
           }}
         >
@@ -140,6 +149,37 @@ export default function ApplicationStep2Screen() {
     updateStep2({ [field]: newArray });
   };
 
+  const toggleTagGroupExpanded = (groupId: string) => {
+    setExpandedTagGroups((prev) =>
+      prev.includes(groupId) ? prev.filter((id) => id !== groupId) : [...prev, groupId]
+    );
+  };
+
+  const addCustomAmenity = () => {
+    const trimmed = customAmenityInput.trim();
+    if (!trimmed) return;
+    if (state.step2.amenities.includes(trimmed)) {
+      setCustomAmenityInput('');
+      return;
+    }
+    updateStep2({ amenities: [...state.step2.amenities, trimmed] });
+    setCustomAmenityInput('');
+  };
+
+  const addCustomFeature = () => {
+    const trimmed = customFeatureInput.trim();
+    if (!trimmed) return;
+    if (state.step2.specialFeatures.includes(trimmed)) {
+      setCustomFeatureInput('');
+      return;
+    }
+    updateStep2({ specialFeatures: [...state.step2.specialFeatures, trimmed] });
+    setCustomFeatureInput('');
+  };
+
+  const customAmenities = state.step2.amenities.filter((a) => !amenitiesList.includes(a));
+  const customFeatures = state.step2.specialFeatures.filter((f) => !specialServiceFeatures.includes(f));
+
   const toggleProvince = (provinceName: string) => {
     const currentProvinces = state.step2.provinces;
     if (currentProvinces.includes(provinceName)) {
@@ -156,61 +196,101 @@ export default function ApplicationStep2Screen() {
     return state.step2.provinces.flatMap((prov) => getCitiesByProvince(prov));
   };
 
+  const allProvincesSelected = provinces.every((p) => state.step2.provinces.includes(p.name));
+  const allCitiesSelected = getAvailableCities().length > 0 && getAvailableCities().every((c) => state.step2.cities.includes(c));
+
+  const selectAllProvinces = () => {
+    if (allProvincesSelected) {
+      updateStep2({ provinces: [], cities: [] });
+    } else {
+      const allProvinceNames = provinces.map((p) => p.name);
+      const allCities = provinces.flatMap((p) => p.cities);
+      updateStep2({ provinces: allProvinceNames, cities: allCities });
+    }
+  };
+
+  const selectAllCities = () => {
+    const availableCities = getAvailableCities();
+    if (availableCities.length === 0) return;
+    if (allCitiesSelected) {
+      updateStep2({ cities: [] });
+    } else {
+      updateStep2({ cities: availableCities });
+    }
+  };
+
   const handleNext = () => {
     const validation = validateStep2(state.step2, state.portfolioType);
 
     if (!validation.isValid) {
       setErrors(validation.errors);
-      Alert.alert('Validation Error', 'Please fix the errors before continuing');
+      setAlertState({ visible: true, title: 'Validation Error', message: 'Please fix the errors before continuing', buttons: [{ text: 'OK', style: 'default', onPress: () => setAlertState(null) }] });
       return;
     }
 
     navigation.navigate('ApplicationStep3');
   };
 
-  return (
-    <View style={{ flex: 1, backgroundColor: colors.background }}>
-      <ScrollView contentContainerStyle={{ paddingBottom: spacing.xl }}>
-        <View style={{ paddingHorizontal: spacing.lg, paddingTop: spacing.xl }}>
-          <TouchableOpacity
-            onPress={() => navigation.goBack()}
-            style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.lg }}
-          >
-            <MaterialIcons name="arrow-back" size={20} color={colors.textPrimary} />
-            <Text style={{ ...typography.body, color: colors.textPrimary, marginLeft: spacing.sm }}>
-              Back
-            </Text>
-          </TouchableOpacity>
+  const desktopContainerStyle = {
+    maxWidth: 1200,
+    width: '100%',
+    alignSelf: 'center' as const,
+    paddingHorizontal: 48,
+    paddingBottom: spacing.xxl * 6,
+  };
 
-          <View style={{ marginBottom: spacing.lg }}>
+  return (
+    <KeyboardAvoidingView
+      style={{ flex: 1, backgroundColor: isDesktop ? colors.surfaceBg : colors.background }}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? spacing.lg : 0}
+    >
+      <ScrollView
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
+        contentContainerStyle={isDesktop ? { ...desktopContainerStyle } as any : { paddingBottom: spacing.xxl * 6 }}
+      >
+        <View style={{ paddingHorizontal: isDesktop ? 0 : spacing.lg, paddingTop: spacing.sm }}>
+          <TouchableOpacity
+              onPress={() => navigation.goBack()}
+              style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.sm }}
+            >
+              <MaterialIcons name="arrow-back" size={20} color={colors.textPrimary} />
+              <Text style={{ ...typography.body, color: colors.textPrimary, marginLeft: spacing.sm }}>
+                Back
+              </Text>
+            </TouchableOpacity>
+
+          <View style={{ marginBottom: spacing.lg, maxWidth: isDesktop ? 800 : undefined, width: isDesktop ? '100%' : undefined, alignSelf: isDesktop ? 'center' as const : undefined }}>
             <View style={{ marginBottom: spacing.md, alignSelf: 'flex-start' }}>
               <ApplicationProgress currentStep={2} />
             </View>
             <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: spacing.md }}>
               <MaterialIcons name="category" size={32} color={colors.textPrimary} />
               <View style={{ flex: 1 }}>
-                <Text style={{ ...typography.titleMedium, color: colors.textPrimary }}>
+                <Text style={isDesktop ? { ...typography.headlineMd, color: colors.primary } as any : { ...typography.titleMedium, color: colors.textPrimary }}>
                   {isVenues ? 'Venue Details' : 'Service Category & Coverage'}
                 </Text>
-                <Text style={{ ...typography.caption, color: colors.textMuted }}>
+                <Text style={isDesktop ? { ...typography.bodyMd, color: colors.onSurfaceVariant } as any : { ...typography.caption, color: colors.textMuted }}>
                   Page 2 of 4
                 </Text>
               </View>
             </View>
           </View>
 
+          <View style={{ maxWidth: isDesktop ? 800 : undefined, width: isDesktop ? '100%' : undefined, alignSelf: isDesktop ? 'center' as const : undefined }}>
           {/* Venue-specific sections */}
           {isVenues && (
             <>
               {/* Venue Type */}
               <View
                 style={{
-                  backgroundColor: colors.surface,
+                  backgroundColor: cardSurface,
                   borderRadius: radii.lg,
                   padding: spacing.lg,
                   marginBottom: spacing.lg,
                   borderWidth: 1,
-                  borderColor: colors.borderSubtle,
+                  borderColor: cardBorder,
                   shadowColor: '#000',
                   shadowOpacity: 0.05,
                   shadowRadius: 8,
@@ -233,7 +313,7 @@ export default function ApplicationStep2Screen() {
                   }),
                 )}
                 {errors.venueType && (
-                  <Text style={{ fontSize: 12, color: '#EF4444', marginTop: spacing.xs }}>
+                  <Text style={{ ...typography.caption, fontSize: 12, color: '#EF4444', marginTop: spacing.xs }}>
                     {errors.venueType}
                   </Text>
                 )}
@@ -242,12 +322,12 @@ export default function ApplicationStep2Screen() {
               {/* Venue Capacity */}
               <View
                 style={{
-                  backgroundColor: colors.surface,
+                  backgroundColor: cardSurface,
                   borderRadius: radii.lg,
                   padding: spacing.lg,
                   marginBottom: spacing.lg,
                   borderWidth: 1,
-                  borderColor: colors.borderSubtle,
+                  borderColor: cardBorder,
                   shadowColor: '#000',
                   shadowOpacity: 0.05,
                   shadowRadius: 8,
@@ -269,12 +349,12 @@ export default function ApplicationStep2Screen() {
                           paddingHorizontal: spacing.md,
                           paddingVertical: spacing.sm,
                           borderRadius: radii.full,
-                          backgroundColor: isSelected ? colors.textPrimary : colors.surface,
+                          backgroundColor: isSelected ? colors.cta : cardSurface,
                           borderWidth: 1,
-                          borderColor: isSelected ? colors.textPrimary : colors.borderSubtle,
+                          borderColor: isSelected ? colors.cta : cardBorder,
                         }}
                       >
-                        <Text style={{ color: isSelected ? '#FFFFFF' : colors.textPrimary, fontSize: 13 }}>
+                        <Text style={{ ...typography.body, color: isSelected ? '#FFFFFF' : colors.textPrimary, fontSize: 13 }}>
                           {capacity}
                         </Text>
                       </TouchableOpacity>
@@ -282,7 +362,7 @@ export default function ApplicationStep2Screen() {
                   })}
                 </View>
                 {errors.venueCapacity && (
-                  <Text style={{ fontSize: 12, color: '#EF4444', marginTop: spacing.xs }}>
+                  <Text style={{ ...typography.caption, fontSize: 12, color: '#EF4444', marginTop: spacing.xs }}>
                     {errors.venueCapacity}
                   </Text>
                 )}
@@ -291,12 +371,12 @@ export default function ApplicationStep2Screen() {
               {/* Amenities */}
               <View
                 style={{
-                  backgroundColor: colors.surface,
+                  backgroundColor: cardSurface,
                   borderRadius: radii.lg,
                   padding: spacing.lg,
                   marginBottom: spacing.lg,
                   borderWidth: 1,
-                  borderColor: colors.borderSubtle,
+                  borderColor: cardBorder,
                   shadowColor: '#000',
                   shadowOpacity: 0.05,
                   shadowRadius: 8,
@@ -318,17 +398,80 @@ export default function ApplicationStep2Screen() {
                     onPress: () => toggleArrayItem('amenities', amenity),
                   }),
                 )}
+
+                {customAmenities.length > 0 && (
+                  <View style={{ marginTop: spacing.sm, marginBottom: spacing.md }}>
+                    <Text style={{ ...typography.caption, color: colors.textMuted, marginBottom: spacing.xs }}>
+                      Your custom amenities:
+                    </Text>
+                    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm }}>
+                      {customAmenities.map((item) => (
+                        <TouchableOpacity
+                          key={item}
+                          onPress={() => toggleArrayItem('amenities', item)}
+                          style={{
+                            flexDirection: 'row',
+                            alignItems: 'center',
+                            paddingHorizontal: spacing.md,
+                            paddingVertical: spacing.sm,
+                            borderRadius: radii.full,
+                            backgroundColor: colors.cta,
+                          }}
+                        >
+                          <Text style={{ ...typography.body, color: '#FFFFFF', fontSize: 13, marginRight: spacing.xs }}>
+                            {item}
+                          </Text>
+                          <MaterialIcons name="close" size={16} color="#FFFFFF" />
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                  </View>
+                )}
+
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginTop: spacing.sm }}>
+                  <TextInput
+                    placeholder="Add your own amenity..."
+                    value={customAmenityInput}
+                    onChangeText={setCustomAmenityInput}
+                    onSubmitEditing={addCustomAmenity}
+                    returnKeyType="done"
+                    style={{
+                      flex: 1,
+                      borderWidth: 1,
+                      borderColor: cardBorder,
+                      borderRadius: radii.md,
+                      paddingHorizontal: spacing.md,
+                      paddingVertical: spacing.sm,
+                      backgroundColor: cardSurface,
+                      fontSize: 14,
+                      color: colors.textPrimary,
+                      fontFamily: typography.body.fontFamily,
+                    }}
+                  />
+                  <TouchableOpacity
+                    onPress={addCustomAmenity}
+                    disabled={!customAmenityInput.trim()}
+                    style={{
+                      paddingHorizontal: spacing.md,
+                      paddingVertical: spacing.sm,
+                      borderRadius: radii.md,
+                      backgroundColor: customAmenityInput.trim() ? colors.cta : colors.textMuted,
+                    }}
+                  >
+                    <Text style={{ ...typography.bodySemiBold, color: '#FFFFFF' }}>Add</Text>
+                  </TouchableOpacity>
+                </View>
               </View>
 
               {/* Event Types */}
               <View
                 style={{
-                  backgroundColor: colors.surface,
+                  backgroundColor: cardSurface,
                   borderRadius: radii.lg,
                   padding: spacing.lg,
                   marginBottom: spacing.lg,
                   borderWidth: 1,
-                  borderColor: colors.borderSubtle,
+                  borderColor: cardBorder,
                   shadowColor: '#000',
                   shadowOpacity: 0.05,
                   shadowRadius: 8,
@@ -351,7 +494,7 @@ export default function ApplicationStep2Screen() {
                   }),
                 )}
                 {errors.eventTypes && (
-                  <Text style={{ fontSize: 12, color: '#EF4444', marginTop: spacing.xs }}>
+                  <Text style={{ ...typography.caption, fontSize: 12, color: '#EF4444', marginTop: spacing.xs }}>
                     {errors.eventTypes}
                   </Text>
                 )}
@@ -360,12 +503,12 @@ export default function ApplicationStep2Screen() {
               {/* Awards / Nominations */}
               <View
                 style={{
-                  backgroundColor: colors.surface,
+                  backgroundColor: cardSurface,
                   borderRadius: radii.lg,
                   padding: spacing.lg,
                   marginBottom: spacing.lg,
                   borderWidth: 1,
-                  borderColor: colors.borderSubtle,
+                  borderColor: cardBorder,
                   shadowColor: '#000',
                   shadowOpacity: 0.05,
                   shadowRadius: 8,
@@ -387,15 +530,16 @@ export default function ApplicationStep2Screen() {
                   numberOfLines={4}
                   style={{
                     borderWidth: 1,
-                    borderColor: colors.borderSubtle,
+                    borderColor: cardBorder,
                     borderRadius: radii.md,
                     paddingHorizontal: spacing.md,
                     paddingVertical: spacing.sm,
-                    backgroundColor: colors.surface,
+                    backgroundColor: cardSurface,
                     fontSize: 14,
                     color: colors.textPrimary,
                     textAlignVertical: 'top',
                     minHeight: 110,
+                    fontFamily: typography.body.fontFamily,
                   }}
                 />
               </View>
@@ -403,12 +547,12 @@ export default function ApplicationStep2Screen() {
               {/* Number of Halls on Property */}
               <View
                 style={{
-                  backgroundColor: colors.surface,
+                  backgroundColor: cardSurface,
                   borderRadius: radii.lg,
                   padding: spacing.lg,
                   marginBottom: spacing.lg,
                   borderWidth: 1,
-                  borderColor: colors.borderSubtle,
+                  borderColor: cardBorder,
                   shadowColor: '#000',
                   shadowOpacity: 0.05,
                   shadowRadius: 8,
@@ -423,6 +567,11 @@ export default function ApplicationStep2Screen() {
                   Add details for each hall/space at your venue (up to 5)
                 </Text>
 
+                {errors.halls && (
+                  <Text style={{ ...typography.caption, fontSize: 12, color: '#EF4444', marginBottom: spacing.md }}>
+                    {errors.halls}
+                  </Text>
+                )}
                 {Array.from({ length: 5 }, (_, idx) => {
                   const hall = state.step2.halls?.[idx] ?? { name: '', capacity: '' };
                   const hallNumber = idx + 1;
@@ -431,16 +580,16 @@ export default function ApplicationStep2Screen() {
                       key={`hall-${hallNumber}`}
                       style={{
                         borderWidth: 1,
-                        borderColor: colors.borderSubtle,
+                        borderColor: cardBorder,
                         borderRadius: radii.lg,
                         padding: spacing.md,
                         marginBottom: spacing.md,
-                        backgroundColor: colors.surface,
+                        backgroundColor: cardSurface,
                       }}
                     >
                       <View style={{ flexDirection: 'row', gap: spacing.md }}>
                         <View style={{ flex: 1 }}>
-                          <Text style={{ ...typography.body, fontWeight: '600', color: colors.textPrimary, marginBottom: spacing.xs }}>
+                          <Text style={{ ...typography.bodySemiBold, color: colors.textPrimary, marginBottom: spacing.xs }}>
                             Hall {hallNumber} Name
                           </Text>
                           <TextInput
@@ -449,19 +598,20 @@ export default function ApplicationStep2Screen() {
                             onChangeText={(value) => updateHall(idx, { name: value })}
                             style={{
                               borderWidth: 1,
-                              borderColor: colors.borderSubtle,
+                              borderColor: cardBorder,
                               borderRadius: radii.md,
                               paddingHorizontal: spacing.md,
                               paddingVertical: spacing.sm,
-                              backgroundColor: colors.surface,
+                              backgroundColor: cardSurface,
                               fontSize: 14,
                               color: colors.textPrimary,
+                              fontFamily: typography.body.fontFamily,
                             }}
                           />
                         </View>
 
                         <View style={{ flex: 1 }}>
-                          <Text style={{ ...typography.body, fontWeight: '600', color: colors.textPrimary, marginBottom: spacing.xs }}>
+                          <Text style={{ ...typography.bodySemiBold, color: colors.textPrimary, marginBottom: spacing.xs }}>
                             Hall {hallNumber} Capacity
                           </Text>
                           <TextInput
@@ -470,13 +620,14 @@ export default function ApplicationStep2Screen() {
                             onChangeText={(value) => updateHall(idx, { capacity: value })}
                             style={{
                               borderWidth: 1,
-                              borderColor: colors.borderSubtle,
+                              borderColor: cardBorder,
                               borderRadius: radii.md,
                               paddingHorizontal: spacing.md,
                               paddingVertical: spacing.sm,
-                              backgroundColor: colors.surface,
+                              backgroundColor: cardSurface,
                               fontSize: 14,
                               color: colors.textPrimary,
+                              fontFamily: typography.body.fontFamily,
                             }}
                           />
                         </View>
@@ -489,12 +640,12 @@ export default function ApplicationStep2Screen() {
               {/* Venue Payment Terms & Conditions */}
               <View
                 style={{
-                  backgroundColor: colors.surface,
+                  backgroundColor: cardSurface,
                   borderRadius: radii.lg,
                   padding: spacing.lg,
                   marginBottom: spacing.lg,
                   borderWidth: 1,
-                  borderColor: colors.borderSubtle,
+                  borderColor: cardBorder,
                   shadowColor: '#000',
                   shadowOpacity: 0.05,
                   shadowRadius: 8,
@@ -516,15 +667,16 @@ export default function ApplicationStep2Screen() {
                   numberOfLines={4}
                   style={{
                     borderWidth: 1,
-                    borderColor: colors.borderSubtle,
+                    borderColor: cardBorder,
                     borderRadius: radii.md,
                     paddingHorizontal: spacing.md,
                     paddingVertical: spacing.sm,
-                    backgroundColor: colors.surface,
+                    backgroundColor: cardSurface,
                     fontSize: 14,
                     color: colors.textPrimary,
                     textAlignVertical: 'top',
                     minHeight: 110,
+                    fontFamily: typography.body.fontFamily,
                   }}
                 />
               </View>
@@ -537,12 +689,12 @@ export default function ApplicationStep2Screen() {
               {/* Service Categories */}
               <View
                 style={{
-                  backgroundColor: colors.surface,
+                  backgroundColor: cardSurface,
                   borderRadius: radii.lg,
                   padding: spacing.lg,
                   marginBottom: spacing.lg,
                   borderWidth: 1,
-                  borderColor: colors.borderSubtle,
+                  borderColor: cardBorder,
                   shadowColor: '#000',
                   shadowOpacity: 0.05,
                   shadowRadius: 8,
@@ -565,13 +717,13 @@ export default function ApplicationStep2Screen() {
                         padding: spacing.md,
                         marginBottom: spacing.sm,
                         borderRadius: radii.md,
-                        backgroundColor: isSelected ? '#f2f7ff' : colors.surface,
+                        backgroundColor: isSelected ? '#f2f7ff' : cardSurface,
                         borderWidth: 1,
-                        borderColor: isSelected ? colors.textPrimary : colors.borderSubtle,
+                        borderColor: isSelected ? colors.cta : cardBorder,
                       }}
                     >
                       <View style={{ flex: 1 }}>
-                        <Text style={{ ...typography.body, fontWeight: '500', color: colors.textPrimary }}>
+                        <Text style={{ ...typography.bodyMedium, color: colors.textPrimary }}>
                           {category.name}
                         </Text>
                         <Text style={{ ...typography.caption, color: colors.textMuted, marginTop: 2 }}>
@@ -583,7 +735,7 @@ export default function ApplicationStep2Screen() {
                   );
                 })}
                 {errors.serviceCategories && (
-                  <Text style={{ fontSize: 12, color: '#EF4444', marginTop: spacing.xs }}>
+                  <Text style={{ ...typography.caption, fontSize: 12, color: '#EF4444', marginTop: spacing.xs }}>
                     {errors.serviceCategories}
                   </Text>
                 )}
@@ -593,12 +745,12 @@ export default function ApplicationStep2Screen() {
               {state.step2.serviceCategories.length > 0 && (
                 <View
                   style={{
-                    backgroundColor: colors.surface,
+                    backgroundColor: cardSurface,
                     borderRadius: radii.lg,
                     padding: spacing.lg,
                     marginBottom: spacing.lg,
                     borderWidth: 1,
-                    borderColor: colors.borderSubtle,
+                    borderColor: cardBorder,
                     shadowColor: '#000',
                     shadowOpacity: 0.05,
                     shadowRadius: 8,
@@ -614,7 +766,7 @@ export default function ApplicationStep2Screen() {
                     if (!category) return null;
                     return (
                       <View key={catId} style={{ marginBottom: spacing.lg }}>
-                        <Text style={{ ...typography.body, fontWeight: '600', color: colors.textPrimary, marginBottom: spacing.sm }}>
+                        <Text style={{ ...typography.bodySemiBold, color: colors.textPrimary, marginBottom: spacing.sm }}>
                           {category.name}
                         </Text>
                         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm }}>
@@ -628,12 +780,12 @@ export default function ApplicationStep2Screen() {
                                   paddingHorizontal: spacing.md,
                                   paddingVertical: spacing.sm,
                                   borderRadius: radii.full,
-                                  backgroundColor: isSelected ? colors.textPrimary : colors.surface,
+                                  backgroundColor: isSelected ? colors.cta : cardSurface,
                                   borderWidth: 1,
-                                  borderColor: isSelected ? colors.textPrimary : colors.borderSubtle,
+                                  borderColor: isSelected ? colors.cta : cardBorder,
                                 }}
                               >
-                                <Text style={{ color: isSelected ? '#FFFFFF' : colors.textPrimary, fontSize: 13 }}>
+                                <Text style={{ ...typography.body, color: isSelected ? '#FFFFFF' : colors.textPrimary, fontSize: 13 }}>
                                   {type}
                                 </Text>
                               </TouchableOpacity>
@@ -646,15 +798,103 @@ export default function ApplicationStep2Screen() {
                 </View>
               )}
 
+              {/* Service Tags */}
+              {state.step2.serviceCategories.length > 0 && (
+                <View
+                  style={{
+                    backgroundColor: cardSurface,
+                    borderRadius: radii.lg,
+                    padding: spacing.lg,
+                    marginBottom: spacing.lg,
+                    borderWidth: 1,
+                    borderColor: cardBorder,
+                    shadowColor: '#000',
+                    shadowOpacity: 0.05,
+                    shadowRadius: 8,
+                    shadowOffset: { width: 0, height: 2 },
+                    elevation: 2,
+                  }}
+                >
+                  <Text style={{ ...typography.titleMedium, color: colors.textPrimary, marginBottom: spacing.sm }}>
+                    Service Tags
+                  </Text>
+                  <Text style={{ ...typography.caption, color: colors.textMuted, marginBottom: spacing.md }}>
+                    Select tags that describe your services (optional)
+                  </Text>
+                  {vendorTagGroups.map((group) => {
+                    const selectedInGroup = state.step2.serviceTags.filter((t) => group.tags.includes(t)).length;
+                    const isExpanded = expandedTagGroups.includes(group.id);
+                    return (
+                      <View key={group.id} style={{ marginBottom: spacing.sm }}>
+                        <TouchableOpacity
+                          onPress={() => toggleTagGroupExpanded(group.id)}
+                          style={{
+                            flexDirection: 'row',
+                            alignItems: 'center',
+                            paddingVertical: spacing.sm,
+                          }}
+                        >
+                          <MaterialIcons
+                            name={isExpanded ? 'keyboard-arrow-down' : 'keyboard-arrow-right'}
+                            size={20}
+                            color={colors.textMuted}
+                          />
+                          <Text style={{ ...typography.bodySemiBold, color: colors.textPrimary, flex: 1 }}>
+                            {group.name}
+                          </Text>
+                          {selectedInGroup > 0 && (
+                            <View
+                              style={{
+                                paddingHorizontal: spacing.sm,
+                                paddingVertical: 2,
+                                borderRadius: radii.full,
+                                backgroundColor: colors.cta,
+                              }}
+                            >
+                              <Text style={{ color: '#FFFFFF', fontSize: 11 }}>{selectedInGroup}</Text>
+                            </View>
+                          )}
+                        </TouchableOpacity>
+                        {isExpanded && (
+                          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginTop: spacing.xs }}>
+                            {group.tags.map((tag) => {
+                              const isSelected = state.step2.serviceTags.includes(tag);
+                              return (
+                                <TouchableOpacity
+                                  key={tag}
+                                  onPress={() => toggleArrayItem('serviceTags', tag)}
+                                  style={{
+                                    paddingHorizontal: spacing.md,
+                                    paddingVertical: spacing.sm,
+                                    borderRadius: radii.full,
+                                    backgroundColor: isSelected ? colors.cta : cardSurface,
+                                    borderWidth: 1,
+                                    borderColor: isSelected ? colors.cta : cardBorder,
+                                  }}
+                                >
+                                  <Text style={{ ...typography.body, color: isSelected ? '#FFFFFF' : colors.textPrimary, fontSize: 13 }}>
+                                    {tag}
+                                  </Text>
+                                </TouchableOpacity>
+                              );
+                            })}
+                          </View>
+                        )}
+                      </View>
+                    );
+                  })}
+                </View>
+              )}
+
               {/* Special Features */}
               <View
                 style={{
-                  backgroundColor: colors.surface,
+                  backgroundColor: cardSurface,
                   borderRadius: radii.lg,
                   padding: spacing.lg,
                   marginBottom: spacing.lg,
                   borderWidth: 1,
-                  borderColor: colors.borderSubtle,
+                  borderColor: cardBorder,
                   shadowColor: '#000',
                   shadowOpacity: 0.05,
                   shadowRadius: 8,
@@ -676,17 +916,80 @@ export default function ApplicationStep2Screen() {
                           paddingHorizontal: spacing.md,
                           paddingVertical: spacing.sm,
                           borderRadius: radii.full,
-                          backgroundColor: isSelected ? colors.textPrimary : colors.surface,
+                          backgroundColor: isSelected ? colors.cta : cardSurface,
                           borderWidth: 1,
-                          borderColor: isSelected ? colors.textPrimary : colors.borderSubtle,
+                          borderColor: isSelected ? colors.cta : cardBorder,
                         }}
                       >
-                        <Text style={{ color: isSelected ? '#FFFFFF' : colors.textPrimary, fontSize: 13 }}>
+                        <Text style={{ ...typography.body, color: isSelected ? '#FFFFFF' : colors.textPrimary, fontSize: 13 }}>
                           {feature}
                         </Text>
                       </TouchableOpacity>
                     );
                   })}
+                </View>
+
+                {customFeatures.length > 0 && (
+                  <View style={{ marginTop: spacing.md, marginBottom: spacing.md }}>
+                    <Text style={{ ...typography.caption, color: colors.textMuted, marginBottom: spacing.xs }}>
+                      Your custom features:
+                    </Text>
+                    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm }}>
+                      {customFeatures.map((item) => (
+                        <TouchableOpacity
+                          key={item}
+                          onPress={() => toggleArrayItem('specialFeatures', item)}
+                          style={{
+                            flexDirection: 'row',
+                            alignItems: 'center',
+                            paddingHorizontal: spacing.md,
+                            paddingVertical: spacing.sm,
+                            borderRadius: radii.full,
+                            backgroundColor: colors.cta,
+                          }}
+                        >
+                          <Text style={{ ...typography.body, color: '#FFFFFF', fontSize: 13, marginRight: spacing.xs }}>
+                            {item}
+                          </Text>
+                          <MaterialIcons name="close" size={16} color="#FFFFFF" />
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                  </View>
+                )}
+
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginTop: spacing.sm }}>
+                  <TextInput
+                    placeholder="Add your own feature..."
+                    value={customFeatureInput}
+                    onChangeText={setCustomFeatureInput}
+                    onSubmitEditing={addCustomFeature}
+                    returnKeyType="done"
+                    style={{
+                      flex: 1,
+                      borderWidth: 1,
+                      borderColor: cardBorder,
+                      borderRadius: radii.md,
+                      paddingHorizontal: spacing.md,
+                      paddingVertical: spacing.sm,
+                      backgroundColor: cardSurface,
+                      fontSize: 14,
+                      color: colors.textPrimary,
+                      fontFamily: typography.body.fontFamily,
+                    }}
+                  />
+                  <TouchableOpacity
+                    onPress={addCustomFeature}
+                    disabled={!customFeatureInput.trim()}
+                    style={{
+                      paddingHorizontal: spacing.md,
+                      paddingVertical: spacing.sm,
+                      borderRadius: radii.md,
+                      backgroundColor: customFeatureInput.trim() ? colors.cta : colors.textMuted,
+                    }}
+                  >
+                    <Text style={{ ...typography.bodySemiBold, color: '#FFFFFF' }}>Add</Text>
+                  </TouchableOpacity>
                 </View>
               </View>
             </>
@@ -695,12 +998,12 @@ export default function ApplicationStep2Screen() {
           {/* Coverage Areas (for both) */}
           <View
             style={{
-              backgroundColor: colors.surface,
+              backgroundColor: cardSurface,
               borderRadius: radii.lg,
               padding: spacing.lg,
               marginBottom: spacing.lg,
               borderWidth: 1,
-              borderColor: colors.borderSubtle,
+              borderColor: cardBorder,
               shadowColor: '#000',
               shadowOpacity: 0.05,
               shadowRadius: 8,
@@ -711,6 +1014,23 @@ export default function ApplicationStep2Screen() {
             <Text style={{ ...typography.titleMedium, color: colors.textPrimary, marginBottom: spacing.md }}>
               Coverage Areas - Provinces *
             </Text>
+            <TouchableOpacity
+              onPress={selectAllProvinces}
+              style={{
+                alignSelf: 'flex-start',
+                paddingHorizontal: spacing.md,
+                paddingVertical: spacing.sm,
+                borderRadius: radii.full,
+                backgroundColor: allProvincesSelected ? colors.cta : cardSurface,
+                borderWidth: 1,
+                borderColor: colors.cta,
+                marginBottom: spacing.md,
+              }}
+            >
+              <Text style={{ ...typography.body, color: allProvincesSelected ? '#FFFFFF' : colors.textPrimary, fontSize: 13 }}>
+                {allProvincesSelected ? 'Deselect All Provinces' : 'Select All Provinces'}
+              </Text>
+            </TouchableOpacity>
             <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm }}>
               {provinces.map((province) => {
                 const isSelected = state.step2.provinces.includes(province.name);
@@ -722,12 +1042,12 @@ export default function ApplicationStep2Screen() {
                       paddingHorizontal: spacing.md,
                       paddingVertical: spacing.sm,
                       borderRadius: radii.full,
-                      backgroundColor: isSelected ? colors.textPrimary : colors.surface,
+                      backgroundColor: isSelected ? colors.cta : cardSurface,
                       borderWidth: 1,
-                      borderColor: isSelected ? colors.textPrimary : colors.borderSubtle,
+                      borderColor: isSelected ? colors.cta : cardBorder,
                     }}
                   >
-                    <Text style={{ color: isSelected ? '#FFFFFF' : colors.textPrimary, fontSize: 13 }}>
+                    <Text style={{ ...typography.body, color: isSelected ? '#FFFFFF' : colors.textPrimary, fontSize: 13 }}>
                       {province.name}
                     </Text>
                   </TouchableOpacity>
@@ -735,7 +1055,7 @@ export default function ApplicationStep2Screen() {
               })}
             </View>
             {errors.provinces && (
-              <Text style={{ fontSize: 12, color: '#EF4444', marginTop: spacing.xs }}>
+              <Text style={{ ...typography.caption, fontSize: 12, color: '#EF4444', marginTop: spacing.xs }}>
                 {errors.provinces}
               </Text>
             )}
@@ -745,12 +1065,12 @@ export default function ApplicationStep2Screen() {
           {state.step2.provinces.length > 0 && (
             <View
               style={{
-                backgroundColor: colors.surface,
+                backgroundColor: cardSurface,
                 borderRadius: radii.lg,
                 padding: spacing.lg,
                 marginBottom: spacing.lg,
                 borderWidth: 1,
-                borderColor: colors.borderSubtle,
+                borderColor: cardBorder,
                 shadowColor: '#000',
                 shadowOpacity: 0.05,
                 shadowRadius: 8,
@@ -761,6 +1081,25 @@ export default function ApplicationStep2Screen() {
               <Text style={{ ...typography.titleMedium, color: colors.textPrimary, marginBottom: spacing.md }}>
                 Coverage Areas - Cities
               </Text>
+              <TouchableOpacity
+                onPress={selectAllCities}
+                disabled={getAvailableCities().length === 0}
+                style={{
+                  alignSelf: 'flex-start',
+                  paddingHorizontal: spacing.md,
+                  paddingVertical: spacing.sm,
+                  borderRadius: radii.full,
+                  backgroundColor: allCitiesSelected ? colors.cta : cardSurface,
+                  borderWidth: 1,
+                  borderColor: colors.cta,
+                  marginBottom: spacing.md,
+                  opacity: getAvailableCities().length === 0 ? 0.5 : 1,
+                }}
+              >
+                <Text style={{ ...typography.body, color: allCitiesSelected ? '#FFFFFF' : colors.textPrimary, fontSize: 13 }}>
+                  {allCitiesSelected ? 'Deselect All Cities' : 'Select All Cities'}
+                </Text>
+              </TouchableOpacity>
               <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm }}>
                 {getAvailableCities().map((city) => {
                   const isSelected = state.step2.cities.includes(city);
@@ -772,12 +1111,12 @@ export default function ApplicationStep2Screen() {
                         paddingHorizontal: spacing.md,
                         paddingVertical: spacing.sm,
                         borderRadius: radii.full,
-                        backgroundColor: isSelected ? colors.textPrimary : colors.surface,
+                        backgroundColor: isSelected ? colors.cta : cardSurface,
                         borderWidth: 1,
-                        borderColor: isSelected ? colors.textPrimary : colors.borderSubtle,
+                        borderColor: isSelected ? colors.cta : cardBorder,
                       }}
                     >
-                      <Text style={{ color: isSelected ? '#FFFFFF' : colors.textPrimary, fontSize: 13 }}>
+                      <Text style={{ ...typography.body, color: isSelected ? '#FFFFFF' : colors.textPrimary, fontSize: 13 }}>
                         {city}
                       </Text>
                     </TouchableOpacity>
@@ -790,12 +1129,12 @@ export default function ApplicationStep2Screen() {
           {/* Description */}
           <View
             style={{
-              backgroundColor: colors.surface,
+              backgroundColor: cardSurface,
               borderRadius: radii.lg,
               padding: spacing.lg,
               marginBottom: spacing.lg,
               borderWidth: 1,
-              borderColor: colors.borderSubtle,
+              borderColor: cardBorder,
               shadowColor: '#000',
               shadowOpacity: 0.05,
               shadowRadius: 8,
@@ -817,42 +1156,43 @@ export default function ApplicationStep2Screen() {
               numberOfLines={6}
               style={{
                 borderWidth: 1,
-                borderColor: errors.description ? '#EF4444' : colors.borderSubtle,
+                borderColor: errors.description ? '#EF4444' : cardBorder,
                 borderRadius: radii.md,
                 paddingHorizontal: spacing.md,
                 paddingVertical: spacing.sm,
-                backgroundColor: colors.surface,
+                backgroundColor: cardSurface,
                 fontSize: 14,
                 color: colors.textPrimary,
                 textAlignVertical: 'top',
                 minHeight: 120,
+                fontFamily: typography.body.fontFamily,
               }}
             />
             <Text style={{ ...typography.caption, color: colors.textMuted, marginTop: spacing.xs }}>
               {state.step2.description.length} characters
             </Text>
             {errors.description && (
-              <Text style={{ fontSize: 12, color: '#EF4444', marginTop: spacing.xs }}>
+              <Text style={{ ...typography.caption, fontSize: 12, color: '#EF4444', marginTop: spacing.xs }}>
                 {errors.description}
               </Text>
             )}
           </View>
 
           {/* Navigation Buttons */}
-          <View style={{ flexDirection: 'row', gap: spacing.md }}>
+          <View style={{ flexDirection: 'row', gap: spacing.md, marginBottom: spacing.lg }}>
             <TouchableOpacity
               onPress={() => navigation.goBack()}
               style={{
                 flex: 1,
-                backgroundColor: colors.surface,
+                backgroundColor: cardSurface,
                 borderWidth: 1,
-                bordercolor: colors.textPrimary,
+                borderColor: colors.primary,
                 paddingVertical: spacing.md,
                 borderRadius: radii.md,
                 alignItems: 'center',
               }}
             >
-              <Text style={{ color: colors.textPrimary, fontSize: 16, fontWeight: '600' }}>
+              <Text style={{ ...typography.bodySemiBold, color: colors.textPrimary, fontSize: 16 }}>
                 Back
               </Text>
             </TouchableOpacity>
@@ -860,7 +1200,7 @@ export default function ApplicationStep2Screen() {
               onPress={handleNext}
               style={{
                 flex: 1,
-                backgroundcolor: colors.textPrimary,
+                backgroundColor: colors.cta,
                 paddingVertical: spacing.md,
                 borderRadius: radii.md,
                 flexDirection: 'row',
@@ -869,14 +1209,25 @@ export default function ApplicationStep2Screen() {
               }}
               activeOpacity={0.8}
             >
-              <Text style={{ color: '#FFFFFF', fontSize: 16, fontWeight: '600', marginRight: spacing.sm }}>
+              <Text style={{ ...typography.bodySemiBold, color: '#FFFFFF', fontSize: 16, marginRight: spacing.sm }}>
                 Next
               </Text>
               <MaterialIcons name="arrow-forward" size={16} color="#FFFFFF" />
             </TouchableOpacity>
           </View>
+          </View>
         </View>
       </ScrollView>
-    </View>
+
+      {alertState && (
+        <ThemedAlert
+          visible={alertState.visible}
+          title={alertState.title}
+          message={alertState.message}
+          buttons={alertState.buttons ?? [{ text: 'OK', style: 'default', onPress: () => setAlertState(null) }]}
+          onDismiss={() => setAlertState(null)}
+        />
+      )}
+    </KeyboardAvoidingView>
   );
 }

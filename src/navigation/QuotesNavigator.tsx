@@ -4,7 +4,6 @@ import QuotesScreen from '../screens/QuotesScreen';
 import QuoteDetailScreen from '../screens/QuoteDetailScreen';
 import QuoteResponseScreen from '../screens/QuoteResponseScreen';
 import QuoteHistoryScreen from '../screens/QuoteHistoryScreen';
-import { colors } from '../theme';
 
 export type QuotesStackParamList = {
   QuotesList: undefined;
@@ -25,14 +24,7 @@ export function QuotesNavigator() {
   return (
     <Stack.Navigator
       screenOptions={{
-        headerStyle: {
-          backgroundColor: colors.surface,
-        },
-        headerTitleStyle: {
-          color: colors.textPrimary,
-          fontWeight: '600',
-        },
-        headerTintColor: colors.textPrimary,
+        headerShown: false,
       }}
     >
       <Stack.Screen
@@ -43,7 +35,7 @@ export function QuotesNavigator() {
       <Stack.Screen
         name="QuoteDetail"
         component={QuoteDetailScreen}
-        options={{ title: 'Quote details' }}
+        options={{ headerShown: false }}
       />
       <Stack.Screen
         name="QuoteResponse"

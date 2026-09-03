@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, Alert, ActivityIndicator } from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView, ActivityIndicator, KeyboardAvoidingView, Platform } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -8,11 +8,15 @@ import { useApplicationForm } from '../../context/ApplicationFormContext';
 import { validateStep4 } from '../../utils/formValidation';
 import { ApplicationProgress } from '../../components/ApplicationProgress';
 import { getSubscriptionTiers } from '../../lib/subscription';
-import { submitApplication, uploadFileToStorage } from '../../lib/applicationService';
+import { submitApplication, uploadFileToStorage, updateUserRoleToVendor } from '../../lib/applicationService';
+import { createGalleryMediaRecord } from '../../lib/mediaUpload';
 import { useAuth } from '../../auth/AuthContext';
 import { supabase } from '../../lib/supabaseClient';
+import ThemedAlert from '../../components/ThemedAlert';
+import { useIsDesktop } from '../../hooks/useIsDesktop';
 
 type ProfileStackParamList = {
+  AccountMain: undefined;
   ApplicationStep3: undefined;
   ApplicationStep4: undefined;
   ApplicationStatus: undefined;
@@ -28,6 +32,7 @@ type ProfileStackParamList = {
   PortfolioProfile: undefined;
   UpdateVenuePortfolio: undefined;
   UpdateVendorPortfolio: undefined;
+  ListerPortfolio: undefined;
   LegalDocument: { documentId: string };
 };
 
@@ -37,6 +42,10 @@ export default function ApplicationStep4Screen() {
   const { user } = useAuth();
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [alertState, setAlertState] = useState<{visible: boolean; title: string; message: string; buttons?: any[]} | null>(null);
+  const isDesktop = useIsDesktop();
+  const cardSurface = isDesktop ? colors.surfaceContainerLowest : colors.surface;
+  const cardBorder = isDesktop ? colors.outlineVariant : colors.borderSubtle;
   const [tiers, setTiers] = useState<Array<{
     id: number;
     tier_name: string;
@@ -51,7 +60,7 @@ export default function ApplicationStep4Screen() {
   const normalizeTierKey = (rawTierName: string): string => {
     const t = (rawTierName ?? '').trim().toLowerCase();
     // Vendor tier names
-    if (t === 'get started' || t === 'get_started' || t === 'free') return 'free';
+    if (t === 'get started' || t === 'get_started' || t === 'free') return 'get_started';
     if (t === 'premium plus' || t === 'premium_plus' || t === 'premiumplus') return 'premium_plus';
     if (t === 'premium') return 'premium';
     // Venue plan keys (already normalised in DB, e.g. 'get_started', 'monthly', '6_month', '12_month')
@@ -63,6 +72,8 @@ export default function ApplicationStep4Screen() {
   }, [state.portfolioType]);
 
   const selectedTier = tiers.find((tier) => normalizeTierKey(tier.tier_name) === normalizeTierKey(state.step4.subscriptionPlan));
+  // Venue plans are monthly-period (6_month/12_month are multi-month lumps, still
+  // priced via price_monthly). Prefer price_monthly; fall back to yearly only if monthly missing.
   const selectedTierPrice = selectedTier?.price_monthly ?? selectedTier?.price_yearly ?? null;
   const selectedTierPriceLabel = selectedTierPrice ? `R${Number(selectedTierPrice).toLocaleString()}` : 'Free';
   const isSelectedTierFree = !selectedTierPrice || selectedTierPrice === 0;
@@ -76,25 +87,58 @@ export default function ApplicationStep4Screen() {
           .select('id, plan_key, plan_name, price_monthly, price_yearly, photo_upload_limit, video_upload_limit, features, is_active')
           .eq('is_active', true)
           .order('price_monthly', { ascending: true, nullsFirst: true });
-        if (error) throw error;
+        if (error) {
+          console.warn('venue_subscription_plans query failed, using fallback:', error);
+        }
         // Map venue plan shape to the shared tier shape used in this screen
-        const mapped = (data || []).map((p: any) => ({
+        let mapped = (data || []).map((p: any) => ({
           id: p.id,
           tier_name: p.plan_key as string,    // use plan_key so normalizeTierKey matches
-          photo_limit: p.photo_upload_limit ?? 10,
+          photo_limit: p.photo_upload_limit ?? 5,
           price_monthly: p.price_monthly ?? null,
           price_yearly: p.price_yearly ?? null,
           features: p.features ?? null,
           is_active: p.is_active,
         }));
+        // Fallback to hardcoded plans if DB table is empty or missing
+        if (mapped.length === 0) {
+          mapped = [
+            { id: 1, tier_name: 'get_started', photo_limit: 5, price_monthly: 0, price_yearly: 0, features: { video_upload_limit: 0 }, is_active: true },
+            { id: 2, tier_name: 'monthly', photo_limit: 40, price_monthly: 1750, price_yearly: null, features: { video_upload_limit: 4 }, is_active: true },
+            { id: 3, tier_name: '6_month', photo_limit: 40, price_monthly: 9750, price_yearly: null, features: { video_upload_limit: 4 }, is_active: true },
+            { id: 4, tier_name: '12_month', photo_limit: 40, price_monthly: 18000, price_yearly: null, features: { video_upload_limit: 4 }, is_active: true },
+          ];
+        }
         setTiers(mapped);
+        // Auto-select free 'get_started' plan if no plan is selected yet (prevents Page 4 error)
+        if (!state.step4.subscriptionPlan) {
+          const free = mapped.find((t) => normalizeTierKey(t.tier_name) === 'get_started');
+          if (free) {
+            updateStep4({ subscriptionPlan: free.tier_name, billingPeriod: 'monthly' });
+          }
+        }
       } else {
         // Load vendor subscription tiers
         const data = await getSubscriptionTiers();
         setTiers(data);
+        // Auto-select free 'get_started' plan if no plan is selected yet
+        if (!state.step4.subscriptionPlan && data.length > 0) {
+          const free = data.find((t) => normalizeTierKey(t.tier_name) === 'get_started');
+          if (free) {
+            updateStep4({ subscriptionPlan: free.tier_name, billingPeriod: 'monthly' });
+          }
+        }
       }
     } catch (error) {
       console.error('Failed to load tiers:', error);
+      // Fall back to hardcoded vendor tiers so the user can always select a plan
+      if (state.portfolioType !== 'venues') {
+        setTiers([
+          { id: 1, tier_name: 'get_started', photo_limit: 5, price_monthly: 0, price_yearly: 0, features: { video_upload_limit: 0 }, is_active: true },
+          { id: 2, tier_name: 'premium', photo_limit: 25, price_monthly: 299, price_yearly: 3289, features: { video_upload_limit: 5 }, is_active: true },
+          { id: 3, tier_name: 'premium_plus', photo_limit: 50, price_monthly: 399, price_yearly: 4389, features: { video_upload_limit: 10 }, is_active: true },
+        ]);
+      }
     } finally {
       setLoading(false);
     }
@@ -102,7 +146,7 @@ export default function ApplicationStep4Screen() {
 
   const handleSubmit = async () => {
     if (!user?.id) {
-      Alert.alert('Error', 'You must be signed in to submit an application');
+      setAlertState({ visible: true, title: 'Error', message: 'You must be signed in to submit an application' });
       return;
     }
 
@@ -110,7 +154,14 @@ export default function ApplicationStep4Screen() {
 
     if (!validation.isValid) {
       setErrors(validation.errors);
-      Alert.alert('Validation Error', 'Please fix the errors before continuing');
+      const missingFields: string[] = [];
+      if (validation.errors.subscriptionPlan) missingFields.push('Subscription plan');
+      if (validation.errors.termsAccepted) missingFields.push('Terms & Conditions');
+      if (validation.errors.privacyAccepted) missingFields.push('Privacy Policy');
+      const message = missingFields.length > 0
+        ? `Please complete the following before submitting: ${missingFields.join(', ')}.`
+        : 'Please fix the errors before continuing';
+      setAlertState({ visible: true, title: 'Incomplete', message });
       return;
     }
 
@@ -165,26 +216,22 @@ export default function ApplicationStep4Screen() {
         }
       }
 
-      // Upload documents
-      for (const document of state.step3.documents) {
-        // Route company logo to portfolio-images bucket, other documents to business-documents
-        const bucket = document.name.startsWith('company_logo__') ? 'portfolio-images' : 'business-documents';
-        const result = await uploadFileToStorage(bucket, document, user.id);
+      // Upload business documents
+      for (const doc of state.step3.documents) {
+        const isImage = doc.type.startsWith('image/');
+        const bucket = isImage ? 'portfolio-images' : 'business-documents';
+        const result = await uploadFileToStorage(bucket, doc, user.id);
         if (result.success && result.url) {
           uploadedDocuments.push(result.url);
         } else {
-          uploadErrors.push(`Document "${document.name}": ${result.error || 'Upload failed'}`);
+          uploadErrors.push(`Document "${doc.name}": ${result.error || 'Upload failed'}`);
         }
       }
 
       // If any uploads failed, show error and prevent submission
       if (uploadErrors.length > 0) {
         console.error('Upload errors:', uploadErrors);
-        Alert.alert(
-          'Upload Failed',
-          `Some files could not be uploaded:\n\n${uploadErrors.join('\n')}\n\nPlease try again or contact support.`,
-          [{ text: 'OK' }]
-        );
+        setAlertState({ visible: true, title: 'Upload Failed', message: `Some files could not be uploaded:\n\n${uploadErrors.join('\n')}\n\nPlease try again or contact support.`, buttons: [{ text: 'OK', style: 'default', onPress: () => setAlertState(null) }] });
         return;
       }
 
@@ -213,6 +260,7 @@ export default function ApplicationStep4Screen() {
       const result = await submitApplication(submission);
 
       if (result.success) {
+        let createdListingId: string | number | null = null;
         if (state.portfolioType === 'venues') {
           const parseCapacityNumber = (value: string): number | null => {
             const numbers = (value ?? '').match(/\d[\d,]*/g);
@@ -222,10 +270,14 @@ export default function ApplicationStep4Screen() {
             return Number.isFinite(parsed) ? parsed : null;
           };
 
-          const halls = (state.step2.halls ?? []).map((h) => ({
-            name: (h?.name ?? '').trim(),
-            capacity: (h?.capacity ?? '').trim(),
-          }));
+          const halls = (state.step2.halls ?? [])
+            .map((h) => ({
+              name: (h?.name ?? '').trim(),
+              capacity: (h?.capacity ?? '').trim(),
+            }))
+            // Only persist halls that actually have a name or capacity,
+            // so empty placeholder rows don't clobber real data.
+            .filter((h) => h.name !== '' || h.capacity !== '');
           const hallCapacities = halls
             .map((h) => parseCapacityNumber(h.capacity))
             .filter((n): n is number => typeof n === 'number' && Number.isFinite(n));
@@ -251,37 +303,75 @@ export default function ApplicationStep4Screen() {
               venueTypes: state.step2.venueType,
             };
 
-            await supabase
+            const { data: upsertedListing, error: listingError } = await supabase
               .from('venue_listings')
               .upsert(
                 {
                   user_id: user.id,
                   name: listingName,
                   description: state.step2.description?.trim() || null,
+                  location: state.step1.businessPhysicalAddress?.trim() || null,
+                  address_line_1: state.step1.businessPhysicalAddress?.trim() || null,
+                  city: state.step2.cities?.[0] || null,
+                  province: state.step2.provinces?.[0] || null,
+                  country: 'South Africa',
+                  contact_email: state.step1.email?.trim() || state.step1.userEmail?.trim() || null,
+                  whatsapp_number: state.step1.userWhatsapp?.trim() || state.step1.contactPhoneNumber?.trim() || null,
+                  instagram_url: state.step1.instagram?.trim() || null,
+                  facebook_url: state.step1.facebook?.trim() || null,
+                  tiktok_url: state.step1.tiktok?.trim() || null,
                   venue_type: state.step2.venueType.join(', ') || null,
                   venue_capacity: state.step2.venueCapacity ?? null,
-                  capacity: maxHallCapacity,
                   amenities: state.step2.amenities,
                   event_types: state.step2.eventTypes,
+                  provinces: state.step2.provinces,
+                  cities: state.step2.cities,
                   features: nextFeatures,
+                  image_url: uploadedImages[0] || null,
+                  subscription_plan: state.step4.subscriptionPlan,
                   subscription_status: 'active',
                 } as any,
                 { onConflict: 'user_id' },
-              );
-          } catch (e) {
-            console.warn('Failed to persist venue hall capacity details:', e);
+              )
+              .select('id')
+              .single();
+
+            if (listingError) {
+              console.error('Venue listing upsert error:', listingError);
+              throw listingError;
+            }
+
+            const venueId = upsertedListing?.id;
+            createdListingId = venueId ?? null;
+            if (venueId) {
+              for (const imageUrl of uploadedImages) {
+                await createGalleryMediaRecord(imageUrl, 'image', { venueId });
+              }
+              for (const videoUrl of uploadedVideos) {
+                await createGalleryMediaRecord(videoUrl, 'video', { venueId });
+              }
+            }
+          } catch (e: any) {
+            console.error('Failed to create venue listing from application:', e);
+            setAlertState({ visible: true, title: 'Portfolio Setup Issue', message: 'Your application was submitted, but we could not fully set up your venue listing. You can update it manually from your account.', buttons: [{ text: 'OK', style: 'default', onPress: () => setAlertState(null) }] });
           }
         }
 
-        // Send application submission confirmation email
-        await sendApplicationConfirmationEmail(submission);
-
         // Create vendor/venue record directly (for both free and paid plans)
+        let portfolioCreated = false;
         try {
           if (state.portfolioType === 'venues' && user?.id) {
-            await supabase.from('venues').upsert(
+            const venueListingName =
+              state.step1.tradingName?.trim() ||
+              state.step1.registeredBusinessName?.trim() ||
+              'Venue Listing';
+
+            const { error: venueRecordError } = await supabase.from('venues').upsert(
               {
                 user_id: user.id,
+                name: venueListingName,
+                description: state.step2.description?.trim() || null,
+                location: state.step1.businessPhysicalAddress?.trim() || null,
                 subscription_plan_key: state.step4.subscriptionPlan,
                 subscription_status: 'active',
                 billing_period: state.step4.billingPeriod || 'monthly',
@@ -292,51 +382,122 @@ export default function ApplicationStep4Screen() {
               },
               { onConflict: 'user_id' },
             );
+
+            if (venueRecordError) {
+              console.error('Venues table upsert error:', venueRecordError);
+              throw venueRecordError;
+            }
+            portfolioCreated = true;
           } else if (user?.id) {
-            await supabase.from('vendors').upsert(
-              {
-                user_id: user.id,
-                subscription_tier: normalizeTierKey(state.step4.subscriptionPlan),
-                subscription_status: 'active',
-                billing_period: state.step4.billingPeriod || 'monthly',
-                billing_email: state.step1.email?.trim() || null,
-                billing_name: state.step1.ownersName?.trim() || null,
-                billing_phone: state.step1.contactPhoneNumber?.trim() || null,
-                subscription_started_at: new Date().toISOString(),
-              },
-              { onConflict: 'user_id' },
-            );
+            // Build rich vendor record from application data
+            const listingName =
+              state.step1.tradingName?.trim() ||
+              state.step1.registeredBusinessName?.trim() ||
+              'Vendor Listing';
+
+            const vendorPayload = {
+              user_id: user.id,
+              name: listingName,
+              description: state.step2.description?.trim() || null,
+              location: state.step1.businessPhysicalAddress?.trim() || null,
+              email: state.step1.email?.trim() || null,
+              whatsapp_number: state.step1.contactPhoneNumber?.trim() || null,
+              instagram_url: state.step1.instagram?.trim() || null,
+              facebook_url: state.step1.facebook?.trim() || null,
+              tiktok_url: state.step1.tiktok?.trim() || null,
+              image_url: uploadedImages[0] || null,
+              subscription_tier: normalizeTierKey(state.step4.subscriptionPlan),
+              subscription_status: 'active',
+              billing_period: state.step4.billingPeriod || 'monthly',
+              billing_email: state.step1.email?.trim() || null,
+              billing_name: state.step1.ownersName?.trim() || null,
+              billing_phone: state.step1.contactPhoneNumber?.trim() || null,
+              subscription_started_at: new Date().toISOString(),
+              service_options: state.step2.serviceCategories ?? [],
+              vendor_tags: Array.from(new Set([...(state.step2.serviceSubcategories ?? []), ...(state.step2.serviceTags ?? [])])),
+            };
+
+            // Use select-then-insert/update for maximum compatibility
+            const { data: existingVendor } = await supabase
+              .from('vendors')
+              .select('id')
+              .eq('user_id', user.id)
+              .maybeSingle();
+
+            let vendorId: number | null = existingVendor?.id ?? null;
+            createdListingId = vendorId;
+
+            if (vendorId) {
+              const { error: updateError } = await supabase
+                .from('vendors')
+                .update(vendorPayload)
+                .eq('id', vendorId);
+              if (updateError) throw updateError;
+            } else {
+              const { data: insertedVendor, error: insertError } = await supabase
+                .from('vendors')
+                .insert(vendorPayload)
+                .select('id')
+                .single();
+              if (insertError) throw insertError;
+              vendorId = insertedVendor?.id ?? null;
+            }
+
+            if (vendorId) {
+              for (const imageUrl of uploadedImages) {
+                await createGalleryMediaRecord(imageUrl, 'image', { vendorId });
+              }
+              for (const videoUrl of uploadedVideos) {
+                await createGalleryMediaRecord(videoUrl, 'video', { vendorId });
+              }
+            }
+
+            portfolioCreated = true;
           }
-        } catch (e) {
-          console.warn('Failed to create subscriber record:', e);
+        } catch (e: any) {
+          console.error('Failed to create portfolio record:', e);
+          setAlertState({ visible: true, title: 'Portfolio Created', message: 'Your application was submitted successfully, but we had a minor issue setting up your portfolio. You can retry from your account screen.', buttons: [{ text: 'OK', style: 'default', onPress: () => setAlertState(null) }] });
         }
 
-        // Reset form and navigate directly to portfolio (no popup)
-        resetForm();
-        
-        if (state.portfolioType === 'venues') {
-          navigation.reset({
-            index: 0,
-            routes: [{ name: 'UpdateVenuePortfolio' }],
-          });
-        } else {
-          navigation.reset({
-            index: 0,
-            routes: [{ name: 'UpdateVendorPortfolio' }],
-          });
+        if (portfolioCreated) {
+          try {
+            await updateUserRoleToVendor();
+          } catch (e) {
+            console.error('Failed to update user role after portfolio creation:', e);
+          }
         }
+
+        // Send application submission confirmation email (after portfolio creation so we can include listing ID)
+        await sendApplicationConfirmationEmail(submission, createdListingId);
+
+        // Reset form and navigate to the Lister Portfolio Dashboard on success.
+        // Navigate to the Account tab first so the user lands on the Lister Portfolio
+        // screen in the correct tab stack, then reset the Profile stack to
+        // ListerPortfolio. The Profile stack navigator's parent IS the RootNavigator
+        // (bottom Tab navigator), so getParent() returns the tab navigator.
+        const tabNav = (navigation as any).getParent?.() as any;
+        resetForm();
+        if (tabNav?.navigate) {
+          tabNav.navigate('Account', { screen: 'ListerPortfolio' });
+        }
+        // Also reset the Profile stack so back from ListerPortfolio doesn't go
+        // back to Step 4.
+        navigation.reset({
+          index: 0,
+          routes: [{ name: 'ListerPortfolio' }],
+        });
       } else {
-        Alert.alert('Submission Failed', result.error || 'Failed to submit application. Please try again.');
+        setAlertState({ visible: true, title: 'Submission Failed', message: result.error || 'Failed to submit application. Please try again.' });
       }
     } catch (error) {
       console.error('Submit application error:', error);
-      Alert.alert('Error', 'An unexpected error occurred. Please try again.');
+      setAlertState({ visible: true, title: 'Error', message: 'An unexpected error occurred. Please try again.' });
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  const sendApplicationConfirmationEmail = async (submission: any) => {
+  const sendApplicationConfirmationEmail = async (submission: any, listingId?: string | number | null) => {
     try {
       const { data: { user }, error: userError } = await supabase.auth.getUser();
       if (userError || !user) {
@@ -366,13 +527,18 @@ export default function ApplicationStep4Screen() {
       const businessName = submission.company_details?.tradingName || submission.company_details?.registeredBusinessName || profileRecord?.name || '';
 
       // Call the Supabase Edge Function to send confirmation email
+      const isVenue = state.portfolioType === 'venues';
+      const catalogueUrl = isVenue ? 'https://funxon.co.za/venue-catalogue' : 'https://funxon.co.za/vendor-catalogue';
+
       const { data, error } = await supabase.functions.invoke('send-application-status-email', {
         body: {
           email: user.email,
           fullName: fullName,
           businessName: businessName || undefined,
-          tierName: submission.subscription_tier || (state.portfolioType === 'venues' ? 'Venue' : 'Vendor'),
-          applicationUrl: 'funxon://application-status',
+          tierName: submission.subscription_tier || (isVenue ? 'Venue' : 'Vendor'),
+          applicationUrl: 'https://funxon.co.za/account/application-status',
+          status: 'approved',
+          catalogueUrl,
         },
       });
 
@@ -384,13 +550,13 @@ export default function ApplicationStep4Screen() {
       console.log('Application confirmation email sent successfully:', data);
       
       // Send admin notification about new application
-      await sendAdminNotification(submission, fullName, businessName, user.email);
+      await sendAdminNotification(submission, fullName, businessName, user.email, listingId);
     } catch (err) {
       console.error('Failed to send application confirmation email:', err);
     }
   };
 
-  const sendAdminNotification = async (submission: any, fullName: string, businessName: string, vendorEmail: string | undefined) => {
+  const sendAdminNotification = async (submission: any, fullName: string, businessName: string, vendorEmail: string | undefined, listingId?: string | number | null) => {
     try {
       const { data, error } = await supabase.functions.invoke('send-admin-notification', {
         body: {
@@ -401,6 +567,8 @@ export default function ApplicationStep4Screen() {
           tierName: submission.subscription_tier,
           serviceCategories: submission.service_categories?.categories || [],
           provinces: submission.coverage_provinces || [],
+          portfolioType: state.portfolioType === 'venues' ? 'venue' : 'vendor',
+          listingId: listingId ?? undefined,
         },
       });
 
@@ -415,46 +583,63 @@ export default function ApplicationStep4Screen() {
     }
   };
 
-  return (
-    <View style={{ flex: 1, backgroundColor: colors.background }}>
-      <ScrollView contentContainerStyle={{ paddingBottom: spacing.xl }}>
-        <View style={{ paddingHorizontal: spacing.lg, paddingTop: spacing.xl }}>
-          <TouchableOpacity
-            onPress={() => navigation.goBack()}
-            style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.lg }}
-          >
-            <MaterialIcons name="arrow-back" size={20} color={colors.textPrimary} />
-            <Text style={{ ...typography.body, color: colors.textPrimary, marginLeft: spacing.sm }}>
-              Back
-            </Text>
-          </TouchableOpacity>
+  const desktopContainerStyle = {
+    maxWidth: 1200,
+    width: '100%',
+    alignSelf: 'center' as const,
+    paddingHorizontal: 48,
+    paddingBottom: spacing.xxl * 6,
+  };
 
-          <View style={{ marginBottom: spacing.lg }}>
+  return (
+    <KeyboardAvoidingView
+      style={{ flex: 1, backgroundColor: isDesktop ? colors.surfaceBg : colors.background }}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? spacing.lg : 0}
+    >
+      <ScrollView
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
+        contentContainerStyle={isDesktop ? { ...desktopContainerStyle } as any : { paddingBottom: spacing.xxl * 6 }}
+      >
+        <View style={{ paddingHorizontal: isDesktop ? 0 : spacing.lg, paddingTop: spacing.sm }}>
+          <TouchableOpacity
+              onPress={() => navigation.goBack()}
+              style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.sm }}
+            >
+              <MaterialIcons name="arrow-back" size={20} color={colors.textPrimary} />
+              <Text style={{ ...typography.body, color: colors.textPrimary, marginLeft: spacing.sm }}>
+                Back
+              </Text>
+            </TouchableOpacity>
+
+          <View style={{ marginBottom: spacing.lg, maxWidth: isDesktop ? 800 : undefined, width: isDesktop ? '100%' : undefined, alignSelf: isDesktop ? 'center' as const : undefined }}>
             <View style={{ marginBottom: spacing.md, alignSelf: 'flex-start' }}>
               <ApplicationProgress currentStep={4} />
             </View>
             <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: spacing.md }}>
               <MaterialIcons name="card-membership" size={32} color={colors.textPrimary} />
               <View style={{ flex: 1 }}>
-                <Text style={{ ...typography.titleMedium, color: colors.textPrimary }}>
+                <Text style={isDesktop ? { ...typography.headlineMd, color: colors.primary } as any : { ...typography.titleMedium, color: colors.textPrimary }}>
                   Subscription & Legal
                 </Text>
-                <Text style={{ ...typography.caption, color: colors.textMuted }}>
+                <Text style={isDesktop ? { ...typography.bodyMd, color: colors.onSurfaceVariant } as any : { ...typography.caption, color: colors.textMuted }}>
                   Page 4 of 4
                 </Text>
               </View>
             </View>
           </View>
 
+          <View style={{ maxWidth: isDesktop ? 800 : undefined, width: isDesktop ? '100%' : undefined, alignSelf: isDesktop ? 'center' as const : undefined }}>
           {/* Subscription Package Selection */}
           <View
             style={{
-              backgroundColor: colors.surface,
+              backgroundColor: cardSurface,
               borderRadius: radii.lg,
               padding: spacing.lg,
               marginBottom: spacing.lg,
               borderWidth: 1,
-              borderColor: colors.borderSubtle,
+              borderColor: cardBorder,
               shadowColor: '#000',
               shadowOpacity: 0.05,
               shadowRadius: 8,
@@ -484,7 +669,7 @@ export default function ApplicationStep4Screen() {
                   backgroundColor: '#FFFBEB',
                 }}
               >
-                <Text style={{ ...typography.body, color: colors.textPrimary, fontWeight: '600' }}>
+                <Text style={{ ...typography.bodySemiBold, color: colors.textPrimary }}>
                   No plans available
                 </Text>
               </View>
@@ -517,8 +702,8 @@ export default function ApplicationStep4Screen() {
                         padding: spacing.md,
                         borderRadius: radii.lg,
                         borderWidth: 2,
-                        borderColor: isSelected ? colors.textPrimary : colors.borderSubtle,
-                        backgroundColor: isSelected ? '#f2f7ff' : colors.surface,
+                        borderColor: isSelected ? colors.cta : cardBorder,
+                        backgroundColor: isSelected ? '#f2f7ff' : cardSurface,
                       }}
                     >
                       <View
@@ -527,8 +712,8 @@ export default function ApplicationStep4Screen() {
                           height: 24,
                           borderRadius: 12,
                           borderWidth: 2,
-                          borderColor: isSelected ? colors.textPrimary : colors.borderStrong,
-                          backgroundColor: isSelected ? colors.textPrimary : colors.surface,
+                          borderColor: isSelected ? colors.cta : colors.borderStrong,
+                          backgroundColor: isSelected ? colors.cta : cardSurface,
                           alignItems: 'center',
                           justifyContent: 'center',
                           marginRight: spacing.md,
@@ -537,7 +722,7 @@ export default function ApplicationStep4Screen() {
                         {isSelected && <MaterialIcons name="check" size={16} color="#FFFFFF" />}
                       </View>
                       <View style={{ flex: 1 }}>
-                        <Text style={{ ...typography.body, color: colors.textPrimary, fontWeight: '600' }}>
+                        <Text style={{ ...typography.bodySemiBold, color: colors.textPrimary }}>
                           {tier.tier_name.replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase())}
                         </Text>
                         <Text style={{ ...typography.caption, color: colors.textMuted, marginTop: 2 }}>
@@ -550,7 +735,7 @@ export default function ApplicationStep4Screen() {
               </View>
             )}
             {errors.subscriptionPlan && (
-              <Text style={{ fontSize: 12, color: '#EF4444', marginTop: spacing.xs }}>
+              <Text style={{ ...typography.caption, fontSize: 12, color: '#EF4444', marginTop: spacing.xs }}>
                 {errors.subscriptionPlan}
               </Text>
             )}
@@ -559,12 +744,12 @@ export default function ApplicationStep4Screen() {
           {/* Legal Agreements */}
           <View
             style={{
-              backgroundColor: colors.surface,
+              backgroundColor: cardSurface,
               borderRadius: radii.lg,
               padding: spacing.lg,
               marginBottom: spacing.lg,
               borderWidth: 1,
-              borderColor: colors.borderSubtle,
+              borderColor: cardBorder,
               shadowColor: '#000',
               shadowOpacity: 0.05,
               shadowRadius: 8,
@@ -591,8 +776,8 @@ export default function ApplicationStep4Screen() {
                   height: 24,
                   borderRadius: 6,
                   borderWidth: 2,
-                  borderColor: errors.termsAccepted ? '#EF4444' : state.step4.termsAccepted ? colors.textPrimary : colors.borderSubtle,
-                  backgroundColor: state.step4.termsAccepted ? colors.textPrimary : colors.surface,
+                  borderColor: errors.termsAccepted ? '#EF4444' : state.step4.termsAccepted ? colors.cta : cardBorder,
+                  backgroundColor: state.step4.termsAccepted ? colors.cta : cardSurface,
                   alignItems: 'center',
                   justifyContent: 'center',
                   marginRight: spacing.md,
@@ -606,7 +791,7 @@ export default function ApplicationStep4Screen() {
                 <Text style={{ ...typography.body, color: colors.textPrimary }}>
                   I accept the{' '}
                   <Text
-                    style={{ color: colors.textPrimary, fontWeight: '600', textDecorationLine: 'underline' }}
+                    style={{ ...typography.captionSemiBold, color: colors.textPrimary, textDecorationLine: 'underline' }}
                     onPress={() => navigation.navigate('LegalDocument', { documentId: 'terms-and-conditions' })}
                   >
                     Terms and Conditions
@@ -614,7 +799,7 @@ export default function ApplicationStep4Screen() {
                   *
                 </Text>
                 {errors.termsAccepted && (
-                  <Text style={{ fontSize: 12, color: '#EF4444', marginTop: 4 }}>
+                  <Text style={{ ...typography.caption, fontSize: 12, color: '#EF4444', marginTop: 4 }}>
                     {errors.termsAccepted}
                   </Text>
                 )}
@@ -636,8 +821,8 @@ export default function ApplicationStep4Screen() {
                   height: 24,
                   borderRadius: 6,
                   borderWidth: 2,
-                  borderColor: errors.privacyAccepted ? '#EF4444' : state.step4.privacyAccepted ? colors.textPrimary : colors.borderSubtle,
-                  backgroundColor: state.step4.privacyAccepted ? colors.textPrimary : colors.surface,
+                  borderColor: errors.privacyAccepted ? '#EF4444' : state.step4.privacyAccepted ? colors.cta : cardBorder,
+                  backgroundColor: state.step4.privacyAccepted ? colors.cta : cardSurface,
                   alignItems: 'center',
                   justifyContent: 'center',
                   marginRight: spacing.md,
@@ -651,7 +836,7 @@ export default function ApplicationStep4Screen() {
                 <Text style={{ ...typography.body, color: colors.textPrimary }}>
                   I accept the{' '}
                   <Text
-                    style={{ color: colors.textPrimary, fontWeight: '600', textDecorationLine: 'underline' }}
+                    style={{ ...typography.captionSemiBold, color: colors.textPrimary, textDecorationLine: 'underline' }}
                     onPress={() => navigation.navigate('LegalDocument', { documentId: 'privacy-policy' })}
                   >
                     Privacy Policy
@@ -659,7 +844,7 @@ export default function ApplicationStep4Screen() {
                   *
                 </Text>
                 {errors.privacyAccepted && (
-                  <Text style={{ fontSize: 12, color: '#EF4444', marginTop: 4 }}>
+                  <Text style={{ ...typography.caption, fontSize: 12, color: '#EF4444', marginTop: 4 }}>
                     {errors.privacyAccepted}
                   </Text>
                 )}
@@ -680,8 +865,8 @@ export default function ApplicationStep4Screen() {
                   height: 24,
                   borderRadius: 6,
                   borderWidth: 2,
-                  borderColor: state.step4.marketingConsent ? colors.textPrimary : colors.borderSubtle,
-                  backgroundColor: state.step4.marketingConsent ? colors.textPrimary : colors.surface,
+                  borderColor: state.step4.marketingConsent ? colors.cta : cardBorder,
+                  backgroundColor: state.step4.marketingConsent ? colors.cta : cardSurface,
                   alignItems: 'center',
                   justifyContent: 'center',
                   marginRight: spacing.md,
@@ -723,15 +908,15 @@ export default function ApplicationStep4Screen() {
               onPress={() => navigation.goBack()}
               style={{
                 flex: 1,
-                backgroundColor: colors.surface,
+                backgroundColor: cardSurface,
                 borderWidth: 1,
-                bordercolor: colors.textPrimary,
+                borderColor: colors.primary,
                 paddingVertical: spacing.md,
                 borderRadius: radii.md,
                 alignItems: 'center',
               }}
             >
-              <Text style={{ color: colors.textPrimary, fontSize: 16, fontWeight: '600' }}>
+              <Text style={{ ...typography.bodySemiBold, color: colors.textPrimary, fontSize: 13 }}>
                 Back
               </Text>
             </TouchableOpacity>
@@ -740,7 +925,7 @@ export default function ApplicationStep4Screen() {
               disabled={isSubmitting}
               style={{
                 flex: 1,
-                backgroundColor: isSubmitting ? colors.borderSubtle : colors.textPrimary,
+                backgroundColor: isSubmitting ? cardBorder : colors.cta,
                 paddingVertical: spacing.md,
                 borderRadius: radii.md,
                 flexDirection: 'row',
@@ -752,22 +937,33 @@ export default function ApplicationStep4Screen() {
               {isSubmitting ? (
                 <>
                   <ActivityIndicator size="small" color="#FFFFFF" style={{ marginRight: spacing.sm }} />
-                  <Text style={{ color: '#FFFFFF', fontSize: 16, fontWeight: '600' }}>
+                  <Text style={{ ...typography.bodySemiBold, color: '#FFFFFF', fontSize: 13 }}>
                     {isSelectedTierFree ? 'Submitting...' : 'Processing...'}
                   </Text>
                 </>
               ) : (
                 <>
-                  <Text style={{ color: '#FFFFFF', fontSize: 16, fontWeight: '600', marginRight: spacing.sm }}>
+                  <Text style={{ ...typography.bodySemiBold, color: '#FFFFFF', fontSize: 13, marginRight: spacing.xs }}>
                     {isSelectedTierFree ? 'Submit Application' : 'Checkout'}
                   </Text>
-                  <MaterialIcons name={isSelectedTierFree ? 'check-circle' : 'shopping-cart'} size={16} color="#FFFFFF" />
+                  <MaterialIcons name={isSelectedTierFree ? 'check-circle' : 'shopping-cart'} size={14} color="#FFFFFF" />
                 </>
               )}
             </TouchableOpacity>
           </View>
+          </View>
         </View>
       </ScrollView>
-    </View>
+
+      {alertState && (
+        <ThemedAlert
+          visible={alertState.visible}
+          title={alertState.title}
+          message={alertState.message}
+          buttons={alertState.buttons ?? [{ text: 'OK', style: 'default', onPress: () => setAlertState(null) }]}
+          onDismiss={() => setAlertState(null)}
+        />
+      )}
+    </KeyboardAvoidingView>
   );
 }

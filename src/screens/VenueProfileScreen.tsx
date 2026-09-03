@@ -1,5 +1,12 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, Alert, BackHandler, Image, Linking, Modal, Platform, ScrollView, Share, Text, TouchableOpacity, View } from 'react-native';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { ActivityIndicator, BackHandler, Dimensions, Image, Linking, Platform, ScrollView, Share, Text, TouchableOpacity, View } from 'react-native';
+import Carousel from 'react-native-reanimated-carousel';
+import type { ICarouselInstance } from 'react-native-reanimated-carousel';
+import ThemedAlert from '../components/ThemedAlert';
+import { openExternalUrl } from '../utils/openUrl';
+import NetworkImage from '../components/NetworkImage';
+import ImageZoomModal, { type GalleryItem } from '../components/ImageZoomModal';
+import VideoThumbnail from '../components/VideoThumbnail';
 import { useQuery } from '@tanstack/react-query';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { WebView } from 'react-native-webview';
@@ -11,7 +18,16 @@ import type { AttendeeStackParamList } from '../navigation/AttendeeNavigator';
 import { colors, spacing, radii, typography } from '../theme';
 import { getFavourites, toggleFavourite } from '../lib/favourites';
 import { useAuth } from '../auth/AuthContext';
+import { useIsDesktop } from '../hooks/useIsDesktop';
 import { PrimaryButton } from '../components/ui';
+
+import VenueAboutTab from '../components/profile/VenueAboutTab';
+import VenueAmenitiesTab from '../components/profile/VenueAmenitiesTab';
+import VenueReviewsTab from '../components/profile/VenueReviewsTab';
+import VenueCatalogueTab from '../components/profile/VenueCatalogueTab';
+
+const headerTitleLarge = { ...typography.titleLarge, fontFamily: 'Montserrat_700Bold' as const };
+const headerTitleMedium = { ...typography.titleMedium, fontFamily: 'Montserrat_600SemiBold' as const };
 
 const GOOGLE_MAPS_API_KEY = 'AIzaSyBjd1KYtTaAzxzdw5ayGwwMu5Sex-gKQLI';
 
@@ -51,6 +67,7 @@ type VenueRecord = {
   subscription_status: string | null;
   subscription_plan: string | null;
   features: Record<string, any> | null;
+  price_range: string | null;
 };
 
  type VenueReview = {
@@ -72,18 +89,48 @@ type AvailabilityRecord = {
   notes: string | null;
 };
 
+type GalleryMedia = {
+  id: number;
+  media_url: string;
+  media_type: 'image' | 'video';
+  sort_order: number;
+};
+
+type CatalogueItem = {
+  id: number;
+  listing_id: number;
+  title: string;
+  description: string | null;
+  price: number | null;
+  currency: string;
+  sort_order: number;
+  is_active: boolean;
+  image_url: string | null;
+};
+
+type VenueDocument = {
+  id: number;
+  document_url: string;
+  file_name: string | null;
+  created_at: string;
+};
+
 export default function VenueProfileScreen({ route, navigation }: Props) {
   const { venueId } = route.params;
-  const [activeTab, setActiveTab] = useState<'about' | 'amenities' | 'reviews' | 'calendar'>('about');
+  const [activeTab, setActiveTab] = useState<'about' | 'amenities' | 'reviews' | 'catalogue'>('about');
   const [mapImageFailed, setMapImageFailed] = useState(false);
   const [galleryIndex, setGalleryIndex] = useState(0);
+  const carouselRef = useRef<ICarouselInstance>(null);
   const [zoomVisible, setZoomVisible] = useState(false);
-  const [zoomImageUri, setZoomImageUri] = useState<string | null>(null);
+  const [zoomInitialIndex, setZoomInitialIndex] = useState(0);
+  const [galleryContainerWidth, setGalleryContainerWidth] = useState(Dimensions.get('window').width);
   const [favouriteIds, setFavouriteIds] = useState<{ vendorIds: number[]; venueIds: number[] }>({
     vendorIds: [],
     venueIds: [],
   });
+  const [alertState, setAlertState] = useState<{visible: boolean; title: string; message: string} | null>(null);
   const { user } = useAuth();
+  const isDesktop = useIsDesktop();
 
   const cameFromFavourites = route.params?.from === 'Favourites';
   const cameFromQuotes = route.params?.from === 'Quotes';
@@ -166,7 +213,6 @@ export default function VenueProfileScreen({ route, navigation }: Props) {
         .from('venue_reviews')
         .select('id, rating, title, review_text, is_verified, created_at, status')
         .eq('venue_id', venueId)
-        .or('status.is.null,status.eq.approved')
         .order('created_at', { ascending: false })
         .limit(50);
 
@@ -179,34 +225,52 @@ export default function VenueProfileScreen({ route, navigation }: Props) {
     enabled: typeof venueId === 'number',
   });
 
+  const hasReviews = !!reviews && reviews.length > 0;
+  const averageRating = hasReviews && reviews
+    ? reviews.reduce((sum, r) => sum + (r?.rating ?? 0), 0) / reviews.length
+    : null;
+  const reviewCount = hasReviews ? reviews!.length : 0;
+  const ratingBreakdown = useMemo(() => {
+    const base = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
+    if (!reviews || !Array.isArray(reviews) || reviews.length === 0) return base;
+    return reviews.reduce((acc, review) => {
+      const r = review.rating as 1 | 2 | 3 | 4 | 5;
+      if (r >= 1 && r <= 5) acc[r]++;
+      return acc;
+    }, { ...base });
+  }, [reviews]);
+  const ratingSummaryValue = averageRating ? averageRating.toFixed(1) : '0.0';
+  const ratingSummaryCount = reviewCount || 0;
+  const ratingCategories = [
+    { label: 'Venue Condition', value: averageRating ?? 0 },
+    { label: 'Cleanliness', value: averageRating ?? 0 },
+    { label: 'Ambiance & Atmosphere', value: averageRating ?? 0 },
+    { label: 'Staff Professionalism', value: averageRating ?? 0 },
+    { label: 'Value for Money', value: averageRating ?? 0 },
+    { label: 'Location & Accessibility', value: averageRating ?? 0 },
+    { label: 'Overall Experience', value: averageRating ?? 0 },
+  ];
+
   const {
-    data: canLeaveReview,
-    isLoading: eligibilityLoading,
-  } = useQuery<boolean>({
-    queryKey: ['venue-review-eligibility', venueId, user?.id],
-    enabled: typeof venueId === 'number' && !!user?.id,
+    data: galleryMedia,
+    isLoading: galleryMediaLoading,
+  } = useQuery<GalleryMedia[]>({
+    queryKey: ['venue-gallery-media', venueId],
+    enabled: typeof venueId === 'number',
     queryFn: async () => {
-      if (!user?.id) return false;
+      const { data, error } = await supabase
+        .from('gallery_media')
+        .select('id, media_url, media_type, sort_order')
+        .eq('venue_id', venueId)
+        .eq('is_active', true)
+        .order('sort_order', { ascending: true });
 
-      const { count: quoteCount, error: quoteError } = await supabase
-        .from('venue_quote_requests')
-        .select('id', { count: 'exact', head: true })
-        .eq('listing_id', venueId)
-        .eq('requester_user_id', user.id)
-        .in('status', ['accepted', 'finalised']);
+      if (error) {
+        console.warn('gallery_media query failed, falling back to additional_photos:', error);
+        return [];
+      }
 
-      if (quoteError) throw quoteError;
-
-      const { count: tourCount, error: tourError } = await supabase
-        .from('venue_tour_bookings')
-        .select('id', { count: 'exact', head: true })
-        .eq('listing_id', venueId)
-        .eq('requester_user_id', user.id)
-        .in('status', ['accepted', 'finalised']);
-
-      if (tourError) throw tourError;
-
-      return (quoteCount ?? 0) > 0 || (tourCount ?? 0) > 0;
+      return (data as GalleryMedia[]) ?? [];
     },
   });
 
@@ -234,6 +298,52 @@ export default function VenueProfileScreen({ route, navigation }: Props) {
     },
   });
 
+  const {
+    data: catalogueItems,
+    isLoading: catalogueLoading,
+  } = useQuery<CatalogueItem[]>({
+    queryKey: ['venue-catalogue-items', venueId],
+    enabled: typeof venueId === 'number',
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('venue_catalogue_items')
+        .select('id, listing_id, title, description, price, currency, sort_order, is_active, image_url')
+        .eq('listing_id', venueId)
+        .eq('is_active', true)
+        .order('sort_order', { ascending: true })
+        .order('created_at', { ascending: true });
+
+      if (error) {
+        console.warn('venue_catalogue_items query failed:', error);
+        return [];
+      }
+
+      return (data as CatalogueItem[]) ?? [];
+    },
+  });
+
+  const {
+    data: cataloguePdfs,
+  } = useQuery<VenueDocument[]>({
+    queryKey: ['venue-catalogue-pdfs', venueId],
+    enabled: typeof venueId === 'number',
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('venue_documents')
+        .select('id, document_url, file_name, created_at')
+        .eq('venue_id', venueId)
+        .eq('document_type', 'catalogue_pdf')
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.warn('venue_documents query failed:', error);
+        return [];
+      }
+
+      return (data as VenueDocument[]) ?? [];
+    },
+  });
+
   const mapQuery = useMemo(() => {
     if (venue?.location?.trim()) {
       return venue.location.trim();
@@ -247,21 +357,25 @@ export default function VenueProfileScreen({ route, navigation }: Props) {
   }, [venue?.location, venue?.city, venue?.province]);
 
   const physicalAddress = useMemo(() => {
-    const structured = [
-      venue?.address_line_1,
-      venue?.address_line_2,
-      venue?.suburb,
-      venue?.city,
-      venue?.province,
-      venue?.postal_code,
-      venue?.country,
-    ]
-      .map((part) => part?.trim() ?? '')
-      .filter(Boolean)
-      .join(', ');
+    const hasStreetAddress = Boolean(venue?.address_line_1?.trim());
 
-    if (structured) {
-      return structured;
+    if (hasStreetAddress) {
+      const structured = [
+        venue?.address_line_1,
+        venue?.address_line_2,
+        venue?.suburb,
+        venue?.city,
+        venue?.province,
+        venue?.postal_code,
+        venue?.country,
+      ]
+        .map((part) => part?.trim() ?? '')
+        .filter(Boolean)
+        .join(', ');
+
+      if (structured) {
+        return structured;
+      }
     }
 
     if (venue?.location?.trim()) {
@@ -288,7 +402,7 @@ export default function VenueProfileScreen({ route, navigation }: Props) {
     return { latitude, longitude };
   }, [venue?.latitude, venue?.longitude]);
 
-  const mapSearchTarget = physicalAddress ?? mapQuery;
+  const mapSearchTarget = mapQuery || physicalAddress;
 
   useEffect(() => {
     setMapImageFailed(false);
@@ -368,10 +482,23 @@ export default function VenueProfileScreen({ route, navigation }: Props) {
     `;
   }, [mapCoordinates, mapSearchTarget, venue?.name]);
 
-  const galleryImages = useMemo(
-    () => [venue?.image_url, ...(venue?.additional_photos ?? [])].filter(Boolean) as string[],
-    [venue?.image_url, venue?.additional_photos],
-  );
+  const galleryItems = useMemo<GalleryItem[]>(() => {
+    const legacyImages = [venue?.image_url, ...(venue?.additional_photos ?? [])].filter(Boolean) as string[];
+    const legacyItems = legacyImages.map((url) => ({ url, type: 'image' as const }));
+    const mediaItems = (galleryMedia ?? []).map((m) => ({ url: m.media_url, type: m.media_type }));
+    const merged = [...legacyItems, ...mediaItems];
+    const seen = new Set<string>();
+    const deduped = merged.filter((item) => {
+      if (seen.has(item.url)) return false;
+      seen.add(item.url);
+      return true;
+    });
+    return deduped.sort((a, b) => {
+      if (a.type === 'video' && b.type !== 'video') return 1;
+      if (a.type !== 'video' && b.type === 'video') return -1;
+      return 0;
+    });
+  }, [galleryMedia, venue?.image_url, venue?.additional_photos]);
 
   const halls = useMemo(() => {
     const raw = (venue?.features as any)?.halls;
@@ -388,10 +515,17 @@ export default function VenueProfileScreen({ route, navigation }: Props) {
 
   // Feature checks
   const canBookTours = useMemo(() => {
-    if (!venue?.features) return false;
-    // Check for explicit flag or fallback to plan check if needed (though features column should be populated)
-    return venue.features['instant_tour_bookings'] === true || 
-           venue.features['tour_bookings'] === true; 
+    if (!venue) return false;
+    // Explicit feature flags take priority
+    if (venue.features) {
+      if (venue.features['instant_tour_bookings'] === true || venue.features['tour_bookings'] === true) {
+        return true;
+      }
+    }
+    // Fallback: paid plan with active/trial status
+    const paidPlan = venue.subscription_plan && venue.subscription_plan !== 'get_started';
+    const activeStatus = venue.subscription_status === 'active' || venue.subscription_status === 'trial';
+    return Boolean(paidPlan && activeStatus);
   }, [venue]);
 
   const canShowLinks = useMemo(() => {
@@ -419,7 +553,7 @@ export default function VenueProfileScreen({ route, navigation }: Props) {
   const handleToggleFavourite = async () => {
     if (!venue || !user?.id) {
       if (!user?.id) {
-        Alert.alert('Sign in required', 'Please sign in to save favourites.');
+        setAlertState({ visible: true, title: 'Sign in required', message: 'Please sign in to save favourites.' });
       }
       return;
     }
@@ -441,7 +575,7 @@ export default function VenueProfileScreen({ route, navigation }: Props) {
     } catch (error) {
       setFavouriteIds(previous);
       const message = error instanceof Error ? error.message : 'We could not update favourites right now.';
-      Alert.alert('Favourite update failed', message);
+      setAlertState({ visible: true, title: 'Favourite update failed', message });
     }
   };
 
@@ -449,11 +583,20 @@ export default function VenueProfileScreen({ route, navigation }: Props) {
 
   const handleShare = async () => {
     if (!venue) return;
+    const url = `https://funxon-web.vercel.app/venue/${venue.id}`;
+    const message = encodeURIComponent(`Check out ${venue.name} on Funxon: ${url}`);
+    const whatsappUrl = Platform.select({
+      ios: `https://wa.me/?text=${message}`,
+      android: `whatsapp://send?text=${message}`,
+      default: `https://wa.me/?text=${message}`,
+    });
     try {
-      await Share.share({
-        message: `Check out ${venue.name} on Funxon!`,
-        title: venue.name,
-      });
+      const supported = await Linking.canOpenURL(whatsappUrl);
+      if (supported) {
+        await Linking.openURL(whatsappUrl);
+      } else {
+        await Share.share({ message: `Check out ${venue.name} on Funxon! ${url}`, title: venue.name });
+      }
     } catch (error) {
       console.error('Share failed:', error);
     }
@@ -463,20 +606,20 @@ export default function VenueProfileScreen({ route, navigation }: Props) {
     if (!mapCoordinates && !physicalAddress && !mapQuery) return;
     const mapsUrl = mapCoordinates
       ? `https://www.google.com/maps/search/?api=1&query=${mapCoordinates.latitude},${mapCoordinates.longitude}`
-      : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(mapSearchTarget)}`;
+      : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(mapSearchTarget ?? '')}`;
     Linking.openURL(mapsUrl).catch(() => null);
   };
 
   const handleOpenUrl = (url?: string | null) => {
-    if (!url) return;
-    Linking.openURL(url).catch(() => null);
+    openExternalUrl(url);
   };
 
   const whatsappUrl = venue?.whatsapp_number
     ? `https://wa.me/${venue.whatsapp_number.replace(/[^0-9]/g, '')}`
     : null;
   const contactNumber = venue?.whatsapp_number?.trim() || null;
-  const emailUrl = venue?.contact_email ? `mailto:${venue.contact_email}` : null;
+  const venueContactEmail = venue?.contact_email?.trim() || (venue as any)?.billing_email?.trim() || null;
+  const emailUrl = venueContactEmail ? `mailto:${venueContactEmail}` : null;
   const webMapEmbedUrl = mapCoordinates
     ? `https://www.google.com/maps?q=${mapCoordinates.latitude},${mapCoordinates.longitude}&z=16&output=embed`
     : mapSearchTarget
@@ -529,7 +672,7 @@ export default function VenueProfileScreen({ route, navigation }: Props) {
           backgroundColor: colors.background,
         }}
       >
-        <Text style={{ ...typography.titleMedium, color: colors.textPrimary }}>Failed to load venue.</Text>
+        <Text style={{ ...headerTitleMedium, color: colors.textPrimary }}>Failed to load venue.</Text>
         <Text style={{ marginTop: spacing.sm, ...typography.body, color: colors.textMuted }}>{venueError.message}</Text>
       </View>
     );
@@ -546,7 +689,7 @@ export default function VenueProfileScreen({ route, navigation }: Props) {
           backgroundColor: colors.background,
         }}
       >
-        <Text style={{ ...typography.titleMedium, color: colors.textPrimary }}>Venue not found.</Text>
+        <Text style={{ ...headerTitleMedium, color: colors.textPrimary }}>Venue not found.</Text>
       </View>
     );
   }
@@ -555,7 +698,7 @@ export default function VenueProfileScreen({ route, navigation }: Props) {
     if (!items || items.length === 0) return null;
     return (
       <View style={{ marginBottom: spacing.md }}>
-        <Text style={{ ...typography.body, color: colors.textPrimary, fontWeight: '600', marginBottom: spacing.xs }}>
+        <Text style={{ ...typography.bodySemiBold, color: colors.textPrimary, marginBottom: spacing.xs }}>
           {title}
         </Text>
         {items.map((item) => (
@@ -565,7 +708,7 @@ export default function VenueProfileScreen({ route, navigation }: Props) {
                 width: 6,
                 height: 6,
                 borderRadius: 3,
-                backgroundcolor: colors.textPrimary,
+                backgroundColor: colors.cta,
                 marginRight: spacing.sm,
               }}
             />
@@ -590,22 +733,9 @@ export default function VenueProfileScreen({ route, navigation }: Props) {
     });
   };
 
-  return (
-    <ScrollView
-      style={{ flex: 1, backgroundColor: colors.background }}
-      contentContainerStyle={{ paddingHorizontal: spacing.lg, paddingBottom: spacing.lg, paddingTop: spacing.sm }}
-    >
-      <TouchableOpacity
-        onPress={handleBackNavigation}
-        style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.md }}
-      >
-        <MaterialIcons name="arrow-back" size={20} color={colors.textPrimary} />
-        <Text style={{ ...typography.body, color: colors.textPrimary, marginLeft: spacing.sm }}>
-          Back
-        </Text>
-      </TouchableOpacity>
-
-      {/* Header */}
+  const renderMainContent = () => (
+    <>
+{/* Header */}
       <View
         style={{
           marginBottom: spacing.lg,
@@ -618,44 +748,47 @@ export default function VenueProfileScreen({ route, navigation }: Props) {
       >
         <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
           <View style={{ flex: 1, paddingRight: spacing.md }}>
-            <Text style={{ ...typography.titleLarge, color: colors.textPrimary }}>{venue.name}</Text>
+            <Text style={{ ...(isDesktop ? typography.headlineMd : headerTitleLarge), color: colors.primary }}>{venue.name}</Text>
           </View>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
-            <TouchableOpacity
-              onPress={handleShare}
-              style={{
-                width: 40,
-                height: 40,
-                borderRadius: 20,
-                borderWidth: 1,
-                borderColor: colors.borderSubtle,
-                alignItems: 'center',
-                justifyContent: 'center',
-                backgroundColor: colors.surface,
-              }}
-            >
-              <MaterialIcons name="share" size={22} color={colors.textMuted} />
-            </TouchableOpacity>
-            <TouchableOpacity
-              onPress={handleToggleFavourite}
-              style={{
-                width: 40,
-                height: 40,
-                borderRadius: 20,
-                borderWidth: 1,
-                borderColor: colors.borderSubtle,
-                alignItems: 'center',
-                justifyContent: 'center',
-                backgroundColor: colors.surface,
-              }}
-            >
-              <MaterialIcons
-                name={isFavourite ? 'favorite' : 'favorite-border'}
-                size={24}
-                color={isFavourite ? colors.primaryTeal : colors.textMuted}
-              />
-            </TouchableOpacity>
-          </View>
+          {/* Only show fav/share buttons in header on mobile; desktop has them in sidebar */}
+          {!isDesktop && (
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
+              <TouchableOpacity
+                onPress={handleShare}
+                style={{
+                  width: 40,
+                  height: 40,
+                  borderRadius: 20,
+                  borderWidth: 1,
+                  borderColor: colors.borderSubtle,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  backgroundColor: colors.surface,
+                }}
+              >
+                <MaterialIcons name="share" size={22} color={colors.textMuted} />
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={handleToggleFavourite}
+                style={{
+                  width: 40,
+                  height: 40,
+                  borderRadius: 20,
+                  borderWidth: 1,
+                  borderColor: colors.borderSubtle,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  backgroundColor: colors.surface,
+                }}
+              >
+                <MaterialIcons
+                  name={isFavourite ? 'favorite' : 'favorite-border'}
+                  size={24}
+                  color={isFavourite ? colors.coral : colors.textMuted}
+                />
+              </TouchableOpacity>
+            </View>
+          )}
         </View>
 
         <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: spacing.sm }}>
@@ -694,131 +827,160 @@ export default function VenueProfileScreen({ route, navigation }: Props) {
           borderColor: colors.borderSubtle,
           overflow: 'hidden',
         }}
+        onLayout={(e) => setGalleryContainerWidth(e.nativeEvent.layout.width)}
       >
-        <View style={{ height: 220, backgroundColor: colors.surfaceMuted }}>
-          {galleryImages.length > 0 ? (
-            <>
-              <TouchableOpacity
-                activeOpacity={0.9}
-                onPress={() => {
-                  setZoomImageUri(galleryImages[galleryIndex]);
-                  setZoomVisible(true);
-                }}
-                style={{ width: '100%', height: '100%' }}
-              >
-                <Image
-                  source={{ uri: galleryImages[galleryIndex] }}
+        {isDesktop ? (
+          /* Desktop: single hero image */
+          galleryItems.length > 0 ? (
+            <TouchableOpacity
+              activeOpacity={0.9}
+              onPress={() => { setZoomInitialIndex(0); setZoomVisible(true); }}
+              style={{ height: 320 }}
+            >
+              {galleryItems[0].type === 'video' ? (
+                <VideoThumbnail
+                  uri={galleryItems[0].url}
+                  style={{ width: '100%', height: '100%' }}
+                  playIconSize={36}
+                />
+              ) : (
+                <NetworkImage
+                  uri={galleryItems[0].url}
                   style={{ width: '100%', height: '100%' }}
                   resizeMode="cover"
                 />
-              </TouchableOpacity>
-              {galleryImages.length > 1 && (
-                <>
-                  <TouchableOpacity
-                    onPress={() => setGalleryIndex((prev) => (prev > 0 ? prev - 1 : galleryImages.length - 1))}
-                    style={{
-                      position: 'absolute',
-                      left: spacing.md,
-                      top: '50%',
-                      marginTop: -18,
-                      width: 36,
-                      height: 36,
-                      borderRadius: 18,
-                      backgroundColor: 'rgba(0,0,0,0.5)',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                    }}
-                  >
-                    <MaterialIcons name="chevron-left" size={24} color="#FFFFFF" />
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    onPress={() => setGalleryIndex((prev) => (prev < galleryImages.length - 1 ? prev + 1 : 0))}
-                    style={{
-                      position: 'absolute',
-                      right: spacing.md,
-                      top: '50%',
-                      marginTop: -18,
-                      width: 36,
-                      height: 36,
-                      borderRadius: 18,
-                      backgroundColor: 'rgba(0,0,0,0.5)',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                    }}
-                  >
-                    <MaterialIcons name="chevron-right" size={24} color="#FFFFFF" />
-                  </TouchableOpacity>
-                  <View
-                    style={{
-                      position: 'absolute',
-                      bottom: spacing.md,
-                      left: 0,
-                      right: 0,
-                      flexDirection: 'row',
-                      justifyContent: 'center',
-                      gap: 6,
-                    }}
-                  >
-                    {galleryImages.map((_, idx) => (
-                      <View
-                        key={idx}
-                        style={{
-                          width: 8,
-                          height: 8,
-                          borderRadius: 4,
-                          backgroundColor: idx === galleryIndex ? '#FFFFFF' : 'rgba(255,255,255,0.4)',
-                        }}
-                      />
-                    ))}
-                  </View>
-                </>
               )}
-            </>
+              {galleryItems.length > 1 && (
+                <View style={{ position: 'absolute', bottom: spacing.md, right: spacing.md, flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: 'rgba(255,255,255,0.15)', paddingHorizontal: spacing.md, paddingVertical: spacing.sm, borderRadius: radii.md, borderWidth: 1, borderColor: 'rgba(255,255,255,0.4)' }}>
+                  <MaterialIcons name="photo-library" size={16} color="#FFFFFF" />
+                  <Text style={{ ...typography.bodySemiBold, color: '#FFFFFF' }}>View all photos</Text>
+                </View>
+              )}
+            </TouchableOpacity>
           ) : (
-            <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+            <View style={{ height: 320, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.surfaceMuted }}>
               <MaterialIcons name="image" size={48} color={colors.textMuted} />
-              <Text style={{ ...typography.caption, color: colors.textMuted, marginTop: spacing.sm }}>
-                No images available
-              </Text>
+              <Text style={{ ...typography.caption, color: colors.textMuted, marginTop: spacing.sm }}>No images available</Text>
             </View>
-          )}
-        </View>
-        {galleryImages.length > 1 && (
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ padding: spacing.md }}>
-            {galleryImages.map((imageUrl, idx) => (
-              <TouchableOpacity key={imageUrl + idx} onPress={() => setGalleryIndex(idx)}>
-                <Image
-                  source={{ uri: imageUrl }}
-                  style={{
-                    width: 80,
-                    height: 80,
-                    borderRadius: radii.md,
-                    backgroundColor: colors.surfaceMuted,
-                    borderWidth: idx === galleryIndex ? 2 : 0,
-                    bordercolor: colors.textPrimary,
-                  }}
-                  resizeMode="cover"
-                />
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
+          )
+        ) : (
+          /* Mobile: carousel only */
+          <>
+            <View style={{ height: 220, backgroundColor: colors.surfaceMuted }}>
+              {galleryItems.length > 0 ? (
+                <>
+                  <Carousel
+                    ref={carouselRef}
+                    width={galleryContainerWidth || Dimensions.get('window').width}
+                    height={220}
+                    data={galleryItems}
+                    loop={galleryItems.length > 1}
+                    pagingEnabled={false}
+                    snapEnabled
+                    onSnapToItem={(index) => setGalleryIndex(index)}
+                    renderItem={({ item }) => (
+                      <TouchableOpacity
+                        activeOpacity={0.9}
+                        onPress={() => {
+                          setZoomInitialIndex(galleryIndex);
+                          setZoomVisible(true);
+                        }}
+                        style={{ width: '100%', height: '100%' }}
+                      >
+                        {item.type === 'video' ? (
+                          <VideoThumbnail
+                            uri={item.url}
+                            style={{ width: '100%', height: '100%' }}
+                            playIconSize={32}
+                          />
+                        ) : (
+                          <NetworkImage uri={item.url} style={{ width: '100%', height: '100%' }} resizeMode="cover" />
+                        )}
+                      </TouchableOpacity>
+                    )}
+                  />
+                  {galleryItems.length > 1 && (
+                    <>
+                      <TouchableOpacity
+                        onPress={() => carouselRef.current?.prev()}
+                        style={{
+                          position: 'absolute',
+                          left: spacing.md,
+                          top: '50%',
+                          marginTop: -18,
+                          width: 36,
+                          height: 36,
+                          borderRadius: 18,
+                          backgroundColor: 'rgba(0,0,0,0.5)',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                        }}
+                      >
+                        <MaterialIcons name="chevron-left" size={24} color="#FFFFFF" />
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        onPress={() => carouselRef.current?.next()}
+                        style={{
+                          position: 'absolute',
+                          right: spacing.md,
+                          top: '50%',
+                          marginTop: -18,
+                          width: 36,
+                          height: 36,
+                          borderRadius: 18,
+                          backgroundColor: 'rgba(0,0,0,0.5)',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                        }}
+                      >
+                        <MaterialIcons name="chevron-right" size={24} color="#FFFFFF" />
+                      </TouchableOpacity>
+                      <View
+                        style={{
+                          position: 'absolute',
+                          bottom: spacing.md,
+                          left: 0,
+                          right: 0,
+                          flexDirection: 'row',
+                          justifyContent: 'center',
+                          gap: 6,
+                        }}
+                      >
+                        {galleryItems.map((_, idx) => (
+                          <View
+                            key={idx}
+                            style={{
+                              width: 8,
+                              height: 8,
+                              borderRadius: 4,
+                              backgroundColor: idx === galleryIndex ? '#FFFFFF' : 'rgba(255,255,255,0.4)',
+                            }}
+                          />
+                        ))}
+                      </View>
+                    </>
+                  )}
+                </>
+              ) : (
+                <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+                  <MaterialIcons name="image" size={48} color={colors.textMuted} />
+                  <Text style={{ ...typography.caption, color: colors.textMuted, marginTop: spacing.sm }}>
+                    No images available
+                  </Text>
+                </View>
+              )}
+            </View>
+          </>
         )}
       </View>
 
-      {/* Zoom Modal */}
-      <Modal visible={zoomVisible} transparent animationType="fade" onRequestClose={() => setZoomVisible(false)}>
-        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.92)', justifyContent: 'center', alignItems: 'center' }}>
-          <TouchableOpacity
-            onPress={() => setZoomVisible(false)}
-            style={{ position: 'absolute', top: 40, right: 20, zIndex: 10 }}
-          >
-            <MaterialIcons name="close" size={32} color="#FFFFFF" />
-          </TouchableOpacity>
-          {zoomImageUri && (
-            <Image source={{ uri: zoomImageUri }} style={{ width: '90%', height: '70%' }} resizeMode="contain" />
-          )}
-        </View>
-      </Modal>
+      {/* Zoom / Video Modal */}
+      <ImageZoomModal
+        visible={zoomVisible}
+        items={galleryItems}
+        initialIndex={zoomInitialIndex}
+        onClose={() => setZoomVisible(false)}
+      />
 
       {/* Tabs */}
       <View
@@ -835,8 +997,8 @@ export default function VenueProfileScreen({ route, navigation }: Props) {
         {([
           { key: 'about', label: 'About' },
           { key: 'amenities', label: 'Amenities' },
+          { key: 'catalogue', label: 'Catalogue' },
           { key: 'reviews', label: 'Reviews' },
-          { key: 'calendar', label: 'Calendar' },
         ] as const).map((tab) => {
           const isActive = activeTab === tab.key;
           return (
@@ -847,14 +1009,16 @@ export default function VenueProfileScreen({ route, navigation }: Props) {
                 flex: 1,
                 paddingVertical: spacing.sm,
                 borderRadius: radii.full,
-                backgroundColor: isActive ? colors.textPrimary : 'transparent',
+                backgroundColor: 'transparent',
                 alignItems: 'center',
+                borderBottomWidth: isActive ? 2 : 0,
+                borderBottomColor: colors.coral,
               }}
             >
               <Text
                 style={{
                   ...typography.caption,
-                  color: isActive ? '#FFFFFF' : colors.textMuted,
+                  color: isActive ? colors.coral : colors.textMuted,
                   fontWeight: isActive ? '600' : '400',
                 }}
               >
@@ -865,746 +1029,323 @@ export default function VenueProfileScreen({ route, navigation }: Props) {
         })}
       </View>
 
-      {activeTab === 'about' && (
-        <View>
-          {halls.length > 0 && (
-            <View
-              style={{
-                marginBottom: spacing.lg,
-                padding: spacing.lg,
-                borderRadius: radii.lg,
-                backgroundColor: colors.surface,
-                borderWidth: 1,
-                borderColor: colors.borderSubtle,
-              }}
-            >
-              <Text
-                style={{
-                  ...typography.titleMedium,
-                  color: colors.textPrimary,
-                  marginBottom: spacing.md,
-                }}
-              >
-                Halls & Capacities
+            {/* All tab content is always rendered (mounted) but hidden via display:none when inactive.
+       This prevents expensive remounts of WebView (Google Maps in About tab) and
+       catalogue lists when switching between tabs on Android. */}
+      <View style={{ display: activeTab === 'about' ? 'flex' : 'none' }}>
+        <VenueAboutTab
+          venue={venue}
+          halls={halls}
+          maxHallCapacity={maxHallCapacity}
+          physicalAddress={physicalAddress}
+          contactNumber={contactNumber}
+          mapQuery={mapQuery}
+          whatsappUrl={whatsappUrl}
+          emailUrl={emailUrl}
+          venueContactEmail={venueContactEmail}
+          webMapEmbedUrl={webMapEmbedUrl}
+          mapCoordinates={mapCoordinates}
+          mapSearchTarget={mapSearchTarget ?? ''}
+          nativeMapHtml={nativeMapHtml}
+          staticMapUrl={staticMapUrl}
+          mapImageFailed={mapImageFailed}
+          canBookTours={canBookTours}
+          handleOpenUrl={handleOpenUrl}
+          handleOpenMap={handleOpenMap}
+          setMapImageFailed={setMapImageFailed}
+          handleRequestQuote={handleRequestQuote}
+          setActiveTab={setActiveTab}
+          navigation={navigation}
+          venueId={venue.id}
+        />
+      </View>
+
+      <View style={{ display: activeTab === 'amenities' ? 'flex' : 'none' }}>
+        <VenueAmenitiesTab
+          halls={halls}
+          amenities={venue.amenities}
+        />
+      </View>
+
+      <View style={{ display: activeTab === 'reviews' ? 'flex' : 'none' }}>
+        <VenueReviewsTab
+          reviews={reviews}
+          reviewsLoading={reviewsLoading}
+          reviewsError={reviewsError ?? null}
+          ratingSummaryValue={ratingSummaryValue}
+          ratingSummaryCount={ratingSummaryCount}
+          averageRating={averageRating}
+          ratingBreakdown={ratingBreakdown}
+          ratingCategories={ratingCategories}
+          user={user ?? null}
+          navigation={navigation}
+          venueId={venue.id}
+          name={venue.name}
+        />
+      </View>
+
+      <View style={{ display: activeTab === 'catalogue' ? 'flex' : 'none' }}>
+        <VenueCatalogueTab
+          catalogueItems={catalogueItems}
+          cataloguePdfs={cataloguePdfs}
+          catalogueLoading={catalogueLoading}
+          handleRequestQuote={handleRequestQuote}
+          navigation={navigation}
+          venueId={venue.id}
+          name={venue.name}
+        />
+      </View>
+
+          </>
+  );
+
+const renderSidebar = () => (
+    <View
+      style={{
+        flex: 1,
+        gap: spacing.lg,
+      } as any}
+    >
+      <View
+        style={{
+          backgroundColor: colors.surface,
+          borderRadius: radii.lg,
+          borderWidth: 1,
+          borderColor: colors.outlineVariant,
+          padding: spacing.lg,
+          shadowColor: '#000',
+          shadowOpacity: 0.06,
+          shadowRadius: 6,
+          shadowOffset: { width: 0, height: 3 },
+        }}
+      >
+        <View style={{ marginBottom: spacing.lg }}>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+            <View style={{ flex: 1, paddingRight: spacing.md }}>
+              <Text style={{ ...typography.headlineMd, color: colors.primary }}>
+                {venue.venue_capacity ? `Up to ${venue.venue_capacity} guests` : 'Request a quote'}
               </Text>
-              {halls.map((hall, idx) => (
-                <View
-                  key={`${hall.name}-${idx}`}
-                  style={{
-                    flexDirection: 'row',
-                    justifyContent: 'space-between',
-                    alignItems: 'flex-start',
-                    marginBottom: spacing.sm,
-                    gap: spacing.md,
-                  }}
-                >
-                  <Text style={{ ...typography.body, color: colors.textPrimary, flex: 1 }}>
-                    {hall.name || `Hall ${idx + 1}`}
-                  </Text>
-                  <Text style={{ ...typography.body, color: colors.textSecondary }}>
-                    {hall.capacity}
-                  </Text>
-                </View>
-              ))}
-            </View>
-          )}
-
-          {/* About */}
-          {venue.description ? (
-            <View
-              style={{
-                marginBottom: spacing.lg,
-                padding: spacing.lg,
-                borderRadius: radii.lg,
-                backgroundColor: colors.surface,
-                borderWidth: 1,
-                borderColor: colors.borderSubtle,
-              }}
-            >
-              <Text
-                style={{
-                  ...typography.titleMedium,
-                  color: colors.textPrimary,
-                  marginBottom: spacing.sm,
-                }}
-              >
-                About {venue.name}
+              <Text style={{ ...typography.body, color: colors.onSurfaceVariant }}>
+                {venue.venue_type || 'Venue'}
               </Text>
-              <Text style={{ ...typography.body, color: colors.textSecondary, lineHeight: 20 }}>{venue.description}</Text>
-            </View>
-          ) : (
-             <View
-              style={{
-                marginBottom: spacing.lg,
-                padding: spacing.lg,
-                borderRadius: radii.lg,
-                backgroundColor: colors.surface,
-                borderWidth: 1,
-                borderColor: colors.borderSubtle,
-              }}
-            >
-              <Text style={{ ...typography.body, color: colors.textMuted }}>No description available.</Text>
-            </View>
-          )}
-
-          {/* Features & Amenities */}
-          {(venue.amenities?.length || venue.event_types?.length || venue.venue_type) ? (
-            <View
-              style={{
-                marginBottom: spacing.lg,
-                padding: spacing.lg,
-                borderRadius: radii.lg,
-                backgroundColor: colors.surface,
-                borderWidth: 1,
-                borderColor: colors.borderSubtle,
-              }}
-            >
-              <Text style={{ ...typography.titleMedium, color: colors.textPrimary, marginBottom: spacing.md }}>
-                Features & Amenities
-              </Text>
-              <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
-                <View style={{ width: '50%', paddingRight: spacing.sm }}>
-                  {venue.venue_type && (
-                    <View style={{ marginBottom: spacing.sm }}>
-                      <Text style={{ ...typography.caption, color: colors.textSecondary, marginBottom: spacing.xs }}>
-                        Venue Type
-                      </Text>
-                      <Text style={{ ...typography.body, color: colors.textPrimary }}>{venue.venue_type}</Text>
-                    </View>
-                  )}
-                  {venue.venue_capacity && (
-                    <View style={{ marginBottom: spacing.sm }}>
-                      <Text style={{ ...typography.caption, color: colors.textSecondary, marginBottom: spacing.xs }}>
-                        Capacity
-                      </Text>
-                      <Text style={{ ...typography.body, color: colors.textPrimary }}>{venue.venue_capacity} guests</Text>
-                    </View>
-                  )}
-                  {renderBulletSection('Amenities', venue.amenities)}
-                </View>
-                <View style={{ width: '50%', paddingLeft: spacing.sm }}>
-                  {renderBulletSection('Event Types', venue.event_types)}
-                </View>
-              </View>
-            </View>
-          ) : null}
-
-          {/* Action Buttons */}
-          <View style={{ marginBottom: spacing.lg, gap: spacing.sm }}>
-            <TouchableOpacity
-              onPress={() =>
-                navigation.navigate('VenueCatalogueView', { venueId: venue.id, venueName: venue.name })
-              }
-              style={{
-                flexDirection: 'row',
-                alignItems: 'center',
-                justifyContent: 'center',
-                paddingVertical: spacing.md,
-                borderRadius: radii.lg,
-                backgroundcolor: colors.textPrimary,
-                gap: spacing.sm,
-              }}
-            >
-              <MaterialIcons name="inventory-2" size={20} color="#FFFFFF" />
-              <Text style={{ ...typography.body, color: '#FFFFFF', fontWeight: '700' }}>View Catalogue</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              onPress={handleRequestQuote}
-              style={{
-                flexDirection: 'row',
-                alignItems: 'center',
-                justifyContent: 'center',
-                paddingVertical: spacing.md,
-                borderRadius: radii.lg,
-                backgroundColor: colors.primary,
-                gap: spacing.sm,
-              }}
-            >
-              <MaterialIcons name="request-quote" size={20} color="#FFFFFF" />
-              <Text style={{ ...typography.body, color: '#FFFFFF', fontWeight: '700' }}>Request a Quote</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              onPress={() => setActiveTab('reviews')}
-              style={{
-                flexDirection: 'row',
-                alignItems: 'center',
-                justifyContent: 'center',
-                paddingVertical: spacing.md,
-                borderRadius: radii.lg,
-                backgroundColor: colors.surface,
-                borderWidth: 1,
-                borderColor: colors.borderSubtle,
-                gap: spacing.sm,
-              }}
-            >
-              <MaterialIcons name="reviews" size={20} color={colors.textPrimary} />
-              <Text style={{ ...typography.body, color: colors.textPrimary, fontWeight: '700' }}>View Reviews & Ratings</Text>
-            </TouchableOpacity>
-          </View>
-
-          {/* Contact */}
-          {(venue.whatsapp_number || venue.contact_email || venue.website_url || venue.instagram_url) && (
-            <View
-              style={{
-                marginBottom: spacing.lg,
-                padding: spacing.lg,
-                borderRadius: radii.lg,
-                backgroundColor: colors.surface,
-                borderWidth: 1,
-                borderColor: colors.borderSubtle,
-              }}
-            >
-              <Text style={{ ...typography.titleMedium, color: colors.textPrimary, marginBottom: spacing.md }}>
-                Contact
-              </Text>
-              <View style={{ gap: spacing.sm }}>
-                {venue.whatsapp_number && (
-                  <TouchableOpacity
-                    onPress={() => handleOpenUrl(whatsappUrl)}
-                    style={{
-                      backgroundColor: '#22C55E',
-                      paddingVertical: spacing.md,
-                      borderRadius: radii.md,
-                      flexDirection: 'row',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                    }}
-                  >
-                    <MaterialIcons name="chat" size={18} color="#FFFFFF" />
-                    <Text style={{ color: '#FFFFFF', fontWeight: '600', marginLeft: spacing.sm }}>Contact via WhatsApp</Text>
-                  </TouchableOpacity>
-                )}
-                {venue.contact_email && (
-                  <TouchableOpacity
-                    onPress={() => handleOpenUrl(emailUrl)}
-                    style={{
-                      backgroundColor: '#3B82F6',
-                      paddingVertical: spacing.md,
-                      borderRadius: radii.md,
-                      flexDirection: 'row',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                    }}
-                  >
-                    <MaterialIcons name="email" size={18} color="#FFFFFF" />
-                    <Text style={{ color: '#FFFFFF', fontWeight: '600', marginLeft: spacing.sm }}>Contact via Email</Text>
-                  </TouchableOpacity>
-                )}
-              </View>
-            </View>
-          )}
-
-          {/* Location & Map */}
-          {(mapQuery || physicalAddress) && (
-            <View
-              style={{
-                marginBottom: spacing.lg,
-                padding: spacing.lg,
-                borderRadius: radii.lg,
-                backgroundColor: colors.surface,
-                borderWidth: 1,
-                borderColor: colors.borderSubtle,
-              }}
-            >
-              <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.sm }}>
-                <MaterialIcons name="place" size={18} color={colors.textPrimary} />
-                <Text style={{ ...typography.titleMedium, color: colors.textPrimary, marginLeft: spacing.sm }}>
-                  Location
-                </Text>
-              </View>
-              {physicalAddress && (
-                <Text style={{ ...typography.body, color: colors.textSecondary, marginBottom: spacing.sm }}>
-                  {physicalAddress}
-                </Text>
-              )}
-              {contactNumber && (
-                <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.sm }}>
-                  <MaterialIcons name="phone" size={16} color={colors.textPrimary} />
-                  <Text style={{ ...typography.body, color: colors.textSecondary, marginLeft: spacing.sm }}>
-                    {contactNumber}
-                  </Text>
-                </View>
-              )}
-              <View
-                style={{
-                  height: 220,
-                  borderRadius: radii.md,
-                  overflow: 'hidden',
-                  borderWidth: 1,
-                  borderColor: colors.borderSubtle,
-                  backgroundColor: colors.surfaceMuted,
-                  marginBottom: spacing.md,
-                }}
-              >
-                {Platform.OS === 'web' ? (
-                  webMapEmbedUrl ? (
-                    <iframe
-                      title="Google Map"
-                      style={{ width: '100%', height: '100%', border: 'none' } as any}
-                      src={webMapEmbedUrl}
-                      allowFullScreen
-                    />
-                  ) : (
-                    <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
-                      <Text style={{ ...typography.caption, color: colors.textMuted }}>Map unavailable</Text>
-                    </View>
-                  )
-                ) : nativeMapHtml ? (
-                  !mapImageFailed && staticMapUrl ? (
-                    <Image
-                      source={{ uri: staticMapUrl }}
-                      style={{ width: '100%', height: '100%' }}
-                      resizeMode="cover"
-                      onError={() => setMapImageFailed(true)}
-                    />
-                  ) : (
-                    <WebView
-                      source={{ html: nativeMapHtml }}
-                      style={{ width: '100%', height: '100%' }}
-                      originWhitelist={['*']}
-                      javaScriptEnabled
-                      domStorageEnabled
-                      setSupportMultipleWindows={false}
-                      startInLoadingState
-                      scrollEnabled={false}
-                    />
-                  )
-                ) : (
-                  <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
-                    <Text style={{ ...typography.caption, color: colors.textMuted }}>Map unavailable</Text>
-                  </View>
-                )}
-              </View>
-              <TouchableOpacity
-                onPress={handleOpenMap}
-                style={{
-                  paddingVertical: spacing.sm,
-                  borderRadius: radii.md,
-                  borderWidth: 1,
-                  bordercolor: colors.textPrimary,
-                  alignItems: 'center',
-                  flexDirection: 'row',
-                  justifyContent: 'center',
-                }}
-              >
-                <MaterialIcons name="map" size={16} color={colors.textPrimary} />
-                <Text style={{ color: colors.textPrimary, marginLeft: spacing.sm, fontWeight: '600' }}>
-                  Open in Google Maps
-                </Text>
-              </TouchableOpacity>
-            </View>
-          )}
-        </View>
-      )}
-
-      {activeTab === 'amenities' && (
-        <View>
-          {venue.amenities && venue.amenities.length > 0 ? (
-            <View
-              style={{
-                marginBottom: spacing.lg,
-                padding: spacing.lg,
-                borderRadius: radii.lg,
-                backgroundColor: colors.surface,
-                borderWidth: 1,
-                borderColor: colors.borderSubtle,
-              }}
-            >
-              <Text style={{ ...typography.titleMedium, color: colors.textPrimary, marginBottom: spacing.md }}>
-                Amenities
-              </Text>
-              {venue.amenities?.map((item) => (
-                <View key={item} style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
-                   <View
-                    style={{
-                      width: 6,
-                      height: 6,
-                      borderRadius: 3,
-                      backgroundcolor: colors.textPrimary,
-                      marginRight: spacing.sm,
-                    }}
-                  />
-                  <Text style={{ ...typography.body, color: colors.textPrimary }}>{item}</Text>
-                </View>
-              ))}
-            </View>
-          ) : (
-             <View
-              style={{
-                marginBottom: spacing.lg,
-                padding: spacing.lg,
-                borderRadius: radii.lg,
-                backgroundColor: colors.surface,
-                borderWidth: 1,
-                borderColor: colors.borderSubtle,
-              }}
-            >
-              <Text style={{ ...typography.body, color: colors.textMuted }}>No amenities listed.</Text>
-            </View>
-          )}
-        </View>
-      )}
-
-      {activeTab === 'reviews' && (
-        <View>
-          {reviewsLoading ? (
-            <View
-              style={{
-                marginBottom: spacing.lg,
-                padding: spacing.lg,
-                borderRadius: radii.lg,
-                backgroundColor: colors.surface,
-                borderWidth: 1,
-                borderColor: colors.borderSubtle,
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-            >
-              <ActivityIndicator />
-            </View>
-          ) : reviewsError instanceof Error ? (
-            <View
-              style={{
-                marginBottom: spacing.lg,
-                padding: spacing.lg,
-                borderRadius: radii.lg,
-                backgroundColor: colors.surface,
-                borderWidth: 1,
-                borderColor: colors.borderSubtle,
-              }}
-            >
-              <Text style={{ ...typography.titleMedium, color: colors.textPrimary, marginBottom: spacing.sm }}>
-                Failed to load reviews
-              </Text>
-              <Text style={{ ...typography.body, color: colors.textMuted }}>{reviewsError.message}</Text>
-            </View>
-          ) : !reviews || reviews.length === 0 ? (
-            <View
-              style={{
-                marginBottom: spacing.lg,
-                padding: spacing.lg,
-                borderRadius: radii.lg,
-                backgroundColor: colors.surface,
-                borderWidth: 1,
-                borderColor: colors.borderSubtle,
-                alignItems: 'center',
-              }}
-            >
-              <MaterialIcons name="rate-review" size={48} color={colors.textMuted} />
-              <Text
-                style={{
-                  ...typography.body,
-                  color: colors.textSecondary,
-                  marginTop: spacing.md,
-                  textAlign: 'center',
-                }}
-              >
-                No reviews yet.
-              </Text>
-            </View>
-          ) : (
-            <View style={{ gap: spacing.md, marginBottom: spacing.lg }}>
-              {reviews.map((review) => (
-                <View
-                  key={review.id}
-                  style={{
-                    padding: spacing.lg,
-                    borderRadius: radii.lg,
-                    backgroundColor: colors.surface,
-                    borderWidth: 1,
-                    borderColor: colors.borderSubtle,
-                  }}
-                >
-                  <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                      {Array.from({ length: 5 }).map((_, idx) => (
-                        <MaterialIcons
-                          key={idx}
-                          name={review.rating >= idx + 1 ? 'star' : 'star-border'}
-                          size={16}
-                          color="#F59E0B"
-                        />
-                      ))}
-                      {review.is_verified ? (
-                        <View
-                          style={{
-                            marginLeft: spacing.sm,
-                            backgroundColor: '#DCFCE7',
-                            paddingHorizontal: spacing.sm,
-                            paddingVertical: 4,
-                            borderRadius: radii.full,
-                            borderWidth: 1,
-                            borderColor: '#BBF7D0',
-                          }}
-                        >
-                          <Text style={{ ...typography.caption, color: '#166534', fontWeight: '600' }}>
-                            Verified
-                          </Text>
-                        </View>
-                      ) : null}
-                    </View>
-                  </View>
-
-                  {review.title ? (
-                    <Text
-                      style={{
-                        ...typography.titleMedium,
-                        color: colors.textPrimary,
-                        marginTop: spacing.sm,
-                      }}
-                    >
-                      {review.title}
-                    </Text>
-                  ) : null}
-
-                  {review.review_text ? (
-                    <Text style={{ ...typography.body, color: colors.textSecondary, marginTop: spacing.sm, lineHeight: 20 }}>
-                      {review.review_text}
-                    </Text>
-                  ) : (
-                    <Text style={{ ...typography.body, color: colors.textMuted, marginTop: spacing.sm }}>
-                      No written review provided.
-                    </Text>
-                  )}
-
-                  {review.created_at ? (
-                    <Text style={{ ...typography.caption, color: colors.textMuted, marginTop: spacing.sm }}>
-                      {new Date(review.created_at).toLocaleDateString()}
-                    </Text>
-                  ) : null}
-                </View>
-              ))}
-            </View>
-          )}
-
-          {/* Ratings System Explanation */}
-          <View
-            style={{
-              marginBottom: spacing.lg,
-              padding: spacing.lg,
-              borderRadius: radii.lg,
-              backgroundColor: colors.surface,
-              borderWidth: 1,
-              borderColor: colors.borderSubtle,
-            }}
-          >
-            <Text style={{ ...typography.titleMedium, color: colors.textPrimary, marginBottom: spacing.sm }}>
-              Ratings System
-            </Text>
-            <View style={{ gap: spacing.xs }}>
-              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                <MaterialIcons name="star" size={14} color="#F59E0B" />
-                <Text style={{ ...typography.caption, color: colors.textSecondary, marginLeft: spacing.sm }}>
-                  5 stars = Exceptional experience
-                </Text>
-              </View>
-              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                <MaterialIcons name="star" size={14} color="#F59E0B" />
-                <Text style={{ ...typography.caption, color: colors.textSecondary, marginLeft: spacing.sm }}>
-                  4 stars = Very good experience
-                </Text>
-              </View>
-              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                <MaterialIcons name="star" size={14} color="#F59E0B" />
-                <Text style={{ ...typography.caption, color: colors.textSecondary, marginLeft: spacing.sm }}>
-                  3 stars = Good experience
-                </Text>
-              </View>
-              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                <MaterialIcons name="star" size={14} color="#F59E0B" />
-                <Text style={{ ...typography.caption, color: colors.textSecondary, marginLeft: spacing.sm }}>
-                  2 stars = Below average experience
-                </Text>
-              </View>
-              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                <MaterialIcons name="star" size={14} color="#F59E0B" />
-                <Text style={{ ...typography.caption, color: colors.textSecondary, marginLeft: spacing.sm }}>
-                  1 star = Poor experience
-                </Text>
-              </View>
             </View>
           </View>
 
-          {user?.id ? (
-            <View
+          <View style={{ flexDirection: 'row', justifyContent: 'flex-end', gap: spacing.sm, marginTop: spacing.md }}>
+            <TouchableOpacity
+              onPress={handleToggleFavourite}
               style={{
-                marginBottom: spacing.lg,
-                padding: spacing.lg,
-                borderRadius: radii.lg,
-                backgroundColor: colors.surface,
+                width: 36,
+                height: 36,
+                borderRadius: 18,
                 borderWidth: 1,
-                borderColor: colors.borderSubtle,
+                borderColor: colors.outlineVariant,
+                alignItems: 'center',
+                justifyContent: 'center',
+                backgroundColor: colors.surfaceBg,
               }}
             >
-              <Text style={{ ...typography.titleMedium, color: colors.textPrimary, marginBottom: spacing.sm }}>
-                Add a Review
-              </Text>
-              <Text style={{ ...typography.body, color: colors.textSecondary, marginBottom: spacing.md }}>
-                Share your experience with this venue. Reviews help other users make informed decisions.
-              </Text>
-              <PrimaryButton
-                title={eligibilityLoading ? 'Checking eligibility...' : 'Add a review'}
-                disabled={!canLeaveReview || eligibilityLoading}
-                onPress={() =>
-                  navigation.navigate('CreateReview', {
-                    type: 'venue',
-                    targetId: venue.id,
-                    targetName: venue.name,
-                  })
-                }
+              <MaterialIcons
+                name={isFavourite ? 'favorite' : 'favorite-border'}
+                size={20}
+                color={isFavourite ? colors.coral : colors.outline}
               />
-              {!eligibilityLoading && !canLeaveReview ? (
-                <Text style={{ ...typography.caption, color: colors.textMuted, marginTop: spacing.sm }}>
-                  You can leave a review once your tour booking or quote is accepted/finalised.
-                </Text>
-              ) : null}
-            </View>
-          ) : (
-            <View
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={handleShare}
               style={{
-                marginBottom: spacing.lg,
-                padding: spacing.lg,
-                borderRadius: radii.lg,
-                backgroundColor: colors.surface,
+                width: 36,
+                height: 36,
+                borderRadius: 18,
                 borderWidth: 1,
-                borderColor: colors.borderSubtle,
+                borderColor: colors.outlineVariant,
+                alignItems: 'center',
+                justifyContent: 'center',
+                backgroundColor: colors.surfaceBg,
               }}
             >
-              <Text style={{ ...typography.body, color: colors.textSecondary }}>
-                Sign in to leave a review.
-              </Text>
-            </View>
-          )}
-        </View>
-      )}
-
-      {activeTab === 'calendar' && (
-        <View
-          style={{
-            marginBottom: spacing.lg,
-            padding: spacing.lg,
-            borderRadius: radii.lg,
-            backgroundColor: colors.surface,
-            borderWidth: 1,
-            borderColor: colors.borderSubtle,
-          }}
-        >
-          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.md }}>
-            <MaterialIcons name="calendar-today" size={18} color={colors.textPrimary} />
-            <Text style={{ ...typography.titleMedium, color: colors.textPrimary, marginLeft: spacing.sm }}>
-              Availability Calendar
-            </Text>
+              <MaterialIcons name="share" size={20} color={colors.outline} />
+            </TouchableOpacity>
           </View>
-          {availabilityLoading ? (
-            <View style={{ alignItems: 'center', paddingVertical: spacing.lg }}>
-              <ActivityIndicator color={colors.textPrimary} />
-            </View>
-          ) : availability && availability.length > 0 ? (
-            <View style={{ gap: spacing.sm }}>
-              {availability.map((entry) => {
-                const isAvailable = entry.is_available;
-                return (
-                  <View
-                    key={entry.id}
-                    style={{
-                      borderRadius: radii.md,
-                      padding: spacing.md,
-                      borderWidth: 1,
-                      borderColor: isAvailable ? '#BBF7D0' : '#FECACA',
-                      backgroundColor: isAvailable ? '#DCFCE7' : '#FEE2E2',
-                    }}
-                  >
-                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: spacing.md }}>
-                      <Text style={{ ...typography.body, color: colors.textPrimary, fontWeight: '600', flex: 1 }}>
-                        {formatAvailabilityDate(entry.date)}
-                      </Text>
-                      <Text style={{ ...typography.caption, color: isAvailable ? '#166534' : '#991B1B', fontWeight: '700' }}>
-                        {isAvailable ? 'Available' : 'Unavailable'}
-                      </Text>
-                    </View>
-                    {entry.availability_type ? (
-                      <Text style={{ ...typography.caption, color: colors.textSecondary, marginTop: spacing.xs }}>
-                        {entry.availability_type}
-                      </Text>
-                    ) : null}
-                    {Array.isArray(entry.time_slots) && entry.time_slots.length > 0 ? (
-                      <Text style={{ ...typography.caption, color: colors.textSecondary, marginTop: spacing.xs }}>
-                        {entry.time_slots.join(', ')}
-                      </Text>
-                    ) : null}
-                    {entry.notes ? (
-                      <Text style={{ ...typography.caption, color: colors.textSecondary, marginTop: spacing.xs }}>
-                        {entry.notes}
-                      </Text>
-                    ) : null}
-                  </View>
-                );
-              })}
-            </View>
-          ) : (
-            <View style={{ alignItems: 'center', paddingVertical: spacing.lg }}>
-              <MaterialIcons name="event-busy" size={48} color={colors.textMuted} />
-              <Text style={{ ...typography.body, color: colors.textPrimary, marginTop: spacing.md, fontWeight: '600' }}>
-                Availability will be updated soon
-              </Text>
-              <Text style={{ ...typography.caption, color: colors.textMuted, textAlign: 'center', marginTop: spacing.xs }}>
-                Contact {venue.name} directly while calendar slots are being updated.
-              </Text>
-            </View>
-          )}
+        </View>
+
+        <View style={{ gap: spacing.sm }}>
           <TouchableOpacity
-            onPress={() => {
-              if (whatsappUrl) {
-                handleOpenUrl(whatsappUrl);
-              } else if (emailUrl) {
-                handleOpenUrl(emailUrl);
-              } else {
-                handleRequestQuote();
-              }
-            }}
+            onPress={handleRequestQuote}
             style={{
-              marginTop: spacing.md,
-              backgroundcolor: colors.textPrimary,
+              backgroundColor: colors.primary,
               paddingVertical: spacing.md,
               borderRadius: radii.md,
               alignItems: 'center',
-              flexDirection: 'row',
-              justifyContent: 'center',
             }}
           >
-            <MaterialIcons name="calendar-today" size={16} color="#FFFFFF" />
-            <Text style={{ color: '#FFFFFF', fontWeight: '600', marginLeft: spacing.sm }}>
-              Contact for Availability
-            </Text>
+            <Text style={{ ...typography.bodySemiBold, color: '#FFFFFF' }}>Request Quote</Text>
           </TouchableOpacity>
+          {canBookTours && (
+            <TouchableOpacity
+              onPress={() => navigation.navigate('BookTour', { venueId: venue.id, venueName: venue.name })}
+              style={{
+                paddingVertical: spacing.md,
+                borderRadius: radii.md,
+                backgroundColor: colors.primary,
+                alignItems: 'center',
+              }}
+            >
+              <Text style={{ ...typography.bodyBold, color: '#FFFFFF' }}>Book a Tour</Text>
+            </TouchableOpacity>
+          )}
         </View>
+
+        <View style={{ borderTopWidth: 1, borderTopColor: colors.outlineVariant, paddingTop: spacing.lg, marginTop: spacing.lg }}>
+          {/* Venue identity row */}
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md, marginBottom: spacing.md }}>
+            {venue.image_url ? (
+              <View style={{ width: 48, height: 48, borderRadius: 24, overflow: 'hidden', backgroundColor: colors.surfaceBg }}>
+                <Image source={{ uri: venue.image_url }} style={{ width: '100%', height: '100%' }} />
+              </View>
+            ) : (
+              <View style={{ width: 48, height: 48, borderRadius: 24, backgroundColor: colors.surfaceBg, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: colors.outlineVariant }}>
+                <MaterialIcons name="location-city" size={24} color={colors.outline} />
+              </View>
+            )}
+            <View style={{ flex: 1 }}>
+              <Text style={{ ...typography.bodySemiBold, color: colors.textPrimary }}>{venue.name}</Text>
+              {venue.venue_type ? (
+                <Text style={{ ...typography.caption, color: colors.onSurfaceVariant }}>{venue.venue_type}</Text>
+              ) : null}
+            </View>
+          </View>
+
+          {/* Address */}
+          {physicalAddress ? (
+            <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm, marginBottom: spacing.sm }}>
+              <MaterialIcons name="place" size={16} color={colors.outline} style={{ marginTop: 2 } as any} />
+              <Text style={{ ...typography.caption, color: colors.onSurfaceVariant, flex: 1, lineHeight: 18 }}>
+                {physicalAddress}
+              </Text>
+            </View>
+          ) : null}
+
+          {/* Contact details */}
+          <View style={{ gap: spacing.sm, marginTop: physicalAddress ? spacing.xs : 0 }}>
+            {venue.whatsapp_number ? (
+              <TouchableOpacity
+                onPress={() => handleOpenUrl(whatsappUrl)}
+                style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}
+              >
+                <MaterialIcons name="phone" size={16} color={colors.primaryTeal} />
+                <Text style={{ ...typography.caption, color: colors.primaryTeal }}>
+                  {venue.whatsapp_number}
+                </Text>
+              </TouchableOpacity>
+            ) : null}
+
+            {venueContactEmail ? (
+              <TouchableOpacity
+                onPress={() => handleOpenUrl(emailUrl)}
+                style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}
+              >
+                <MaterialIcons name="email" size={16} color={colors.primary} />
+                <Text style={{ ...typography.caption, color: colors.primary }}>
+                  {venueContactEmail}
+                </Text>
+              </TouchableOpacity>
+            ) : null}
+
+            {venue.website_url ? (
+              <TouchableOpacity
+                onPress={() => handleOpenUrl(venue.website_url!)}
+                style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}
+              >
+                <MaterialIcons name="language" size={16} color={colors.primary} />
+                <Text style={{ ...typography.caption, color: colors.primary }} numberOfLines={1}>
+                  {venue.website_url.replace(/^https?:\/\//, '')}
+                </Text>
+              </TouchableOpacity>
+            ) : null}
+
+            {venue.instagram_url ? (
+              <TouchableOpacity
+                onPress={() => handleOpenUrl(venue.instagram_url!)}
+                style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}
+              >
+                <MaterialIcons name="photo-camera" size={16} color={colors.primary} />
+                <Text style={{ ...typography.caption, color: colors.primary }} numberOfLines={1}>
+                  {venue.instagram_url.replace(/^https?:\/\/(www\.)?instagram\.com\//, '@').replace(/\/$/, '')}
+                </Text>
+              </TouchableOpacity>
+            ) : null}
+
+            {!venue.whatsapp_number && !venueContactEmail && !venue.website_url && !venue.instagram_url ? (
+              <Text style={{ ...typography.caption, color: colors.textMuted }}>No contact details available</Text>
+            ) : null}
+          </View>
+        </View>
+      </View>
+    </View>
+  );
+
+  return (
+    <ScrollView
+      style={{ flex: 1, backgroundColor: isDesktop ? colors.surfaceBg : colors.background }}
+      contentContainerStyle={isDesktop ? { paddingHorizontal: 48, paddingBottom: spacing.lg, paddingTop: spacing.xl, maxWidth: 1200, width: '100%', alignSelf: 'center' } : { paddingHorizontal: spacing.lg, paddingBottom: spacing.lg, paddingTop: spacing.sm }}
+      keyboardShouldPersistTaps="handled"
+    >
+      <TouchableOpacity
+          onPress={handleBackNavigation}
+          style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.md }}
+        >
+          <MaterialIcons name="arrow-back" size={20} color={colors.textPrimary} />
+          <Text style={{ ...typography.body, color: colors.textPrimary, marginLeft: spacing.sm }}>
+            Back
+          </Text>
+        </TouchableOpacity>
+
+      {isDesktop ? (
+        <View style={{ flexDirection: 'row', gap: 24 } as any}>
+          <View style={{ flex: 2 } as any}>
+            {renderMainContent()}
+          </View>
+          {renderSidebar()}
+        </View>
+      ) : (
+        <>
+          {renderMainContent()}
+          {/* Request Quote entry */}
+          <View
+            style={{
+              paddingVertical: spacing.lg,
+              borderTopWidth: 1,
+              borderTopColor: colors.borderSubtle,
+              marginTop: spacing.lg,
+            }}
+          >
+            <Text
+              style={{
+                ...headerTitleMedium,
+                color: colors.textPrimary,
+                marginBottom: spacing.sm,
+              }}
+            >
+              Request a quote
+            </Text>
+            <Text style={{ ...typography.body, color: colors.textSecondary, marginBottom: spacing.md }}>
+              Share your event details and request a custom quote from this venue.
+            </Text>
+            <PrimaryButton title="Request a quote" onPress={handleRequestQuote} />
+          </View>
+        </>
       )}
 
-      {/* Request Quote entry */}
-      <View
-        style={{
-          paddingVertical: spacing.lg,
-          borderTopWidth: 1,
-          borderTopColor: colors.borderSubtle,
-          marginTop: spacing.lg,
-        }}
-      >
-        <Text
-          style={{
-            ...typography.titleMedium,
-            color: colors.textPrimary,
-            marginBottom: spacing.sm,
-          }}
-        >
-          Request a quote
-        </Text>
-        <Text style={{ ...typography.body, color: colors.textSecondary, marginBottom: spacing.md }}>
-          Share your event details and request a custom quote from this venue.
-        </Text>
-        <PrimaryButton title="Request a quote" onPress={handleRequestQuote} />
-      </View>
+      {alertState && (
+        <ThemedAlert
+          visible={alertState.visible}
+          title={alertState.title}
+          message={alertState.message}
+          buttons={[{ text: 'OK', style: 'default', onPress: () => setAlertState(null) }]}
+          onDismiss={() => setAlertState(null)}
+        />
+      )}
     </ScrollView>
   );
 }

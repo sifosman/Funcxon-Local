@@ -1,0 +1,14 @@
+-- Migration: Fix venue_listings upsert failure
+-- Date: 2026-06-22
+-- Issue: ApplicationStep4Screen was sending a `capacity` column in the
+--   venue_listings upsert payload, but that column does not exist in the
+--   table schema. This caused the entire upsert to fail silently (caught
+--   by a try/catch that showed a "Portfolio Setup Issue" popup), leaving
+--   the user without a venue_listings record even though their application
+--   was submitted and a venues table record was created.
+-- Fix: The `capacity` field was removed from the upsert payload in the
+--   application code. The maxHallCapacity value is already stored in the
+--   `features` JSONB column. This migration is a no-op on the database
+--   side — it exists only to document the fix and serve as a checkpoint.
+-- No schema changes required.
+SELECT 1;

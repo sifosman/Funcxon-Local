@@ -1,0 +1,40 @@
+# Exclude unnecessary files from Vercel deployment
+# to speed up builds and avoid conflicts
+
+# The separate web app (not needed — we build from the Expo codebase now)
+deploy-web/
+
+# Tests and Playwright
+tests/
+e2e-tests/
+playwright-report/
+test-results/
+test-screenshots/
+playwright.config.ts
+
+# Documentation
+*.md
+WEB_PARITY_AUDIT.md
+
+# Screenshots and temp files
+screenshots/
+tmp-qa/
+console-error-output/
+
+# Supabase functions (deployed separately)
+supabase/
+
+# Scripts
+scripts/
+
+# Build artifacts
+dist/
+web-build/
+.expo/
+
+# Misc
+Images of Spec/
+Tags docs/
+*.html
+*.txt
+build-qr.png

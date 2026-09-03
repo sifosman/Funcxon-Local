@@ -40,6 +40,7 @@ export function AddressAutocompleteInput({
   const [predictions, setPredictions] = useState<Prediction[]>([]);
   const [loading, setLoading] = useState(false);
   const [open, setOpen] = useState(false);
+  const [apiError, setApiError] = useState<string | null>(null);
   const requestSeq = useRef(0);
   const blurTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -66,12 +67,14 @@ export function AddressAutocompleteInput({
 
     if (trimmed.length < 3) {
       setPredictions([]);
+      setApiError(null);
       return;
     }
 
     const seq = ++requestSeq.current;
     const handle = setTimeout(async () => {
       setLoading(true);
+      setApiError(null);
       try {
         const { data, error } = await supabase.functions.invoke('places-autocomplete', {
           body: { input: trimmed },
@@ -81,6 +84,14 @@ export function AddressAutocompleteInput({
 
         if (error) {
           console.error('Places autocomplete error:', error);
+          setApiError(error.message || 'Search service error');
+          setPredictions([]);
+          return;
+        }
+
+        if (data?.error) {
+          console.error('Places autocomplete API error:', data.error);
+          setApiError(data.error);
           setPredictions([]);
           return;
         }
@@ -92,9 +103,10 @@ export function AddressAutocompleteInput({
           : [];
 
         setPredictions(next);
-      } catch (err) {
+      } catch (err: any) {
         console.error('Places autocomplete exception:', err);
         if (seq === requestSeq.current) {
+          setApiError(err?.message || 'Network error');
           setPredictions([]);
         }
       } finally {
@@ -120,7 +132,7 @@ export function AddressAutocompleteInput({
 
   return (
     <View>
-      <Text style={{ ...typography.body, fontWeight: '500', color: colors.textPrimary, marginBottom: spacing.xs }}>
+      <Text style={{ ...typography.bodyMedium, color: colors.textPrimary, marginBottom: spacing.xs }}>
         {label}
         {required ? ' *' : ''}
       </Text>
@@ -171,6 +183,7 @@ export function AddressAutocompleteInput({
               textAlignVertical: 'top',
               padding: 0,
               margin: 0,
+              fontFamily: typography.body.fontFamily,
             }}
           />
         </View>
@@ -184,7 +197,7 @@ export function AddressAutocompleteInput({
         </TouchableOpacity>
       </View>
 
-      {error && <Text style={{ fontSize: 12, color: '#EF4444', marginTop: 4 }}>{error}</Text>}
+      {error && <Text style={{ ...typography.caption, fontSize: 12, color: '#EF4444', marginTop: 4 }}>{error}</Text>}
 
       {open && (
         <View
@@ -209,7 +222,13 @@ export function AddressAutocompleteInput({
 
           {!loading && canSearch && predictions.length === 0 && (
             <View style={{ padding: spacing.md }}>
-              <Text style={{ ...typography.caption, color: colors.textMuted }}>No results</Text>
+              {apiError ? (
+                <Text style={{ ...typography.caption, color: '#EF4444' }}>
+                  Error: {apiError}
+                </Text>
+              ) : (
+                <Text style={{ ...typography.caption, color: colors.textMuted }}>No results</Text>
+              )}
             </View>
           )}
 

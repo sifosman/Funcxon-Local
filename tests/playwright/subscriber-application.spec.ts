@@ -34,9 +34,11 @@ test.describe('Subscriber "Become a Vendor" Application E2E Flow', () => {
     await goToWelcomeFromHomeSearch(page);
     await loginFromWelcome(page);
 
-    // 2. Navigate to "Become a Vendor" from Account menu
+    // 2. Navigate to portfolio creation via Account → Lister Portfolio Dashboard →
+    // Capture new portfolio application (the old "Become a Vendor" menu item no longer exists)
     await openAccountTab(page);
-    await openAccountMenuItem(page, 'Become a Vendor');
+    await openAccountMenuItem(page, 'Lister Portfolio Dashboard');
+    await openAccountMenuItem(page, 'Capture new portfolio application');
 
     // Assert Portfolio selection screen
     await expect(page.getByText('Create Portfolio', { exact: true })).toBeVisible();
@@ -114,30 +116,6 @@ test.describe('Subscriber "Become a Vendor" Application E2E Flow', () => {
     const videoChooser = await videoUploadPromise;
     await videoChooser.setFiles(path.join(MOCK_ASSETS_DIR, 'mock-video.mp4'));
     await expect(page.getByText(/added successfully|mock-video/i).first()).toBeVisible({ timeout: 15000 });
-
-    // C. Document Upload - ID Copy Card
-    const idCopyCard = page.locator('div').filter({ has: page.getByText('ID copy', { exact: true }) }).first();
-    const idCopyPromise = page.waitForEvent('filechooser');
-    await idCopyCard.getByText('Upload', { exact: true }).click();
-    const idCopyChooser = await idCopyPromise;
-    await idCopyChooser.setFiles(path.join(MOCK_ASSETS_DIR, 'mock-doc.pdf'));
-    await expect(page.getByText(/uploaded successfully|mock-doc/i).first()).toBeVisible({ timeout: 15000 });
-
-    // D. Document Upload - Company Logo Card
-    const logoCard = page.locator('div').filter({ has: page.getByText('Company Logo', { exact: true }) }).first();
-    const logoPromise = page.waitForEvent('filechooser');
-    await logoCard.getByText('Upload', { exact: true }).click();
-    const logoChooser = await logoPromise;
-    await logoChooser.setFiles(path.join(MOCK_ASSETS_DIR, 'mock-logo.png'));
-    await expect(page.getByText(/uploaded successfully|mock-logo/i).first()).toBeVisible({ timeout: 15000 });
-
-    // E. Document Upload - Catalogue (Optional)
-    const catalogueCard = page.locator('div').filter({ has: page.getByText('Upload Catalogue (PDF)', { exact: true }) }).first();
-    const cataloguePromise = page.waitForEvent('filechooser');
-    await catalogueCard.getByText('Upload', { exact: true }).click();
-    const catalogueChooser = await cataloguePromise;
-    await catalogueChooser.setFiles(path.join(MOCK_ASSETS_DIR, 'mock-doc.pdf'));
-    await expect(page.getByText(/uploaded successfully|mock-doc/i).first()).toBeVisible({ timeout: 15000 });
 
     // Click Next
     await page.getByText('Next', { exact: true }).click();

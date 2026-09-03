@@ -16,13 +16,14 @@ export type VenueFeatureKey =
   | 'analytics'
   | 'quote_requests'
   | 'website_social_links'
-  | 'instant_tour_bookings';
+  | 'instant_tour_bookings'
+  | 'featured_listings';
 
 const FALLBACK: VenueSubscriptionEntitlement = {
   planKey: 'get_started',
   status: 'inactive',
-  photoUploadLimit: 10,
-  videoUploadLimit: 1,
+  photoUploadLimit: 5,
+  videoUploadLimit: 0,
   features: {},
 };
 
@@ -71,6 +72,7 @@ function readFeatureFlag(features: Record<string, any>, keys: string[]): boolean
   for (const key of keys) {
     const value = features?.[key];
     if (typeof value === 'boolean') return value;
+    if (typeof value === 'string' && (value === 'limited' || value === 'full')) return true;
   }
   return undefined;
 }
@@ -89,7 +91,7 @@ export function isVenueFeatureEnabled(ent: VenueSubscriptionEntitlement, feature
     }
     case 'analytics': {
       const flag = readFeatureFlag(ent.features, ['analytics', 'analytics_stats']);
-      return flag ?? planBased;
+      return flag ?? true;
     }
     case 'quote_requests': {
       const flag = readFeatureFlag(ent.features, ['quote_requests', 'online_quote_requests']);
@@ -101,6 +103,10 @@ export function isVenueFeatureEnabled(ent: VenueSubscriptionEntitlement, feature
     }
     case 'instant_tour_bookings': {
       const flag = readFeatureFlag(ent.features, ['instant_tour_bookings', 'instant_bookings', 'tour_bookings']);
+      return flag ?? planBased;
+    }
+    case 'featured_listings': {
+      const flag = readFeatureFlag(ent.features, ['featured_listings', 'featured']);
       return flag ?? planBased;
     }
     default:

@@ -1,6 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { StatusBar } from 'expo-status-bar';
-import { DefaultTheme, NavigationContainer } from '@react-navigation/native';
+import { DefaultTheme, NavigationContainer, useNavigation } from '@react-navigation/native';
+import * as Linking from 'expo-linking';
+import { linking } from './src/navigation/linking';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Platform, View } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
@@ -14,16 +16,17 @@ import {
   Montserrat_400Regular,
   Montserrat_500Medium,
   Montserrat_600SemiBold,
+  Montserrat_700Bold,
 } from '@expo-google-fonts/montserrat';
 import {
   PlayfairDisplay_600SemiBold,
   PlayfairDisplay_700Bold,
 } from '@expo-google-fonts/playfair-display';
-import FloatingHelpButton from './src/components/FloatingHelpButton';
 import { HelpCenterModal } from './src/components/HelpCenterModal';
 import DataConsentModal, { hasAcceptedDataConsent } from './src/components/DataConsentModal';
 import { useVendorStatus } from './src/hooks/useVendorStatus';
 import AppHeader from './src/components/AppHeader';
+import * as SystemUI from 'expo-system-ui';
 
 const queryClient = new QueryClient();
 
@@ -36,35 +39,6 @@ const navTheme = {
     card: colors.surface,
     text: colors.textPrimary,
     border: colors.borderSubtle,
-  },
-};
-
-const linking: any = {
-  prefixes: ['vibeventz://'],
-  config: {
-    screens: {
-      Main: {
-        screens: {
-          Quotes: {
-            path: 'quotes',
-            screens: {
-              QuotesList: '',
-              QuoteDetail: 'detail/:quoteId',
-              QuoteResponse: 'response/:revisionId',
-              QuoteHistory: 'history/:quoteRequestId',
-            },
-          },
-          Account: {
-            screens: {
-              ApplicationStatus: 'application-status',
-              VenueQuoteRequests: 'vendor/quotes',
-              VendorQuoteCreate: 'vendor/quote/:quoteRequestId',
-            },
-          },
-        },
-      },
-      Auth: 'auth',
-    },
   },
 };
 
@@ -81,19 +55,22 @@ export default function App() {
       setConsentChecked(true);
     });
   }, []);
-  
+
+  // Enforce white body background on the web build (desktop view)
+  useEffect(() => {
+    if (Platform.OS === 'web') {
+      SystemUI.setBackgroundColorAsync(colors.background);
+    }
+  }, []);
+
   // Only load custom fonts on native platforms
   const [fontsLoaded] = useFonts({
     Montserrat_400Regular,
     Montserrat_500Medium,
     Montserrat_600SemiBold,
+    Montserrat_700Bold,
     PlayfairDisplay_600SemiBold,
     PlayfairDisplay_700Bold,
-    ...(Platform.OS !== 'web'
-      ? {
-          'TAN-Grandeur': require('./assets/TAN-Grandeur/TAN-Grandeur/TAN Grandeur/TANGRANDEUR.ttf'),
-        }
-      : {}),
   });
 
   // On web, don't wait for fonts - use system fonts as fallback
@@ -127,13 +104,37 @@ export default function App() {
 
 function AppContent({ helpVisible, setHelpVisible }: { helpVisible: boolean; setHelpVisible: (visible: boolean) => void }) {
   const { isVendor } = useVendorStatus();
-  
+  const navigation = useNavigation<any>();
+  const navRef = useRef(navigation);
+  navRef.current = navigation;
+
+  useEffect(() => {
+    const handlePaymentDeepLink = (url: string | null) => {
+      if (!url || Platform.OS === 'web') return;
+      if (url.startsWith('funxon://payment/success') || url.startsWith('funxon://payment/cancel')) {
+        navRef.current.navigate('Main', { screen: 'Account', params: { screen: 'Billing' } });
+      }
+    };
+
+    Linking.getInitialURL().then(handlePaymentDeepLink);
+    const subscription = Linking.addEventListener('url', (event) => handlePaymentDeepLink(event.url));
+    return () => subscription.remove();
+  }, []);
+
   return (
     <View style={{ flex: 1 }}>
       <AppHeader />
       <AppNavigator />
-      {isVendor && <FloatingHelpButton onPress={() => setHelpVisible(true)} />}
-      {isVendor && <HelpCenterModal visible={helpVisible} onClose={() => setHelpVisible(false)} />}
+      {isVendor && (
+        <HelpCenterModal
+          visible={helpVisible}
+          onClose={() => setHelpVisible(false)}
+          onNavigateToHelp={() => {
+            setHelpVisible(false);
+            navigation.navigate('PortfolioAssistance', { openFaqs: true });
+          }}
+        />
+      )}
     </View>
   );
 }

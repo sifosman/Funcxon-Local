@@ -6,8 +6,6 @@ import {
   ScrollView,
   TouchableOpacity,
   Image,
-  Alert,
-  Linking,
   ActivityIndicator,
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
@@ -19,24 +17,11 @@ import { useAuth } from '../../auth/AuthContext';
 import { supabase } from '../../lib/supabaseClient';
 import { fetchHubSpotBlogPosts, type AppBlogPost } from '../../lib/hubspotBlog';
 import { AppFooter } from '../../components/AppFooter';
+import { HelpCenterModal } from '../../components/HelpCenterModal';
+import ThemedAlert from '../../components/ThemedAlert';
 import { useFocusEffect } from '@react-navigation/native';
-
-type ProfileStackParamList = {
-  ListerPortfolio: undefined;
-  PortfolioType: undefined;
-  ApplicationStep1: undefined;
-  UpdateVendorPortfolio: undefined;
-  UpdateVenuePortfolio: undefined;
-  VendorCatalogue: undefined;
-  VenueCatalogue: undefined;
-  AccountSettings: undefined;
-  ChangePassword: undefined;
-  MarketingPermissions: undefined;
-  Billing: undefined;
-  TermsAndPolicies: undefined;
-  SubscriptionPlans: undefined;
-  VenueListingPlans: undefined;
-};
+import type { ProfileStackParamList } from '../../navigation/ProfileNavigator';
+import { useIsDesktop } from '../../hooks/useIsDesktop';
 
 type NavigationProp = NativeStackNavigationProp<ProfileStackParamList>;
 
@@ -55,7 +40,7 @@ type VenueListing = {
   name: string;
   subscription_plan: string | null;
   subscription_status: string | null;
-  subscription_expires_at: string | null;
+  subscription_expires_at?: string | null;
 };
 
 type ActionItem = {
@@ -68,13 +53,17 @@ type ActionItem = {
 export default function ListerPortfolioScreen() {
   const navigation = useNavigation<NavigationProp>();
   const { user, userRole, signOut } = useAuth();
+  const isDesktop = useIsDesktop();
   const [vendorListing, setVendorListing] = useState<VendorListing | null>(null);
   const [venueListing, setVenueListing] = useState<VenueListing | null>(null);
+  const [venueListingNeedsSetup, setVenueListingNeedsSetup] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [helpVisible, setHelpVisible] = useState(false);
+  const [alertState, setAlertState] = useState<{visible: boolean; title: string; message: string; buttons?: any[]} | null>(null);
 
   const getUsername = () => {
     if (!user) return 'Lister';
-    const displayName = user.user_metadata?.display_name || user.user_metadata?.full_name || user.user_metadata?.name;
+    const displayName = user.user_metadata?.display_name || user.user_metadata?.username || user.user_metadata?.full_name || user.user_metadata?.name;
     if (displayName) return displayName;
     if (user.email) return user.email.split('@')[0];
     return 'Lister';
@@ -86,21 +75,53 @@ export default function ListerPortfolioScreen() {
       return;
     }
     try {
-      const { data: userRow } = await supabase
-        .from('users')
-        .select('id')
-        .eq('auth_user_id', user.id)
-        .maybeSingle();
+      // Try multiple user_id resolutions so we catch vendor/venue records
+      // created with either auth_user_id or internal users.id.
+      let resolvedIds: string[] = [user.id];
+      try {
+        const { data: userRow } = await supabase
+          .from('users')
+          .select('id, auth_user_id')
+          .eq('auth_user_id', user.id)
+          .maybeSingle();
+        if (userRow?.id) resolvedIds.push(String(userRow.id));
+      } catch {}
 
-      const internalUserId = userRow?.id ?? user.id;
+      // Query all tables with all candidate user ids
+      const queries = resolvedIds.map(async (uid) => {
+        const [vendorRes, venueListingRes, venuesRes] = await Promise.all([
+          supabase.from('vendors').select('id, name, subscription_tier, subscription_status, subscription_expires_at').eq('user_id', uid).maybeSingle(),
+          supabase.from('venue_listings').select('id, name, subscription_plan, subscription_status').eq('user_id', uid).maybeSingle(),
+          supabase.from('venues').select('id, name, subscription_plan_key, subscription_status, subscription_expires_at').eq('user_id', uid).maybeSingle(),
+        ]);
+        return { vendorData: vendorRes.data, venueData: venueListingRes.data, venuesData: venuesRes.data };
+      });
 
-      const [{ data: vendorData }, { data: venueData }] = await Promise.all([
-        supabase.from('vendors').select('id, name, subscription_tier, subscription_status, subscription_expires_at').eq('user_id', internalUserId).maybeSingle(),
-        supabase.from('venue_listings').select('id, name, subscription_plan, subscription_status, subscription_expires_at').eq('user_id', internalUserId).maybeSingle(),
-      ]);
-
-      if (vendorData) setVendorListing(vendorData);
-      if (venueData) setVenueListing(venueData);
+      const results = await Promise.all(queries);
+      // Use the first result that found something
+      for (const r of results) {
+        if (r.vendorData) {
+          setVendorListing(r.vendorData as VendorListing);
+          break;
+        }
+      }
+      for (const r of results) {
+        if (r.venueData) {
+          setVenueListing(r.venueData as VenueListing);
+          setVenueListingNeedsSetup(false);
+          break;
+        } else if (r.venuesData) {
+          setVenueListing({
+            id: r.venuesData.id,
+            name: r.venuesData.name,
+            subscription_plan: r.venuesData.subscription_plan_key,
+            subscription_status: r.venuesData.subscription_status,
+            subscription_expires_at: r.venuesData.subscription_expires_at,
+          });
+          setVenueListingNeedsSetup(true);
+          break;
+        }
+      }
     } catch {
       // silently fail
     } finally {
@@ -129,14 +150,39 @@ export default function ListerPortfolioScreen() {
   const handleLogout = async () => {
     const { error } = await signOut();
     if (error) {
-      Alert.alert('Sign out failed', error.message);
+      setAlertState({ visible: true, title: 'Sign out failed', message: error.message });
+    }
+  };
+
+  const handleDeleteAccount = async () => {
+    if (!user?.id) return;
+    try {
+      const { error } = await supabase
+        .from('account_deletion_requests')
+        .insert({ user_id: user.id, status: 'pending' });
+
+      if (error) throw error;
+
+      setAlertState({
+        visible: true,
+        title: 'Request Submitted',
+        message: 'Your account deletion request has been submitted. Our admin team will review and process it within 48 hours. You will be notified once it is completed.',
+        buttons: [{ text: 'OK', style: 'default', onPress: () => setAlertState(null) }],
+      });
+    } catch (err: any) {
+      setAlertState({
+        visible: true,
+        title: 'Request Failed',
+        message: err?.message || 'Could not submit deletion request. Please try again or contact support.',
+        buttons: [{ text: 'OK', style: 'default', onPress: () => setAlertState(null) }],
+      });
     }
   };
 
   const portfolioActions: ActionItem[] = [
     {
       id: 'new-application',
-      label: 'Capture your new portfolio application',
+      label: 'Capture new portfolio application',
       icon: 'add-business',
       action: () => navigation.navigate('PortfolioType'),
     },
@@ -145,19 +191,34 @@ export default function ListerPortfolioScreen() {
       label: 'View your portfolio',
       icon: 'visibility',
       action: () => {
-        const parentNav = (navigation as any).getParent?.();
         if (vendorListing && venueListing) {
-          Alert.alert('View Portfolio', 'Which portfolio would you like to view?', [
-            { text: 'Vendor', onPress: () => parentNav?.navigate?.('Main', { screen: 'Home', params: { screen: 'VendorProfile', params: { vendorId: vendorListing.id } } }) },
-            { text: 'Venue', onPress: () => parentNav?.navigate?.('Main', { screen: 'Home', params: { screen: 'VenueProfile', params: { venueId: venueListing.id } } }) },
-            { text: 'Cancel', style: 'cancel' },
-          ]);
+          setAlertState({
+            visible: true,
+            title: 'View Portfolio',
+            message: 'Which portfolio would you like to view?',
+            buttons: [
+              { text: 'Vendor', style: 'default', onPress: () => { setAlertState(null); navigation.navigate('VendorProfile', { vendorId: vendorListing.id }); } },
+              { text: 'Venue', style: 'default', onPress: () => {
+                setAlertState(null);
+                if (venueListingNeedsSetup) {
+                  setAlertState({ visible: true, title: 'Venue Listing Setup', message: 'Your venue listing needs to be completed before it can be viewed publicly. Tap "Edit your portfolio details" to finish setting it up.', buttons: [{ text: 'OK', style: 'default', onPress: () => setAlertState(null) }] });
+                } else {
+                  navigation.navigate('VenueProfile', { venueId: venueListing.id });
+                }
+              } },
+              { text: 'Cancel', style: 'cancel', onPress: () => setAlertState(null) },
+            ],
+          });
         } else if (vendorListing) {
-          parentNav?.navigate?.('Main', { screen: 'Home', params: { screen: 'VendorProfile', params: { vendorId: vendorListing.id } } });
+          navigation.navigate('VendorProfile', { vendorId: vendorListing.id });
         } else if (venueListing) {
-          parentNav?.navigate?.('Main', { screen: 'Home', params: { screen: 'VenueProfile', params: { venueId: venueListing.id } } });
+          if (venueListingNeedsSetup) {
+            setAlertState({ visible: true, title: 'Venue Listing Setup', message: 'Your venue listing needs to be completed before it can be viewed publicly. Tap "Edit your portfolio details" to finish setting it up.', buttons: [{ text: 'OK', style: 'default', onPress: () => setAlertState(null) }] });
+          } else {
+            navigation.navigate('VenueProfile', { venueId: venueListing.id });
+          }
         } else {
-          Alert.alert('No portfolio found', 'You do not have an active portfolio yet. Create one first.');
+          setAlertState({ visible: true, title: 'No portfolio found', message: 'You do not have an active portfolio yet. Create one first.' });
         }
       },
     },
@@ -167,17 +228,22 @@ export default function ListerPortfolioScreen() {
       icon: 'edit',
       action: () => {
         if (vendorListing && venueListing) {
-          Alert.alert('Edit Portfolio', 'Which portfolio would you like to edit?', [
-            { text: 'Vendor', onPress: () => navigation.navigate('UpdateVendorPortfolio') },
-            { text: 'Venue', onPress: () => navigation.navigate('UpdateVenuePortfolio') },
-            { text: 'Cancel', style: 'cancel' },
-          ]);
+          setAlertState({
+            visible: true,
+            title: 'Edit Portfolio',
+            message: 'Which portfolio would you like to edit?',
+            buttons: [
+              { text: 'Vendor', style: 'default', onPress: () => { setAlertState(null); navigation.navigate('UpdateVendorPortfolio'); } },
+              { text: 'Venue', style: 'default', onPress: () => { setAlertState(null); navigation.navigate('UpdateVenuePortfolio'); } },
+              { text: 'Cancel', style: 'cancel', onPress: () => setAlertState(null) },
+            ],
+          });
         } else if (vendorListing) {
           navigation.navigate('UpdateVendorPortfolio');
         } else if (venueListing) {
           navigation.navigate('UpdateVenuePortfolio');
         } else {
-          Alert.alert('No portfolio found', 'You do not have an active portfolio yet. Create one first.');
+          setAlertState({ visible: true, title: 'No portfolio found', message: 'You do not have an active portfolio yet. Create one first.' });
         }
       },
     },
@@ -187,17 +253,22 @@ export default function ListerPortfolioScreen() {
       icon: 'list',
       action: () => {
         if (vendorListing && venueListing) {
-          Alert.alert('Edit Catalogue', 'Which catalogue would you like to edit?', [
-            { text: 'Vendor', onPress: () => navigation.navigate('VendorCatalogue') },
-            { text: 'Venue', onPress: () => navigation.navigate('VenueCatalogue') },
-            { text: 'Cancel', style: 'cancel' },
-          ]);
+          setAlertState({
+            visible: true,
+            title: 'Edit Catalogue',
+            message: 'Which catalogue would you like to edit?',
+            buttons: [
+              { text: 'Vendor', style: 'default', onPress: () => { setAlertState(null); navigation.navigate('VendorCatalogue'); } },
+              { text: 'Venue', style: 'default', onPress: () => { setAlertState(null); navigation.navigate('VenueCatalogue'); } },
+              { text: 'Cancel', style: 'cancel', onPress: () => setAlertState(null) },
+            ],
+          });
         } else if (vendorListing) {
           navigation.navigate('VendorCatalogue');
         } else if (venueListing) {
           navigation.navigate('VenueCatalogue');
         } else {
-          Alert.alert('No portfolio found', 'You do not have an active portfolio yet. Create one first.');
+          setAlertState({ visible: true, title: 'No portfolio found', message: 'You do not have an active portfolio yet. Create one first.' });
         }
       },
     },
@@ -207,17 +278,72 @@ export default function ListerPortfolioScreen() {
       icon: 'photo-library',
       action: () => {
         if (vendorListing && venueListing) {
-          Alert.alert('Update Photos', 'Which portfolio would you like to update?', [
-            { text: 'Vendor', onPress: () => navigation.navigate('UpdateVendorPortfolio') },
-            { text: 'Venue', onPress: () => navigation.navigate('UpdateVenuePortfolio') },
-            { text: 'Cancel', style: 'cancel' },
-          ]);
+          setAlertState({
+            visible: true,
+            title: 'Update Photos',
+            message: 'Which portfolio would you like to update?',
+            buttons: [
+              { text: 'Vendor', style: 'default', onPress: () => { setAlertState(null); navigation.navigate('UpdateVendorPortfolio'); } },
+              { text: 'Venue', style: 'default', onPress: () => { setAlertState(null); navigation.navigate('UpdateVenuePortfolio'); } },
+              { text: 'Cancel', style: 'cancel', onPress: () => setAlertState(null) },
+            ],
+          });
         } else if (vendorListing) {
           navigation.navigate('UpdateVendorPortfolio');
         } else if (venueListing) {
           navigation.navigate('UpdateVenuePortfolio');
         } else {
-          Alert.alert('No portfolio found', 'You do not have an active portfolio yet. Create one first.');
+          setAlertState({ visible: true, title: 'No portfolio found', message: 'You do not have an active portfolio yet. Create one first.' });
+        }
+      },
+    },
+    {
+      id: 'view-quotes',
+      label: 'View Quotes',
+      icon: 'request-quote',
+      action: () => {
+        if (vendorListing && venueListing) {
+          setAlertState({
+            visible: true,
+            title: 'View Quotes',
+            message: 'Which portfolio quotes would you like to view?',
+            buttons: [
+              { text: 'Vendor', style: 'default', onPress: () => { setAlertState(null); navigation.navigate('VendorDashboard'); } },
+              { text: 'Venue', style: 'default', onPress: () => { setAlertState(null); navigation.navigate('VenueQuoteRequests'); } },
+              { text: 'Cancel', style: 'cancel', onPress: () => setAlertState(null) },
+            ],
+          });
+        } else if (vendorListing) {
+          navigation.navigate('VendorDashboard');
+        } else if (venueListing) {
+          navigation.navigate('VenueQuoteRequests');
+        } else {
+          setAlertState({ visible: true, title: 'No portfolio found', message: 'You do not have an active portfolio yet. Create one first.' });
+        }
+      },
+    },
+    {
+      id: 'view-bookings',
+      label: 'View Bookings',
+      icon: 'event-available',
+      action: () => {
+        if (vendorListing && venueListing) {
+          setAlertState({
+            visible: true,
+            title: 'View Bookings',
+            message: 'Which portfolio bookings would you like to view?',
+            buttons: [
+              { text: 'Vendor', style: 'default', onPress: () => { setAlertState(null); navigation.navigate('VendorBookings'); } },
+              { text: 'Venue', style: 'default', onPress: () => { setAlertState(null); navigation.navigate('VenueTourBookings'); } },
+              { text: 'Cancel', style: 'cancel', onPress: () => setAlertState(null) },
+            ],
+          });
+        } else if (vendorListing) {
+          navigation.navigate('VendorBookings');
+        } else if (venueListing) {
+          navigation.navigate('VenueTourBookings');
+        } else {
+          setAlertState({ visible: true, title: 'No portfolio found', message: 'You do not have an active portfolio yet. Create one first.' });
         }
       },
     },
@@ -256,45 +382,25 @@ export default function ListerPortfolioScreen() {
     },
     {
       id: 'delete-account',
-      label: 'Delete Account',
+      label: 'Request Account Deletion',
       icon: 'delete-forever',
       action: () => {
-        Alert.alert(
-          'Delete Account',
-          'This will permanently delete your account and all associated data. Are you absolutely sure?',
-          [
-            { text: 'Cancel', style: 'cancel' },
+        setAlertState({
+          visible: true,
+          title: 'Request Account Deletion',
+          message: 'Your request will be sent to our admin team for review. Your account and data will be permanently deleted once approved (usually within 48 hours). Continue?',
+          buttons: [
+            { text: 'Cancel', style: 'cancel', onPress: () => setAlertState(null) },
             {
-              text: 'Delete Forever',
+              text: 'Submit Request',
               style: 'destructive',
-              onPress: () =>
-                Alert.alert('Feature Coming Soon', 'Account deletion will be available soon. For now, please contact support to delete your account.'),
+              onPress: () => { setAlertState(null); handleDeleteAccount(); },
             },
-          ]
-        );
+          ],
+        });
       },
     },
   ];
-
-  const renderActionCard = (item: ActionItem, index: number, total: number) => (
-    <TouchableOpacity
-      key={item.id}
-      onPress={item.action}
-      style={[
-        styles.actionRow,
-        index < total - 1 && styles.actionRowBorder,
-      ]}
-      activeOpacity={0.7}
-    >
-      <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
-        <MaterialIcons name={item.icon} size={22} color={colors.textPrimary} style={{ marginRight: spacing.md }} />
-        <Text style={{ ...typography.body, fontWeight: '500', color: colors.textPrimary }}>
-          {item.label}
-        </Text>
-      </View>
-      <MaterialIcons name="chevron-right" size={20} color={colors.textMuted} />
-    </TouchableOpacity>
-  );
 
   if (loading) {
     return (
@@ -304,140 +410,114 @@ export default function ListerPortfolioScreen() {
     );
   }
 
+  const desktopContainerStyle = {
+    maxWidth: 1200,
+    width: '100%',
+    alignSelf: 'center' as const,
+    paddingHorizontal: isDesktop ? 48 : spacing.lg,
+    paddingBottom: spacing.xxl,
+  };
+
+  const cardStyle = {
+    backgroundColor: isDesktop ? colors.surfaceContainerLowest : colors.surface,
+    borderColor: isDesktop ? colors.outlineVariant : colors.borderSubtle,
+  };
+
+  const renderActionCard = (item: ActionItem, index: number, total: number) => {
+    const isLast = index === total - 1;
+    return (
+      <TouchableOpacity
+        key={item.id}
+        style={[styles.actionRow, !isLast && styles.actionRowBorder]}
+        onPress={item.action}
+        activeOpacity={0.7}
+      >
+        <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
+          <MaterialIcons name={item.icon} size={22} color={colors.textPrimary} style={{ marginRight: spacing.md }} />
+          <Text style={isDesktop ? { ...typography.bodyMd, color: colors.textPrimary } as any : { ...typography.body, color: colors.textPrimary }}>
+            {item.label}
+          </Text>
+        </View>
+        <MaterialIcons name="chevron-right" size={20} color={colors.textMuted} />
+      </TouchableOpacity>
+    );
+  };
+
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
+    <ScrollView style={[styles.container, { backgroundColor: isDesktop ? colors.surfaceBg : colors.background }]} contentContainerStyle={desktopContainerStyle as any}>
       {/* Welcome Section */}
       <View style={styles.section}>
-        <Text style={styles.welcomeTitle}>Welcome back {getUsername()}</Text>
-        <Text style={styles.welcomeSubtitle}>Let's get into it!!!</Text>
+        <Text style={isDesktop ? { ...typography.headlineMd, color: colors.primary, marginBottom: spacing.xs } as any : styles.welcomeTitle}>Welcome back {getUsername()}</Text>
+        <Text style={isDesktop ? { ...typography.bodyMd, color: colors.onSurfaceVariant } as any : styles.welcomeSubtitle}>Let's get into it!!!</Text>
       </View>
 
-      {/* Subscription Info Cards */}
-      {vendorListing && (
-        <View style={{ paddingHorizontal: spacing.lg, marginBottom: spacing.md }}>
-          <View style={{ backgroundColor: colors.surface, borderRadius: radii.lg, padding: spacing.lg, borderWidth: 1, borderColor: colors.borderSubtle }}>
-            <Text style={{ ...typography.titleMedium, color: colors.textPrimary, marginBottom: spacing.sm }}>Vendor Plan</Text>
-            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.xs }}>
-              <Text style={{ ...typography.body, color: colors.textMuted, width: 110 }}>Plan:</Text>
-              <Text style={{ ...typography.body, color: colors.textPrimary, fontWeight: '600' }}>
-                {vendorListing.subscription_tier ? vendorListing.subscription_tier.charAt(0).toUpperCase() + vendorListing.subscription_tier.slice(1) : 'Free'}
-              </Text>
+      {isDesktop ? (
+        <View style={{ flexDirection: 'row', gap: spacing.gutter } as any}>
+          <View style={{ flex: 1 } as any}>
+            {/* Portfolio Actions Card */}
+            <View style={[styles.card, cardStyle]}>
+              <Text style={styles.cardTitle}>Portfolio</Text>
+              {portfolioActions.map((item, i) => renderActionCard(item, i, portfolioActions.length))}
             </View>
-            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.sm }}>
-              <Text style={{ ...typography.body, color: colors.textMuted, width: 110 }}>Expires:</Text>
-              <Text style={{ ...typography.body, color: colors.textPrimary }}>
-                {vendorListing.subscription_expires_at
-                  ? new Date(vendorListing.subscription_expires_at).toLocaleDateString('en-ZA')
-                  : '—'}
-              </Text>
-            </View>
-            <View style={{ flexDirection: 'row', gap: spacing.md, marginTop: spacing.sm }}>
-              <TouchableOpacity
-                onPress={() => navigation.navigate('SubscriptionPlans')}
-                style={{ flex: 1, borderWidth: 1, borderColor: colors.primary, borderRadius: radii.md, paddingVertical: spacing.sm, alignItems: 'center' }}
-              >
-                <Text style={{ ...typography.body, color: colors.primary, fontWeight: '600' }}>Renew</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                onPress={() => navigation.navigate('SubscriptionPlans')}
-                style={{ flex: 1, backgroundColor: colors.primary, borderRadius: radii.md, paddingVertical: spacing.sm, alignItems: 'center' }}
-              >
-                <Text style={{ ...typography.body, color: '#FFFFFF', fontWeight: '600' }}>Upgrade</Text>
-              </TouchableOpacity>
+          </View>
+          <View style={{ flex: 1 } as any}>
+            {/* Profile & Settings Card */}
+            <View style={[styles.card, cardStyle]}>
+              <Text style={styles.cardTitle}>Profile & Settings</Text>
+              {settingsActions.map((item, i) => renderActionCard(item, i, settingsActions.length))}
             </View>
           </View>
         </View>
-      )}
-      {venueListing && (
-        <View style={{ paddingHorizontal: spacing.lg, marginBottom: spacing.md }}>
-          <View style={{ backgroundColor: colors.surface, borderRadius: radii.lg, padding: spacing.lg, borderWidth: 1, borderColor: colors.borderSubtle }}>
-            <Text style={{ ...typography.titleMedium, color: colors.textPrimary, marginBottom: spacing.sm }}>Venue Plan</Text>
-            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.xs }}>
-              <Text style={{ ...typography.body, color: colors.textMuted, width: 110 }}>Plan:</Text>
-              <Text style={{ ...typography.body, color: colors.textPrimary, fontWeight: '600' }}>
-                {venueListing.subscription_plan ? venueListing.subscription_plan.charAt(0).toUpperCase() + venueListing.subscription_plan.slice(1) : 'Free'}
-              </Text>
-            </View>
-            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.sm }}>
-              <Text style={{ ...typography.body, color: colors.textMuted, width: 110 }}>Expires:</Text>
-              <Text style={{ ...typography.body, color: colors.textPrimary }}>
-                {venueListing.subscription_expires_at
-                  ? new Date(venueListing.subscription_expires_at).toLocaleDateString('en-ZA')
-                  : '—'}
-              </Text>
-            </View>
-            <View style={{ flexDirection: 'row', gap: spacing.md, marginTop: spacing.sm }}>
-              <TouchableOpacity
-                onPress={() => navigation.navigate('SubscriptionPlans')}
-                style={{ flex: 1, borderWidth: 1, borderColor: colors.primary, borderRadius: radii.md, paddingVertical: spacing.sm, alignItems: 'center' }}
-              >
-                <Text style={{ ...typography.body, color: colors.primary, fontWeight: '600' }}>Renew</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                onPress={() => navigation.navigate('VenueListingPlans')}
-                style={{ flex: 1, backgroundColor: colors.primary, borderRadius: radii.md, paddingVertical: spacing.sm, alignItems: 'center' }}
-              >
-                <Text style={{ ...typography.body, color: '#FFFFFF', fontWeight: '600' }}>Upgrade</Text>
-              </TouchableOpacity>
-            </View>
+      ) : (
+        <>
+          {/* Portfolio Actions Card */}
+          <View style={[styles.card, cardStyle]}>
+            <Text style={styles.cardTitle}>Portfolio</Text>
+            {portfolioActions.map((item, i) => renderActionCard(item, i, portfolioActions.length))}
           </View>
-        </View>
+
+          {/* Profile & Settings Card */}
+          <View style={[styles.card, cardStyle]}>
+            <Text style={styles.cardTitle}>Profile & Settings</Text>
+            {settingsActions.map((item, i) => renderActionCard(item, i, settingsActions.length))}
+          </View>
+        </>
       )}
-
-      {/* Portfolio Actions Card */}
-      <View style={styles.card}>
-        <Text style={styles.cardTitle}>Portfolio</Text>
-        {portfolioActions.map((item, i) => renderActionCard(item, i, portfolioActions.length))}
-      </View>
-
-      {/* Profile & Settings Card */}
-      <View style={styles.card}>
-        <Text style={styles.cardTitle}>Profile & Settings</Text>
-        {settingsActions.map((item, i) => renderActionCard(item, i, settingsActions.length))}
-      </View>
 
       {/* Submit Review & Featured CTA */}
       <View style={styles.ctaSection}>
         <TouchableOpacity
           style={styles.ctaButton}
-          onPress={() => {
-            const parentNav = (navigation as any).getParent?.();
-            if (vendorListing) {
-              parentNav?.navigate?.('Main', { screen: 'Home', params: { screen: 'CreateReview', params: { type: 'vendor', targetId: vendorListing.id, targetName: vendorListing.name } } });
-            } else if (venueListing) {
-              parentNav?.navigate?.('Main', { screen: 'Home', params: { screen: 'CreateReview', params: { type: 'venue', targetId: venueListing.id, targetName: venueListing.name } } });
-            } else {
-              Alert.alert('No portfolio found', 'Create a portfolio first before submitting a review.');
-            }
-          }}
+          onPress={() => navigation.navigate('CreateReview', { type: 'app' })}
         >
           <MaterialIcons name="rate-review" size={18} color={colors.surface} style={{ marginRight: spacing.sm }} />
           <Text style={styles.ctaButtonText}>Submit a Funxon app review</Text>
         </TouchableOpacity>
 
-        <View style={styles.featuredCard}>
+        <View style={[styles.featuredCard, { backgroundColor: isDesktop ? colors.surfaceContainerLowest : colors.accent, borderColor: isDesktop ? colors.outlineVariant : undefined, borderWidth: isDesktop ? 1 : 0 }]}>
           <Text style={styles.featuredLabel}>Want priority exposure?</Text>
           <TouchableOpacity
             style={styles.featuredButton}
-            onPress={() => Alert.alert('Coming Soon', 'Featured listings will be available in a later release.')}
+            onPress={() => {
+              setAlertState({
+                visible: true,
+                title: 'Get Featured',
+                message: 'Contact support for more info on how to get featured.',
+                buttons: [
+                  { text: 'OK', style: 'default', onPress: () => setAlertState(null) },
+                ],
+              });
+            }}
           >
             <Text style={styles.featuredButtonText}>GET FEATURED</Text>
           </TouchableOpacity>
         </View>
-
-        {/* Temporary debug button */}
-        <TouchableOpacity
-          style={[styles.ctaButton, { backgroundColor: '#dc2626' }]}
-          onPress={() => (navigation as any).navigate('DebugUser')}
-        >
-          <Text style={styles.ctaButtonText}>DEBUG: View User Data</Text>
-        </TouchableOpacity>
       </View>
 
       {/* Listers Blog Section */}
       <View style={styles.section}>
         <View style={styles.blogHeader}>
-          <Text style={styles.sectionTitle}>Listers Blog</Text>
+          <Text style={isDesktop ? { ...typography.headlineSm, color: colors.textPrimary, marginBottom: spacing.md } as any : styles.sectionTitle}>Listers Blog</Text>
           <TouchableOpacity onPress={() => {
             const parentNav = (navigation as any).getParent?.();
             parentNav?.navigate?.('Main', { screen: 'Home', params: { screen: 'BlogList' } });
@@ -460,7 +540,7 @@ export default function ListerPortfolioScreen() {
                   parentNav?.navigate?.('Main', { screen: 'Home', params: { screen: 'BlogDetail', params: { slug: post.slug } } });
                 }}
               >
-                <View style={styles.blogCardInner}>
+                <View style={[styles.blogCardInner, cardStyle]}>
                   {post.cover_image_url ? (
                     <Image source={{ uri: post.cover_image_url }} style={styles.blogCardImage} resizeMode="cover" />
                   ) : (
@@ -491,26 +571,31 @@ export default function ListerPortfolioScreen() {
         )}
       </View>
 
-      {/* Support Links */}
-      <View style={styles.card}>
-        <Text style={styles.cardTitle}>Support</Text>
-        {[
-          { id: 'faqs', label: "FAQ's", icon: 'help-outline' as keyof typeof MaterialIcons.glyphMap, action: () => Alert.alert("FAQ's", "FAQs page coming soon!") },
-          { id: 'helpdesk', label: 'Need app assistance? Contact our helpdesk', icon: 'support-agent' as keyof typeof MaterialIcons.glyphMap, action: () => Alert.alert('Help Desk', 'Help desk coming soon!') },
-          { id: 'report', label: 'Report a problem to Funxon', icon: 'report-problem' as keyof typeof MaterialIcons.glyphMap, action: () => Alert.alert('Report Problem', 'Problem reporting coming soon!') },
-          { id: 'whatsapp', label: 'Chat with Funxon via WhatsApp', icon: 'chat' as keyof typeof MaterialIcons.glyphMap, action: () => Linking.openURL('https://wa.me/') },
-          { id: 'email', label: 'Chat with Funxon via email', icon: 'email' as keyof typeof MaterialIcons.glyphMap, action: () => Linking.openURL('mailto:support@funxon.com') },
-          { id: 'terms', label: 'Terms & Policies', icon: 'policy' as keyof typeof MaterialIcons.glyphMap, action: () => navigation.navigate('TermsAndPolicies') },
-        ].map((item, i, arr) => renderActionCard(item, i, arr.length))}
-      </View>
-
       <View style={{ height: spacing.xl }} />
 
       <AppFooter
-        onNavigateToFAQs={() => Alert.alert("FAQ's", "FAQs page coming soon!")}
-        onNavigateToHelpDesk={() => Alert.alert('Help Desk', 'Help desk coming soon!')}
+        onNavigateToFAQs={() => navigation.navigate('PortfolioAssistance', { openFaqs: true })}
+        onNavigateToHelpDesk={() => setHelpVisible(true)}
         onNavigateToTerms={() => navigation.navigate('TermsAndPolicies')}
       />
+      <HelpCenterModal
+        visible={helpVisible}
+        onClose={() => setHelpVisible(false)}
+        onNavigateToHelp={() => {
+          setHelpVisible(false);
+          navigation.navigate('PortfolioAssistance', { openFaqs: true });
+        }}
+      />
+
+      {alertState && (
+        <ThemedAlert
+          visible={alertState.visible}
+          title={alertState.title}
+          message={alertState.message}
+          buttons={alertState.buttons ?? [{ text: 'OK', style: 'default', onPress: () => setAlertState(null) }]}
+          onDismiss={() => setAlertState(null)}
+        />
+      )}
     </ScrollView>
   );
 }
@@ -550,9 +635,8 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   cardTitle: {
-    ...typography.titleMedium,
+    ...typography.titleLarge,
     color: colors.textPrimary,
-    fontWeight: '700',
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.lg,
     paddingBottom: spacing.md,
@@ -573,7 +657,7 @@ const styles = StyleSheet.create({
     gap: spacing.md,
   },
   ctaButton: {
-    backgroundColor: colors.textPrimary,
+    backgroundColor: colors.cta,
     paddingVertical: spacing.lg,
     paddingHorizontal: spacing.xl,
     borderRadius: radii.lg,
@@ -582,8 +666,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   ctaButtonText: {
+    ...typography.bodySemiBold,
     color: colors.surface,
-    fontWeight: '600',
     fontSize: 15,
   },
   featuredCard: {
@@ -592,24 +676,23 @@ const styles = StyleSheet.create({
     padding: spacing.lg,
     alignItems: 'center',
     borderLeftWidth: 4,
-    borderLeftcolor: colors.textPrimary,
+    borderLeftColor: colors.textPrimary,
   },
   featuredLabel: {
-    ...typography.body,
+    ...typography.bodySemiBold,
     color: colors.textPrimary,
-    fontWeight: '600',
     marginBottom: spacing.md,
   },
   featuredButton: {
-    backgroundColor: colors.textPrimary,
+    backgroundColor: colors.cta,
     paddingVertical: spacing.md,
     paddingHorizontal: spacing.xl,
     borderRadius: radii.lg,
     marginBottom: spacing.md,
   },
   featuredButtonText: {
+    ...typography.bodyBold,
     color: colors.surface,
-    fontWeight: '700',
     fontSize: 14,
   },
   featuredNote: {
@@ -622,7 +705,6 @@ const styles = StyleSheet.create({
     ...typography.titleLarge,
     color: colors.textPrimary,
     marginBottom: spacing.md,
-    fontWeight: '700',
   },
   blogHeader: {
     flexDirection: 'row',
@@ -631,9 +713,8 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
   },
   viewAllText: {
-    ...typography.body,
+    ...typography.bodySemiBold,
     color: colors.textPrimary,
-    fontWeight: '600',
   },
   blogScrollContainer: {
     paddingRight: spacing.lg,
@@ -675,9 +756,9 @@ const styles = StyleSheet.create({
     marginBottom: spacing.sm,
   },
   blogCategoryText: {
+    ...typography.captionSemiBold,
     color: colors.textPrimary,
     fontSize: 10,
-    fontWeight: '600',
   },
   blogCardTitle: {
     ...typography.titleMedium,

@@ -33,9 +33,8 @@ export function PrimaryButton({ title, onPress, disabled, style }: PrimaryButton
     >
       <Text
         style={{
+          ...typography.button,
           color: '#FFFFFF',
-          fontSize: 16,
-          fontWeight: '600',
         }}
       >
         {title}
@@ -72,9 +71,8 @@ export function OutlineButton({ title, onPress, style }: OutlineButtonProps) {
     >
       <Text
         style={{
+          ...typography.button,
           color: colors.primary,
-          fontSize: 16,
-          fontWeight: '600',
         }}
       >
         {title}
@@ -110,8 +108,8 @@ export function FilterChip({ label, selected, onPress, style }: FilterChipProps)
     >
       <Text
         style={{
+          ...typography.buttonMedium,
           color: textColor,
-          fontSize: 13,
           fontWeight: selected ? '600' : '500',
         }}
       >
@@ -140,6 +138,7 @@ export function ThemedInput({ errorText, style, ...rest }: ThemedInputProps) {
           paddingVertical: spacing.sm,
           backgroundColor: colors.inputBackground,
           fontSize: 14,
+          fontFamily: typography.body.fontFamily,
           color: colors.textPrimary,
           ...(style ? (style as object) : {}),
         }}
@@ -149,6 +148,7 @@ export function ThemedInput({ errorText, style, ...rest }: ThemedInputProps) {
           style={{
             marginTop: 4,
             fontSize: 12,
+            fontFamily: typography.caption.fontFamily,
             color: colors.textPrimary,
           }}
         >

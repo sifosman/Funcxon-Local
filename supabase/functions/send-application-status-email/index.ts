@@ -10,6 +10,7 @@ interface EmailRequest {
   applicationUrl: string;
   status?: string;
   adminNotes?: string;
+  catalogueUrl?: string;
 }
 
 interface BrevoEmailPayload {
@@ -40,31 +41,31 @@ const getEmailTemplate = (status: string): EmailTemplate => {
   switch (status) {
     case 'approved':
       return {
-        subject: 'Your Funcxon application has been approved',
+        subject: 'Your Funxons application has been approved',
         heading: 'Application Approved',
-        intro: 'Great news. Your application has been approved successfully.',
-        nextSteps: 'You can now open the app to view your application status and continue with your Funcxon account.',
-        buttonLabel: 'Open Application Status',
+        intro: 'Great news. Your application has been approved automatically.',
+        nextSteps: 'You now have full access to manage your portfolio. Open the app to update your profile, add listings, and start receiving enquiries.',
+        buttonLabel: 'Open Application',
       };
     case 'needs_changes':
       return {
-        subject: 'Changes requested for your Funcxon application',
+        subject: 'Changes requested for your Funxons application',
         heading: 'Changes Requested',
-        intro: 'Our team reviewed your application and requested a few changes before approval.',
-        nextSteps: 'Open your application status to review the latest update and follow the guidance from the Funcxon team before submitting again.',
+        intro: 'Our team reviewed your application and requested a few changes.',
+        nextSteps: 'Open your application status to review the latest update and follow the guidance from the Funxons team before submitting again.',
         buttonLabel: 'Review Application Update',
       };
     case 'rejected':
       return {
-        subject: 'Your Funcxon application was not approved',
-        heading: 'Application Not Approved',
-        intro: 'We reviewed your application and it was not approved at this time.',
-        nextSteps: 'Open your application status to review the update. If you still want to join Funcxon, you can start a new application when you are ready.',
+        subject: 'Your Funxons application was not accepted',
+        heading: 'Application Not Accepted',
+        intro: 'We reviewed your application and it was not accepted at this time.',
+        nextSteps: 'Open your application status to review the update. If you still want to join Funxons, you can start a new application when you are ready.',
         buttonLabel: 'View Application Status',
       };
     case 'cancelled':
       return {
-        subject: 'Your Funcxon application has been cancelled',
+        subject: 'Your Funxons application has been cancelled',
         heading: 'Application Cancelled',
         intro: 'Your application has been cancelled and will no longer be reviewed by our team.',
         nextSteps: 'Open your application status if you want to confirm the cancellation or start a new application later.',
@@ -72,21 +73,21 @@ const getEmailTemplate = (status: string): EmailTemplate => {
       };
     case 'under_review':
       return {
-        subject: 'Your Funcxon application is under review',
-        heading: 'Application Under Review',
-        intro: 'Your application is currently under review by the Funcxon team.',
-        nextSteps: 'You can open your application status at any time to check for the latest progress.',
-        buttonLabel: 'View Application Status',
+        subject: 'Your Funxons application has been submitted',
+        heading: 'Application Submitted',
+        intro: 'Your application has been submitted successfully.',
+        nextSteps: 'Applications are approved automatically, so you now have full access to manage your portfolio. Open the app to update your profile, add listings, and start receiving enquiries.',
+        buttonLabel: 'Open Application',
       };
     case 'submitted':
     case 'pending':
     default:
       return {
-        subject: 'Your Funcxon application has been submitted',
+        subject: 'Your Funxons application has been submitted',
         heading: 'Application Submitted',
-        intro: 'Your application has been submitted successfully.',
-        nextSteps: 'Our team will review your application within 12 to 24 hours. While it is pending, you will not be able to edit or resubmit it.',
-        buttonLabel: 'View Application Status',
+        intro: 'Your application has been submitted successfully and approved automatically.',
+        nextSteps: 'You now have full access to manage your portfolio. Open the app to update your profile, add listings, and start receiving enquiries.',
+        buttonLabel: 'Open Application',
       };
   }
 };
@@ -105,13 +106,13 @@ Deno.serve(async (req: Request) => {
   try {
     const brevoApiKey = Deno.env.get('BREVO_API_KEY');
     const fromEmail = Deno.env.get('FROM_EMAIL') || 'noreply@funcxon.com';
-    const fromName = Deno.env.get('FROM_NAME') || 'Funcxon Team';
+    const fromName = Deno.env.get('FROM_NAME') || 'Funxons Team';
 
     if (!brevoApiKey) {
       throw new Error('BREVO_API_KEY environment variable is not set');
     }
 
-    const { email, fullName, businessName, tierName, applicationUrl, status, adminNotes }: EmailRequest = await req.json();
+    const { email, fullName, businessName, tierName, applicationUrl, status, adminNotes, catalogueUrl }: EmailRequest = await req.json();
 
     if (!email || !fullName || !tierName || !applicationUrl) {
       return new Response(
@@ -126,6 +127,7 @@ Deno.serve(async (req: Request) => {
     const safeTierName = escapeHtml(tierName);
     const safeApplicationUrl = escapeHtml(applicationUrl);
     const safeAdminNotes = adminNotes ? escapeHtml(adminNotes) : '';
+    const safeCatalogueUrl = catalogueUrl ? escapeHtml(catalogueUrl) : '';
 
     const htmlContent = `
       <!DOCTYPE html>
@@ -151,6 +153,20 @@ Deno.serve(async (req: Request) => {
             <p style="margin-bottom: 0; color: #2B3840;">${escapeHtml(emailTemplate.nextSteps)}</p>
           </div>
           ${safeAdminNotes ? `<div style="background: #FFF7ED; padding: 20px; border-radius: 8px; margin: 25px 0; border: 1px solid #FDBA74;"><h3 style="margin-top: 0; color: #C2410C;">Admin Notes</h3><p style="margin-bottom: 0; color: #2B3840; white-space: pre-wrap;">${safeAdminNotes}</p></div>` : ''}
+          ${(status === 'approved' || status === 'submitted' || status === 'under_review' || status === 'pending') ? `
+          <div style="background: #E8F5F0; padding: 20px; border-radius: 8px; margin: 25px 0; border: 1px solid #B3D9CC;">
+            <h3 style="margin-top: 0; color: #2B9EB3;">Set Up Your Catalogue / Pricelist</h3>
+            <p style="margin-bottom: 15px; color: #2B3840;">Add catalogue items (like an online store) so customers can see your offerings when they request a quote. Upload an image, add a product name and price for each item. Customers can select items and quantities, and a total is calculated automatically.</p>
+            <p style="margin-bottom: 0; color: #2B3840; font-size: 14px;">The number of items you can add depends on your plan: <strong>${safeTierName}</strong>.</p>
+          </div>
+          ${safeCatalogueUrl ? `
+          <div style="text-align: center; margin: 25px 0;">
+            <a href="${safeCatalogueUrl}" style="background: #2B9EB3; color: white; padding: 12px 28px; text-decoration: none; border-radius: 5px; font-weight: bold; display: inline-block;">
+              Add Catalogue Items
+            </a>
+          </div>
+          ` : ''}
+          ` : ''}
           <div style="text-align: center; margin: 30px 0;">
             <a href="${safeApplicationUrl}" style="background: #2B9EB3; color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; font-weight: bold; display: inline-block;">
               ${escapeHtml(emailTemplate.buttonLabel)}
@@ -175,6 +191,11 @@ ${emailTemplate.intro}
 ${emailTemplate.nextSteps}
 
 ${emailTemplate.buttonLabel}: ${safeApplicationUrl}
+${(status === 'approved' || status === 'submitted' || status === 'under_review' || status === 'pending') ? `
+Set Up Your Catalogue / Pricelist
+Add catalogue items (like an online store) so customers can see your offerings when they request a quote. Upload an image, add a product name and price for each item.
+The number of items you can add depends on your plan: ${safeTierName}.
+${safeCatalogueUrl ? `Add Catalogue Items: ${safeCatalogueUrl}` : ''}` : ''}
 ${adminNotes ? `
 Admin Notes:
 ${safeAdminNotes}` : ''}

@@ -6,7 +6,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.49.1';
 const BREVO_API_URL = 'https://api.brevo.com/v3';
 
 // Notification types
-type NotificationType = 
+type NotificationType =
   | 'quote-requested-vendor'      // New quote request to vendor
   | 'quote-created-client'        // Quote created/sent to client
   | 'quote-accepted-vendor'      // Client accepted quote
@@ -17,25 +17,32 @@ interface NotificationPayload {
   type: NotificationType;
   quoteRequestId: number;
   quoteRevisionId?: number;
-  
+
   // Vendor/Venue info
   vendorName?: string;
   vendorEmail?: string;
   vendorBusinessName?: string;
-  
+  isVenue?: boolean;
+
   // Client info
   clientName?: string;
   clientEmail?: string;
-  
-  // Quote details
+
+  // Quote details (kept for backwards compatibility, no longer displayed in email)
   quoteAmount?: number;
   quoteDescription?: string;
   eventDetails?: string;
   eventDate?: string;
-  
-  // Response details
+
+  // Line items (catalogue selections)
+  lineItems?: { title: string; quantity: number; price: number }[];
+
+  // Response details (kept for backwards compatibility, no longer displayed in email)
   clientNotes?: string;
   revisionNumber?: number;
+
+  // Attachments (no longer included in email)
+  attachments?: { url?: string; name?: string }[];
 }
 
 interface BrevoEmailPayload {
@@ -59,8 +66,8 @@ Deno.serve(async (req: Request) => {
 
   try {
     const brevoApiKey = Deno.env.get('BREVO_API_KEY');
-    const fromEmail = Deno.env.get('FROM_EMAIL') || 'noreply@funcxon.com';
-    const fromName = Deno.env.get('FROM_NAME') || 'Funcxon Platform';
+    const fromEmail = Deno.env.get('FROM_EMAIL') || 'noreply@funxon.co.za';
+    const fromName = Deno.env.get('FROM_NAME') || 'Funxon Platform';
 
     if (!brevoApiKey) {
       throw new Error('BREVO_API_KEY environment variable is not set');
@@ -80,7 +87,7 @@ Deno.serve(async (req: Request) => {
 
     // Determine recipient
     const recipientEmail = payload.vendorEmail || payload.clientEmail;
-    const recipientName = payload.vendorName || payload.clientName || 'Funcxon User';
+    const recipientName = payload.vendorName || payload.clientName || 'Funxon User';
 
     if (!recipientEmail) {
       return new Response(
@@ -157,321 +164,228 @@ function generateEmailContent(payload: NotificationPayload): { subject: string; 
 }
 
 function generateQuoteRequestedToVendorEmail(payload: NotificationPayload) {
-  const { clientName, vendorBusinessName, eventDetails, eventDate } = payload;
-  const subject = `New Quote Request from ${clientName || 'a potential client'}`;
+  const { vendorBusinessName, lineItems, eventDate } = payload;
+  const subject = 'New Quote Request';
+  const deepLink = 'https://funxon.co.za/account/vendor/quotes';
 
-  const htmlContent = `
-    <!DOCTYPE html>
-    <html>
-    <head>
-      <meta charset="UTF-8">
-      <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <title>New Quote Request</title>
-    </head>
-    <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #2B3840; max-width: 600px; margin: 0 auto; padding: 20px; background: #F8F6F0;">
-      <div style="background: linear-gradient(135deg, #2B9EB3 0%, #9DCFDB 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
-        <h1 style="color: white; margin: 0; font-size: 24px;">New Quote Request</h1>
-      </div>
-      
-      <div style="background: #ffffff; padding: 30px; border: 1px solid #D4CFBD; border-top: none; border-radius: 0 0 10px 10px;">
-        <p style="font-size: 16px; margin-bottom: 20px; color: #2B3840;">Hi ${vendorBusinessName || 'there'},</p>
-        
-        <p style="font-size: 16px; margin-bottom: 20px; color: #2B3840;">
-          You have received a new quote request from <strong>${clientName || 'a potential client'}</strong>.
-        </p>
-        
-        ${eventDetails ? `
-        <div style="background: #F5F1E8; padding: 20px; border-radius: 8px; margin: 25px 0; border: 1px solid #D4CFBD;">
-          <h3 style="margin-top: 0; color: #2B9EB3;">Event Details</h3>
-          <p style="color: #2B3840;">${eventDetails}</p>
+  const itemsHtml = lineItems && lineItems.length > 0
+    ? `
+      <div style="background: #F5F1E8; padding: 20px; border-radius: 8px; margin: 20px 0; border: 1px solid #D4CFBD;">
+        <h3 style="margin-top: 0; color: #2B9EB3;">Requested Items</h3>
+        <table style="width: 100%; border-collapse: collapse;">
+          <thead>
+            <tr style="border-bottom: 1px solid #D4CFBD;">
+              <th style="text-align: left; padding: 8px 0; color: #2B3840; font-size: 14px;">Item</th>
+              <th style="text-align: center; padding: 8px 0; color: #2B3840; font-size: 14px;">Qty</th>
+              <th style="text-align: right; padding: 8px 0; color: #2B3840; font-size: 14px;">Price</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${lineItems.map((item) => `
+              <tr style="border-bottom: 1px solid #E8E4D7;">
+                <td style="padding: 8px 0; color: #2B3840; font-size: 15px;">${escapeHtml(item.title)}</td>
+                <td style="text-align: center; padding: 8px 0; color: #2B3840; font-size: 15px;">${item.quantity}</td>
+                <td style="text-align: right; padding: 8px 0; color: #2B3840; font-size: 15px;">R${(item.price * item.quantity).toLocaleString('en-ZA')}</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+        <div style="text-align: right; margin-top: 12px; padding-top: 8px; border-top: 2px solid #2B9EB3;">
+          <strong style="color: #2B9EB3; font-size: 16px;">Estimated Total: R${lineItems.reduce((sum, item) => sum + item.price * item.quantity, 0).toLocaleString('en-ZA')}</strong>
         </div>
-        ` : ''}
-        
-        ${eventDate ? `
-        <p style="font-size: 16px; color: #2B3840;">
-          <strong>Event Date:</strong> ${eventDate}
-        </p>
-        ` : ''}
-        
-        <div style="text-align: center; margin: 30px 0;">
-          <a href="vibeventz://vendor/quotes" 
-             style="background: #2B9EB3; color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; font-weight: bold; display: inline-block;">
-            View & Respond to Quote
-          </a>
-        </div>
-        
-        <p style="font-size: 14px; color: #5A7A85; margin-top: 20px;">
-          Tap the button above to open the Funcxon app and respond to this quote request.
-        </p>
       </div>
-    </body>
-    </html>
-  `;
+    `
+    : '';
 
-  const textContent = `
-New Quote Request
+  const itemsText = lineItems && lineItems.length > 0
+    ? `\nRequested Items:\n${lineItems.map((item) => `  - ${item.title} (Qty: ${item.quantity}) - R${(item.price * item.quantity).toLocaleString('en-ZA')}`).join('\n')}\nEstimated Total: R${lineItems.reduce((sum, item) => sum + item.price * item.quantity, 0).toLocaleString('en-ZA')}\n`
+    : '';
 
-Hi ${vendorBusinessName || 'there'},
+  const eventDateText = eventDate ? `Event date: ${eventDate}\n` : '';
 
-You have received a new quote request from ${clientName || 'a potential client'}.
+  const htmlContent = genericEmailHtml({
+    title: 'New Quote Request',
+    greeting: `Hi ${vendorBusinessName || 'there'},`,
+    message: `You have received a new quote request.${eventDate ? ` Event date: ${eventDate}.` : ''} View the details and respond in Funxon.`,
+    deepLink,
+    cta: 'View in Funxon',
+    accentColor: '#2B9EB3',
+    extraContent: itemsHtml,
+  });
 
-${eventDetails ? `Event Details:\n${eventDetails}\n\n` : ''}
-${eventDate ? `Event Date: ${eventDate}\n\n` : ''}
-
-Log in to your vendor dashboard to view and respond:
-vibeventz://vendor/quotes
-
-- Funcxon Team
-  `;
+  const textContent = genericEmailText({
+    title: 'New Quote Request',
+    greeting: `Hi ${vendorBusinessName || 'there'},`,
+    message: `You have received a new quote request.${eventDate ? ` Event date: ${eventDate}.` : ''} View the details and respond in Funxon.`,
+    deepLink,
+    extraContent: eventDateText + itemsText,
+  });
 
   return { subject, htmlContent, textContent };
 }
 
 function generateQuoteCreatedToClientEmail(payload: NotificationPayload) {
-  const { clientName, vendorBusinessName, quoteAmount, quoteDescription, revisionNumber } = payload;
-  const subject = `Quote Received from ${vendorBusinessName || 'your vendor'}`;
+  const { clientName } = payload;
+  const subject = 'Quote Received';
+  const deepLink = 'https://funxon.co.za/quotes';
 
-  const htmlContent = `
-    <!DOCTYPE html>
-    <html>
-    <head>
-      <meta charset="UTF-8">
-      <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <title>Quote Received</title>
-    </head>
-    <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #2B3840; max-width: 600px; margin: 0 auto; padding: 20px; background: #F8F6F0;">
-      <div style="background: linear-gradient(135deg, #2B9EB3 0%, #9DCFDB 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
-        <h1 style="color: white; margin: 0; font-size: 24px;">Quote Received</h1>
-      </div>
-      
-      <div style="background: #ffffff; padding: 30px; border: 1px solid #D4CFBD; border-top: none; border-radius: 0 0 10px 10px;">
-        <p style="font-size: 16px; margin-bottom: 20px; color: #2B3840;">Hi ${clientName || 'there'},</p>
-        
-        <p style="font-size: 16px; margin-bottom: 20px; color: #2B3840;">
-          <strong>${vendorBusinessName || 'Your vendor'}</strong> has sent you a quote${revisionNumber && revisionNumber > 1 ? ' (Revision #' + revisionNumber + ')' : ''}.
-        </p>
-        
-        <div style="background: #F5F1E8; padding: 20px; border-radius: 8px; margin: 25px 0; border: 1px solid #D4CFBD;">
-          <h3 style="margin-top: 0; color: #2B9EB3;">Quote Summary</h3>
-          ${quoteAmount ? `<p style="color: #2B3840; font-size: 24px; font-weight: bold; margin: 10px 0;">R${quoteAmount.toLocaleString()}</p>` : ''}
-          ${quoteDescription ? `<p style="color: #2B3840;">${quoteDescription}</p>` : ''}
-        </div>
-        
-        <div style="text-align: center; margin: 30px 0;">
-          <a href="vibeventz://quotes" 
-             style="background: #2B9EB3; color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; font-weight: bold; display: inline-block; margin-right: 10px;">
-            View Quote
-          </a>
-        </div>
-        
-        <p style="font-size: 14px; color: #5A7A85; margin-top: 20px;">
-          Tap the button above to open the Funcxon app and accept or reject this quote.
-        </p>
-      </div>
-    </body>
-    </html>
-  `;
+  const htmlContent = genericEmailHtml({
+    title: 'Quote Received',
+    greeting: `Hi ${clientName || 'there'},`,
+    message: 'You have received a new quote. Review and respond in Funxon.',
+    deepLink,
+    cta: 'View in Funxon',
+    accentColor: '#2B9EB3',
+  });
 
-  const textContent = `
-Quote Received
-
-Hi ${clientName || 'there'},
-
-${vendorBusinessName || 'Your vendor'} has sent you a quote${revisionNumber && revisionNumber > 1 ? ' (Revision #' + revisionNumber + ')' : ''}.
-
-Quote Summary:
-${quoteAmount ? `Amount: R${quoteAmount.toLocaleString()}\n` : ''}
-${quoteDescription ? `Description: ${quoteDescription}\n` : ''}
-
-View and respond to your quote:
-vibeventz://quotes
-
-- Funcxon Team
-  `;
+  const textContent = genericEmailText({
+    title: 'Quote Received',
+    greeting: `Hi ${clientName || 'there'},`,
+    message: 'You have received a new quote. Review and respond in Funxon.',
+    deepLink,
+  });
 
   return { subject, htmlContent, textContent };
 }
 
 function generateQuoteAcceptedToVendorEmail(payload: NotificationPayload) {
-  const { vendorBusinessName, clientName, quoteAmount } = payload;
-  const subject = `Quote Accepted by ${clientName || 'Client'}`;
+  const { vendorBusinessName } = payload;
+  const subject = 'Quote Accepted';
+  const deepLink = 'https://funxon.co.za/account/vendor/quotes';
 
-  const htmlContent = `
-    <!DOCTYPE html>
-    <html>
-    <head>
-      <meta charset="UTF-8">
-      <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <title>Quote Accepted</title>
-    </head>
-    <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #2B3840; max-width: 600px; margin: 0 auto; padding: 20px; background: #F8F6F0;">
-      <div style="background: linear-gradient(135deg, #16A34A 0%, #22C55E 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
-        <h1 style="color: white; margin: 0; font-size: 24px;">Quote Accepted!</h1>
-      </div>
-      
-      <div style="background: #ffffff; padding: 30px; border: 1px solid #D4CFBD; border-top: none; border-radius: 0 0 10px 10px;">
-        <p style="font-size: 16px; margin-bottom: 20px; color: #2B3840;">Great news, ${vendorBusinessName || 'there'}!</p>
-        
-        <p style="font-size: 16px; margin-bottom: 20px; color: #2B3840;">
-          <strong>${clientName || 'A client'}</strong> has accepted your quote${quoteAmount ? ` for <strong>R${quoteAmount.toLocaleString()}</strong>` : ''}.
-        </p>
-        
-        <p style="font-size: 16px; color: #2B3840;">
-          The quote is now finalized. You should contact the client to confirm next steps.
-        </p>
-        
-        <div style="text-align: center; margin: 30px 0;">
-          <a href="vibeventz://vendor/quotes" 
-             style="background: #16A34A; color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; font-weight: bold; display: inline-block;">
-            View Finalized Quote
-          </a>
-        </div>
-      </div>
-    </body>
-    </html>
-  `;
+  const htmlContent = genericEmailHtml({
+    title: 'Quote Accepted',
+    greeting: `Great news, ${vendorBusinessName || 'there'}!`,
+    message: 'A client has accepted your quote. View the details and next steps in Funxon.',
+    deepLink,
+    cta: 'View in Funxon',
+    accentColor: '#16A34A',
+  });
 
-  const textContent = `
-Quote Accepted!
-
-Great news, ${vendorBusinessName || 'there'}!
-
-${clientName || 'A client'} has accepted your quote${quoteAmount ? ` for R${quoteAmount.toLocaleString()}` : ''}.
-
-The quote is now finalized. You should contact the client to confirm next steps.
-
-View finalized quote: vibeventz://vendor/quotes
-
-- Funcxon Team
-  `;
+  const textContent = genericEmailText({
+    title: 'Quote Accepted',
+    greeting: `Great news, ${vendorBusinessName || 'there'}!`,
+    message: 'A client has accepted your quote. View the details and next steps in Funxon.',
+    deepLink,
+  });
 
   return { subject, htmlContent, textContent };
 }
 
 function generateQuoteRejectedToVendorEmail(payload: NotificationPayload) {
-  const { vendorBusinessName, clientName, clientNotes, quoteAmount } = payload;
-  const subject = `Quote Not Accepted - ${clientName || 'Client Response'}`;
+  const { vendorBusinessName } = payload;
+  const subject = 'Quote Not Accepted';
+  const deepLink = 'https://funxon.co.za/account/vendor/quotes';
 
-  const htmlContent = `
-    <!DOCTYPE html>
-    <html>
-    <head>
-      <meta charset="UTF-8">
-      <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <title>Quote Response</title>
-    </head>
-    <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #2B3840; max-width: 600px; margin: 0 auto; padding: 20px; background: #F8F6F0;">
-      <div style="background: linear-gradient(135deg, #DC2626 0%, #EF4444 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
-        <h1 style="color: white; margin: 0; font-size: 24px;">Quote Not Accepted</h1>
-      </div>
-      
-      <div style="background: #ffffff; padding: 30px; border: 1px solid #D4CFBD; border-top: none; border-radius: 0 0 10px 10px;">
-        <p style="font-size: 16px; margin-bottom: 20px; color: #2B3840;">Hi ${vendorBusinessName || 'there'},</p>
-        
-        <p style="font-size: 16px; margin-bottom: 20px; color: #2B3840;">
-          <strong>${clientName || 'The client'}</strong> has decided not to proceed with your quote${quoteAmount ? ` for <strong>R${quoteAmount.toLocaleString()}</strong>` : ''} at this time.
-        </p>
-        
-        ${clientNotes ? `
-        <div style="background: #F5F1E8; padding: 20px; border-radius: 8px; margin: 25px 0; border: 1px solid #D4CFBD;">
-          <h3 style="margin-top: 0; color: #DC2626;">Client Feedback</h3>
-          <p style="color: #2B3840;">${clientNotes}</p>
-        </div>
-        ` : ''}
-        
-        <p style="font-size: 16px; color: #2B3840;">
-          Don't be discouraged! You can submit a revised quote if you'd like to adjust your offer.
-        </p>
-        
-        <div style="text-align: center; margin: 30px 0;">
-          <a href="vibeventz://vendor/quotes" 
-             style="background: #2B9EB3; color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; font-weight: bold; display: inline-block;">
-            Submit Revised Quote
-          </a>
-        </div>
-      </div>
-    </body>
-    </html>
-  `;
+  const htmlContent = genericEmailHtml({
+    title: 'Quote Not Accepted',
+    greeting: `Hi ${vendorBusinessName || 'there'},`,
+    message: 'A client has decided not to proceed with your quote at this time. View their feedback and submit a revised quote if you wish.',
+    deepLink,
+    cta: 'View in Funxon',
+    accentColor: '#DC2626',
+  });
 
-  const textContent = `
-Quote Not Accepted
-
-Hi ${vendorBusinessName || 'there'},
-
-${clientName || 'The client'} has decided not to proceed with your quote${quoteAmount ? ` for R${quoteAmount.toLocaleString()}` : ''} at this time.
-
-${clientNotes ? `Client Feedback:\n${clientNotes}\n\n` : ''}
-Don't be discouraged! You can submit a revised quote if you'd like to adjust your offer.
-
-View quotes: vibeventz://vendor/quotes
-
-- Funcxon Team
-  `;
+  const textContent = genericEmailText({
+    title: 'Quote Not Accepted',
+    greeting: `Hi ${vendorBusinessName || 'there'},`,
+    message: 'A client has decided not to proceed with your quote at this time. View their feedback and submit a revised quote if you wish.',
+    deepLink,
+  });
 
   return { subject, htmlContent, textContent };
 }
 
 function generateQuoteRevisedToClientEmail(payload: NotificationPayload) {
-  // Similar to quote-created but mentions it's a revision
-  const { clientName, vendorBusinessName, quoteAmount, quoteDescription, revisionNumber } = payload;
-  const subject = `Revised Quote from ${vendorBusinessName || 'your vendor'}`;
+  const { clientName } = payload;
+  const subject = 'Revised Quote Available';
+  const deepLink = 'https://funxon.co.za/quotes';
 
-  const htmlContent = `
+  const htmlContent = genericEmailHtml({
+    title: 'Revised Quote Available',
+    greeting: `Hi ${clientName || 'there'},`,
+    message: 'A revised quote is now available for your review. See the updated details and respond in Funxon.',
+    deepLink,
+    cta: 'View in Funxon',
+    accentColor: '#D97706',
+  });
+
+  const textContent = genericEmailText({
+    title: 'Revised Quote Available',
+    greeting: `Hi ${clientName || 'there'},`,
+    message: 'A revised quote is now available for your review. See the updated details and respond in Funxon.',
+    deepLink,
+  });
+
+  return { subject, htmlContent, textContent };
+}
+
+function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+interface GenericEmailOptions {
+  title: string;
+  greeting: string;
+  message: string;
+  deepLink: string;
+  cta?: string;
+  accentColor?: string;
+  extraContent?: string;
+}
+
+function genericEmailHtml(options: GenericEmailOptions): string {
+  const { title, greeting, message, deepLink, cta = 'View in Funxon', accentColor = '#2B9EB3', extraContent = '' } = options;
+  return `
     <!DOCTYPE html>
     <html>
     <head>
       <meta charset="UTF-8">
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <title>Revised Quote</title>
+      <title>${title}</title>
     </head>
     <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #2B3840; max-width: 600px; margin: 0 auto; padding: 20px; background: #F8F6F0;">
-      <div style="background: linear-gradient(135deg, #D97706 0%, #F59E0B 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
-        <h1 style="color: white; margin: 0; font-size: 24px;">Revised Quote Available</h1>
+      <div style="background: ${accentColor}; padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
+        <h1 style="color: white; margin: 0; font-size: 24px;">${title}</h1>
       </div>
-      
       <div style="background: #ffffff; padding: 30px; border: 1px solid #D4CFBD; border-top: none; border-radius: 0 0 10px 10px;">
-        <p style="font-size: 16px; margin-bottom: 20px; color: #2B3840;">Hi ${clientName || 'there'},</p>
-        
-        <p style="font-size: 16px; margin-bottom: 20px; color: #2B3840;">
-          <strong>${vendorBusinessName || 'Your vendor'}</strong> has submitted a revised quote (Revision #${revisionNumber || 2}) based on your feedback.
-        </p>
-        
-        <div style="background: #F5F1E8; padding: 20px; border-radius: 8px; margin: 25px 0; border: 1px solid #D4CFBD;">
-          <h3 style="margin-top: 0; color: #2B9EB3;">Updated Quote</h3>
-          ${quoteAmount ? `<p style="color: #2B3840; font-size: 24px; font-weight: bold; margin: 10px 0;">R${quoteAmount.toLocaleString()}</p>` : ''}
-          ${quoteDescription ? `<p style="color: #2B3840;">${quoteDescription}</p>` : ''}
-        </div>
-        
+        <p style="font-size: 16px; margin-bottom: 20px; color: #2B3840;">${greeting}</p>
+        <p style="font-size: 16px; margin-bottom: 20px; color: #2B3840;">${message}</p>
+        ${extraContent}
         <div style="text-align: center; margin: 30px 0;">
-          <a href="vibeventz://quotes" 
-             style="background: #2B9EB3; color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; font-weight: bold; display: inline-block;">
-            Review Revised Quote
+          <a href="${deepLink}"
+             style="background: ${accentColor}; color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; font-weight: bold; display: inline-block;">
+            ${cta}
           </a>
         </div>
+        <p style="font-size: 14px; color: #5A7A85; margin-top: 20px;">
+          Tap the button above to view the full details in Funxon.
+        </p>
       </div>
     </body>
     </html>
   `;
+}
 
-  const textContent = `
-Revised Quote Available
+function genericEmailText(options: GenericEmailOptions): string {
+  const { title, greeting, message, deepLink, extraContent = '' } = options;
+  return `
+${title}
 
-Hi ${clientName || 'there'},
+${greeting}
 
-${vendorBusinessName || 'Your vendor'} has submitted a revised quote (Revision #${revisionNumber || 2}) based on your feedback.
+${message}
+${extraContent}
+View the details in Funxon:
+${deepLink}
 
-Updated Quote:
-${quoteAmount ? `Amount: R${quoteAmount.toLocaleString()}\n` : ''}
-${quoteDescription ? `Description: ${quoteDescription}\n` : ''}
-
-Review and respond:
-vibeventz://quotes
-
-- Funcxon Team
+- Funxon Team
   `;
-
-  return { subject, htmlContent, textContent };
 }
 
 function generateGenericEmail(payload: NotificationPayload) {
@@ -489,7 +403,7 @@ function generateGenericEmail(payload: NotificationPayload) {
         <h2 style="color: #2B9EB3;">Quote Update</h2>
         <p style="color: #2B3840;">There has been an update to your quote request.</p>
         <div style="text-align: center; margin: 30px 0;">
-          <a href="vibeventz://quotes" 
+          <a href="https://funxon.co.za/quotes" 
              style="background: #2B9EB3; color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; font-weight: bold; display: inline-block;">
             View Quote
           </a>
@@ -504,9 +418,9 @@ Quote Update
 
 There has been an update to your quote request.
 
-View quote: vibeventz://quotes
+View quote: https://funxon.co.za/quotes
 
-- Funcxon Team
+- Funxon Team
   `;
 
   return { subject, htmlContent, textContent };

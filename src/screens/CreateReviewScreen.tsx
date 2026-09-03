@@ -1,12 +1,15 @@
 import { useMemo, useState } from 'react';
-import { ActivityIndicator, Alert, KeyboardAvoidingView, Platform, ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import ThemedAlert from '../components/ThemedAlert';
 import { MaterialIcons } from '@expo/vector-icons';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 
 import type { AttendeeStackParamList } from '../navigation/AttendeeNavigator';
+import { useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../lib/supabaseClient';
 import { useAuth } from '../auth/AuthContext';
 import { colors, radii, spacing, typography } from '../theme';
+import { useIsDesktop } from '../hooks/useIsDesktop';
 import { PrimaryButton, ThemedInput } from '../components/ui';
 
 type Props = NativeStackScreenProps<AttendeeStackParamList, 'CreateReview'>;
@@ -14,11 +17,38 @@ type Props = NativeStackScreenProps<AttendeeStackParamList, 'CreateReview'>;
 export default function CreateReviewScreen({ route, navigation }: Props) {
   const { type, targetId, targetName } = route.params;
   const { user } = useAuth();
+  const queryClient = useQueryClient();
+  const isAppReview = type === 'app';
+  const isDesktop = useIsDesktop();
 
   const [rating, setRating] = useState<number>(0);
+  const [categoryRatings, setCategoryRatings] = useState<Record<string, number>>({});
   const [title, setTitle] = useState('');
   const [reviewText, setReviewText] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [alertState, setAlertState] = useState<{visible: boolean; title: string; message: string} | null>(null);
+
+  const vendorCategories = [
+    'Efficiency',
+    'Professionalism',
+    'Condition of Goods',
+    'Staff Competency',
+    'Cleanliness',
+    'Attention to Detail',
+    'Communication',
+  ];
+
+  const venueCategories = [
+    'Venue Condition',
+    'Cleanliness',
+    'Ambiance & Atmosphere',
+    'Staff Professionalism',
+    'Value for Money',
+    'Location & Accessibility',
+    'Overall Experience',
+  ];
+
+  const categories = type === 'vendor' ? vendorCategories : type === 'venue' ? venueCategories : [];
 
   const isFormValid = useMemo(() => rating >= 1 && rating <= 5, [rating]);
 
@@ -29,68 +59,33 @@ export default function CreateReviewScreen({ route, navigation }: Props) {
     return (data as any)?.id ?? null;
   };
 
-  const checkEligibility = async (): Promise<boolean> => {
-    if (!user?.id) return false;
-
-    if (type === 'vendor') {
-      const internalUserId = await resolveInternalUserId();
-      if (!internalUserId) return false;
-
-      const { count, error } = await supabase
-        .from('quote_requests')
-        .select('id', { count: 'exact', head: true })
-        .eq('vendor_id', targetId)
-        .eq('user_id', internalUserId)
-        .in('status', ['accepted', 'finalised']);
-
-      if (error) throw error;
-      return (count ?? 0) > 0;
-    }
-
-    const { count: quoteCount, error: quoteError } = await supabase
-      .from('venue_quote_requests')
-      .select('id', { count: 'exact', head: true })
-      .eq('listing_id', targetId)
-      .eq('requester_user_id', user.id)
-      .in('status', ['accepted', 'finalised']);
-
-    if (quoteError) throw quoteError;
-
-    const { count: tourCount, error: tourError } = await supabase
-      .from('venue_tour_bookings')
-      .select('id', { count: 'exact', head: true })
-      .eq('listing_id', targetId)
-      .eq('requester_user_id', user.id)
-      .in('status', ['accepted', 'finalised']);
-
-    if (tourError) throw tourError;
-
-    return (quoteCount ?? 0) > 0 || (tourCount ?? 0) > 0;
-  };
-
   const handleSubmit = async () => {
     if (!user?.id) {
-      Alert.alert('Sign in required', 'Please sign in to leave a review.');
+      setAlertState({ visible: true, title: 'Sign in required', message: 'Please sign in to leave a review.' });
       return;
     }
 
     if (!isFormValid) {
-      Alert.alert('Missing rating', 'Please select a star rating.');
+      setAlertState({ visible: true, title: 'Missing rating', message: 'Please select a star rating.' });
       return;
     }
 
     setSubmitting(true);
     try {
-      const eligible = await checkEligibility();
-      if (!eligible) {
-        Alert.alert('Not eligible', 'You can only leave a review after you have used this service.');
-        return;
-      }
+      if (isAppReview) {
+        const { error } = await supabase.from('app_reviews').insert({
+          user_id: user.id,
+          rating,
+          title: title.trim() || null,
+          review_text: reviewText.trim() || null,
+          status: 'pending',
+        });
 
-      if (type === 'vendor') {
+        if (error) throw error;
+      } else if (type === 'vendor') {
         const internalUserId = await resolveInternalUserId();
         if (!internalUserId) {
-          Alert.alert('Missing profile', 'We could not find your user profile. Please sign in again.');
+          setAlertState({ visible: true, title: 'Missing profile', message: 'We could not find your user profile. Please sign in again.' });
           return;
         }
 
@@ -100,7 +95,8 @@ export default function CreateReviewScreen({ route, navigation }: Props) {
           rating,
           title: title.trim() || null,
           review_text: reviewText.trim() || null,
-          is_verified: true,
+          is_verified: false,
+          review_source: 'public',
           status: 'pending',
         });
 
@@ -112,17 +108,22 @@ export default function CreateReviewScreen({ route, navigation }: Props) {
           rating,
           title: title.trim() || null,
           review_text: reviewText.trim() || null,
-          is_verified: true,
+          is_verified: false,
+          review_source: 'public',
           status: 'pending',
         });
 
         if (error) throw error;
       }
 
-      Alert.alert('Review submitted', 'Thanks! Your review is pending approval.');
+      queryClient.invalidateQueries({ queryKey: ['reviews'] });
+      queryClient.invalidateQueries({ queryKey: ['venue-reviews'] });
+      queryClient.invalidateQueries({ queryKey: ['vendor-dashboard-reviews'] });
+
+      setAlertState({ visible: true, title: 'Review submitted', message: 'Thanks! Your review is pending approval.' });
       navigation.goBack();
     } catch (err: any) {
-      Alert.alert('Error', err?.message ?? 'Failed to submit review.');
+      setAlertState({ visible: true, title: 'Error', message: err?.message ?? 'Failed to submit review.' });
     } finally {
       setSubmitting(false);
     }
@@ -131,45 +132,49 @@ export default function CreateReviewScreen({ route, navigation }: Props) {
   return (
     <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <ScrollView
-        style={{ flex: 1, backgroundColor: colors.background }}
-        contentContainerStyle={{ paddingHorizontal: spacing.lg, paddingVertical: spacing.lg, paddingBottom: 120 }}
+        style={{ flex: 1, backgroundColor: isDesktop ? colors.surfaceBg : colors.background }}
+        contentContainerStyle={isDesktop ? { paddingHorizontal: 48, paddingTop: spacing.xl, paddingBottom: 120, maxWidth: 1200, width: '100%', alignSelf: 'center' } : { paddingHorizontal: spacing.lg, paddingTop: spacing.sm, paddingBottom: 120 }}
         keyboardShouldPersistTaps="handled"
       >
-        {Platform.OS === 'web' && (
-          <TouchableOpacity
+        <TouchableOpacity
             onPress={() => navigation.goBack()}
-            style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.md }}
+            style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.sm }}
           >
             <MaterialIcons name="arrow-back" size={20} color={colors.textPrimary} />
             <Text style={{ ...typography.body, color: colors.textPrimary, marginLeft: spacing.xs }}>Back</Text>
           </TouchableOpacity>
-        )}
         <View
           style={{
             marginBottom: spacing.lg,
-            padding: spacing.lg,
+            padding: isDesktop ? spacing.xl : spacing.lg,
             borderRadius: radii.xl,
-            backgroundColor: colors.surface,
+            backgroundColor: isDesktop ? colors.surfaceContainerLowest : colors.surface,
             borderWidth: 1,
-            borderColor: colors.borderSubtle,
+            borderColor: isDesktop ? colors.outlineVariant : colors.borderSubtle,
+            ...(isDesktop ? { maxWidth: 800, width: '100%', alignSelf: 'center' } : {}),
           }}
         >
-          <Text style={{ ...typography.titleMedium, color: colors.textPrimary }}>Leave a review for</Text>
-          <Text style={{ ...typography.body, color: colors.textSecondary, marginTop: spacing.xs, fontWeight: '600' }}>
-            {targetName}
+          <Text style={{ ...(isDesktop ? typography.headlineSm : typography.titleMedium), color: colors.textPrimary }}>
+            {isAppReview ? 'Review the Funxon App' : 'Leave a review for'}
           </Text>
+          {!isAppReview && (
+            <Text style={{ ...(isDesktop ? typography.bodyMd : typography.bodySemiBold), color: colors.textSecondary, marginTop: spacing.xs }}>
+              {targetName}
+            </Text>
+          )}
         </View>
 
         <View
           style={{
-            padding: spacing.lg,
+            padding: isDesktop ? spacing.xl : spacing.lg,
             borderRadius: radii.xl,
-            backgroundColor: colors.surface,
+            backgroundColor: isDesktop ? colors.surfaceContainerLowest : colors.surface,
             borderWidth: 1,
-            borderColor: colors.borderSubtle,
+            borderColor: isDesktop ? colors.outlineVariant : colors.borderSubtle,
+            ...(isDesktop ? { maxWidth: 800, width: '100%', alignSelf: 'center' } : {}),
           }}
         >
-          <Text style={{ ...typography.titleMedium, color: colors.textPrimary, marginBottom: spacing.md }}>Your rating</Text>
+          <Text style={{ ...(isDesktop ? typography.headlineSm : typography.titleMedium), color: colors.textPrimary, marginBottom: spacing.md }}>Your rating</Text>
           <View style={{ flexDirection: 'row', marginBottom: spacing.md }}>
             {Array.from({ length: 5 }).map((_, idx) => {
               const value = idx + 1;
@@ -181,23 +186,53 @@ export default function CreateReviewScreen({ route, navigation }: Props) {
                   style={{ padding: 6 }}
                   accessibilityRole="button"
                 >
-                  <MaterialIcons name={filled ? 'star' : 'star-border'} size={28} color="#F59E0B" />
+                  <MaterialIcons name={filled ? 'star' : 'star-border'} size={isDesktop ? 36 : 28} color="#F59E0B" />
                 </TouchableOpacity>
               );
             })}
           </View>
 
-          <Text style={typography.label}>Title (optional)</Text>
+          {categories.length > 0 && (
+            <View style={{ marginBottom: spacing.md }}>
+              <Text style={{ ...typography.labelMd, color: colors.textPrimary, marginBottom: spacing.xs }}>Rate by category (optional)</Text>
+              {categories.map((cat) => {
+                const currentVal = categoryRatings[cat] ?? 0;
+                return (
+                  <View key={cat} style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing.xs }}>
+                    <Text style={{ ...typography.caption, color: colors.textSecondary, flex: 1, marginRight: spacing.sm }}>{cat}</Text>
+                    <View style={{ flexDirection: 'row' }}>
+                      {Array.from({ length: 5 }).map((_, idx) => {
+                        const value = idx + 1;
+                        const filled = currentVal >= value;
+                        return (
+                          <TouchableOpacity
+                            key={value}
+                            onPress={() => setCategoryRatings((prev) => ({ ...prev, [cat]: prev[cat] === value ? 0 : value }))}
+                            style={{ padding: 2 }}
+                            accessibilityRole="button"
+                          >
+                            <MaterialIcons name={filled ? 'star' : 'star-border'} size={isDesktop ? 20 : 16} color={filled ? colors.coral : colors.textMuted} />
+                          </TouchableOpacity>
+                        );
+                      })}
+                    </View>
+                  </View>
+                );
+              })}
+            </View>
+          )}
+
+          <Text style={{ ...typography.labelMd, color: colors.textPrimary, marginBottom: spacing.xs }}>Title (optional)</Text>
           <ThemedInput value={title} onChangeText={setTitle} placeholder="e.g. Great experience" />
 
-          <Text style={typography.label}>Review (optional)</Text>
+          <Text style={{ ...typography.labelMd, color: colors.textPrimary, marginTop: spacing.md, marginBottom: spacing.xs }}>Review (optional)</Text>
           <ThemedInput
             value={reviewText}
             onChangeText={setReviewText}
             placeholder="Share details about your experience..."
             multiline
-            numberOfLines={5}
-            style={{ minHeight: 110, textAlignVertical: 'top' }}
+            numberOfLines={isDesktop ? 6 : 5}
+            style={{ minHeight: isDesktop ? 140 : 110, textAlignVertical: 'top' }}
           />
 
           <PrimaryButton
@@ -214,6 +249,16 @@ export default function CreateReviewScreen({ route, navigation }: Props) {
           ) : null}
         </View>
       </ScrollView>
+
+      {alertState && (
+        <ThemedAlert
+          visible={alertState.visible}
+          title={alertState.title}
+          message={alertState.message}
+          buttons={[{ text: 'OK', style: 'default', onPress: () => setAlertState(null) }]}
+          onDismiss={() => setAlertState(null)}
+        />
+      )}
     </KeyboardAvoidingView>
   );
 }

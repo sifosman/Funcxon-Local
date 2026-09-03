@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { Alert, KeyboardAvoidingView, Platform, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { KeyboardAvoidingView, Platform, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import ThemedAlert from '../components/ThemedAlert';
 import { MaterialIcons } from '@expo/vector-icons';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { supabase } from '../lib/supabaseClient';
@@ -7,6 +8,7 @@ import type { ProfileStackParamList } from '../navigation/ProfileNavigator';
 import { useAuth } from '../auth/AuthContext';
 import { colors, radii, spacing, typography } from '../theme';
 import { PrimaryButton } from '../components/ui';
+import { useIsDesktop } from '../hooks/useIsDesktop';
 
 type Props = NativeStackScreenProps<ProfileStackParamList, 'AccountSettings'>;
 
@@ -18,12 +20,14 @@ type UserProfileRow = {
 
 export default function AccountSettingsScreen({ navigation }: Props) {
   const { user } = useAuth();
+  const isDesktop = useIsDesktop();
   const [username, setUsername] = useState('');
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState(user?.email ?? '');
   const [profileRowExists, setProfileRowExists] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [alertState, setAlertState] = useState<{visible: boolean; title: string; message: string} | null>(null);
 
   useEffect(() => {
     const loadProfile = async () => {
@@ -41,7 +45,7 @@ export default function AccountSettingsScreen({ navigation }: Props) {
 
       if (error) {
         setLoading(false);
-        Alert.alert('Unable to load profile', error.message);
+        setAlertState({ visible: true, title: 'Unable to load profile', message: error.message });
         return;
       }
 
@@ -66,7 +70,7 @@ export default function AccountSettingsScreen({ navigation }: Props) {
 
   const handleSave = async () => {
     if (!user?.id) {
-      Alert.alert('Sign in required', 'Please sign in to update your account.');
+      setAlertState({ visible: true, title: 'Sign in required', message: 'Please sign in to update your account.' });
       return;
     }
 
@@ -74,7 +78,7 @@ export default function AccountSettingsScreen({ navigation }: Props) {
     const trimmedFullName = fullName.trim();
 
     if (!trimmedUsername) {
-      Alert.alert('Username required', 'Please enter a username.');
+      setAlertState({ visible: true, title: 'Username required', message: 'Please enter a username.' });
       return;
     }
 
@@ -94,7 +98,7 @@ export default function AccountSettingsScreen({ navigation }: Props) {
 
       if (profileError) {
         setSaving(false);
-        Alert.alert('Unable to save profile', profileError.message);
+        setAlertState({ visible: true, title: 'Unable to save profile', message: profileError.message });
         return;
       }
     }
@@ -115,125 +119,232 @@ export default function AccountSettingsScreen({ navigation }: Props) {
     setSaving(false);
 
     if (authError) {
-      Alert.alert('Profile saved with warnings', 'Your profile details were saved, but your auth profile could not be fully updated.');
+      setAlertState({ visible: true, title: 'Profile saved with warnings', message: 'Your profile details were saved, but your auth profile could not be fully updated.' });
       return;
     }
 
     if (!profileRowExists) {
-      Alert.alert('Profile updated', 'Your account details have been saved. Some app profile fields will sync fully once your user profile row is created.');
+      setAlertState({ visible: true, title: 'Profile updated', message: 'Your account details have been saved. Some app profile fields will sync fully once your user profile row is created.' });
       return;
     }
 
-    Alert.alert('Profile updated', 'Your account details have been saved.');
+    setAlertState({ visible: true, title: 'Profile updated', message: 'Your account details have been saved.' });
   };
 
   return (
     <KeyboardAvoidingView
-      style={{ flex: 1, backgroundColor: colors.background }}
+      style={{ flex: 1, backgroundColor: isDesktop ? colors.surfaceBg : colors.background }}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
-      <ScrollView contentContainerStyle={{ padding: spacing.lg, paddingBottom: spacing.xl }} keyboardShouldPersistTaps="handled">
-        <TouchableOpacity
-          onPress={() => navigation.goBack()}
-          style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.lg }}
-          activeOpacity={0.7}
-        >
-          <MaterialIcons name="arrow-back" size={20} color={colors.textPrimary} />
-          <Text style={{ ...typography.body, color: colors.textPrimary, marginLeft: spacing.sm }}>
-            Back
-          </Text>
-        </TouchableOpacity>
+      <ScrollView contentContainerStyle={isDesktop ? { paddingBottom: spacing.xxl } : { padding: spacing.lg, paddingBottom: spacing.xl }} keyboardShouldPersistTaps="handled">
+        {isDesktop ? (
+          <View style={{ maxWidth: 1200, width: '100%', alignSelf: 'center', paddingHorizontal: 48, paddingTop: spacing.xl, paddingBottom: spacing.xxl }}>
+            <View
+              style={{
+                maxWidth: 720,
+                width: '100%',
+                alignSelf: 'center',
+                backgroundColor: colors.surfaceContainerLowest,
+                borderRadius: radii.lg,
+                borderWidth: 1,
+                borderColor: colors.outlineVariant,
+                padding: spacing.xl,
+              }}
+            >
+              <Text style={{ ...typography.headlineSm, color: colors.textPrimary, marginBottom: spacing.sm }}>
+                Account Settings
+              </Text>
+              <Text style={{ ...typography.bodyMd, color: colors.onSurfaceVariant, marginBottom: spacing.lg }}>
+                Update your name, username and password from one place.
+              </Text>
 
-        <View
-          style={{
-            backgroundColor: colors.surface,
-            borderRadius: radii.lg,
-            borderWidth: 1,
-            borderColor: colors.borderSubtle,
-            padding: spacing.lg,
-          }}
-        >
-          <Text style={{ ...typography.titleLarge, color: colors.textPrimary, marginBottom: spacing.sm }}>
-            Account Settings
-          </Text>
-          <Text style={{ ...typography.body, color: colors.textSecondary, marginBottom: spacing.lg }}>
-            Update your name, username and password from one place.
-          </Text>
+              <Text style={{ ...typography.labelMd, color: colors.onSurface, marginBottom: spacing.xs }}>Username</Text>
+              <TextInput
+                value={username}
+                onChangeText={setUsername}
+                autoCapitalize="none"
+                editable={!loading && !saving}
+                placeholder="Enter username"
+                placeholderTextColor={colors.textMuted}
+                style={{
+                  borderWidth: 1,
+                  borderColor: colors.outlineVariant,
+                  borderRadius: radii.md,
+                  paddingHorizontal: spacing.md,
+                  paddingVertical: spacing.md,
+                  color: colors.textPrimary,
+                  marginBottom: spacing.md,
+                }}
+              />
 
-          <Text style={{ ...typography.caption, color: colors.textMuted, marginBottom: spacing.xs }}>Username</Text>
-          <TextInput
-            value={username}
-            onChangeText={setUsername}
-            autoCapitalize="none"
-            editable={!loading && !saving}
-            placeholder="Enter username"
-            placeholderTextColor={colors.textMuted}
-            style={{
-              borderWidth: 1,
-              borderColor: colors.borderSubtle,
-              borderRadius: radii.md,
-              paddingHorizontal: spacing.md,
-              paddingVertical: spacing.md,
-              color: colors.textPrimary,
-              marginBottom: spacing.md,
-            }}
-          />
+              <Text style={{ ...typography.labelMd, color: colors.onSurface, marginBottom: spacing.xs }}>Full name</Text>
+              <TextInput
+                value={fullName}
+                onChangeText={setFullName}
+                editable={!loading && !saving}
+                placeholder="Enter full name"
+                placeholderTextColor={colors.textMuted}
+                style={{
+                  borderWidth: 1,
+                  borderColor: colors.outlineVariant,
+                  borderRadius: radii.md,
+                  paddingHorizontal: spacing.md,
+                  paddingVertical: spacing.md,
+                  color: colors.textPrimary,
+                  marginBottom: spacing.md,
+                }}
+              />
 
-          <Text style={{ ...typography.caption, color: colors.textMuted, marginBottom: spacing.xs }}>Full name</Text>
-          <TextInput
-            value={fullName}
-            onChangeText={setFullName}
-            editable={!loading && !saving}
-            placeholder="Enter full name"
-            placeholderTextColor={colors.textMuted}
-            style={{
-              borderWidth: 1,
-              borderColor: colors.borderSubtle,
-              borderRadius: radii.md,
-              paddingHorizontal: spacing.md,
-              paddingVertical: spacing.md,
-              color: colors.textPrimary,
-              marginBottom: spacing.md,
-            }}
-          />
+              <Text style={{ ...typography.labelMd, color: colors.onSurface, marginBottom: spacing.xs }}>Email</Text>
+              <TextInput
+                value={email}
+                editable={false}
+                placeholderTextColor={colors.textMuted}
+                style={{
+                  borderWidth: 1,
+                  borderColor: colors.outlineVariant,
+                  borderRadius: radii.md,
+                  paddingHorizontal: spacing.md,
+                  paddingVertical: spacing.md,
+                  color: colors.textMuted,
+                  marginBottom: spacing.lg,
+                  backgroundColor: colors.surfaceContainerLow,
+                }}
+              />
 
-          <Text style={{ ...typography.caption, color: colors.textMuted, marginBottom: spacing.xs }}>Email</Text>
-          <TextInput
-            value={email}
-            editable={false}
-            placeholderTextColor={colors.textMuted}
-            style={{
-              borderWidth: 1,
-              borderColor: colors.borderSubtle,
-              borderRadius: radii.md,
-              paddingHorizontal: spacing.md,
-              paddingVertical: spacing.md,
-              color: colors.textMuted,
-              marginBottom: spacing.lg,
-              backgroundColor: colors.backgroundAlt,
-            }}
-          />
+              <PrimaryButton title={saving ? 'Saving...' : 'Save Changes'} onPress={handleSave} disabled={loading || saving} />
 
-          <PrimaryButton title={saving ? 'Saving...' : 'Save Changes'} onPress={handleSave} disabled={loading || saving} />
+              <TouchableOpacity
+                onPress={() => navigation.navigate('ChangePassword')}
+                style={{
+                  marginTop: spacing.md,
+                  borderRadius: radii.md,
+                  paddingVertical: spacing.md,
+                  alignItems: 'center',
+                  backgroundColor: colors.primary,
+                }}
+                activeOpacity={0.8}
+              >
+                <Text style={{ ...typography.bodySemiBold, color: '#FFFFFF' }}>
+                  Change Password
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        ) : (
+          <>
+            <TouchableOpacity
+              onPress={() => navigation.goBack()}
+              style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.lg }}
+              activeOpacity={0.7}
+            >
+              <MaterialIcons name="arrow-back" size={20} color={colors.textPrimary} />
+              <Text style={{ ...typography.body, color: colors.textPrimary, marginLeft: spacing.sm }}>
+                Back
+              </Text>
+            </TouchableOpacity>
 
-          <TouchableOpacity
-            onPress={() => navigation.navigate('ChangePassword')}
-            style={{
-              marginTop: spacing.md,
-              borderWidth: 1,
-              bordercolor: colors.textPrimary,
-              borderRadius: radii.md,
-              paddingVertical: spacing.md,
-              alignItems: 'center',
-            }}
-            activeOpacity={0.8}
-          >
-            <Text style={{ ...typography.body, color: colors.textPrimary, fontWeight: '600' }}>
-              Change Password
-            </Text>
-          </TouchableOpacity>
-        </View>
+            <View
+              style={{
+                backgroundColor: colors.surface,
+                borderRadius: radii.lg,
+                borderWidth: 1,
+                borderColor: colors.borderSubtle,
+                padding: spacing.lg,
+              }}
+            >
+              <Text style={{ ...typography.titleLarge, color: colors.textPrimary, marginBottom: spacing.sm }}>
+                Account Settings
+              </Text>
+              <Text style={{ ...typography.body, color: colors.textSecondary, marginBottom: spacing.lg }}>
+                Update your name, username and password from one place.
+              </Text>
+
+              <Text style={{ ...typography.caption, color: colors.textMuted, marginBottom: spacing.xs }}>Username</Text>
+              <TextInput
+                value={username}
+                onChangeText={setUsername}
+                autoCapitalize="none"
+                editable={!loading && !saving}
+                placeholder="Enter username"
+                placeholderTextColor={colors.textMuted}
+                style={{
+                  borderWidth: 1,
+                  borderColor: colors.borderSubtle,
+                  borderRadius: radii.md,
+                  paddingHorizontal: spacing.md,
+                  paddingVertical: spacing.md,
+                  color: colors.textPrimary,
+                  marginBottom: spacing.md,
+                }}
+              />
+
+              <Text style={{ ...typography.caption, color: colors.textMuted, marginBottom: spacing.xs }}>Full name</Text>
+              <TextInput
+                value={fullName}
+                onChangeText={setFullName}
+                editable={!loading && !saving}
+                placeholder="Enter full name"
+                placeholderTextColor={colors.textMuted}
+                style={{
+                  borderWidth: 1,
+                  borderColor: colors.borderSubtle,
+                  borderRadius: radii.md,
+                  paddingHorizontal: spacing.md,
+                  paddingVertical: spacing.md,
+                  color: colors.textPrimary,
+                  marginBottom: spacing.md,
+                }}
+              />
+
+              <Text style={{ ...typography.caption, color: colors.textMuted, marginBottom: spacing.xs }}>Email</Text>
+              <TextInput
+                value={email}
+                editable={false}
+                placeholderTextColor={colors.textMuted}
+                style={{
+                  borderWidth: 1,
+                  borderColor: colors.borderSubtle,
+                  borderRadius: radii.md,
+                  paddingHorizontal: spacing.md,
+                  paddingVertical: spacing.md,
+                  color: colors.textMuted,
+                  marginBottom: spacing.lg,
+                  backgroundColor: colors.backgroundAlt,
+                }}
+              />
+
+              <PrimaryButton title={saving ? 'Saving...' : 'Save Changes'} onPress={handleSave} disabled={loading || saving} />
+
+              <TouchableOpacity
+                onPress={() => navigation.navigate('ChangePassword')}
+                style={{
+                  marginTop: spacing.md,
+                  borderRadius: radii.md,
+                  paddingVertical: spacing.md,
+                  alignItems: 'center',
+                  backgroundColor: colors.primary,
+                }}
+                activeOpacity={0.8}
+              >
+                <Text style={{ ...typography.bodySemiBold, color: '#FFFFFF' }}>
+                  Change Password
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </>
+        )}
       </ScrollView>
+
+      {alertState && (
+        <ThemedAlert
+          visible={alertState.visible}
+          title={alertState.title}
+          message={alertState.message}
+          buttons={[{ text: 'OK', style: 'default', onPress: () => setAlertState(null) }]}
+          onDismiss={() => setAlertState(null)}
+        />
+      )}
     </KeyboardAvoidingView>
   );
 }

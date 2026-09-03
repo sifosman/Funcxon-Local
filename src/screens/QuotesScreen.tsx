@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useState } from 'react';
-import { ActivityIndicator, Alert, FlatList, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, FlatList, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useQuery } from '@tanstack/react-query';
@@ -7,8 +7,11 @@ import { MaterialIcons } from '@expo/vector-icons';
 
 import { supabase } from '../lib/supabaseClient';
 import { colors, spacing, radii, typography } from '../theme';
+import { quoteStatusLabel } from '../lib/quoting';
 import type { QuotesStackParamList } from '../navigation/QuotesNavigator';
 import { useAuth } from '../auth/AuthContext';
+import ThemedAlert from '../components/ThemedAlert';
+import { useIsDesktop } from '../hooks/useIsDesktop';
 
 type QuoteRequest = {
   id: number | string;
@@ -27,6 +30,7 @@ type QuoteRequest = {
   quote_amount?: number | null;
   created_at?: string | null;
   requirements?: string | null;
+  notes?: string | null;
 };
 
 type VendorSeed = {
@@ -44,8 +48,12 @@ type CategorySeed = {
 export default function QuotesScreen() {
   const navigation = useNavigation<any>();
   const { user } = useAuth();
-  const [activeTab, setActiveTab] = useState<'all' | 'pending' | 'finalised' | 'tours'>('all');
+  const isDesktop = useIsDesktop();
+  const [activeTab, setActiveTab] = useState<'all' | 'pending' | 'quoted' | 'amended' | 'accepted' | 'finalised' | 'cancelled' | 'tours'>('all');
   const [actionLoadingId, setActionLoadingId] = useState<number | string | null>(null);
+  const [editingNotesId, setEditingNotesId] = useState<number | string | null>(null);
+  const [notesDraft, setNotesDraft] = useState('');
+  const [alertState, setAlertState] = useState<{visible: boolean; title: string; message: string; buttons?: any[]} | null>(null);
 
   const { data, isLoading, error, refetch } = useQuery<QuoteRequest[]>({
     queryKey: ['attendee-quotes', user?.id],
@@ -72,7 +80,7 @@ export default function QuotesScreen() {
       let internalUser = userRows ?? null;
 
       if (!internalUser) {
-        const email = user.email ?? 'attendee@funxon.com';
+        const email = user.email ?? 'attendee@funxon.co.za';
         const username = email.split('@')[0] || 'attendee';
         console.log('[QuotesScreen] Creating new user:', { email, username });
         
@@ -138,7 +146,7 @@ export default function QuotesScreen() {
 
       const { data: venueQuotes, error: venueError } = await supabase
         .from('venue_quote_requests')
-        .select('id, listing_id, requester_name, requester_email, status, message, event_date, created_at')
+        .select('id, listing_id, requester_name, requester_email, status, message, event_date, created_at, line_items, quoted_amount')
         .eq('requester_user_id', user.id) // venue requests use the auth.uid
         .order('id', { ascending: false })
         .limit(50);
@@ -146,7 +154,7 @@ export default function QuotesScreen() {
       console.log('[QuotesScreen] Venue quotes result:', { count: venueQuotes?.length, venueError });
 
       if (venueError) {
-        console.error('Error fetching venue quotes:', venueError);
+        throw venueError;
       }
 
       const formattedVendorQuotes: QuoteRequest[] = (vendorQuotes ?? []).map(q => ({
@@ -164,6 +172,7 @@ export default function QuotesScreen() {
         quote_amount: q.quote_amount,
         created_at: q.created_at,
         requirements: q.requirements,
+        notes: q.requirements,
       }));
 
       const formattedVenueQuotes: QuoteRequest[] = (venueQuotes ?? []).map(q => ({
@@ -180,9 +189,10 @@ export default function QuotesScreen() {
         event_type: 'Venues',
         event_date: q.event_date,
         budget: null,
-        quote_amount: null,
+        quote_amount: q.quoted_amount,
         created_at: q.created_at,
-        requirements: q.message,
+        requirements: null,
+        notes: null,
       }));
 
       const allQuotes = [...formattedVendorQuotes, ...formattedVenueQuotes].sort((a, b) => {
@@ -208,6 +218,7 @@ export default function QuotesScreen() {
   const filtered = useMemo(() => {
     if (!data) return [];
     if (activeTab === 'all') return data;
+    if (activeTab === 'quoted') return data.filter((item) => item.status === 'quoted' || (typeof item.quote_amount === 'number' && item.quote_amount > 0 && item.status !== 'accepted' && item.status !== 'finalised' && item.status !== 'rejected' && item.status !== 'cancelled'));
     if (activeTab === 'tours') return data.filter((item) => item.status === 'tour_requested');
     return data.filter((item) => item.status === activeTab);
   }, [data, activeTab]);
@@ -217,17 +228,18 @@ export default function QuotesScreen() {
       total: 0,
       finalised: 0,
       pending: 0,
-      inProgress: 0,
+      received: 0,
     };
     data?.forEach((quote) => {
+      if (quote.status === 'cancelled') return;
       const amount = typeof quote.quote_amount === 'number' ? quote.quote_amount : 0;
       totals.total += amount;
-      if (quote.status === 'finalised') {
+      if (quote.status === 'finalised' || quote.status === 'accepted') {
         totals.finalised += amount;
       } else if (quote.status === 'pending') {
         totals.pending += amount;
-      } else if (quote.status === 'in_progress') {
-        totals.inProgress += amount;
+      } else if (quote.status === 'quoted') {
+        totals.received += amount;
       }
     });
     return totals;
@@ -251,6 +263,8 @@ export default function QuotesScreen() {
         return { backgroundColor: '#FDE68A', color: '#92400E' };
       case 'tour_requested':
         return { backgroundColor: '#E0F2FE', color: '#0369A1' };
+      case 'cancelled':
+        return { backgroundColor: '#F3F4F6', color: '#6B7280' };
       default:
         return { backgroundColor: '#FEF3C7', color: '#92400E' };
     }
@@ -261,15 +275,97 @@ export default function QuotesScreen() {
   const tabCounts = {
     all: data?.length ?? 0,
     pending: data?.filter((item) => item.status === 'pending').length ?? 0,
+    quoted: data?.filter((item) => item.status === 'quoted' || (typeof item.quote_amount === 'number' && item.quote_amount > 0 && item.status !== 'accepted' && item.status !== 'finalised' && item.status !== 'rejected' && item.status !== 'cancelled')).length ?? 0,
+    amended: data?.filter((item) => item.status === 'amended').length ?? 0,
+    accepted: data?.filter((item) => item.status === 'accepted').length ?? 0,
     finalised: data?.filter((item) => item.status === 'finalised').length ?? 0,
+    cancelled: data?.filter((item) => item.status === 'cancelled').length ?? 0,
     tours: data?.filter((item) => item.status === 'tour_requested').length ?? 0,
+  };
+
+  const canCancel = (status?: string | null) => {
+    return status === 'pending' || status === 'quoted' || status === 'amended';
+  };
+
+  const handleCancel = (quote: QuoteRequest) => {
+    if (!canCancel(quote.status)) {
+      setAlertState({ visible: true, title: 'Cannot cancel', message: 'This quote cannot be cancelled.' });
+      return;
+    }
+    setAlertState({
+      visible: true,
+      title: 'Cancel quote request?',
+      message: 'The vendor will be notified that this quote request has been cancelled.',
+      buttons: [
+        { text: 'Keep request', style: 'cancel', onPress: () => setAlertState(null) },
+        {
+          text: 'Cancel request',
+          style: 'destructive',
+          onPress: async () => {
+            setAlertState(null);
+            setActionLoadingId(quote.id);
+            try {
+              const tableName = quote.is_venue ? 'venue_quote_requests' : 'quote_requests';
+              const { data: updatedRows, error: updateError } = await supabase
+                .from(tableName)
+                .update({ status: 'cancelled' })
+                .eq('id', quote.original_id ?? quote.id)
+                .select('id');
+
+              if (updateError) throw updateError;
+              if (!updatedRows || updatedRows.length === 0) {
+                throw new Error('Could not cancel this quote request. You may not have permission to modify it.');
+              }
+              await refetch();
+            } catch (err: any) {
+              setAlertState({ visible: true, title: 'Unable to cancel', message: err?.message ?? 'Please try again.' });
+            } finally {
+              setActionLoadingId(null);
+            }
+          },
+        },
+      ],
+    });
+  };
+
+  const handleRemove = (quote: QuoteRequest) => {
+    setAlertState({
+      visible: true,
+      title: 'Remove quote request?',
+      message: 'This will permanently remove this cancelled quote request from your list. This action cannot be undone.',
+      buttons: [
+        { text: 'Keep', style: 'cancel', onPress: () => setAlertState(null) },
+        {
+          text: 'Remove',
+          style: 'destructive',
+          onPress: async () => {
+            setAlertState(null);
+            setActionLoadingId(quote.id);
+            try {
+              const tableName = quote.is_venue ? 'venue_quote_requests' : 'quote_requests';
+              const { error: deleteError } = await supabase
+                .from(tableName)
+                .delete()
+                .eq('id', quote.original_id ?? quote.id);
+
+              if (deleteError) throw deleteError;
+              await refetch();
+            } catch (err: any) {
+              setAlertState({ visible: true, title: 'Unable to remove', message: err?.message ?? 'Please try again.' });
+            } finally {
+              setActionLoadingId(null);
+            }
+          },
+        },
+      ],
+    });
   };
 
   const handleSecondaryAction = async (quote: QuoteRequest) => {
     const targetId = quote.target_id ?? quote.vendor_id;
 
     if (!targetId) {
-      Alert.alert('Missing listing', 'This quote is missing a vendor or venue reference.');
+      setAlertState({ visible: true, title: 'Missing listing', message: 'This quote is missing a vendor or venue reference.' });
       return;
     }
 
@@ -298,12 +394,12 @@ export default function QuotesScreen() {
             description: latestRevision.description || undefined,
           });
         } else {
-          // Fallback if no revision found
-          Alert.alert('Quote Ready', 'A quote has been prepared for you. View details to see more.');
+          // Fallback if no revision found — navigate to QuoteDetail which has Accept/Amend/Reject
+          navigation.navigate('QuoteDetail', { quoteId: quote.id, from: 'Quotes' });
         }
       } catch (err) {
         console.error('Error fetching revision:', err);
-        Alert.alert('Error', 'Failed to load quote details');
+        setAlertState({ visible: true, title: 'Error', message: 'Failed to load quote details' });
       } finally {
         setActionLoadingId(null);
       }
@@ -324,28 +420,36 @@ export default function QuotesScreen() {
     }
 
     if (quote.status === 'pending') {
-      navigation.navigate('QuoteDetail', { quoteId: quote.id });
+      navigation.navigate('Home', {
+        screen: 'QuoteRequest',
+        params: {
+          vendorId: targetId ?? 0,
+          vendorName: quote.target_name ?? 'Vendor',
+          type: quote.is_venue ? 'venue' : 'vendor',
+          editMode: true,
+          quoteId: quote.original_id ?? quote.id,
+        },
+      });
       return;
     }
 
     if (quote.status === 'amended') {
-      setActionLoadingId(quote.id);
-      try {
-        const { error: updateError } = await supabase
-          .from('quote_requests')
-          .update({ status: 'finalised' })
-          .eq('id', quote.original_id ?? quote.id);
+      // User can amend a quote that was already amended; navigate to QuoteRequest edit mode
+      navigation.navigate('Home', {
+        screen: 'QuoteRequest',
+        params: {
+          vendorId: targetId ?? 0,
+          vendorName: quote.target_name ?? 'Vendor',
+          type: quote.is_venue ? 'venue' : 'vendor',
+          editMode: true,
+          quoteId: quote.original_id ?? quote.id,
+        },
+      });
+      return;
+    }
 
-        if (updateError) {
-          throw updateError;
-        }
-
-        await refetch();
-      } catch (err: any) {
-        Alert.alert('Unable to approve', err?.message ?? 'Please try again.');
-      } finally {
-        setActionLoadingId(null);
-      }
+    if (quote.status === 'cancelled') {
+      setAlertState({ visible: true, title: 'Quote cancelled', message: 'This quote request has been cancelled.' });
       return;
     }
 
@@ -364,7 +468,7 @@ export default function QuotesScreen() {
       return;
     }
 
-    Alert.alert('In progress', 'This quote is still being prepared by the vendor.');
+    setAlertState({ visible: true, title: 'In progress', message: 'This quote is still being prepared by the vendor.' });
   };
 
   if (isLoading) {
@@ -427,279 +531,466 @@ export default function QuotesScreen() {
     );
   }
 
+  const renderQuoteCard = (item: QuoteRequest) => {
+    const requestedDate = item.event_date || item.created_at
+      ? new Date(item.event_date || item.created_at || '').toLocaleDateString('en-ZA', { day: 'numeric', month: 'long', year: 'numeric' })
+      : null;
+    const actionLabel = item.status === 'cancelled'
+      ? 'View Details'
+      : item.status === 'finalised' || item.status === 'accepted'
+        ? 'Rate and Review'
+        : item.status === 'quoted' || (typeof item.quote_amount === 'number' && item.quote_amount > 0)
+          ? 'Make changes'
+          : item.status === 'amended'
+            ? 'Amend'
+            : item.status === 'pending'
+              ? 'Amend'
+              : item.status === 'tour_requested'
+                ? 'Contact Venue'
+                : 'View Details';
+    const actionLoading = actionLoadingId === item.id;
+    return (
+      <View
+        style={{
+          marginBottom: spacing.md,
+          padding: spacing.lg,
+          borderRadius: radii.lg,
+          backgroundColor: isDesktop ? colors.surfaceContainerLowest : colors.surface,
+          borderWidth: 1,
+          borderColor: isDesktop ? colors.outlineVariant : colors.borderSubtle,
+          width: isDesktop ? 'calc(50% - 12px)' : '100%',
+          shadowColor: '#000',
+          shadowOpacity: 0.06,
+          shadowRadius: 8,
+          shadowOffset: { width: 0, height: 4 },
+        } as any}
+      >
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+          <View style={{ flex: 1, paddingRight: spacing.sm }}>
+            <Text style={isDesktop ? { ...typography.headlineSm, color: colors.textPrimary } : { ...typography.titleMedium, color: colors.textPrimary }}>
+              {item.target_name ?? item.name ?? (item.is_venue ? 'Venue Quote' : 'Vendor Quote')}
+            </Text>
+            <Text style={isDesktop ? { ...typography.bodyMd, color: colors.textSecondary, marginTop: spacing.xs } : { ...typography.caption, color: colors.textSecondary, marginTop: spacing.xs }}>
+              {item.is_venue ? 'Venue Quote Request' : (item.event_type ?? 'Service package')}
+            </Text>
+          </View>
+          <View
+            style={{
+              paddingHorizontal: spacing.sm,
+              paddingVertical: spacing.xs,
+              borderRadius: radii.full,
+              backgroundColor: statusStyle(item.status).backgroundColor,
+            }}
+          >
+            <Text style={{ ...typography.captionSemiBold, color: statusStyle(item.status).color }}>
+              {quoteStatusLabel(item.status)}
+            </Text>
+          </View>
+        </View>
+
+        <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: spacing.sm }}>
+          <MaterialIcons name={item.is_venue ? 'storefront' : 'store'} size={14} color={colors.textMuted} style={{ marginRight: spacing.xs }} />
+          <Text style={isDesktop ? { ...typography.bodyMd, color: colors.textMuted } : { ...typography.caption, color: colors.textMuted }}>
+            Requested from {item.target_name ?? (item.is_venue ? 'Venue' : 'Vendor')}
+          </Text>
+        </View>
+
+        <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: spacing.sm }}>
+          <MaterialIcons
+            name={item.status === 'pending' ? 'schedule' : 'visibility'}
+            size={14}
+            color={item.status === 'pending' ? colors.textMuted : '#16A34A'}
+            style={{ marginRight: spacing.xs }}
+          />
+          <Text style={isDesktop ? { ...typography.bodyMd, color: item.status === 'pending' ? colors.textMuted : '#16A34A' } : { ...typography.caption, color: item.status === 'pending' ? colors.textMuted : '#16A34A' }}>
+            {item.status === 'pending' ? 'Awaiting vendor review' : 'Vendor has seen this request'}
+          </Text>
+        </View>
+
+        {item.details && (
+          <Text style={isDesktop ? { ...typography.bodyMd, color: colors.textSecondary, marginTop: spacing.sm } : { ...typography.body, color: colors.textSecondary, marginTop: spacing.sm }} numberOfLines={3}>
+            {item.details}
+          </Text>
+        )}
+
+        {/* Notes field */}
+        <View style={{ marginTop: spacing.sm }}>
+          {editingNotesId === item.id ? (
+            <View>
+              <Text style={isDesktop ? { ...typography.labelMd, color: colors.textMuted, marginBottom: spacing.xs } : { ...typography.caption, color: colors.textMuted, marginBottom: spacing.xs }}>Notes</Text>
+              <TextInput
+                value={notesDraft}
+                onChangeText={setNotesDraft}
+                placeholder="Add notes about this quote..."
+                placeholderTextColor={colors.textMuted}
+                multiline
+                style={{
+                  borderWidth: 1,
+                  borderColor: isDesktop ? colors.outlineVariant : colors.borderSubtle,
+                  borderRadius: radii.md,
+                  paddingHorizontal: spacing.sm,
+                  paddingVertical: spacing.sm,
+                  backgroundColor: isDesktop ? colors.surfaceContainerLow : colors.surfaceMuted,
+                  color: colors.textPrimary,
+                  minHeight: 60,
+                  textAlignVertical: 'top',
+                }}
+              />
+              <View style={{ flexDirection: 'row', gap: spacing.sm, marginTop: spacing.xs }}>
+                <TouchableOpacity
+                  onPress={async () => {
+                    try {
+                      setActionLoadingId(item.id);
+                      const tableName = item.is_venue ? 'venue_quote_requests' : 'quote_requests';
+                      const { error } = await supabase
+                        .from(tableName)
+                        .update({ requirements: notesDraft || null })
+                        .eq('id', item.original_id ?? item.id);
+                      if (error) throw error;
+                      await refetch();
+                    } catch (err: any) {
+                      setAlertState({ visible: true, title: 'Error', message: err?.message ?? 'Failed to save notes' });
+                    } finally {
+                      setActionLoadingId(null);
+                      setEditingNotesId(null);
+                    }
+                  }}
+                  disabled={actionLoadingId === item.id}
+                  style={{
+                    flex: 1,
+                    paddingVertical: spacing.xs,
+                    borderRadius: radii.sm,
+                    backgroundColor: colors.primary,
+                    alignItems: 'center',
+                    opacity: actionLoadingId === item.id ? 0.7 : 1,
+                  }}
+                >
+                  <Text style={{ ...typography.captionSemiBold, color: '#FFFFFF' }}>
+                    {actionLoadingId === item.id ? 'Saving...' : 'Save'}
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={() => { setEditingNotesId(null); setNotesDraft(''); }}
+                  style={{
+                    flex: 1,
+                    paddingVertical: spacing.xs,
+                    borderRadius: radii.sm,
+                    borderWidth: 1,
+                    borderColor: isDesktop ? colors.outlineVariant : colors.borderSubtle,
+                    alignItems: 'center',
+                  }}
+                >
+                  <Text style={{ ...typography.caption, color: colors.textSecondary }}>Cancel</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          ) : (
+            <View>
+              {item.notes ? (
+                <View style={{
+                  padding: spacing.sm,
+                  backgroundColor: isDesktop ? colors.surfaceContainerLow : colors.surfaceMuted,
+                  borderRadius: radii.md,
+                  borderLeftWidth: 3,
+                  borderLeftColor: colors.textMuted,
+                }}>
+                  <Text style={isDesktop ? { ...typography.labelMd, color: colors.textMuted } : { ...typography.captionSemiBold, color: colors.textMuted }}>Notes</Text>
+                  <Text style={isDesktop ? { ...typography.bodyMd, color: colors.textSecondary, marginTop: 2 } : { ...typography.caption, color: colors.textSecondary, marginTop: 2 }}>
+                    {item.notes}
+                  </Text>
+                </View>
+              ) : null}
+              <TouchableOpacity
+                onPress={() => {
+                  setNotesDraft(item.notes ?? '');
+                  setEditingNotesId(item.id);
+                }}
+                style={{ flexDirection: 'row', alignItems: 'center', marginTop: spacing.xs }}
+              >
+                <MaterialIcons name="edit-note" size={16} color={colors.primary} />
+                <Text style={{ ...typography.caption, color: colors.primary, marginLeft: spacing.xs }}>
+                  {item.notes ? 'Edit notes' : 'Add notes'}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          )}
+        </View>
+
+        {item.requirements && item.status === 'tour_requested' && (
+          <View style={{
+            marginTop: spacing.sm,
+            padding: spacing.sm,
+            backgroundColor: '#F0F9FF',
+            borderRadius: radii.md,
+            borderLeftWidth: 3,
+            borderLeftColor: colors.primary
+          }}>
+            <Text style={isDesktop ? { ...typography.labelMd, color: colors.primary } : { ...typography.captionSemiBold, color: colors.primary }}>
+              Tour Request
+            </Text>
+            <Text style={isDesktop ? { ...typography.bodyMd, color: colors.primary, marginTop: 2 } : { ...typography.caption, color: colors.primary, marginTop: 2 }}>
+              {item.requirements}
+            </Text>
+          </View>
+        )}
+
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: spacing.md }}>
+          <View>
+            <Text style={isDesktop ? { ...typography.labelMd, color: colors.textMuted } : { ...typography.caption, color: colors.textMuted }}>Category:</Text>
+            <Text style={isDesktop ? { ...typography.bodyMd, color: colors.textPrimary } : { ...typography.body, color: colors.textPrimary }}>
+              {item.is_venue ? 'Venue' : (item.event_type ?? 'General')}
+            </Text>
+          </View>
+          <View>
+            <Text style={isDesktop ? { ...typography.labelMd, color: colors.textMuted } : { ...typography.caption, color: colors.textMuted }}>Requested:</Text>
+            <Text style={isDesktop ? { ...typography.bodyMd, color: colors.textPrimary } : { ...typography.body, color: colors.textPrimary }}>
+              {requestedDate ?? 'TBD'}
+            </Text>
+          </View>
+          <View style={{ alignItems: 'flex-end' }}>
+            <Text style={isDesktop ? { ...typography.labelMd, color: colors.textMuted } : { ...typography.caption, color: colors.textMuted }}>Quote</Text>
+            <Text style={isDesktop ? { ...typography.headlineSm, color: colors.textPrimary } : { ...typography.titleMedium, color: colors.textPrimary }}>
+              {typeof item.quote_amount === 'number' ? formatCurrency(item.quote_amount) : 'TBD'}
+            </Text>
+          </View>
+        </View>
+
+        <View style={{ flexDirection: 'row', marginTop: spacing.md, columnGap: spacing.sm }}>
+          <TouchableOpacity
+            onPress={() => navigation.navigate('QuoteDetail', { quoteId: item.id, from: 'Quotes' })}
+            style={{
+              flex: 1,
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'center',
+              paddingVertical: spacing.sm,
+              borderRadius: radii.md,
+              borderWidth: 1,
+              borderColor: isDesktop ? colors.outlineVariant : colors.borderSubtle,
+              backgroundColor: isDesktop ? colors.surfaceContainerLowest : colors.surface,
+            }}
+          >
+            <MaterialIcons name="description" size={16} color={colors.textPrimary} style={{ marginRight: spacing.xs }} />
+            <Text style={isDesktop ? { ...typography.labelMd, color: colors.textPrimary } : { ...typography.caption, color: colors.textPrimary }}>View Details</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={() => handleSecondaryAction(item)}
+            disabled={actionLoading}
+            style={{
+              flex: 1,
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'center',
+              paddingVertical: spacing.sm,
+              borderRadius: radii.md,
+              backgroundColor: colors.accent,
+              opacity: actionLoading ? 0.7 : 1,
+            }}
+          >
+            <MaterialIcons name="edit" size={16} color={colors.textPrimary} style={{ marginRight: spacing.xs }} />
+            <Text style={isDesktop ? { ...typography.labelMd, color: colors.textPrimary } : { ...typography.caption, color: colors.textPrimary }}>
+              {actionLoading ? 'Saving...' : actionLabel}
+            </Text>
+          </TouchableOpacity>
+        </View>
+
+        {canCancel(item.status) && (
+          <TouchableOpacity
+            onPress={() => handleCancel(item)}
+            disabled={actionLoading}
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'center',
+              marginTop: spacing.sm,
+              paddingVertical: spacing.sm,
+              borderRadius: radii.md,
+              borderWidth: 1,
+              borderColor: colors.destructive,
+              opacity: actionLoading ? 0.7 : 1,
+            }}
+          >
+            <MaterialIcons name="cancel" size={16} color={colors.destructive} style={{ marginRight: spacing.xs }} />
+            <Text style={isDesktop ? { ...typography.labelMd, color: colors.destructive } : { ...typography.captionSemiBold, color: colors.destructive }}>
+              {actionLoading ? 'Cancelling...' : 'Cancel request'}
+            </Text>
+          </TouchableOpacity>
+        )}
+
+        {item.status === 'cancelled' && (
+          <TouchableOpacity
+            onPress={() => handleRemove(item)}
+            disabled={actionLoading}
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'center',
+              marginTop: spacing.sm,
+              paddingVertical: spacing.sm,
+              borderRadius: radii.md,
+              borderWidth: 1,
+              borderColor: colors.destructive,
+              opacity: actionLoading ? 0.7 : 1,
+            }}
+          >
+            <MaterialIcons name="delete" size={16} color={colors.destructive} style={{ marginRight: spacing.xs }} />
+            <Text style={isDesktop ? { ...typography.labelMd, color: colors.destructive } : { ...typography.captionSemiBold, color: colors.destructive }}>
+              {actionLoading ? 'Removing...' : 'Remove request'}
+            </Text>
+          </TouchableOpacity>
+        )}
+      </View>
+    );
+  };
+
+  const tabs = [
+    { key: 'all' as const, label: `All (${tabCounts.all})` },
+    { key: 'pending' as const, label: `Pending (${tabCounts.pending})` },
+    { key: 'quoted' as const, label: `Received Quote (${tabCounts.quoted})` },
+    { key: 'amended' as const, label: `Amended (${tabCounts.amended})` },
+    { key: 'accepted' as const, label: `Accepted (${tabCounts.accepted})` },
+    { key: 'finalised' as const, label: `Finalised (${tabCounts.finalised})` },
+    { key: 'cancelled' as const, label: `Cancelled (${tabCounts.cancelled})` },
+    { key: 'tours' as const, label: `Tours (${tabCounts.tours})` },
+  ];
+
+  const renderTabBar = () => (
+    <ScrollView
+      horizontal
+      showsHorizontalScrollIndicator={false}
+      contentContainerStyle={{ flexDirection: 'row', columnGap: spacing.sm, marginTop: spacing.lg, marginBottom: spacing.md, paddingRight: isDesktop ? 0 : spacing.lg }}
+    >
+      {tabs.map((tab) => {
+        const selected = activeTab === tab.key;
+        return (
+          <TouchableOpacity
+            key={tab.key}
+            onPress={() => setActiveTab(tab.key)}
+            style={{
+              paddingHorizontal: spacing.md,
+              paddingVertical: spacing.xs,
+              borderRadius: radii.full,
+              borderWidth: 1,
+              borderColor: selected ? colors.primary : isDesktop ? colors.outlineVariant : colors.borderSubtle,
+              backgroundColor: selected ? colors.primary : isDesktop ? colors.surfaceContainerLowest : colors.surface,
+            }}
+          >
+            <Text style={isDesktop ? { ...typography.labelMd, color: selected ? '#FFFFFF' : colors.textPrimary } : { ...typography.caption, color: selected ? '#FFFFFF' : colors.textPrimary }}>
+              {tab.label}
+            </Text>
+          </TouchableOpacity>
+        );
+      })}
+    </ScrollView>
+  );
+
+  const renderSummary = () => (
+    <View
+      style={{
+        marginTop: spacing.lg,
+        padding: spacing.lg,
+        borderRadius: radii.lg,
+        backgroundColor: isDesktop ? colors.surfaceContainerLowest : colors.surface,
+        borderWidth: 1,
+        borderColor: isDesktop ? colors.outlineVariant : colors.borderSubtle,
+        shadowColor: '#000',
+        shadowOpacity: 0.05,
+        shadowRadius: 8,
+        shadowOffset: { width: 0, height: 3 },
+      }}
+    >
+      <Text style={isDesktop ? { ...typography.headlineSm, color: colors.textPrimary, marginBottom: spacing.md } : { ...typography.bodySemiBold, color: colors.textPrimary, marginBottom: spacing.md }}>
+        Quote Summary
+      </Text>
+      <View style={{ flexDirection: 'row', flexWrap: 'wrap', rowGap: spacing.md }}>
+        <View style={{ width: '50%' }}>
+          <Text style={isDesktop ? { ...typography.labelMd, color: colors.textMuted } : { ...typography.caption, color: colors.textMuted }}>Total Value</Text>
+          <Text style={isDesktop ? { ...typography.headlineSm, color: colors.textPrimary } : { ...typography.titleMedium, color: colors.textPrimary }}>
+            {formatCurrency(summary.total)}
+          </Text>
+        </View>
+        <View style={{ width: '50%' }}>
+          <Text style={isDesktop ? { ...typography.labelMd, color: colors.textMuted } : { ...typography.caption, color: colors.textMuted }}>Finalised</Text>
+          <Text style={isDesktop ? { ...typography.headlineSm, color: '#16A34A' } : { ...typography.titleMedium, color: '#16A34A' }}>
+            {formatCurrency(summary.finalised)}
+          </Text>
+        </View>
+        <View style={{ width: '50%' }}>
+          <Text style={isDesktop ? { ...typography.labelMd, color: colors.textMuted } : { ...typography.caption, color: colors.textMuted }}>Pending</Text>
+          <Text style={isDesktop ? { ...typography.headlineSm, color: '#4F46E5' } : { ...typography.titleMedium, color: '#4F46E5' }}>
+            {formatCurrency(summary.pending)}
+          </Text>
+        </View>
+        <View style={{ width: '50%' }}>
+          <Text style={isDesktop ? { ...typography.labelMd, color: colors.textMuted } : { ...typography.caption, color: colors.textMuted }}>Received</Text>
+          <Text style={isDesktop ? { ...typography.headlineSm, color: '#D97706' } : { ...typography.titleMedium, color: '#D97706' }}>
+            {formatCurrency(summary.received)}
+          </Text>
+        </View>
+      </View>
+    </View>
+  );
+
   return (
     <View
       style={{
         flex: 1,
-        paddingHorizontal: spacing.lg,
-        paddingVertical: spacing.lg,
-        backgroundColor: colors.background,
+        paddingHorizontal: isDesktop ? 48 : spacing.lg,
+        paddingVertical: isDesktop ? spacing.sm : spacing.lg,
+        backgroundColor: isDesktop ? colors.surfaceBg : colors.background,
       }}
     >
-      <FlatList
-        data={filtered}
-        keyExtractor={(item) => String(item.id)}
-        contentContainerStyle={{ paddingBottom: spacing.xl }}
-        ListHeaderComponent={
-          <View>
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-              <View style={{ flex: 1, paddingRight: spacing.md }}>
+      {isDesktop ? (
+        <ScrollView contentContainerStyle={{ paddingBottom: spacing.xl, maxWidth: 1200, width: '100%', alignSelf: 'center' }}>
+          <View style={{ marginBottom: spacing.lg, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end' }}>
+            <View>
+              <Text style={{ ...typography.labelMd, color: colors.dustyRose, marginBottom: spacing.sm, textTransform: 'uppercase', letterSpacing: 0.05 }}>
+                Quotes
+              </Text>
+              <Text style={{ ...typography.headlineMd, color: colors.primary }}>
+                My Quotes
+              </Text>
+              <Text style={{ ...typography.bodyMd, color: colors.textSecondary, marginTop: spacing.xs }}>
+                Track your vendor quotes by status
+              </Text>
+            </View>
+          </View>
+          {renderSummary()}
+          {renderTabBar()}
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.gutter } as any}>
+            {filtered.map((item) => renderQuoteCard(item))}
+          </View>
+        </ScrollView>
+      ) : (
+        <FlatList
+          data={filtered}
+          keyExtractor={(item) => String(item.id)}
+          contentContainerStyle={{ paddingBottom: spacing.xl }}
+          ListHeaderComponent={
+            <View>
+              <View>
                 <Text style={{ ...typography.displayMedium, color: colors.textPrimary }}>My Quotes</Text>
                 <Text style={{ ...typography.body, color: colors.textSecondary, marginTop: spacing.xs }}>
                   Track your vendor quotes by status
                 </Text>
               </View>
-              <TouchableOpacity
-                activeOpacity={0.9}
-                style={{
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  paddingHorizontal: spacing.lg,
-                  paddingVertical: spacing.sm,
-                  borderRadius: radii.md,
-                  backgroundColor: colors.primary,
-                }}
-              >
-                <MaterialIcons name="add" size={18} color="#FFFFFF" style={{ marginRight: spacing.xs }} />
-                <Text style={{ ...typography.body, color: '#FFFFFF', fontWeight: '600' }}>Request Quote</Text>
-              </TouchableOpacity>
+              {renderSummary()}
+              {renderTabBar()}
             </View>
+          }
+          renderItem={({ item }) => renderQuoteCard(item)}
+        />
+      )}
 
-            <View
-              style={{
-                marginTop: spacing.lg,
-                padding: spacing.lg,
-                borderRadius: radii.lg,
-                backgroundColor: colors.surface,
-                borderWidth: 1,
-                borderColor: colors.borderSubtle,
-                shadowColor: '#000',
-                shadowOpacity: 0.05,
-                shadowRadius: 8,
-                shadowOffset: { width: 0, height: 3 },
-              }}
-            >
-              <Text style={{ ...typography.body, color: colors.textPrimary, fontWeight: '600', marginBottom: spacing.md }}>
-                Quote Summary
-              </Text>
-              <View style={{ flexDirection: 'row', flexWrap: 'wrap', rowGap: spacing.md }}>
-                <View style={{ width: '50%' }}>
-                  <Text style={{ ...typography.caption, color: colors.textMuted }}>Total Value</Text>
-                  <Text style={{ ...typography.titleMedium, color: colors.textPrimary }}>
-                    {formatCurrency(summary.total)}
-                  </Text>
-                </View>
-                <View style={{ width: '50%' }}>
-                  <Text style={{ ...typography.caption, color: colors.textMuted }}>Finalised</Text>
-                  <Text style={{ ...typography.titleMedium, color: '#16A34A' }}>
-                    {formatCurrency(summary.finalised)}
-                  </Text>
-                </View>
-                <View style={{ width: '50%' }}>
-                  <Text style={{ ...typography.caption, color: colors.textMuted }}>Pending</Text>
-                  <Text style={{ ...typography.titleMedium, color: '#4F46E5' }}>
-                    {formatCurrency(summary.pending)}
-                  </Text>
-                </View>
-                <View style={{ width: '50%' }}>
-                  <Text style={{ ...typography.caption, color: colors.textMuted }}>In Progress</Text>
-                  <Text style={{ ...typography.titleMedium, color: '#D97706' }}>
-                    {formatCurrency(summary.inProgress)}
-                  </Text>
-                </View>
-              </View>
-            </View>
-
-            <View style={{ flexDirection: 'row', columnGap: spacing.sm, marginTop: spacing.lg, marginBottom: spacing.md }}>
-              {([
-                { key: 'all' as const, label: `All (${tabCounts.all})` },
-                { key: 'pending' as const, label: `Pending (${tabCounts.pending})` },
-                { key: 'finalised' as const, label: `Finalised (${tabCounts.finalised})` },
-                { key: 'tours' as const, label: `Tours (${tabCounts.tours})` },
-              ]).map((tab) => {
-                const selected = activeTab === tab.key;
-                return (
-                  <TouchableOpacity
-                    key={tab.key}
-                    onPress={() => setActiveTab(tab.key)}
-                    style={{
-                      paddingHorizontal: spacing.md,
-                      paddingVertical: spacing.xs,
-                      borderRadius: radii.full,
-                      borderWidth: 1,
-                      borderColor: selected ? colors.primary : colors.borderSubtle,
-                      backgroundColor: selected ? colors.primary : colors.surface,
-                    }}
-                  >
-                    <Text style={{ ...typography.caption, color: selected ? '#FFFFFF' : colors.textPrimary }}>
-                      {tab.label}
-                    </Text>
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
-          </View>
-        }
-        renderItem={({ item }) => {
-          const requestedDate = item.event_date || item.created_at
-            ? new Date(item.event_date || item.created_at || '').toLocaleDateString('en-ZA')
-            : null;
-          const actionLabel = item.status === 'finalised' || item.status === 'accepted'
-            ? 'Rate and Review'
-            : item.status === 'quoted' || (typeof item.quote_amount === 'number' && item.quote_amount > 0)
-              ? 'Review & Accept'
-              : item.status === 'amended'
-                ? 'Approve'
-                : item.status === 'pending'
-                  ? 'Amend'
-                  : item.status === 'tour_requested'
-                    ? 'Contact Venue'
-                    : 'View Details';
-          const actionLoading = actionLoadingId === item.id;
-          return (
-            <View
-              style={{
-                marginBottom: spacing.md,
-                padding: spacing.lg,
-                borderRadius: radii.lg,
-                backgroundColor: colors.surface,
-                borderWidth: 1,
-                borderColor: colors.borderSubtle,
-                shadowColor: '#000',
-                shadowOpacity: 0.06,
-                shadowRadius: 8,
-                shadowOffset: { width: 0, height: 4 },
-              }}
-            >
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                <View style={{ flex: 1, paddingRight: spacing.sm }}>
-                  <Text style={{ ...typography.titleMedium, color: colors.textPrimary }}>
-                    {item.target_name ?? item.name ?? (item.is_venue ? 'Venue Quote' : 'Vendor Quote')}
-                  </Text>
-                  <Text style={{ ...typography.caption, color: colors.textSecondary, marginTop: spacing.xs }}>
-                    {item.is_venue ? 'Venue Quote Request' : (item.event_type ?? 'Service package')}
-                  </Text>
-                </View>
-                <View
-                  style={{
-                    paddingHorizontal: spacing.sm,
-                    paddingVertical: spacing.xs,
-                    borderRadius: radii.full,
-                    backgroundColor: statusStyle(item.status).backgroundColor,
-                  }}
-                >
-                  <Text style={{ ...typography.caption, color: statusStyle(item.status).color, fontWeight: '600' }}>
-                    {item.status ?? 'requested'}
-                  </Text>
-                </View>
-              </View>
-
-              <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: spacing.sm }}>
-                <MaterialIcons name={item.is_venue ? 'storefront' : 'store'} size={14} color={colors.textMuted} style={{ marginRight: spacing.xs }} />
-                <Text style={{ ...typography.caption, color: colors.textMuted }}>
-                  Requested from {item.target_name ?? (item.is_venue ? 'Venue' : 'Vendor')}
-                </Text>
-              </View>
-
-              <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: spacing.sm }}>
-                <MaterialIcons
-                  name={item.status === 'pending' ? 'schedule' : 'visibility'}
-                  size={14}
-                  color={item.status === 'pending' ? colors.textMuted : '#16A34A'}
-                  style={{ marginRight: spacing.xs }}
-                />
-                <Text style={{ ...typography.caption, color: item.status === 'pending' ? colors.textMuted : '#16A34A' }}>
-                  {item.status === 'pending' ? 'Awaiting vendor review' : 'Vendor has seen this request'}
-                </Text>
-              </View>
-
-              {item.details && (
-                <Text style={{ ...typography.body, color: colors.textSecondary, marginTop: spacing.sm }} numberOfLines={3}>
-                  {item.details}
-                </Text>
-              )}
-
-              {item.requirements && item.status === 'tour_requested' && (
-                <View style={{ 
-                  marginTop: spacing.sm, 
-                  padding: spacing.sm, 
-                  backgroundColor: '#F0F9FF', 
-                  borderRadius: radii.md,
-                  borderLeftWidth: 3,
-                  borderLeftColor: '#0284C7'
-                }}>
-                  <Text style={{ ...typography.caption, color: '#0C4A6E', fontWeight: '600' }}>
-                    Tour Request
-                  </Text>
-                  <Text style={{ ...typography.caption, color: '#0C4A6E', marginTop: 2 }}>
-                    {item.requirements}
-                  </Text>
-                </View>
-              )}
-
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: spacing.md }}>
-                <View>
-                  <Text style={{ ...typography.caption, color: colors.textMuted }}>Category:</Text>
-                  <Text style={{ ...typography.body, color: colors.textPrimary }}>
-                    {item.is_venue ? 'Venue' : (item.event_type ?? 'General')}
-                  </Text>
-                </View>
-                <View>
-                  <Text style={{ ...typography.caption, color: colors.textMuted }}>Requested:</Text>
-                  <Text style={{ ...typography.body, color: colors.textPrimary }}>
-                    {requestedDate ?? 'TBD'}
-                  </Text>
-                </View>
-                <View style={{ alignItems: 'flex-end' }}>
-                  <Text style={{ ...typography.caption, color: colors.textMuted }}>Quote</Text>
-                  <Text style={{ ...typography.titleMedium, color: colors.textPrimary }}>
-                    {typeof item.quote_amount === 'number' ? formatCurrency(item.quote_amount) : 'TBD'}
-                  </Text>
-                </View>
-              </View>
-
-              <View style={{ flexDirection: 'row', marginTop: spacing.md, columnGap: spacing.sm }}>
-                <TouchableOpacity
-                  onPress={() => navigation.navigate('QuoteDetail', { quoteId: item.id })}
-                  style={{
-                    flex: 1,
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    paddingVertical: spacing.sm,
-                    borderRadius: radii.md,
-                    borderWidth: 1,
-                    borderColor: colors.borderSubtle,
-                    backgroundColor: colors.surface,
-                  }}
-                >
-                  <MaterialIcons name="description" size={16} color={colors.textPrimary} style={{ marginRight: spacing.xs }} />
-                  <Text style={{ ...typography.caption, color: colors.textPrimary }}>View Details</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  onPress={() => handleSecondaryAction(item)}
-                  disabled={actionLoading}
-                  style={{
-                    flex: 1,
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    paddingVertical: spacing.sm,
-                    borderRadius: radii.md,
-                    backgroundColor: colors.accent,
-                    opacity: actionLoading ? 0.7 : 1,
-                  }}
-                >
-                  <MaterialIcons name="edit" size={16} color={colors.textPrimary} style={{ marginRight: spacing.xs }} />
-                  <Text style={{ ...typography.caption, color: colors.textPrimary }}>
-                    {actionLoading ? 'Saving...' : actionLabel}
-                  </Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-          );
-        }}
-      />
+      {alertState && (
+        <ThemedAlert
+          visible={alertState.visible}
+          title={alertState.title}
+          message={alertState.message}
+          buttons={alertState.buttons ?? [{ text: 'OK', style: 'default', onPress: () => setAlertState(null) }]}
+          onDismiss={() => setAlertState(null)}
+        />
+      )}
     </View>
   );
 }

@@ -1,0 +1,506 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Discover Venues - Funxon</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600&amp;family=Playfair+Display:wght@600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "surface-container-lowest": "#ffffff",
+                    "on-primary-fixed": "#001e30",
+                    "secondary-fixed-dim": "#9bcdf0",
+                    "on-error-container": "#93000a",
+                    "tertiary-container": "#303b5b",
+                    "tertiary-fixed-dim": "#bac5ec",
+                    "on-primary-container": "#83aacc",
+                    "on-surface-variant": "#42474d",
+                    "on-secondary-fixed": "#001e2e",
+                    "primary-fixed": "#cbe6ff",
+                    "inverse-on-surface": "#f2f1ec",
+                    "surface-container-highest": "#e4e2dd",
+                    "secondary": "#306382",
+                    "on-tertiary-container": "#9aa5cb",
+                    "outline": "#72787e",
+                    "surface-variant": "#e4e2dd",
+                    "surface": "#fbf9f4",
+                    "on-tertiary-fixed-variant": "#3b4666",
+                    "gold": "#ffd700",
+                    "destructive": "#dc2626",
+                    "surface-container-low": "#f5f3ee",
+                    "surface-bright": "#fbf9f4",
+                    "on-tertiary": "#ffffff",
+                    "outline-variant": "#c2c7ce",
+                    "inverse-surface": "#30312e",
+                    "surface-container-high": "#eae8e3",
+                    "on-surface": "#1b1c19",
+                    "primary-container": "#123f5c",
+                    "surface-container": "#f0eee9",
+                    "secondary-fixed": "#c7e7ff",
+                    "on-secondary": "#ffffff",
+                    "on-primary": "#ffffff",
+                    "on-secondary-fixed-variant": "#104c69",
+                    "on-background": "#1b1c19",
+                    "primary-fixed-dim": "#a3cbee",
+                    "tertiary-fixed": "#dae1ff",
+                    "inverse-primary": "#a3cbee",
+                    "primary": "#002940",
+                    "on-error": "#ffffff",
+                    "brand-cream": "#f7f5f0",
+                    "error": "#ba1a1a",
+                    "on-secondary-container": "#2c617f",
+                    "surface-dim": "#dbdad5",
+                    "surface-tint": "#3b6281",
+                    "on-tertiary-fixed": "#0e1a38",
+                    "secondary-container": "#a9dbfe",
+                    "dusty-rose": "#aa7478",
+                    "background": "#fbf9f4",
+                    "error-container": "#ffdad6",
+                    "on-primary-fixed-variant": "#204a68",
+                    "tertiary": "#1a2544"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.25rem",
+                    "lg": "0.5rem",
+                    "xl": "0.75rem",
+                    "full": "9999px"
+            },
+            "spacing": {
+                    "margin-mobile": "20px",
+                    "max-width": "1200px",
+                    "section-padding": "80px",
+                    "gutter": "24px",
+                    "stack-lg": "32px",
+                    "margin-desktop": "48px",
+                    "stack-sm": "8px",
+                    "stack-md": "16px"
+            },
+            "fontFamily": {
+                    "headline-sm": [
+                            "Playfair Display"
+                    ],
+                    "headline-lg-mobile": [
+                            "Playfair Display"
+                    ],
+                    "body-sm": [
+                            "Montserrat"
+                    ],
+                    "label-md": [
+                            "Montserrat"
+                    ],
+                    "headline-lg": [
+                            "Playfair Display"
+                    ],
+                    "body-md": [
+                            "Montserrat"
+                    ],
+                    "body-lg": [
+                            "Montserrat"
+                    ],
+                    "display-lg": [
+                            "Playfair Display"
+                    ],
+                    "label-lg": [
+                            "Montserrat"
+                    ],
+                    "headline-md": [
+                            "Playfair Display"
+                    ]
+            },
+            "fontSize": {
+                    "headline-sm": [
+                            "24px",
+                            {
+                                    "lineHeight": "32px",
+                                    "fontWeight": "600"
+                            }
+                    ],
+                    "headline-lg-mobile": [
+                            "32px",
+                            {
+                                    "lineHeight": "40px",
+                                    "fontWeight": "700"
+                            }
+                    ],
+                    "body-sm": [
+                            "14px",
+                            {
+                                    "lineHeight": "20px",
+                                    "fontWeight": "400"
+                            }
+                    ],
+                    "label-md": [
+                            "12px",
+                            {
+                                    "lineHeight": "16px",
+                                    "letterSpacing": "0.05em",
+                                    "fontWeight": "600"
+                            }
+                    ],
+                    "headline-lg": [
+                            "40px",
+                            {
+                                    "lineHeight": "48px",
+                                    "fontWeight": "700"
+                            }
+                    ],
+                    "body-md": [
+                            "16px",
+                            {
+                                    "lineHeight": "24px",
+                                    "fontWeight": "400"
+                            }
+                    ],
+                    "body-lg": [
+                            "18px",
+                            {
+                                    "lineHeight": "28px",
+                                    "fontWeight": "400"
+                            }
+                    ],
+                    "display-lg": [
+                            "56px",
+                            {
+                                    "lineHeight": "64px",
+                                    "letterSpacing": "-0.02em",
+                                    "fontWeight": "700"
+                            }
+                    ],
+                    "label-lg": [
+                            "14px",
+                            {
+                                    "lineHeight": "16px",
+                                    "letterSpacing": "0.05em",
+                                    "fontWeight": "600"
+                            }
+                    ],
+                    "headline-md": [
+                            "32px",
+                            {
+                                    "lineHeight": "40px",
+                                    "fontWeight": "600"
+                            }
+                    ]
+            }
+    },
+        },
+      }
+    </script>
+<style>
+        body {
+            background-color: theme('colors.background');
+            color: theme('colors.on-background');
+        }
+    </style>
+</head>
+<body class="antialiased min-h-screen flex flex-col">
+<!-- TopNavBar -->
+<header class="bg-brand-cream border-b border-surface-container-highest shadow-sm docked full-width top-0 z-50 sticky">
+<div class="flex justify-between items-center w-full px-margin-desktop max-w-max-width mx-auto h-20">
+<div class="font-headline-md text-headline-md font-bold text-primary">
+                Funxon
+            </div>
+<nav class="hidden md:flex gap-gutter items-center">
+<a class="text-on-surface-variant hover:text-primary transition-colors hover:bg-surface-container-low transition-all duration-200 px-3 py-2 rounded-lg font-label-lg text-label-lg" href="#">Home</a>
+<a class="text-primary font-bold border-b-2 border-primary pb-1 hover:bg-surface-container-low transition-all duration-200 px-3 py-2 rounded-lg font-label-lg text-label-lg active:scale-95 duration-150" href="#">Venues</a>
+<a class="text-on-surface-variant hover:text-primary transition-colors hover:bg-surface-container-low transition-all duration-200 px-3 py-2 rounded-lg font-label-lg text-label-lg" href="#">Vendors</a>
+<a class="text-on-surface-variant hover:text-primary transition-colors hover:bg-surface-container-low transition-all duration-200 px-3 py-2 rounded-lg font-label-lg text-label-lg" href="#">Listers Portal</a>
+<a class="text-on-surface-variant hover:text-primary transition-colors hover:bg-surface-container-low transition-all duration-200 px-3 py-2 rounded-lg font-label-lg text-label-lg" href="#">Blog</a>
+</nav>
+<div class="flex items-center gap-4">
+<div class="relative">
+<input class="hidden md:block rounded-full bg-surface-container-lowest border border-outline-variant px-4 py-2 text-body-sm font-body-sm text-on-surface focus:outline-none focus:border-primary-container focus:ring-1 focus:ring-primary-container w-64" placeholder="Search..." type="text"/>
+<span class="material-symbols-outlined absolute right-3 top-2 text-outline hidden md:block">search</span>
+</div>
+<button aria-label="notifications" class="text-primary hover:bg-surface-container-low p-2 rounded-full transition-all duration-200 active:scale-95 duration-150">
+<span class="material-symbols-outlined">notifications</span>
+</button>
+<button class="rounded-full w-10 h-10 bg-surface-container-highest overflow-hidden border border-outline-variant hover:border-primary transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2">
+<img alt="User profile avatar" class="w-full h-full object-cover" data-alt="A close-up, high-quality photograph of a young professional smiling warmly. The lighting is soft and flattering, creating a premium and trustworthy vibe suitable for an elite event marketplace profile avatar." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAUgwP1taTKFR98FatUw59KI0ZEBc9zKsN1V_mLZdR5Fm9Ajkv7zxO22A5rt9eOIl9y3sX1skfXQkip0xmCHjsIvp7jvJNh_N8kLqcZLdcWqam-2ZaPSMDC1zfDFZlNqD0r8cQfQtRe7cvmUUcZFv-7oppu7zYdvnQf51Sr8hNe9nZYxzIM0-OxhNOg73ZwbjpEzy5UPvmvdRIuYWko1uwZdOYybMkmA937q47AwKfw45IovbYRig"/>
+</button>
+</div>
+</div>
+</header>
+<!-- Main Layout -->
+<main class="flex-grow w-full max-w-max-width mx-auto px-margin-desktop py-stack-lg flex flex-col md:flex-row gap-gutter">
+<!-- Sidebar Filters -->
+<aside class="w-full md:w-[280px] shrink-0 flex flex-col gap-stack-lg">
+<div class="bg-surface-container-lowest p-stack-md rounded-lg shadow-[0_2px_8px_rgba(0,0,0,0.08)] border border-surface-container-highest">
+<div class="flex justify-between items-center mb-stack-md">
+<h2 class="font-headline-sm text-headline-sm text-primary">Filters</h2>
+<button class="text-body-sm font-body-sm text-primary-container hover:underline">Clear all</button>
+</div>
+<!-- Location -->
+<div class="mb-stack-md">
+<label class="block font-label-md text-label-md text-on-surface-variant mb-stack-sm">Location</label>
+<div class="relative">
+<span class="material-symbols-outlined absolute left-3 top-2.5 text-outline text-sm">location_on</span>
+<input class="w-full rounded-lg bg-surface-container-lowest border border-outline-variant pl-10 pr-4 py-2 text-body-sm font-body-sm text-on-surface focus:outline-none focus:border-primary-container focus:ring-1 focus:ring-primary-container" placeholder="Cape Town, SA" type="text"/>
+</div>
+</div>
+<hr class="border-surface-container-highest my-stack-md"/>
+<!-- Venue Type -->
+<div class="mb-stack-md">
+<label class="block font-label-md text-label-md text-on-surface-variant mb-stack-sm">Venue Type</label>
+<div class="flex flex-col gap-2">
+<label class="flex items-center gap-2 cursor-pointer group">
+<input class="rounded border-outline-variant text-primary-container focus:ring-primary-container h-4 w-4 bg-surface-container-lowest" type="checkbox"/>
+<span class="font-body-sm text-body-sm text-on-surface group-hover:text-primary transition-colors">Wine Estate</span>
+</label>
+<label class="flex items-center gap-2 cursor-pointer group">
+<input checked="" class="rounded border-outline-variant text-primary-container focus:ring-primary-container h-4 w-4 bg-surface-container-lowest" type="checkbox"/>
+<span class="font-body-sm text-body-sm text-on-surface group-hover:text-primary transition-colors">Historic Manor</span>
+</label>
+<label class="flex items-center gap-2 cursor-pointer group">
+<input class="rounded border-outline-variant text-primary-container focus:ring-primary-container h-4 w-4 bg-surface-container-lowest" type="checkbox"/>
+<span class="font-body-sm text-body-sm text-on-surface group-hover:text-primary transition-colors">Modern Gallery</span>
+</label>
+<label class="flex items-center gap-2 cursor-pointer group">
+<input class="rounded border-outline-variant text-primary-container focus:ring-primary-container h-4 w-4 bg-surface-container-lowest" type="checkbox"/>
+<span class="font-body-sm text-body-sm text-on-surface group-hover:text-primary transition-colors">Boutique Hotel</span>
+</label>
+</div>
+</div>
+<hr class="border-surface-container-highest my-stack-md"/>
+<!-- Capacity -->
+<div class="mb-stack-md">
+<label class="block font-label-md text-label-md text-on-surface-variant mb-stack-sm">Capacity</label>
+<div class="flex items-center gap-2">
+<input class="w-1/2 rounded-lg bg-surface-container-lowest border border-outline-variant px-3 py-2 text-body-sm font-body-sm text-on-surface focus:outline-none focus:border-primary-container focus:ring-1 focus:ring-primary-container" placeholder="Min" type="number"/>
+<span class="text-outline">-</span>
+<input class="w-1/2 rounded-lg bg-surface-container-lowest border border-outline-variant px-3 py-2 text-body-sm font-body-sm text-on-surface focus:outline-none focus:border-primary-container focus:ring-1 focus:ring-primary-container" placeholder="Max" type="number"/>
+</div>
+</div>
+<hr class="border-surface-container-highest my-stack-md"/>
+<!-- Price Range -->
+<div class="mb-stack-md">
+<label class="block font-label-md text-label-md text-on-surface-variant mb-stack-sm">Price per Day (ZAR)</label>
+<input class="w-full accent-primary-container h-2 bg-surface-container-highest rounded-lg appearance-none cursor-pointer" max="100000" min="5000" type="range" value="50000"/>
+<div class="flex justify-between mt-2 font-body-sm text-body-sm text-outline">
+<span>R5k</span>
+<span>R100k+</span>
+</div>
+</div>
+<hr class="border-surface-container-highest my-stack-md"/>
+<!-- Amenities -->
+<div class="mb-stack-md">
+<label class="block font-label-md text-label-md text-on-surface-variant mb-stack-sm">Amenities</label>
+<div class="flex flex-wrap gap-2">
+<span class="px-3 py-1 bg-brand-cream text-primary-container font-label-md text-label-md rounded-full border border-surface-container-highest cursor-pointer hover:bg-surface-container-low transition-colors">Catering</span>
+<span class="px-3 py-1 bg-primary-container text-on-primary font-label-md text-label-md rounded-full cursor-pointer hover:bg-primary transition-colors">Parking</span>
+<span class="px-3 py-1 bg-brand-cream text-primary-container font-label-md text-label-md rounded-full border border-surface-container-highest cursor-pointer hover:bg-surface-container-low transition-colors">AV Equipment</span>
+<span class="px-3 py-1 bg-brand-cream text-primary-container font-label-md text-label-md rounded-full border border-surface-container-highest cursor-pointer hover:bg-surface-container-low transition-colors">Wi-Fi</span>
+</div>
+</div>
+</div>
+</aside>
+<!-- Results Grid -->
+<section class="flex-grow flex flex-col gap-stack-lg">
+<div class="flex justify-between items-center bg-surface-container-lowest p-stack-md rounded-lg shadow-[0_2px_8px_rgba(0,0,0,0.08)] border border-surface-container-highest">
+<h1 class="font-headline-sm text-headline-sm text-primary">Showing 124 Venues in Cape Town</h1>
+<div class="flex items-center gap-2">
+<span class="font-body-sm text-body-sm text-on-surface-variant hidden sm:inline">Sort by:</span>
+<select class="rounded-lg bg-surface-container-lowest border border-outline-variant px-3 py-1.5 text-body-sm font-body-sm text-on-surface focus:outline-none focus:border-primary-container focus:ring-1 focus:ring-primary-container cursor-pointer">
+<option>Recommended</option>
+<option>Price: Low to High</option>
+<option>Price: High to Low</option>
+<option>Highest Rated</option>
+</select>
+</div>
+</div>
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-gutter">
+<!-- Card 1 -->
+<article class="bg-surface-container-lowest rounded-lg overflow-hidden shadow-[0_2px_8px_rgba(0,0,0,0.08)] hover:shadow-[0_4px_16px_rgba(0,0,0,0.12)] transition-shadow duration-300 flex flex-col group cursor-pointer border border-surface-container-highest">
+<div class="relative aspect-[4/3] overflow-hidden">
+<img alt="Venue image" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" data-alt="A sweeping, high-resolution wide shot of a majestic Cape Dutch manor house bathed in golden hour sunlight. The pristine white walls contrast beautifully with the deep green vineyards surrounding it. The mood is highly luxurious, historical, and serene, fitting for a premium South African wedding venue." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDf8uN5HCvbxEQYaPqhLDaSn1ZaAuQ1LSgJKIcX67EZbXP3_6SZQJ_fOw8llLArO586D8sOm-6cY9KU9_hM3ZLA8exEBM8bUI3flary6ARTkN6RyNy2Fu0MVBhOWOVY2lBxiQjbh6_7VmSrL3uKFfW24s1wzFnD49TekHrAzLEZ8fz_6D02nCNQ1n6nQfoiCl4M20uVJiFoFUG3Q7qdU_UDTrKEVDQZFSmrdH4csiVNyjfo4iaxxA"/>
+<div class="absolute top-3 left-3 flex gap-2">
+<span class="bg-dusty-rose text-white px-2.5 py-1 rounded-full font-label-md text-label-md flex items-center gap-1 shadow-sm">
+<span class="material-symbols-outlined text-[14px]">verified</span> Verified
+                            </span>
+</div>
+<button class="absolute top-3 right-3 text-white hover:text-dusty-rose transition-colors bg-black/20 hover:bg-black/40 rounded-full p-1.5 backdrop-blur-sm">
+<span class="material-symbols-outlined">favorite_border</span>
+</button>
+</div>
+<div class="p-4 flex flex-col flex-grow">
+<div class="flex justify-between items-start mb-2">
+<h3 class="font-headline-sm text-headline-sm text-primary line-clamp-1 group-hover:text-primary-container transition-colors">Boschendal Estate</h3>
+<div class="flex items-center gap-1 text-gold shrink-0">
+<span class="material-symbols-outlined text-[16px] font-variation-settings-'FILL'-1">star</span>
+<span class="font-label-md text-label-md text-on-surface">4.9</span>
+</div>
+</div>
+<p class="font-body-sm text-body-sm text-on-surface-variant flex items-center gap-1 mb-3">
+<span class="material-symbols-outlined text-[16px]">location_on</span> Franschhoek, WC
+                        </p>
+<div class="flex gap-2 mb-4 flex-wrap">
+<span class="bg-brand-cream text-primary-container px-2 py-0.5 rounded font-label-md text-[10px] uppercase">Historic</span>
+<span class="bg-brand-cream text-primary-container px-2 py-0.5 rounded font-label-md text-[10px] uppercase">Up to 300 guests</span>
+</div>
+<div class="mt-auto pt-4 border-t border-surface-container-highest flex justify-between items-center">
+<div class="font-body-sm text-body-sm">
+<span class="font-bold text-primary-container text-body-md">R45,000</span> <span class="text-outline">/ day</span>
+</div>
+<button class="text-primary-container font-label-md text-label-md hover:underline flex items-center gap-1">
+                                View Details <span class="material-symbols-outlined text-[16px]">arrow_forward</span>
+</button>
+</div>
+</div>
+</article>
+<!-- Card 2 -->
+<article class="bg-surface-container-lowest rounded-lg overflow-hidden shadow-[0_2px_8px_rgba(0,0,0,0.08)] hover:shadow-[0_4px_16px_rgba(0,0,0,0.12)] transition-shadow duration-300 flex flex-col group cursor-pointer border border-surface-container-highest">
+<div class="relative aspect-[4/3] overflow-hidden">
+<img alt="Venue image" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" data-alt="An expansive, modern industrial gallery space with polished concrete floors, exposed steel beams, and massive floor-to-ceiling windows flooding the room with bright, natural daylight. The aesthetic is contemporary, minimalist, and high-end, perfectly suited for a corporate launch event." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCL_YC3vGNAVur2t_qmfXHG3G67kkkHUJMFJKPt-Sn5hHlxbEnqDBYmXwiQSBv85LyGexmouwogBzXG5aY25ldDmrt2mSVgE2fj9fXkZgLY-qDeY6lySiTyfl8JGr0BkYDaxJh2iZI_4AE1D-sAXXbfd65Guhp_BCe91rkmRa84f101HWgZs5gi5n_614e8wC5tZN5XyeZRV2TwdYUNInMP2ev7NQehkn776LTeh5rT-5uIi4IPiQ"/>
+<div class="absolute top-3 left-3 flex gap-2">
+<span class="bg-primary-container text-white px-2.5 py-1 rounded-full font-label-md text-label-md flex items-center gap-1 shadow-sm">
+                                Top Rated
+                            </span>
+</div>
+<button class="absolute top-3 right-3 text-white hover:text-dusty-rose transition-colors bg-black/20 hover:bg-black/40 rounded-full p-1.5 backdrop-blur-sm">
+<span class="material-symbols-outlined">favorite_border</span>
+</button>
+</div>
+<div class="p-4 flex flex-col flex-grow">
+<div class="flex justify-between items-start mb-2">
+<h3 class="font-headline-sm text-headline-sm text-primary line-clamp-1 group-hover:text-primary-container transition-colors">The Silo Canvas</h3>
+<div class="flex items-center gap-1 text-gold shrink-0">
+<span class="material-symbols-outlined text-[16px] font-variation-settings-'FILL'-1">star</span>
+<span class="font-label-md text-label-md text-on-surface">4.8</span>
+</div>
+</div>
+<p class="font-body-sm text-body-sm text-on-surface-variant flex items-center gap-1 mb-3">
+<span class="material-symbols-outlined text-[16px]">location_on</span> V&amp;A Waterfront, CT
+                        </p>
+<div class="flex gap-2 mb-4 flex-wrap">
+<span class="bg-brand-cream text-primary-container px-2 py-0.5 rounded font-label-md text-[10px] uppercase">Modern</span>
+<span class="bg-brand-cream text-primary-container px-2 py-0.5 rounded font-label-md text-[10px] uppercase">Up to 150 guests</span>
+</div>
+<div class="mt-auto pt-4 border-t border-surface-container-highest flex justify-between items-center">
+<div class="font-body-sm text-body-sm">
+<span class="font-bold text-primary-container text-body-md">R28,000</span> <span class="text-outline">/ day</span>
+</div>
+<button class="text-primary-container font-label-md text-label-md hover:underline flex items-center gap-1">
+                                View Details <span class="material-symbols-outlined text-[16px]">arrow_forward</span>
+</button>
+</div>
+</div>
+</article>
+<!-- Card 3 -->
+<article class="bg-surface-container-lowest rounded-lg overflow-hidden shadow-[0_2px_8px_rgba(0,0,0,0.08)] hover:shadow-[0_4px_16px_rgba(0,0,0,0.12)] transition-shadow duration-300 flex flex-col group cursor-pointer border border-surface-container-highest">
+<div class="relative aspect-[4/3] overflow-hidden">
+<img alt="Venue image" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" data-alt="A lush, meticulously manicured botanical garden setting under a clear blue sky. Elegant white marquee tents are visible in the background. The scene is brightly lit, evoking a sense of tranquil luxury and exclusivity for an outdoor garden party." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCREz6-A-7MCorDqJeCRoNUihxttjzqZxr2v7yLn-WiTlBBrrlBpERSiLcK-GD5Veqzw6i0R9RMfi6tuzXGD6Mg8QNNe0xaV-qyG0k7yBsMwUr6rbb_lrJhtYsUd0274Y_jUHNKgy4oMHvS7wyIA4QWXZMmhd8dTPZRgezjOFQj9qOmfs8qKqqqcQuVbm87SjpnUTRrLbKHVWINeR1eMQk0pgKdQkPTNv2xKSS2lasQWG_d7ekivQ"/>
+</div>
+<div class="p-4 flex flex-col flex-grow">
+<div class="flex justify-between items-start mb-2">
+<h3 class="font-headline-sm text-headline-sm text-primary line-clamp-1 group-hover:text-primary-container transition-colors">Kirstenbosch Pavilion</h3>
+<div class="flex items-center gap-1 text-gold shrink-0">
+<span class="material-symbols-outlined text-[16px] font-variation-settings-'FILL'-1">star</span>
+<span class="font-label-md text-label-md text-on-surface">4.7</span>
+</div>
+</div>
+<p class="font-body-sm text-body-sm text-on-surface-variant flex items-center gap-1 mb-3">
+<span class="material-symbols-outlined text-[16px]">location_on</span> Newlands, CT
+                        </p>
+<div class="flex gap-2 mb-4 flex-wrap">
+<span class="bg-brand-cream text-primary-container px-2 py-0.5 rounded font-label-md text-[10px] uppercase">Outdoor</span>
+<span class="bg-brand-cream text-primary-container px-2 py-0.5 rounded font-label-md text-[10px] uppercase">Up to 500 guests</span>
+</div>
+<div class="mt-auto pt-4 border-t border-surface-container-highest flex justify-between items-center">
+<div class="font-body-sm text-body-sm">
+<span class="font-bold text-primary-container text-body-md">R60,000</span> <span class="text-outline">/ day</span>
+</div>
+<button class="text-primary-container font-label-md text-label-md hover:underline flex items-center gap-1">
+                                View Details <span class="material-symbols-outlined text-[16px]">arrow_forward</span>
+</button>
+</div>
+</div>
+</article>
+<!-- Card 4 -->
+<article class="bg-surface-container-lowest rounded-lg overflow-hidden shadow-[0_2px_8px_rgba(0,0,0,0.08)] hover:shadow-[0_4px_16px_rgba(0,0,0,0.12)] transition-shadow duration-300 flex flex-col group cursor-pointer border border-surface-container-highest">
+<div class="relative aspect-[4/3] overflow-hidden">
+<img alt="Venue image" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" data-alt="An opulent, dimly lit ballroom featuring grand crystal chandeliers, dark wood panelling, and rich teal and gold accents. The atmosphere is highly sophisticated, intimate, and exclusive, ideal for a premium gala dinner or high-end corporate networking event." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBd_BokUIPAZE6h4ts3MEHDRKVdfQN-uRG3vuK_lAMJ19f7QgszZYLIUvQW1HX8BSqs5sBqy51m2VYGszEXzM0YrUYhMfwZnJPQRBQaeAzWDUnt7Ospmyvg37ISQnHCPwg4r7YDUevtr2s6TCnvuiMBna1xrtWDmmKRLIHWS6BpC58PFE8pDjcB9d9385MN3TOymiLI-diozvsTl_Kg7hWnECVGFcXiP4Ci3zoBG0oBb8Fy7sDjow"/>
+<div class="absolute top-3 left-3 flex gap-2">
+<span class="bg-dusty-rose text-white px-2.5 py-1 rounded-full font-label-md text-label-md flex items-center gap-1 shadow-sm">
+<span class="material-symbols-outlined text-[14px]">verified</span> Verified
+                            </span>
+</div>
+</div>
+<div class="p-4 flex flex-col flex-grow">
+<div class="flex justify-between items-start mb-2">
+<h3 class="font-headline-sm text-headline-sm text-primary line-clamp-1 group-hover:text-primary-container transition-colors">Mount Nelson Ballroom</h3>
+<div class="flex items-center gap-1 text-gold shrink-0">
+<span class="material-symbols-outlined text-[16px] font-variation-settings-'FILL'-1">star</span>
+<span class="font-label-md text-label-md text-on-surface">5.0</span>
+</div>
+</div>
+<p class="font-body-sm text-body-sm text-on-surface-variant flex items-center gap-1 mb-3">
+<span class="material-symbols-outlined text-[16px]">location_on</span> Gardens, CT
+                        </p>
+<div class="flex gap-2 mb-4 flex-wrap">
+<span class="bg-brand-cream text-primary-container px-2 py-0.5 rounded font-label-md text-[10px] uppercase">Luxury Hotel</span>
+<span class="bg-brand-cream text-primary-container px-2 py-0.5 rounded font-label-md text-[10px] uppercase">Up to 250 guests</span>
+</div>
+<div class="mt-auto pt-4 border-t border-surface-container-highest flex justify-between items-center">
+<div class="font-body-sm text-body-sm">
+<span class="font-bold text-primary-container text-body-md">R85,000</span> <span class="text-outline">/ day</span>
+</div>
+<button class="text-primary-container font-label-md text-label-md hover:underline flex items-center gap-1">
+                                View Details <span class="material-symbols-outlined text-[16px]">arrow_forward</span>
+</button>
+</div>
+</div>
+</article>
+</div>
+<!-- Pagination -->
+<div class="flex justify-center mt-stack-lg gap-2">
+<button class="w-10 h-10 rounded-lg bg-surface-container-lowest border border-outline-variant flex items-center justify-center text-on-surface hover:bg-surface-container-low hover:border-primary-container transition-colors disabled:opacity-50" disabled="">
+<span class="material-symbols-outlined">chevron_left</span>
+</button>
+<button class="w-10 h-10 rounded-lg bg-primary-container text-on-primary font-label-md text-label-md flex items-center justify-center">1</button>
+<button class="w-10 h-10 rounded-lg bg-surface-container-lowest border border-outline-variant flex items-center justify-center text-on-surface hover:bg-surface-container-low hover:border-primary-container transition-colors font-label-md text-label-md">2</button>
+<button class="w-10 h-10 rounded-lg bg-surface-container-lowest border border-outline-variant flex items-center justify-center text-on-surface hover:bg-surface-container-low hover:border-primary-container transition-colors font-label-md text-label-md">3</button>
+<span class="w-10 h-10 flex items-center justify-center text-outline">...</span>
+<button class="w-10 h-10 rounded-lg bg-surface-container-lowest border border-outline-variant flex items-center justify-center text-on-surface hover:bg-surface-container-low hover:border-primary-container transition-colors disabled:opacity-50">
+<span class="material-symbols-outlined">chevron_right</span>
+</button>
+</div>
+</section>
+</main>
+<!-- Footer -->
+<footer class="bg-surface border-t border-surface-container-highest full-width mt-auto">
+<div class="grid grid-cols-1 md:grid-cols-4 gap-gutter w-full px-margin-desktop py-section-padding max-w-max-width mx-auto">
+<div class="flex flex-col gap-4 col-span-1 md:col-span-1">
+<div class="font-headline-sm text-headline-sm font-bold text-primary">
+                    Funxon
+                </div>
+<p class="font-body-sm text-body-sm text-on-surface-variant mt-2 max-w-xs">
+                    © 2024 Funxon. South Africa's Premier Event Marketplace.
+                </p>
+</div>
+<div class="flex flex-col gap-3">
+<h4 class="font-label-md text-label-md text-primary uppercase tracking-wider mb-2">Explore</h4>
+<a class="font-body-sm text-body-sm text-on-surface-variant hover:text-primary transition-colors" href="#">Explore Venues</a>
+<a class="font-body-sm text-body-sm text-on-surface-variant hover:text-primary transition-colors" href="#">Explore Vendors</a>
+</div>
+<div class="flex flex-col gap-3">
+<h4 class="font-label-md text-label-md text-primary uppercase tracking-wider mb-2">Partner</h4>
+<a class="font-body-sm text-body-sm text-on-surface-variant hover:text-primary transition-colors" href="#">List Your Space</a>
+</div>
+<div class="flex flex-col gap-3">
+<h4 class="font-label-md text-label-md text-primary uppercase tracking-wider mb-2">Legal &amp; Help</h4>
+<a class="font-body-sm text-body-sm text-on-surface-variant hover:text-primary transition-colors" href="#">Support Center</a>
+<a class="font-body-sm text-body-sm text-on-surface-variant hover:text-primary transition-colors" href="#">Privacy Policy</a>
+<a class="font-body-sm text-body-sm text-on-surface-variant hover:text-primary transition-colors" href="#">Terms of Service</a>
+</div>
+</div>
+</footer>
+</body></html>

@@ -10,10 +10,12 @@ const BREVO_API_URL = 'https://api.brevo.com/v3';
 type NotificationType = 
   | 'vendor-subscription-purchased'
   | 'vendor-application-submitted'
+  | 'venue-application-submitted'
   | 'vendor-free-signup'
   | 'quote-requested'
   | 'portfolio-callback-requested'
-  | 'new-user-registered';
+  | 'new-user-registered'
+  | 'venue-tour-requested';
 
 interface NotificationPayload {
   type: NotificationType;
@@ -32,6 +34,10 @@ interface NotificationPayload {
   eventDetails?: string;
   vendorId?: string;
   quoteDetails?: string;
+  adminEmail?: string;
+  adminName?: string;
+  portfolioType?: 'vendor' | 'venue';
+  listingId?: string | number;
 }
 
 interface BrevoEmailPayload {
@@ -58,10 +64,10 @@ Deno.serve(async (req: Request) => {
   try {
     // Get environment variables
     const brevoApiKey = Deno.env.get('BREVO_API_KEY');
-    const fromEmail = Deno.env.get('FROM_EMAIL') || 'noreply@funcxon.com';
-    const fromName = Deno.env.get('FROM_NAME') || 'Funcxon Platform';
-    const adminEmail = Deno.env.get('ADMIN_EMAIL') || 'admin@funcxon.com';
-    const adminName = Deno.env.get('ADMIN_NAME') || 'Funcxon Admin';
+    const fromEmail = Deno.env.get('FROM_EMAIL') || 'noreply@funxon.co.za';
+    const fromName = Deno.env.get('FROM_NAME') || 'Funxon Platform';
+    const defaultAdminEmail = Deno.env.get('ADMIN_EMAIL') || 'admin@funxon.co.za';
+    const defaultAdminName = Deno.env.get('ADMIN_NAME') || 'Funxon Admin';
 
     if (!brevoApiKey) {
       throw new Error('BREVO_API_KEY environment variable is not set');
@@ -76,6 +82,10 @@ Deno.serve(async (req: Request) => {
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
+
+    // Allow caller to override recipient email/name
+    const adminEmail = payload.adminEmail || defaultAdminEmail;
+    const adminName = payload.adminName || defaultAdminName;
 
     // Generate email content based on notification type
     const { subject, htmlContent, textContent } = generateEmailContent(payload);
@@ -135,6 +145,24 @@ Deno.serve(async (req: Request) => {
   }
 });
 
+function buildPortfolioLinks(payload: NotificationPayload): { adminLink: string; publicLink: string } {
+  const { portfolioType, listingId } = payload;
+  const isVenue = portfolioType === 'venue';
+  const basePath = isVenue ? 'venues' : 'vendors';
+  const publicBase = isVenue ? 'venue' : 'vendor';
+
+  if (listingId) {
+    return {
+      adminLink: `https://funcxonsadmin.vercel.app/dashboard/${basePath}/${listingId}`,
+      publicLink: `https://funxon.co.za/${publicBase}/${listingId}`,
+    };
+  }
+  return {
+    adminLink: `https://funcxonsadmin.vercel.app/dashboard/${basePath}`,
+    publicLink: `https://funxon.co.za/${publicBase}s`,
+  };
+}
+
 function generateEmailContent(payload: NotificationPayload): { subject: string; htmlContent: string; textContent: string } {
   const { type } = payload;
 
@@ -142,6 +170,7 @@ function generateEmailContent(payload: NotificationPayload): { subject: string; 
     case 'vendor-subscription-purchased':
       return generateSubscriptionPurchasedEmail(payload);
     case 'vendor-application-submitted':
+    case 'venue-application-submitted':
       return generateApplicationSubmittedEmail(payload);
     case 'vendor-free-signup':
       return generateFreeSignupEmail(payload);
@@ -149,6 +178,8 @@ function generateEmailContent(payload: NotificationPayload): { subject: string; 
       return generateQuoteRequestedEmail(payload);
     case 'portfolio-callback-requested':
       return generateCallbackRequestedEmail(payload);
+    case 'venue-tour-requested':
+      return generateVenueTourRequestedEmail(payload);
     case 'new-user-registered':
       return generateNewUserEmail(payload);
     default:
@@ -158,6 +189,7 @@ function generateEmailContent(payload: NotificationPayload): { subject: string; 
 
 function generateSubscriptionPurchasedEmail(payload: NotificationPayload) {
   const { vendorName, vendorEmail, businessName, tierName, amount } = payload;
+  const { adminLink, publicLink } = buildPortfolioLinks(payload);
   const subject = `New Subscription: ${businessName || vendorName} - ${tierName}`;
 
   const htmlContent = `
@@ -186,9 +218,13 @@ function generateSubscriptionPurchasedEmail(payload: NotificationPayload) {
         </div>
         
         <div style="text-align: center; margin: 30px 0;">
-          <a href="https://funcxon.com/admin/vendors" 
+          <a href="${adminLink}" 
              style="background: #2B9EB3; color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; font-weight: bold; display: inline-block;">
             View in Admin Panel
+          </a>
+          <a href="${publicLink}" 
+             style="background: #fff; color: #2B9EB3; border: 2px solid #2B9EB3; padding: 13px 28px; text-decoration: none; border-radius: 5px; font-weight: bold; display: inline-block; margin-left: 10px;">
+            View Public Profile
           </a>
         </div>
       </div>
@@ -206,15 +242,18 @@ Vendor Details:
 - Plan: ${tierName || 'N/A'}
 - Amount: R${amount || '0'}
 
-View in admin panel: https://funcxon.com/admin/vendors
+View in admin panel: ${adminLink}
+View public profile: ${publicLink}
   `;
 
   return { subject, htmlContent, textContent };
 }
 
 function generateApplicationSubmittedEmail(payload: NotificationPayload) {
-  const { vendorName, vendorEmail, businessName, tierName, serviceCategories, provinces } = payload;
-  const subject = `New Vendor Application: ${businessName || vendorName}`;
+  const { vendorName, vendorEmail, businessName, tierName, serviceCategories, provinces, portfolioType } = payload;
+  const { adminLink, publicLink } = buildPortfolioLinks(payload);
+  const isVenue = portfolioType === 'venue';
+  const subject = `New ${isVenue ? 'Venue' : 'Vendor'} Application: ${businessName || vendorName}`;
 
   const htmlContent = `
     <!DOCTYPE html>
@@ -230,7 +269,7 @@ function generateApplicationSubmittedEmail(payload: NotificationPayload) {
       </div>
       
       <div style="background: #ffffff; padding: 30px; border: 1px solid #D4CFBD; border-top: none; border-radius: 0 0 10px 10px;">
-        <p style="font-size: 16px; margin-bottom: 20px; color: #2B3840;">A new vendor has submitted their application for review.</p>
+        <p style="font-size: 16px; margin-bottom: 20px; color: #2B3840;">A new vendor has submitted their application and has been given immediate access.</p>
         
         <div style="background: #F5F1E8; padding: 20px; border-radius: 8px; margin: 25px 0; border: 1px solid #D4CFBD;">
           <h3 style="margin-top: 0; color: #2B9EB3;">Application Details</h3>
@@ -243,20 +282,24 @@ function generateApplicationSubmittedEmail(payload: NotificationPayload) {
         </div>
         
         <div style="text-align: center; margin: 30px 0;">
-          <a href="https://funcxonsadmin.vercel.app/dashboard/applications" 
+          <a href="${adminLink}" 
              style="background: #2B9EB3; color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; font-weight: bold; display: inline-block;">
-            Review Application
+            View in Admin Panel
+          </a>
+          <a href="${publicLink}" 
+             style="background: #fff; color: #2B9EB3; border: 2px solid #2B9EB3; padding: 13px 28px; text-decoration: none; border-radius: 5px; font-weight: bold; display: inline-block; margin-left: 10px;">
+            View Public Profile
           </a>
         </div>
         
-        <p style="font-size: 14px; color: #5A7A85;">Please review within 3-5 business days as per SLA.</p>
+        <p style="font-size: 14px; color: #5A7A85;">Applications are now auto-approved. Review only if you spot an issue.</p>
       </div>
     </body>
     </html>
   `;
 
   const textContent = `
-New Vendor Application Submitted
+New ${isVenue ? 'Venue' : 'Vendor'} Application Submitted
 
 Application Details:
 - Name: ${vendorName || 'N/A'}
@@ -266,7 +309,8 @@ Application Details:
 - Categories: ${serviceCategories?.join(', ') || 'N/A'}
 - Coverage: ${provinces?.join(', ') || 'N/A'}
 
-Review in admin panel: https://funcxonsadmin.vercel.app/dashboard/applications
+View in admin panel: ${adminLink}
+View public profile: ${publicLink}
   `;
 
   return { subject, htmlContent, textContent };
@@ -274,6 +318,7 @@ Review in admin panel: https://funcxonsadmin.vercel.app/dashboard/applications
 
 function generateFreeSignupEmail(payload: NotificationPayload) {
   const { vendorName, vendorEmail, businessName, tierName } = payload;
+  const { adminLink, publicLink } = buildPortfolioLinks(payload);
   const subject = `New Free Plan Signup: ${businessName || vendorName}`;
 
   const htmlContent = `
@@ -301,9 +346,13 @@ function generateFreeSignupEmail(payload: NotificationPayload) {
         </div>
         
         <div style="text-align: center; margin: 30px 0;">
-          <a href="https://funcxon.com/admin/vendors" 
+          <a href="${adminLink}" 
              style="background: #2B9EB3; color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; font-weight: bold; display: inline-block;">
             View in Admin Panel
+          </a>
+          <a href="${publicLink}" 
+             style="background: #fff; color: #2B9EB3; border: 2px solid #2B9EB3; padding: 13px 28px; text-decoration: none; border-radius: 5px; font-weight: bold; display: inline-block; margin-left: 10px;">
+            View Public Profile
           </a>
         </div>
       </div>
@@ -320,7 +369,8 @@ Vendor Details:
 - Business: ${businessName || 'N/A'}
 - Plan: ${tierName || 'FREE'}
 
-View in admin panel: https://funcxon.com/admin/vendors
+View in admin panel: ${adminLink}
+View public profile: ${publicLink}
   `;
 
   return { subject, htmlContent, textContent };
@@ -366,7 +416,7 @@ function generateQuoteRequestedEmail(payload: NotificationPayload) {
         ` : ''}
         
         <div style="text-align: center; margin: 30px 0;">
-          <a href="https://funcxon.com/admin/quotes" 
+          <a href="https://funxon.co.za/admin/quotes" 
              style="background: #2B9EB3; color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; font-weight: bold; display: inline-block;">
             View Quote Requests
           </a>
@@ -389,7 +439,7 @@ Vendor Details:
 
 ${quoteDetails ? `Quote Details:\n${quoteDetails}\n` : ''}
 
-View in admin panel: https://funcxon.com/admin/quotes
+View in admin panel: https://funxon.co.za/admin/quotes
   `;
 
   return { subject, htmlContent, textContent };
@@ -429,7 +479,7 @@ function generateCallbackRequestedEmail(payload: NotificationPayload) {
         </div>
         
         <div style="text-align: center; margin: 30px 0;">
-          <a href="https://funcxon.com/admin/callbacks" 
+          <a href="https://funxon.co.za/admin/callbacks" 
              style="background: #2B9EB3; color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; font-weight: bold; display: inline-block;">
             Manage Callbacks
           </a>
@@ -455,9 +505,70 @@ Callback Request:
 - Preferred Time: ${preferredTime || 'N/A'}
 - Assistance Needed: ${assistanceType || 'N/A'}
 
-Manage in admin panel: https://funcxon.com/admin/callbacks
+Manage in admin panel: https://funxon.co.za/admin/callbacks
 
 Reminder: Response time is within 2 hours during business hours.
+  `;
+
+  return { subject, htmlContent, textContent };
+}
+
+function generateVenueTourRequestedEmail(payload: NotificationPayload) {
+  const { customerName, customerEmail, vendorName, vendorEmail, eventDetails } = payload;
+  const subject = `New Tour Request: ${customerName} → ${vendorName}`;
+
+  const htmlContent = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>New Tour Request</title>
+    </head>
+    <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #2B3840; max-width: 600px; margin: 0 auto; padding: 20px; background: #F8F6F0;">
+      <div style="background: linear-gradient(135deg, #2B9EB3 0%, #9DCFDB 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
+        <h1 style="color: white; margin: 0; font-size: 24px;">New Venue Tour Request</h1>
+      </div>
+      
+      <div style="background: #ffffff; padding: 30px; border: 1px solid #D4CFBD; border-top: none; border-radius: 0 0 10px 10px;">
+        <p style="font-size: 16px; margin-bottom: 20px; color: #2B3840;">A customer has requested a tour of <strong>${vendorName || 'your venue'}</strong>.</p>
+        
+        <div style="background: #F5F1E8; padding: 20px; border-radius: 8px; margin: 25px 0; border: 1px solid #D4CFBD;">
+          <h3 style="margin-top: 0; color: #2B9EB3;">Customer Details</h3>
+          <p style="color: #2B3840;"><strong>Name:</strong> ${customerName || 'N/A'}</p>
+          <p style="color: #2B3840;"><strong>Email:</strong> ${customerEmail || 'N/A'}</p>
+        </div>
+        
+        ${eventDetails ? `
+        <div style="background: #F5F1E8; padding: 20px; border-radius: 8px; margin: 25px 0; border: 1px solid #D4CFBD;">
+          <h3 style="margin-top: 0; color: #2B9EB3;">Tour Details</h3>
+          <p style="color: #2B3840; white-space: pre-wrap;">${eventDetails}</p>
+        </div>
+        ` : ''}
+        
+        <div style="text-align: center; margin: 30px 0;">
+          <a href="https://funxon.co.za/admin/tours" 
+             style="background: #2B9EB3; color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; font-weight: bold; display: inline-block;">
+            Manage Tour Requests
+          </a>
+        </div>
+      </div>
+    </body>
+    </html>
+  `;
+
+  const textContent = `
+New Venue Tour Request
+
+A customer has requested a tour of ${vendorName || 'your venue'}.
+
+Customer Details:
+- Name: ${customerName || 'N/A'}
+- Email: ${customerEmail || 'N/A'}
+
+${eventDetails ? `Tour Details:\n${eventDetails}\n\n` : ''}
+
+Manage in admin panel: https://funxon.co.za/admin/tours
   `;
 
   return { subject, htmlContent, textContent };
@@ -491,7 +602,7 @@ function generateNewUserEmail(payload: NotificationPayload) {
         </div>
         
         <div style="text-align: center; margin: 30px 0;">
-          <a href="https://funcxon.com/admin/users" 
+          <a href="https://funxon.co.za/admin/users" 
              style="background: #2B9EB3; color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; font-weight: bold; display: inline-block;">
             View Users
           </a>
@@ -509,7 +620,7 @@ User Details:
 - Email: ${vendorEmail || 'N/A'}
 - Registered: ${new Date().toLocaleString()}
 
-View in admin panel: https://funcxon.com/admin/users
+View in admin panel: https://funxon.co.za/admin/users
   `;
 
   return { subject, htmlContent, textContent };

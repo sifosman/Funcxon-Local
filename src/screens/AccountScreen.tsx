@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Alert, ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import { ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -9,7 +9,9 @@ import { supabase } from '../lib/supabaseClient';
 import { getLatestUserApplication, getLatestUserApplicationByType, isBlockingApplicationStatus } from '../lib/applicationService';
 import type { ProfileStackParamList } from '../navigation/ProfileNavigator';
 import { HelpCenterModal } from '../components/HelpCenterModal';
+import ThemedAlert from '../components/ThemedAlert';
 import { useApplicationForm } from '../context/ApplicationFormContext';
+import { useIsDesktop } from '../hooks/useIsDesktop';
 
 type MenuItem = {
     id: string;
@@ -25,32 +27,42 @@ export default function AccountScreen() {
     const navigation = useNavigation<NativeStackNavigationProp<ProfileStackParamList>>();
     const { signOut, user, userRole } = useAuth();
     const { resetForm } = useApplicationForm();
+    const isDesktop = useIsDesktop();
     const [expandedMenus, setExpandedMenus] = useState<Set<string>>(new Set());
     const [helpVisible, setHelpVisible] = useState(false);
+    const [logoutAlert, setLogoutAlert] = useState<{visible: boolean; title: string; message: string} | null>(null);
     const [currentPlan, setCurrentPlan] = useState<string | null>(null);
-    const hasSubscriberAccess = userRole === 'vendor';
+    const [hasSubscriberAccess, setHasSubscriberAccess] = useState(false);
 
     const fetchCurrentPlan = useCallback(async () => {
-        if (!user?.id) return;
+        if (!user?.id) {
+            setHasSubscriberAccess(false);
+            return;
+        }
         try {
             const { data: userData } = await supabase
                 .from('users')
-                .select('id')
+                .select('id, auth_user_id')
                 .eq('auth_user_id', user.id)
                 .maybeSingle();
-            if (!userData) return;
+            const listingUserId = userData?.auth_user_id ?? user.id;
 
-            const { data: vendorData } = await supabase
-                .from('vendors')
-                .select('subscription_tier')
-                .eq('user_id', userData.id)
-                .maybeSingle();
+            // A user has Lister Portfolio access if they have any vendor,
+            // venue listing, legacy venue, or a submitted subscriber application.
+            const [{ data: vendorData }, { data: venueData }, { data: applicationsData }] = await Promise.all([
+                supabase.from('vendors').select('subscription_tier').eq('user_id', listingUserId).maybeSingle(),
+                supabase.from('venue_listings').select('id').eq('user_id', listingUserId).maybeSingle(),
+                supabase.from('subscriber_applications').select('id').eq('user_id', listingUserId).limit(1),
+            ]);
 
+            const hasPortfolio = !!vendorData || !!venueData || !!(applicationsData && applicationsData.length > 0);
+            setHasSubscriberAccess(hasPortfolio || userRole === 'vendor');
             setCurrentPlan(vendorData?.subscription_tier || null);
         } catch {
-            // Silently fail
+            // Silently fail; fall back to role-based access
+            setHasSubscriberAccess(userRole === 'vendor');
         }
-    }, [user?.id]);
+    }, [user?.id, userRole]);
 
     useFocusEffect(
         useCallback(() => {
@@ -71,19 +83,11 @@ export default function AccountScreen() {
     const handleLogout = async () => {
         const { error } = await signOut();
         if (error) {
-            Alert.alert('Sign out failed', error.message);
+            setLogoutAlert({ visible: true, title: 'Sign out failed', message: error.message });
             return;
         }
 
-        Alert.alert('Logged out', 'You have been logged out successfully.', [
-            {
-                text: 'OK',
-                onPress: () => {
-                    const parentNav = navigation.getParent() as any;
-                    parentNav?.navigate?.('Home');
-                },
-            },
-        ]);
+        setLogoutAlert({ visible: true, title: 'Logged out', message: 'You have been logged out successfully.' });
     };
 
     const handleLogin = () => {
@@ -135,40 +139,26 @@ export default function AccountScreen() {
 
         const { data: userData, error: userError } = await supabase
             .from('users')
-            .select('id')
+            .select('id, auth_user_id')
             .eq('auth_user_id', user.id)
             .maybeSingle();
 
-        const internalUserId = userData?.id ?? null;
+        const vendorUserId = userData?.auth_user_id ?? user.id;
 
         const { data: vendorData, error: vendorError } = await supabase
             .from('vendors')
             .select('id, subscription_status, subscription_tier')
-            .eq('user_id', internalUserId)
+            .eq('user_id', vendorUserId)
             .maybeSingle();
 
-        let resolvedVendorData = vendorData;
-        let resolvedVendorError = vendorError;
-
-        if ((!resolvedVendorData && !resolvedVendorError) || userError) {
-            const fallbackResult = await supabase
-                .from('vendors')
-                .select('id, subscription_status, subscription_tier')
-                .eq('user_id', user.id)
-                .maybeSingle();
-
-            resolvedVendorData = fallbackResult.data;
-            resolvedVendorError = fallbackResult.error;
-        }
-
-        if (resolvedVendorError) {
+        if (vendorError) {
             navigation.navigate('SubscriptionPlans');
             return;
         }
 
-        const status = String(resolvedVendorData?.subscription_status ?? '').toLowerCase();
-        const tier = String(resolvedVendorData?.subscription_tier ?? '').toLowerCase();
-        const hasActiveSubscription = !!resolvedVendorData && (status === 'active' || status === 'trial' || tier === 'basic' || tier === 'premium' || tier === 'enterprise');
+        const status = String(vendorData?.subscription_status ?? '').toLowerCase();
+        const tier = String(vendorData?.subscription_tier ?? '').toLowerCase();
+        const hasActiveSubscription = !!vendorData && (status === 'active' || status === 'trial' || tier === 'premium' || tier === 'premium_plus');
 
         if (!hasActiveSubscription) {
             navigation.navigate('SubscriptionPlans');
@@ -186,6 +176,21 @@ export default function AccountScreen() {
     };
 
     const handleGoToVenueListingPlans = async () => {
+        // If user already has a venue listing, let them through to upgrade/change plan
+        if (user?.id) {
+            const { data: existingVenue } = await supabase
+                .from('venue_listings')
+                .select('id')
+                .eq('user_id', user.id)
+                .maybeSingle();
+
+            if (existingVenue?.id) {
+                navigation.navigate('VenueListingPlans');
+                return;
+            }
+        }
+
+        // New applicant — check for blocking application status
         const latestVenueApplication = await getLatestUserApplicationByType('venue');
         if (latestVenueApplication.success && latestVenueApplication.data && isBlockingApplicationStatus(latestVenueApplication.data.status)) {
             navigation.navigate('ApplicationStatus');
@@ -193,16 +198,6 @@ export default function AccountScreen() {
         }
 
         navigation.navigate('VenueListingPlans');
-    };
-
-    const handleSubscriberAccess = () => {
-        if (!hasSubscriberAccess) {
-            Alert.alert('Subscriber access only', 'This area is only available to vendors and venues with subscriber access. You can view plans to upgrade your account.');
-            navigation.navigate('SubscriptionPlans');
-            return;
-        }
-
-        navigation.navigate('SubscriberProfile');
     };
 
     const handleGoToListings = () => {
@@ -216,27 +211,30 @@ export default function AccountScreen() {
         setHelpVisible(true);
     };
 
-    const handleDeleteAccount = async () => {
-        Alert.alert(
-            'Delete Account',
-            'This will permanently delete your account and all associated data. Are you absolutely sure?',
-            [
-                { text: 'Cancel', style: 'cancel' },
-                { 
-                    text: 'Delete Forever', 
-                    style: 'destructive',
-                    onPress: async () => {
-                        // TODO: Implement actual account deletion logic
-                        // This should delete user data from all relevant tables
-                        // and then delete the auth user
-                        Alert.alert(
-                            'Feature Coming Soon',
-                            'Account deletion will be available soon. For now, please contact support to delete your account.'
-                        );
-                    }
-                }
-            ]
-        );
+    const [errorAlert, setErrorAlert] = useState<{visible: boolean; title: string; message: string} | null>(null);
+
+    const executeDeleteAccount = async () => {
+        if (!user?.id) return;
+        setHelpVisible(false);
+        try {
+            const { error } = await supabase
+                .from('account_deletion_requests')
+                .insert({ user_id: user.id, status: 'pending' });
+
+            if (error) throw error;
+
+            setErrorAlert({
+                visible: true,
+                title: 'Request Submitted',
+                message: 'Your account deletion request has been submitted. Our admin team will review and process it within 48 hours. You will be notified once it is completed.',
+            });
+        } catch (err: any) {
+            setErrorAlert({
+                visible: true,
+                title: 'Request Failed',
+                message: err?.message || 'Could not submit deletion request. Please try again or contact support.',
+            });
+        }
     };
 
     const menuItems: MenuItem[] = [
@@ -255,25 +253,12 @@ export default function AccountScreen() {
                 { id: 'notification', label: 'Notification', icon: 'notifications', route: 'MarketingPermissions' },
             ],
         },
-        {
-            id: 'subscriber-suite',
-            label: 'Subscriber Suite',
-            icon: 'credit-card',
-            submenu: [
-                { id: 'portfolio-profile', label: 'Portfolio Profile', icon: 'business-center', action: handleSubscriberAccess },
-                { id: 'billing', label: 'Billing & Payments', icon: 'receipt-long', action: hasSubscriberAccess ? () => navigation.navigate('Billing') : handleSubscriberAccess },
-                { id: 'subscriber-legal-terms', label: 'Subscriber Legal Terms', icon: 'description', route: 'TermsAndPolicies' },
-                { id: 'activity-dashboard', label: 'Activity Dashboard', icon: 'bar-chart', action: handleSubscriberAccess },
-            ],
-        },
-        {
-            id: 'account-management',
-            label: 'Account Management',
-            icon: 'settings',
-            submenu: [
-                { id: 'delete-account', label: 'Delete Account', icon: 'delete-forever', color: colors.destructive, action: handleDeleteAccount },
-            ],
-        },
+        ...(userRole !== 'vendor' ? [{
+            id: 'my-tours',
+            label: 'My Bookings',
+            icon: 'calendar-month' as keyof typeof MaterialIcons.glyphMap,
+            route: 'MyTours' as keyof ProfileStackParamList,
+        }] : []),
         {
             id: 'terms-policies',
             label: 'Funxon Terms and Policies',
@@ -302,7 +287,8 @@ export default function AccountScreen() {
             || item.id === 'marketing-permissions'
             || item.id === 'terms-policies'
             || item.id === 'help-centre'
-            || item.id === 'delete-account';
+            || item.id === 'delete-account'
+            || item.id === 'account-management';
 
         const handlePress = () => {
             if (item.action) {
@@ -324,6 +310,7 @@ export default function AccountScreen() {
         return (
             <View key={item.id}>
                 <TouchableOpacity
+                    testID={item.id}
                     onPress={handlePress}
                     style={{
                         flexDirection: 'row',
@@ -377,94 +364,212 @@ export default function AccountScreen() {
     };
 
     return (
-        <View style={{ flex: 1, backgroundColor: colors.background }}>
+        <View style={{ flex: 1, backgroundColor: isDesktop ? colors.surfaceBg : colors.background }}>
             <ScrollView contentContainerStyle={{ paddingBottom: spacing.xl }}>
-                <View style={{ paddingHorizontal: spacing.lg, paddingTop: spacing.xl, paddingBottom: spacing.lg }}>
-                    <Text style={{ ...typography.displayMedium, color: colors.textPrimary }}>
-                        Hello{user?.email ? `, ${user.email.split('@')[0]}` : ''}
-                    </Text>
-                    {user && (
-                        <View style={{ marginTop: spacing.sm }}>
-                            <Text style={{ ...typography.caption, color: colors.textSecondary, marginBottom: spacing.xs }}>
-                                {user.email}
-                            </Text>
-                            <View style={{ flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: spacing.xs }}>
+                {isDesktop ? (
+                    <View style={{ maxWidth: 1200, width: '100%', alignSelf: 'center', paddingHorizontal: 48, paddingTop: spacing.xl, paddingBottom: spacing.xl }}>
+                        <View style={{ flexDirection: 'row', gap: spacing.gutter } as any}>
+                            <View style={{ width: 320, gap: spacing.gutter } as any}>
                                 <View
                                     style={{
-                                        paddingHorizontal: spacing.md,
-                                        paddingVertical: spacing.xs,
-                                        borderRadius: radii.full,
-                                        backgroundColor: userRole === 'vendor' ? colors.textPrimary : colors.accent,
+                                        borderRadius: radii.lg,
+                                        overflow: 'hidden',
+                                        backgroundColor: colors.surfaceContainerLowest,
+                                        borderWidth: 1,
+                                        borderColor: colors.outlineVariant,
                                     }}
                                 >
-                                    <Text
-                                        style={{
-                                            ...typography.caption,
-                                            fontWeight: '700',
-                                            color: userRole === 'vendor' ? '#FFFFFF' : colors.textPrimary,
-                                        }}
-                                    >
-                                        {userRole === 'vendor' ? 'Vendor' : 'Attendee'}
-                                    </Text>
+                                    {menuItems
+                                        .filter((item) => item.id !== 'lister-portfolio' || hasSubscriberAccess)
+                                        .map((item) => renderMenuItem(item))}
                                 </View>
-                                {currentPlan && (
-                                    <View
-                                        style={{
-                                            paddingHorizontal: spacing.md,
-                                            paddingVertical: spacing.xs,
-                                            borderRadius: radii.full,
-                                            backgroundColor: currentPlan === 'free' ? '#9CA3AF' : currentPlan === 'premium' ? '#8B5CF6' : currentPlan === 'enterprise' ? '#DC2626' : colors.primary,
-                                        }}
-                                    >
-                                        <Text style={{ ...typography.caption, fontWeight: '700', color: '#FFFFFF' }}>
-                                            {currentPlan.charAt(0).toUpperCase() + currentPlan.slice(1)} Plan
-                                        </Text>
-                                    </View>
-                                )}
-                                {currentPlan && currentPlan !== 'enterprise' && (
-                                    <TouchableOpacity
-                                        onPress={() => navigation.navigate('SubscriptionPlans')}
-                                        style={{
-                                            paddingHorizontal: spacing.sm,
-                                            paddingVertical: spacing.xs,
-                                            borderRadius: radii.full,
-                                            borderWidth: 1,
-                                            bordercolor: colors.textPrimary,
-                                        }}
-                                    >
-                                        <Text style={{ ...typography.caption, color: colors.textPrimary, fontWeight: '600', fontSize: 10 }}>Upgrade</Text>
-                                    </TouchableOpacity>
-                                )}
+                            </View>
+                            <View style={{ flex: 1, gap: spacing.gutter } as any}>
+                                <View
+                                    style={{
+                                        backgroundColor: colors.surfaceContainerLowest,
+                                        borderRadius: radii.lg,
+                                        borderWidth: 1,
+                                        borderColor: colors.outlineVariant,
+                                        padding: spacing.xl,
+                                    }}
+                                >
+                                    <Text style={{ ...typography.headlineMd, color: colors.textPrimary }}>
+                                        Hello{user?.email ? `, ${user.email.split('@')[0]}` : ''}
+                                    </Text>
+                                    {user && (
+                                        <View style={{ marginTop: spacing.md }}>
+                                            <Text style={{ ...typography.bodyMd, color: colors.onSurfaceVariant, marginBottom: spacing.sm }}>
+                                                {user.email}
+                                            </Text>
+                                            <View style={{ flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: spacing.sm }}>
+                                                <View
+                                                    style={{
+                                                        paddingHorizontal: spacing.md,
+                                                        paddingVertical: spacing.xs,
+                                                        borderRadius: radii.full,
+                                                        backgroundColor: userRole === 'vendor' ? colors.primary : colors.accent,
+                                                    }}
+                                                >
+                                                    <Text
+                                                        style={{
+                                                            ...typography.labelMd,
+                                                            color: userRole === 'vendor' ? '#FFFFFF' : colors.textPrimary,
+                                                        }}
+                                                    >
+                                                        {userRole === 'vendor' ? 'Vendor' : 'Attendee'}
+                                                    </Text>
+                                                </View>
+                                                {currentPlan && (
+                                                    <View
+                                                        style={{
+                                                            paddingHorizontal: spacing.md,
+                                                            paddingVertical: spacing.xs,
+                                                            borderRadius: radii.full,
+                                                            backgroundColor: currentPlan === 'free' ? '#9CA3AF' : currentPlan === 'premium' ? '#8B5CF6' : currentPlan === 'enterprise' ? '#DC2626' : colors.primary,
+                                                        }}
+                                                    >
+                                                        <Text style={{ ...typography.labelMd, color: '#FFFFFF' }}>
+                                                            {currentPlan.charAt(0).toUpperCase() + currentPlan.slice(1)} Plan
+                                                        </Text>
+                                                    </View>
+                                                )}
+                                                {currentPlan && currentPlan !== 'enterprise' && (
+                                                    <TouchableOpacity
+                                                        onPress={() => navigation.navigate('SubscriptionPlans')}
+                                                        style={{
+                                                            paddingHorizontal: spacing.sm,
+                                                            paddingVertical: spacing.xs,
+                                                            borderRadius: radii.full,
+                                                            borderWidth: 1,
+                                                            borderColor: colors.primary,
+                                                        }}
+                                                    >
+                                                        <Text style={{ ...typography.labelMd, color: colors.textPrimary }}>Upgrade</Text>
+                                                    </TouchableOpacity>
+                                                )}
+                                            </View>
+                                        </View>
+                                    )}
+                                </View>
                             </View>
                         </View>
-                    )}
-                </View>
+                    </View>
+                ) : (
+                    <>
+                        <View style={{ paddingHorizontal: spacing.lg, paddingTop: spacing.xl, paddingBottom: spacing.lg }}>
+                            <Text style={{ ...typography.displayMedium, color: colors.textPrimary }}>
+                                Hello{user?.email ? `, ${user.email.split('@')[0]}` : ''}
+                            </Text>
+                            {user && (
+                                <View style={{ marginTop: spacing.sm }}>
+                                    <Text style={{ ...typography.caption, color: colors.textSecondary, marginBottom: spacing.xs }}>
+                                        {user.email}
+                                    </Text>
+                                    <View style={{ flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: spacing.xs }}>
+                                        <View
+                                            style={{
+                                                paddingHorizontal: spacing.md,
+                                                paddingVertical: spacing.xs,
+                                                borderRadius: radii.full,
+                                                backgroundColor: userRole === 'vendor' ? colors.primary : colors.accent,
+                                            }}
+                                        >
+                                            <Text
+                                                style={{
+                                                    ...typography.caption,
+                                                    fontWeight: '700',
+                                                    color: userRole === 'vendor' ? '#FFFFFF' : colors.textPrimary,
+                                                }}
+                                            >
+                                                {userRole === 'vendor' ? 'Vendor' : 'Attendee'}
+                                            </Text>
+                                        </View>
+                                        {currentPlan && (
+                                            <View
+                                                style={{
+                                                    paddingHorizontal: spacing.md,
+                                                    paddingVertical: spacing.xs,
+                                                    borderRadius: radii.full,
+                                                    backgroundColor: currentPlan === 'free' ? '#9CA3AF' : currentPlan === 'premium' ? '#8B5CF6' : currentPlan === 'enterprise' ? '#DC2626' : colors.primary,
+                                                }}
+                                            >
+                                                <Text style={{ ...typography.captionBold, color: '#FFFFFF' }}>
+                                                    {currentPlan.charAt(0).toUpperCase() + currentPlan.slice(1)} Plan
+                                                </Text>
+                                            </View>
+                                        )}
+                                        {currentPlan && currentPlan !== 'enterprise' && (
+                                            <TouchableOpacity
+                                                onPress={() => navigation.navigate('SubscriptionPlans')}
+                                                style={{
+                                                    paddingHorizontal: spacing.sm,
+                                                    paddingVertical: spacing.xs,
+                                                    borderRadius: radii.full,
+                                                    borderWidth: 1,
+                                                    borderColor: colors.primary,
+                                                }}
+                                            >
+                                                <Text style={{ ...typography.captionSemiBold, color: colors.textPrimary, fontSize: 10 }}>Upgrade</Text>
+                                            </TouchableOpacity>
+                                        )}
+                                    </View>
+                                </View>
+                            )}
+                        </View>
 
-                <View
-                    style={{
-                        marginHorizontal: spacing.lg,
-                        borderRadius: radii.lg,
-                        overflow: 'hidden',
-                        backgroundColor: colors.surface,
-                        borderWidth: 1,
-                        borderColor: colors.borderSubtle,
-                        shadowColor: '#000',
-                        shadowOpacity: 0.05,
-                        shadowRadius: 8,
-                        shadowOffset: { width: 0, height: 2 },
-                        elevation: 2,
-                    }}
-                >
-                    {menuItems
-                        .filter((item) => hasSubscriberAccess || (item.id !== 'subscriber-suite' && item.id !== 'lister-portfolio'))
-                        .map((item) => renderMenuItem(item))}
-                </View>
+                        <View
+                            style={{
+                                marginHorizontal: spacing.lg,
+                                borderRadius: radii.lg,
+                                overflow: 'hidden',
+                                backgroundColor: colors.surface,
+                                borderWidth: 1,
+                                borderColor: colors.borderSubtle,
+                                shadowColor: '#000',
+                                shadowOpacity: 0.05,
+                                shadowRadius: 8,
+                                shadowOffset: { width: 0, height: 2 },
+                                elevation: 2,
+                            }}
+                        >
+                            {menuItems
+                                .filter((item) => item.id !== 'lister-portfolio' || hasSubscriberAccess)
+                                .map((item) => renderMenuItem(item))}
+                        </View>
+                    </>
+                )}
             </ScrollView>
-            <HelpCenterModal 
-                visible={helpVisible} 
-                onClose={() => setHelpVisible(false)} 
-                onDeleteAccount={handleDeleteAccount}
+            <HelpCenterModal
+                visible={helpVisible}
+                onClose={() => setHelpVisible(false)}
+                onNavigateToHelp={() => {
+                    setHelpVisible(false);
+                    navigation.navigate('PortfolioAssistance', { openFaqs: true });
+                }}
+                onDeleteAccount={executeDeleteAccount}
+                userRole={userRole}
             />
+            {logoutAlert && (
+                <ThemedAlert
+                    visible={logoutAlert.visible}
+                    title={logoutAlert.title}
+                    message={logoutAlert.message}
+                    buttons={[
+                        { text: 'OK', style: 'default', onPress: () => { setLogoutAlert(null); const parentNav = navigation.getParent() as any; parentNav?.navigate?.('Home'); } }
+                    ]}
+                    onDismiss={() => setLogoutAlert(null)}
+                />
+            )}
+            {errorAlert && (
+                <ThemedAlert
+                    visible={errorAlert.visible}
+                    title={errorAlert.title}
+                    message={errorAlert.message}
+                    buttons={[{ text: 'OK', style: 'default', onPress: () => setErrorAlert(null) }]}
+                    onDismiss={() => setErrorAlert(null)}
+                />
+            )}
         </View>
     );
 }
