@@ -8,6 +8,7 @@ import { useApplicationForm } from '../../context/ApplicationFormContext';
 import { validateStep2 } from '../../utils/formValidation';
 import { ApplicationProgress } from '../../components/ApplicationProgress';
 import { serviceCategories, specialServiceFeatures } from '../../config/serviceProfessionals';
+import { vendorTagGroups } from '../../config/vendorTags';
 import { venueTypes, amenitiesList, venueCapacityOptions, eventTypes } from '../../config/venueTypes';
 import { provinces, getCitiesByProvince } from '../../config/locations';
 import ThemedAlert from '../../components/ThemedAlert';
@@ -26,6 +27,7 @@ export default function ApplicationStep2Screen() {
   const [alertState, setAlertState] = useState<{visible: boolean; title: string; message: string; buttons?: any[]} | null>(null);
   const [customAmenityInput, setCustomAmenityInput] = useState('');
   const [customFeatureInput, setCustomFeatureInput] = useState('');
+  const [expandedTagGroups, setExpandedTagGroups] = useState<string[]>([]);
   const isDesktop = useIsDesktop();
   const isVenues = state.portfolioType === 'venues';
   const isVendors = state.portfolioType === 'vendors';
@@ -145,6 +147,12 @@ export default function ApplicationStep2Screen() {
       ? currentArray.filter((item) => item !== value)
       : [...currentArray, value];
     updateStep2({ [field]: newArray });
+  };
+
+  const toggleTagGroupExpanded = (groupId: string) => {
+    setExpandedTagGroups((prev) =>
+      prev.includes(groupId) ? prev.filter((id) => id !== groupId) : [...prev, groupId]
+    );
   };
 
   const addCustomAmenity = () => {
@@ -784,6 +792,94 @@ export default function ApplicationStep2Screen() {
                             );
                           })}
                         </View>
+                      </View>
+                    );
+                  })}
+                </View>
+              )}
+
+              {/* Service Tags */}
+              {state.step2.serviceCategories.length > 0 && (
+                <View
+                  style={{
+                    backgroundColor: cardSurface,
+                    borderRadius: radii.lg,
+                    padding: spacing.lg,
+                    marginBottom: spacing.lg,
+                    borderWidth: 1,
+                    borderColor: cardBorder,
+                    shadowColor: '#000',
+                    shadowOpacity: 0.05,
+                    shadowRadius: 8,
+                    shadowOffset: { width: 0, height: 2 },
+                    elevation: 2,
+                  }}
+                >
+                  <Text style={{ ...typography.titleMedium, color: colors.textPrimary, marginBottom: spacing.sm }}>
+                    Service Tags
+                  </Text>
+                  <Text style={{ ...typography.caption, color: colors.textMuted, marginBottom: spacing.md }}>
+                    Select tags that describe your services (optional)
+                  </Text>
+                  {vendorTagGroups.map((group) => {
+                    const selectedInGroup = state.step2.serviceTags.filter((t) => group.tags.includes(t)).length;
+                    const isExpanded = expandedTagGroups.includes(group.id);
+                    return (
+                      <View key={group.id} style={{ marginBottom: spacing.sm }}>
+                        <TouchableOpacity
+                          onPress={() => toggleTagGroupExpanded(group.id)}
+                          style={{
+                            flexDirection: 'row',
+                            alignItems: 'center',
+                            paddingVertical: spacing.sm,
+                          }}
+                        >
+                          <MaterialIcons
+                            name={isExpanded ? 'keyboard-arrow-down' : 'keyboard-arrow-right'}
+                            size={20}
+                            color={colors.textMuted}
+                          />
+                          <Text style={{ ...typography.bodySemiBold, color: colors.textPrimary, flex: 1 }}>
+                            {group.name}
+                          </Text>
+                          {selectedInGroup > 0 && (
+                            <View
+                              style={{
+                                paddingHorizontal: spacing.sm,
+                                paddingVertical: 2,
+                                borderRadius: radii.full,
+                                backgroundColor: colors.cta,
+                              }}
+                            >
+                              <Text style={{ color: '#FFFFFF', fontSize: 11 }}>{selectedInGroup}</Text>
+                            </View>
+                          )}
+                        </TouchableOpacity>
+                        {isExpanded && (
+                          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginTop: spacing.xs }}>
+                            {group.tags.map((tag) => {
+                              const isSelected = state.step2.serviceTags.includes(tag);
+                              return (
+                                <TouchableOpacity
+                                  key={tag}
+                                  onPress={() => toggleArrayItem('serviceTags', tag)}
+                                  style={{
+                                    paddingHorizontal: spacing.md,
+                                    paddingVertical: spacing.sm,
+                                    borderRadius: radii.full,
+                                    backgroundColor: isSelected ? colors.cta : cardSurface,
+                                    borderWidth: 1,
+                                    borderColor: isSelected ? colors.cta : cardBorder,
+                                  }}
+                                >
+                                  <Text style={{ ...typography.body, color: isSelected ? '#FFFFFF' : colors.textPrimary, fontSize: 13 }}>
+                                    {tag}
+                                  </Text>
+                                </TouchableOpacity>
+                              );
+                            })}
+                          </View>
+                        )}
                       </View>
                     );
                   })}

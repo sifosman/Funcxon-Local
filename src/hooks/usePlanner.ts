@@ -5,19 +5,26 @@ import { supabase } from '../lib/supabaseClient';
 import { useAuth } from '../auth/AuthContext';
 
 export const fallbackEventTypes = [
-  'Wedding',
-  'Engagement party',
-  'Birthday party',
-  'Corporate event',
-  'Baby shower',
-  'Bridal shower',
   'Anniversary',
-  'Graduation',
-  'Funeral',
-  'Product launch',
-  'Year-end function',
-  'Conference',
-  'Other',
+  'Baby Shower',
+  'Birthday - Adult',
+  'Birthday - Kiddies',
+  'Bridal Shower',
+  'Community Fair',
+  'Conference / Seminar',
+  'Corporate Party',
+  'Cultural Celebration',
+  'Expo',
+  'Festival',
+  'Fundraiser',
+  'Graduation/Awards',
+  'Live Show/Concert',
+  'Market',
+  'Product Launch',
+  'Reunion',
+  'Sports Tournament',
+  'Teambuilding',
+  'Wedding',
 ];
 
 export type Task = {
@@ -139,13 +146,14 @@ export function usePlanner() {
   const { data: eventTypeOptions } = useQuery<string[]>({
     queryKey: ['event-type-options'],
     queryFn: async () => {
-      const { data: rows } = await supabase
+      const { data: rows, error } = await supabase
         .from('dropdown_options')
-        .select('value')
-        .eq('category', 'event_type')
+        .select('label')
+        .eq('type', 'event_type')
+        .eq('is_active', true)
         .order('sort_order', { ascending: true });
-      if (rows && rows.length > 0) {
-        return rows.map((r: any) => r.value as string);
+      if (!error && rows && rows.length > 0) {
+        return rows.map((r: any) => r.label as string);
       }
       return fallbackEventTypes;
     },

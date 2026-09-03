@@ -414,7 +414,7 @@ export default function ApplicationStep4Screen() {
               billing_phone: state.step1.contactPhoneNumber?.trim() || null,
               subscription_started_at: new Date().toISOString(),
               service_options: state.step2.serviceCategories ?? [],
-              vendor_tags: state.step2.serviceSubcategories ?? [],
+              vendor_tags: Array.from(new Set([...(state.step2.serviceSubcategories ?? []), ...(state.step2.serviceTags ?? [])])),
             };
 
             // Use select-then-insert/update for maximum compatibility

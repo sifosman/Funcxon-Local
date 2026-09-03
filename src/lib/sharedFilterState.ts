@@ -12,6 +12,7 @@ export type FilterState = {
   selectedCities: string[];
   selectedVendorCategories: number[];
   selectedVendorSubcategories: string[];
+  selectedVendorTags: string[];
   selectedVendorProvinces: string[];
   selectedVendorCities: string[];
   selectedLocationProvince: string;

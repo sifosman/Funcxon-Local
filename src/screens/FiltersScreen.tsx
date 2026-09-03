@@ -17,6 +17,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, spacing, radii, typography } from '../theme';
 import { VENDOR_CATEGORIES } from './AttendeeHomeScreen';
 import { venueTypes, amenitiesList, venueCapacityOptions } from '../config/venueTypes';
+import { allVendorTags } from '../config/vendorTags';
 import { provinces } from '../config/locations';
 import MapRadiusSelector from '../components/MapRadiusSelector';
 import * as ExpoLocation from 'expo-location';
@@ -47,6 +48,7 @@ export default function FiltersScreen() {
   const [selectedCities, setSelectedCities] = useState<string[]>(initial?.selectedCities ?? []);
   const [selectedVendorCategories, setSelectedVendorCategories] = useState<number[]>(initial?.selectedVendorCategories ?? []);
   const [selectedVendorSubcategories, setSelectedVendorSubcategories] = useState<string[]>(initial?.selectedVendorSubcategories ?? []);
+  const [selectedVendorTags, setSelectedVendorTags] = useState<string[]>(initial?.selectedVendorTags ?? []);
   const [selectedVendorProvinces, setSelectedVendorProvinces] = useState<string[]>(initial?.selectedVendorProvinces ?? []);
   const [selectedVendorCities, setSelectedVendorCities] = useState<string[]>(initial?.selectedVendorCities ?? []);
   const [selectedLocationProvince, setSelectedLocationProvince] = useState(initial?.selectedLocationProvince ?? '');
@@ -104,6 +106,7 @@ export default function FiltersScreen() {
     setSelectedCities([]);
     setSelectedVendorCategories([]);
     setSelectedVendorSubcategories([]);
+    setSelectedVendorTags([]);
     setSelectedVendorProvinces([]);
     setSelectedVendorCities([]);
     setSelectedLocationProvince('');
@@ -121,6 +124,7 @@ export default function FiltersScreen() {
       selectedCities: [],
       selectedVendorCategories: [],
       selectedVendorSubcategories: [],
+      selectedVendorTags: [],
       selectedVendorProvinces: [],
       selectedVendorCities: [],
       selectedLocationProvince: '',
@@ -142,6 +146,7 @@ export default function FiltersScreen() {
       selectedCities,
       selectedVendorCategories,
       selectedVendorSubcategories,
+      selectedVendorTags,
       selectedVendorProvinces,
       selectedVendorCities,
       selectedLocationProvince,
@@ -165,6 +170,8 @@ export default function FiltersScreen() {
       ? 'Select vendor category'
       : activeDropdown === 'vendor_subcategory'
       ? 'Select service type'
+      : activeDropdown === 'vendor_tags'
+      ? 'Select tags'
       : activeDropdown === 'vendor_province'
       ? 'Select preferred provinces'
       : activeDropdown === 'vendor_city'
@@ -410,6 +417,28 @@ export default function FiltersScreen() {
               </Text>
               <MaterialIcons name="keyboard-arrow-down" size={20} color={colors.textSecondary} />
             </TouchableOpacity>
+
+            <Text style={{ ...typography.caption, color: colors.textMuted, marginBottom: spacing.xs }}>Select tags</Text>
+            <TouchableOpacity
+              onPress={() => { setDropdownSearch(''); setActiveDropdown('vendor_tags'); }}
+              style={{
+                borderRadius: radii.md,
+                borderWidth: 1,
+                borderColor: colors.borderSubtle,
+                backgroundColor: colors.surfaceMuted,
+                paddingHorizontal: spacing.md,
+                paddingVertical: spacing.sm,
+                marginBottom: spacing.md,
+                flexDirection: 'row',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+              }}
+            >
+              <Text style={{ ...typography.body, color: selectedVendorTags.length > 0 ? colors.textPrimary : colors.textMuted }} numberOfLines={1}>
+                {selectedVendorTags.length > 0 ? selectedVendorTags.join(', ') : 'Any'}
+              </Text>
+              <MaterialIcons name="keyboard-arrow-down" size={20} color={colors.textSecondary} />
+            </TouchableOpacity>
           </>
         )}
 
@@ -644,7 +673,7 @@ export default function FiltersScreen() {
                 contentContainerStyle={{ paddingBottom: spacing.xl }}
               >
                 {(() => {
-                  const isMulti = activeDropdown === 'venue_type' || activeDropdown === 'venue_amenities' || activeDropdown === 'province' || activeDropdown === 'city' || activeDropdown === 'vendor_category' || activeDropdown === 'vendor_subcategory' || activeDropdown === 'vendor_province' || activeDropdown === 'vendor_city';
+                  const isMulti = activeDropdown === 'venue_type' || activeDropdown === 'venue_amenities' || activeDropdown === 'province' || activeDropdown === 'city' || activeDropdown === 'vendor_category' || activeDropdown === 'vendor_subcategory' || activeDropdown === 'vendor_tags' || activeDropdown === 'vendor_province' || activeDropdown === 'vendor_city';
                   const isSingle = !isMulti;
 
                   let allOptions: string[] = [];
@@ -655,6 +684,7 @@ export default function FiltersScreen() {
                   else if (activeDropdown === 'city') allOptions = availableCities;
                   else if (activeDropdown === 'vendor_category') allOptions = VENDOR_CATEGORIES.map((c) => c.label);
                   else if (activeDropdown === 'vendor_subcategory') allOptions = availableVendorSubcategories;
+                  else if (activeDropdown === 'vendor_tags') allOptions = allVendorTags;
                   else if (activeDropdown === 'vendor_province') allOptions = provinces.map((p) => p.name);
                   else if (activeDropdown === 'vendor_city') allOptions = availableVendorCities;
 
@@ -677,6 +707,8 @@ export default function FiltersScreen() {
                       ? selectedVendorCategories.length === 0
                       : activeDropdown === 'vendor_subcategory'
                       ? selectedVendorSubcategories.length === 0
+                      : activeDropdown === 'vendor_tags'
+                      ? selectedVendorTags.length === 0
                       : activeDropdown === 'vendor_province'
                       ? selectedVendorProvinces.length === 0
                       : activeDropdown === 'vendor_city'
@@ -698,6 +730,7 @@ export default function FiltersScreen() {
                             else if (activeDropdown === 'city') setSelectedCities([]);
                             else if (activeDropdown === 'vendor_category') { setSelectedVendorCategories([]); setSelectedVendorSubcategories([]); }
                             else if (activeDropdown === 'vendor_subcategory') setSelectedVendorSubcategories([]);
+                            else if (activeDropdown === 'vendor_tags') setSelectedVendorTags([]);
                             else if (activeDropdown === 'vendor_province') { setSelectedVendorProvinces([]); setSelectedVendorCities((prev) => prev.filter((c) => provinces.flatMap((p) => p.cities).includes(c))); }
                             else if (activeDropdown === 'vendor_city') setSelectedVendorCities([]);
                             if (isSingle) setActiveDropdown(null);
@@ -739,6 +772,8 @@ export default function FiltersScreen() {
                         ? selectedVendorCategories.some((id) => VENDOR_CATEGORIES.find((c) => c.id === id)?.label === option)
                         : activeDropdown === 'vendor_subcategory'
                         ? selectedVendorSubcategories.includes(option)
+                        : activeDropdown === 'vendor_tags'
+                        ? selectedVendorTags.includes(option)
                         : activeDropdown === 'vendor_province'
                         ? selectedVendorProvinces.includes(option)
                         : activeDropdown === 'vendor_city'
@@ -791,6 +826,10 @@ export default function FiltersScreen() {
                             });
                           } else if (activeDropdown === 'vendor_subcategory') {
                             setSelectedVendorSubcategories((prev) =>
+                              prev.includes(option) ? prev.filter((s) => s !== option) : [...prev, option]
+                            );
+                          } else if (activeDropdown === 'vendor_tags') {
+                            setSelectedVendorTags((prev) =>
                               prev.includes(option) ? prev.filter((s) => s !== option) : [...prev, option]
                             );
                           } else if (activeDropdown === 'vendor_province') {

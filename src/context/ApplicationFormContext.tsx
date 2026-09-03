@@ -37,6 +37,7 @@ export interface Step2Data {
   paymentTermsAndConditions?: string;
   serviceCategories: string[];
   serviceSubcategories: string[];
+  serviceTags: string[];
   provinces: string[];
   cities: string[];
   specialFeatures: string[];
@@ -123,6 +124,7 @@ const initialState: ApplicationFormState = {
     paymentTermsAndConditions: '',
     serviceCategories: [],
     serviceSubcategories: [],
+    serviceTags: [],
     provinces: [],
     cities: [],
     specialFeatures: [],

@@ -82,6 +82,7 @@ export default function DiscoverScreen() {
   // Vendor-specific dropdown states
   const [selectedVendorCategories, setSelectedVendorCategories] = useState<number[]>([]);
   const [selectedVendorSubcategories, setSelectedVendorSubcategories] = useState<string[]>([]);
+  const [selectedVendorTags, setSelectedVendorTags] = useState<string[]>([]);
   const [selectedVendorProvinces, setSelectedVendorProvinces] = useState<string[]>([]);
   const [selectedVendorCities, setSelectedVendorCities] = useState<string[]>([]);
   const [selectedLocationProvince, setSelectedLocationProvince] = useState('');
@@ -373,6 +374,7 @@ export default function DiscoverScreen() {
         setSelectedCities(shared.selectedCities);
         setSelectedVendorCategories(shared.selectedVendorCategories);
         setSelectedVendorSubcategories(shared.selectedVendorSubcategories);
+        setSelectedVendorTags(shared.selectedVendorTags);
         setSelectedVendorProvinces(shared.selectedVendorProvinces);
         setSelectedVendorCities(shared.selectedVendorCities);
         setSelectedLocationProvince(shared.selectedLocationProvince);
@@ -521,6 +523,14 @@ export default function DiscoverScreen() {
         matchesVendorSubcategory = haystack.some((v) => selectedSet.has(v));
       }
 
+      let matchesVendorTag = true;
+      if (selectedVendorTags.length > 0 && item.type === 'vendor') {
+        const tags = Array.isArray(item.vendor_tags) ? item.vendor_tags : [];
+        const haystack = [...(Array.isArray(item.service_options) ? item.service_options : []), ...tags].map((v) => String(v ?? '').toLowerCase());
+        const selectedTagSet = new Set(selectedVendorTags.map((t) => t.toLowerCase()));
+        matchesVendorTag = haystack.some((v) => selectedTagSet.has(v));
+      }
+
       const matchesVendorProvinceDropdown = selectedVendorProvinces.length === 0 || selectedVendorProvinces.some((p) => itemProvince === p.toLowerCase() || (itemProvince.includes(p.toLowerCase()) && p.length > 3));
       const matchesVendorCityDropdown = selectedVendorCities.length === 0 || selectedVendorCities.some((c) => itemCity === c.toLowerCase() || (itemCity.includes(c.toLowerCase()) && c.length > 2));
 
@@ -564,6 +574,7 @@ export default function DiscoverScreen() {
         matchesCityDropdown &&
         matchesVendorCategory &&
         matchesVendorSubcategory &&
+        matchesVendorTag &&
         matchesVendorProvinceDropdown &&
         matchesVendorCityDropdown &&
         matchesLocationProvince &&
@@ -596,6 +607,7 @@ export default function DiscoverScreen() {
     selectedCities,
     selectedVendorCategories,
     selectedVendorSubcategories,
+    selectedVendorTags,
     selectedVendorProvinces,
     selectedVendorCities,
     selectedLocationProvince,
@@ -674,6 +686,7 @@ export default function DiscoverScreen() {
     selectedCities.length > 0 ||
     selectedVendorCategories.length > 0 ||
     selectedVendorSubcategories.length > 0 ||
+    selectedVendorTags.length > 0 ||
     selectedVendorProvinces.length > 0 ||
     selectedVendorCities.length > 0 ||
     !!selectedLocationProvince ||
@@ -1252,6 +1265,7 @@ export default function DiscoverScreen() {
                 selectedCities,
                 selectedVendorCategories,
                 selectedVendorSubcategories,
+                selectedVendorTags,
                 selectedVendorProvinces,
                 selectedVendorCities,
                 selectedLocationProvince,
